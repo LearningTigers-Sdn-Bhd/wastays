@@ -71,10 +71,13 @@ module CorporatePortal
       Booking.where(hotel_corporate_account_id: corporate_relationships.select(:id))
     end
 
+    # Guest blocks arrive keyed by position, so they are permitted as a hash and
+    # read back in order by the service.
     def booking_params
       params.require(:booking).permit(
         :room_type_id, :check_in, :check_out, :adults, :children,
-        :guest_name, :guest_email, :guest_phone, :special_requests
+        :guest_name, :guest_email, :guest_phone, :special_requests,
+        guests: {}
       )
     end
 

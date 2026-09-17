@@ -87,6 +87,46 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     expect(response.body).not_to include(theirs.guest_name)
   end
 
+  it "records every adult sharing the room, not just the lead" do
+    post corporate_bookings_path, params: {
+      hotel_relationship_id: relationship.id,
+      booking: {
+        room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
+        adults: 2, children: 0,
+        guests: {
+          "0" => { name: "Aisha Rahman", phone: "+60123456789", email: "aisha@example.com" },
+          "1" => { name: "Iman Rahman", phone: "+60129876543" }
+        }
+      }
+    }
+
+    booking = Booking.order(:id).last
+    # The lead is the stay's own guest; the companion is a booking_guest on it,
+    # exactly as the desk would add at check-in.
+    expect(booking.guest_name).to eq("Aisha Rahman")
+    expect(booking.booking_guests.count).to eq(2)
+    expect(booking.guests.map(&:name)).to contain_exactly("Aisha Rahman", "Iman Rahman")
+    expect(booking.booking_guests.where(is_primary: true).count).to eq(1)
+  end
+
+  it "takes the lead guest alone when the companion is not known yet" do
+    post corporate_bookings_path, params: {
+      hotel_relationship_id: relationship.id,
+      booking: {
+        room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
+        adults: 2, children: 0,
+        guests: {
+          "0" => { name: "Aisha Rahman", phone: "+60123456789" },
+          "1" => { name: "", phone: "", email: "" }
+        }
+      }
+    }
+
+    booking = Booking.order(:id).last
+    expect(booking.guest_name).to eq("Aisha Rahman")
+    expect(booking.booking_guests.count).to eq(1)
+  end
+
   # The search is not the only gate: a stale page, or two agents confirming the
   # last room at once, both arrive straight at create.
   it "refuses to confirm a category that filled up after the search" do

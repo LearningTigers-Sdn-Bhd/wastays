@@ -113,24 +113,40 @@
               <%= form.hidden_field :adults, value: @adults %>
               <%= form.hidden_field :children, value: @children %>
 
-              <div class="grid gap-4 sm:grid-cols-2">
-                <label class="block">
-                  <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Guest name</span>
-                  <%= form.text_field :guest_name, required: true, class: "form-input mt-1 w-full" %>
-                </label>
-                <label class="block">
-                  <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Guest phone</span>
-                  <%= form.telephone_field :guest_phone, required: true, class: "form-input mt-1 w-full" %>
-                </label>
-                <label class="block">
-                  <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Guest email</span>
-                  <%= form.email_field :guest_email, class: "form-input mt-1 w-full" %>
-                </label>
-                <label class="block">
-                  <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Special requests</span>
-                  <%= form.text_field :special_requests, class: "form-input mt-1 w-full" %>
-                </label>
-              </div>
+              <%# One block per adult sharing the room. The first is the lead guest
+                  the stay is held under; the rest are the people staying with
+                  them, and may be filled in later if the agent does not have
+                  their details yet. %>
+              <% @adults.times do |index| %>
+                <fieldset class="rounded-xl border border-border p-4">
+                  <legend class="px-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    <%= index.zero? ? "Lead guest" : "Guest #{index + 1}" %>
+                    <% unless index.zero? %><span class="font-normal normal-case"> · optional</span><% end %>
+                  </legend>
+                  <div class="grid gap-4 sm:grid-cols-3">
+                    <label class="block">
+                      <span class="text-xs text-muted-foreground">Full name</span>
+                      <%= text_field_tag "booking[guests][#{index}][name]", nil,
+                            required: index.zero?, class: "form-input mt-1 w-full" %>
+                    </label>
+                    <label class="block">
+                      <span class="text-xs text-muted-foreground">Phone</span>
+                      <%= telephone_field_tag "booking[guests][#{index}][phone]", nil,
+                            required: index.zero?, class: "form-input mt-1 w-full" %>
+                    </label>
+                    <label class="block">
+                      <span class="text-xs text-muted-foreground">Email</span>
+                      <%= email_field_tag "booking[guests][#{index}][email]", nil,
+                            class: "form-input mt-1 w-full" %>
+                    </label>
+                  </div>
+                </fieldset>
+              <% end %>
+
+              <label class="block">
+                <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Special requests</span>
+                <%= form.text_field :special_requests, class: "form-input mt-1 w-full" %>
+              </label>
 
               <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
                 Confirm booking

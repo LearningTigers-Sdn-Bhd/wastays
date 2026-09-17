@@ -9,6 +9,11 @@ module CorporatePortal
   # inherits that service's availability check, which is what stops an agent
   # selling a room that is already taken.
   #
+  # Every adult sharing the room can be named. The first is the lead guest the
+  # stay is held under, and the rest become booking_guests on it -- the same
+  # records the desk would add at check-in. They are optional: an agent often
+  # holds the room before knowing who is travelling with whom.
+  #
   # The booking is attributed to the agent through hotel_corporate_account_id.
   # No money is taken here: the booking is created unpaid, and how it settles
   # follows the relationship -- direct bill is invoiced, standard settles at
@@ -51,16 +56,48 @@ module CorporatePortal
 
       return failure(*Array(result.errors)) unless result.success?
 
+      add_companions(result.booking)
       Result.new(booking: result.booking, errors: [])
     end
 
     private
 
+    # Indexed form fields arrive as a Hash keyed by position, so order is read
+    # back from the keys rather than assumed.
+    def guests
+      @guests ||= begin
+        raw = @params[:guests]
+        list = raw.is_a?(Hash) ? raw.sort_by { |index, _| index.to_i }.map(&:last) : Array(raw)
+        list.map { |attrs| attrs.to_h.symbolize_keys.slice(:name, :email, :phone) }
+            .reject { |attrs| attrs.values.all?(&:blank?) }
+      end
+    end
+
+    def lead_guest = guests.first || {}
+
+    # Everyone after the lead, named. A block left blank is not a guest.
+    def companions = guests.drop(1).select { |attrs| attrs[:name].present? }
+
+    def add_companions(booking)
+      companions.each do |attrs|
+        result = BookingGuests::Add.call(
+          booking: booking, actor: @user,
+          # Guest requires a country and the export of a name is all an agent
+          # has; the property's own country is the sane default, and the desk
+          # corrects it on the registration card.
+          attributes: attrs.merge(country: @hotel.country)
+        )
+        next if result.success?
+
+        Rails.logger.warn("Agent booking #{booking.id} could not add #{attrs[:name]}: #{result.errors.to_sentence}")
+      end
+    end
+
     def booking_params(room_type)
       {
-        guest_name: @params[:guest_name],
-        guest_email: @params[:guest_email].presence,
-        guest_phone: @params[:guest_phone],
+        guest_name: @params[:guest_name].presence || lead_guest[:name],
+        guest_email: (@params[:guest_email].presence || lead_guest[:email]).presence,
+        guest_phone: @params[:guest_phone].presence || lead_guest[:phone],
         check_in: @params[:check_in],
         check_out: @params[:check_out],
         adults: [ @params[:adults].to_i, 1 ].max,
