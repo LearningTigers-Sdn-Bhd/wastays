@@ -203,6 +203,8 @@ Rails.application.routes.draw do
     get "dashboard", to: "dashboard#index", as: :dashboard
     resource :profile, only: [ :show ]
     resources :hotel_relationships, only: [ :edit, :update ], path: "linked-hotels"
+    # An agent booking a stay for a guest at a hotel this account is linked to.
+    resources :bookings, only: [ :index, :new, :create, :show ]
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
     resources :ar_statements, only: [ :index, :show ], path: "statements" do
       get "pdf/:filename", action: :pdf, as: :pdf, on: :member, constraints: { filename: /[^\/]+\.pdf/ }

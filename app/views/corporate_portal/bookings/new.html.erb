@@ -1,0 +1,144 @@
+<div class="mx-auto w-full max-w-4xl space-y-6">
+  <header>
+    <h1 class="text-2xl font-bold text-foreground">Book a stay</h1>
+    <p class="mt-1 text-sm text-muted-foreground">
+      Reserve a room for your guest at a hotel your account is linked to.
+    </p>
+  </header>
+
+  <% if @relationships.empty? %>
+    <div class="rounded-2xl border border-dashed border-border-interactive bg-card px-6 py-12 text-center text-muted-foreground">
+      Your account is not linked to any hotel yet.
+    </div>
+  <% else %>
+    <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <%= form_with url: new_corporate_booking_path, method: :get, class: "grid gap-4 sm:grid-cols-2 lg:grid-cols-5" do %>
+        <label class="lg:col-span-2 block">
+          <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Hotel</span>
+          <select name="hotel_relationship_id" class="form-input mt-1 w-full">
+            <% @relationships.each do |relationship| %>
+              <option value="<%= relationship.id %>" <%= "selected" if @relationship&.id == relationship.id %>>
+                <%= relationship.hotel.name %>
+              </option>
+            <% end %>
+          </select>
+        </label>
+
+        <label class="block">
+          <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Arrival</span>
+          <input type="date" name="check_in" value="<%= @check_in %>" required class="form-input mt-1 w-full">
+        </label>
+
+        <label class="block">
+          <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Departure</span>
+          <input type="date" name="check_out" value="<%= @check_out %>" required class="form-input mt-1 w-full">
+        </label>
+
+        <div class="grid grid-cols-2 gap-2">
+          <label class="block">
+            <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Adults</span>
+            <input type="number" name="adults" value="<%= @adults %>" min="1" class="form-input mt-1 w-full">
+          </label>
+          <label class="block">
+            <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Children</span>
+            <input type="number" name="children" value="<%= @children %>" min="0" class="form-input mt-1 w-full">
+          </label>
+        </div>
+
+        <div class="sm:col-span-2 lg:col-span-5">
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
+            Search availability
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+
+    <% if @search.present? %>
+      <% if @search.error.present? %>
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900"><%= @search.error %></div>
+      <% else %>
+        <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div class="border-b border-border px-6 py-4">
+            <h2 class="text-sm font-bold text-foreground">
+              <%= pluralize(@search.nights, "night") %> · <%= @check_in.strftime("%d %b") %> – <%= @check_out.strftime("%d %b %Y") %>
+            </h2>
+          </div>
+
+          <% if @search.available.empty? %>
+            <p class="px-6 py-10 text-center text-sm text-muted-foreground">
+              Nothing is available for these dates.
+            </p>
+          <% else %>
+            <ul class="divide-y divide-border">
+              <% @search.available.each do |option| %>
+                <li class="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+                  <div class="min-w-0">
+                    <p class="font-bold text-foreground"><%= option.room_type.name %></p>
+                    <p class="mt-0.5 text-xs text-muted-foreground">
+                      <%= option.rate_plan.name %> · <%= pluralize(option.available_count, "room") %> left
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <p class="text-right font-bold tabular-nums text-foreground">
+                      <%= option.currency %> <%= number_with_precision(option.total_amount, precision: 2) %>
+                      <span class="block text-xs font-normal text-muted-foreground">total stay</span>
+                    </p>
+                    <%= link_to new_corporate_booking_path(
+                          hotel_relationship_id: @relationship.id, check_in: @check_in, check_out: @check_out,
+                          adults: @adults, children: @children, room_type_id: option.room_type.id),
+                        class: "rounded-xl px-4 py-2 text-sm font-bold #{@selected&.room_type&.id == option.room_type.id ? 'bg-muted text-foreground' : 'bg-primary text-primary-foreground hover:bg-primary-hover'}" do %>
+                      <%= @selected&.room_type&.id == option.room_type.id ? "Selected" : "Select" %>
+                    <% end %>
+                  </div>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        </section>
+
+        <% if @selected.present? %>
+          <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <h2 class="text-sm font-bold text-foreground">Guest details</h2>
+            <p class="mt-1 text-xs text-muted-foreground">
+              <%= @selected.room_type.name %> · <%= @selected.currency %>
+              <%= number_with_precision(@selected.total_amount, precision: 2) %> for the stay.
+              Payment is not taken here — this follows your billing relationship with the hotel.
+            </p>
+
+            <%= form_with url: corporate_bookings_path, method: :post, scope: :booking, class: "mt-5 space-y-4" do |form| %>
+              <%= hidden_field_tag :hotel_relationship_id, @relationship.id %>
+              <%= form.hidden_field :room_type_id, value: @selected.room_type.id %>
+              <%= form.hidden_field :check_in, value: @check_in %>
+              <%= form.hidden_field :check_out, value: @check_out %>
+              <%= form.hidden_field :adults, value: @adults %>
+              <%= form.hidden_field :children, value: @children %>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <label class="block">
+                  <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Guest name</span>
+                  <%= form.text_field :guest_name, required: true, class: "form-input mt-1 w-full" %>
+                </label>
+                <label class="block">
+                  <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Guest phone</span>
+                  <%= form.telephone_field :guest_phone, required: true, class: "form-input mt-1 w-full" %>
+                </label>
+                <label class="block">
+                  <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Guest email</span>
+                  <%= form.email_field :guest_email, class: "form-input mt-1 w-full" %>
+                </label>
+                <label class="block">
+                  <span class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Special requests</span>
+                  <%= form.text_field :special_requests, class: "form-input mt-1 w-full" %>
+                </label>
+              </div>
+
+              <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
+                Confirm booking
+              <% end %>
+            <% end %>
+          </section>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

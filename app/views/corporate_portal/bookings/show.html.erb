@@ -1,0 +1,41 @@
+<div class="mx-auto w-full max-w-2xl space-y-6">
+  <section class="rounded-2xl border border-emerald-200 bg-card p-8 shadow-sm">
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Confirmed</p>
+    <h1 class="mt-2 text-2xl font-bold text-foreground"><%= @booking.guest_name %></h1>
+    <p class="mt-1 text-sm text-muted-foreground"><%= @booking.hotel.name %></p>
+
+    <dl class="mt-6 grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <dt class="text-muted-foreground">Reservation</dt>
+        <dd class="font-bold"><%= @booking.formatted_reservation_number %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Status</dt>
+        <dd class="font-bold"><%= @booking.status.humanize %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Arrival</dt>
+        <dd class="font-bold"><%= @booking.check_in.to_date.strftime("%d %b %Y") %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Departure</dt>
+        <dd class="font-bold"><%= @booking.check_out.to_date.strftime("%d %b %Y") %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Guests</dt>
+        <dd class="font-bold"><%= pluralize(@booking.adults, "adult") %><%= ", #{pluralize(@booking.children, 'child')}" if @booking.children.to_i.positive? %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Total</dt>
+        <dd class="font-bold"><%= @booking.currency %> <%= number_with_precision(@booking.total_amount, precision: 2) %></dd>
+      </div>
+    </dl>
+  </section>
+
+  <div class="flex flex-wrap gap-3">
+    <%= link_to "Book another stay", new_corporate_booking_path,
+          class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+    <%= link_to "All bookings", corporate_bookings_path,
+          class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
+  </div>
+</div>
