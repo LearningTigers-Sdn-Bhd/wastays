@@ -95,7 +95,6 @@ module AiConcierge
           ).call
 
           record(domain_result, digest: { advanced: true })
-          halt("The booking system has answered the guest. Stop.")
         end
 
         private

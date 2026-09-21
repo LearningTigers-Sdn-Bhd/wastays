@@ -19,9 +19,9 @@ module AiConcierge
         # The guest's question is not a parameter -- the tool already has the
         # message. Only the room type is something the model has to read.
         parameter :room_type_name, type: "string", required: false,
-          desc: "The room type the guest named, if they named one."
+          description: "The room type the guest named, if they named one."
         parameter :guest_language, type: "string", required: false,
-          desc: "ISO 639-1 code for the language used in the guest's message."
+          description: "ISO 639-1 code for the language used in the guest's message."
 
         def execute(room_type_name: nil, guest_language: nil)
           return advance_booking_instead if rate_question?

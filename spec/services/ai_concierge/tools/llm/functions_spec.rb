@@ -41,7 +41,7 @@ RSpec.describe "AI concierge tools the model can see" do
         guest_language: "en"
       )
 
-      expect(result).to be_a(RubyLLM::Tool::Halt)
+      expect(result).to eq(answered: true, question_count: 2)
       answer = recorder.outcome.domain_result.dig(:extra_context, :message)
       expect(answer).to include("1. Check-in — You can check in from 3:00 PM.")
       expect(answer).to include("2. Check-out — Check-out is by 11:00 AM.")
@@ -181,7 +181,7 @@ RSpec.describe "AI concierge tools the model can see" do
       result = tool(AiConcierge::Tools::Llm::AnswerHotelQuestionFunction, "how much is a room here?")
         .execute
 
-      expect(result).to be_a(RubyLLM::Tool::Halt)
+      expect(result).to eq(advanced: true)
       expect(recorder.outcome.domain_result[:active_flow]).to eq("booking_search")
       expect(recorder.outcome.domain_result[:pending_question]).to eq("booking_timing")
       expect(recorder.outcome.domain_result.dig(:slots_payload, "booking_task", "purpose")).to eq("price_exploration")

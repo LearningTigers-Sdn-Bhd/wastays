@@ -33,22 +33,22 @@ module AiConcierge
         # changes HybridAnswerBuilder's cache key. What the model is asked for
         # below is judgement it alone can supply.
         parameter :category, type: "string", required: false,
-          desc: "Where the answer is most likely to live: policy, general_info or faq. " \
+          description: "Where the answer is most likely to live: policy, general_info or faq. " \
                 "A wrong guess is recovered automatically, so omit it rather than forcing one."
         parameter :search_terms, type: "string", required: false,
-          desc: "A few words to look this question up by, space separated. " \
+          description: "A few words to look this question up by, space separated. " \
                 "Give them in every language the hotel's documents are written in, " \
                 "not only the guest's -- the search matches words, so a question in " \
                 "one language finds nothing in a document written in another."
         parameter :fact, type: "string", required: false,
-          desc: "Set to check_in_time, check_out_time or cancellation_policy when the " \
+          description: "Set to check_in_time, check_out_time or cancellation_policy when the " \
                 "guest explicitly asks exactly that. Do not infer check-in from open or opening hours. " \
                 "The hotel answers those from its own " \
                 "records, so naming one is faster and cannot be wrong."
         parameter :scope, type: "string", required: false,
-          desc: "Use specific or broad. Use broad only when the guest asks for an overview or all policies."
+          description: "Use specific or broad. Use broad only when the guest asks for an overview or all policies."
         parameter :guest_language, type: "string", required: false,
-          desc: "ISO 639-1 code for the language used in the guest's message. Omit it when the message has no language signal."
+          description: "ISO 639-1 code for the language used in the guest's message. Omit it when the message has no language signal."
 
         def execute(category: nil, search_terms: nil, fact: nil, scope: nil, guest_language: nil)
           return advance_booking_instead if rate_question?

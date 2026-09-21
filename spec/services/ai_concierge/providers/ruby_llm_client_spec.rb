@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe AiConcierge::Providers::RubyLlmClient do
   let(:context) { instance_double(RubyLLM::Context, chat: chat) }
-  let(:chat) { instance_double(RubyLLM::Chat, with_thinking: nil) }
+  let(:chat) { instance_double(RubyLLM::Chat, with_thinking: nil, with_instructions: nil) }
   let(:config) { double("ruby_llm_config").as_null_object }
 
   before do
@@ -44,26 +44,24 @@ RSpec.describe AiConcierge::Providers::RubyLlmClient do
     end
   end
 
-  describe "#cacheable" do
+  describe "#add_cacheable_instructions" do
     # claude is the only one that has to be asked. The other two cache a stable
     # prefix on their own, so there is nothing to write -- only something to
     # stop breaking, which is why the instructions are split at all.
     it "marks the block for claude to keep" do
       hotel = build(:hotel, ai_provider_enabled: true, ai_provider_name: "claude", ai_provider_key: "test-key")
 
-      result = described_class.new(hotel: hotel).cacheable("the stable half")
+      described_class.new(hotel: hotel).add_cacheable_instructions(chat, "the stable half")
 
-      expect(result).to be_a(RubyLLM::Content::Raw)
-      expect(result.value).to eq(
-        [ { type: "text", text: "the stable half", cache_control: { type: "ephemeral" } } ]
-      )
+      expect(chat).to have_received(:with_instructions).with("the stable half", cache_until_here: true)
     end
 
     it "hands the other providers the text unchanged" do
       %w[openai gemini].each do |provider|
         hotel = build(:hotel, ai_provider_enabled: true, ai_provider_name: provider, ai_provider_key: "test-key")
+        expect(chat).to receive(:with_instructions).with("the stable half")
 
-        expect(described_class.new(hotel: hotel).cacheable("the stable half")).to eq("the stable half")
+        described_class.new(hotel: hotel).add_cacheable_instructions(chat, "the stable half")
       end
     end
   end
