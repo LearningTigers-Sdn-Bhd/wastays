@@ -2,12 +2,30 @@
 
 module Admin
   class IntegrationsController < Admin::BaseController
-    AI_PROVIDER_CONFIG_KEYS = %w[
-      gemini_api_key
-      openai_api_key
-      deepseek_api_key
-      anthropic_api_key
+    # One entry per tab. The view reads this for both the tab strip and the
+    # panels, so a tab and its partial can never drift apart.
+    TABS = [
+      { name: "channel_manager", label: "Channel manager", icon: "waypoints" },
+      { name: "storage", label: "Storage", icon: "database" },
+      { name: "ai_providers", label: "AI providers", icon: "sparkles" },
+      { name: "around_that", label: "AroundThat", icon: "map-pin" }
     ].freeze
+
+    TAB_NAMES = TABS.map { |tab| tab[:name] }.freeze
+
+    CHANNEX_ENVIRONMENTS = [
+      { label: "Staging", value: "staging" },
+      { label: "Production", value: "production" }
+    ].freeze
+
+    AI_PROVIDERS = [
+      { label: "Gemini", key: "gemini_api_key" },
+      { label: "OpenAI", key: "openai_api_key" },
+      { label: "DeepSeek", key: "deepseek_api_key" },
+      { label: "Claude", key: "anthropic_api_key" }
+    ].freeze
+
+    AI_PROVIDER_CONFIG_KEYS = AI_PROVIDERS.map { |provider| provider[:key] }.freeze
 
     AROUND_THAT_CONFIG_KEYS = %w[
       aroundthat_api_key
@@ -21,6 +39,8 @@ module Admin
     ].freeze
 
     def show
+      @active_tab = requested_tab
+
       @channex_api_key = AppConfig.get("channex_api_key")
       @channex_environment = AppConfig.get("channex_environment") || "staging"
 
@@ -71,7 +91,9 @@ module Admin
         AppConfig.set(key, params[key].to_s.strip) if params.key?(key)
       end
 
-      redirect_to admin_integrations_path, notice: "Settings saved successfully."
+      # Each form posts the tab it belongs to, so saving does not throw the
+      # admin back to the first tab.
+      redirect_to admin_integrations_path(tab: requested_tab), notice: "Settings saved successfully."
     end
 
     def test_around_that_connection
@@ -112,6 +134,12 @@ module Admin
       rescue StandardError => e
         render json: { success: false, message: "An error occurred: #{e.message}" }, status: :internal_server_error
       end
+    end
+
+    private
+
+    def requested_tab
+      TAB_NAMES.include?(params[:tab]) ? params[:tab] : TAB_NAMES.first
     end
   end
 end

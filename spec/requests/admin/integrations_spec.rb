@@ -18,6 +18,64 @@ RSpec.describe "Admin::Integrations", type: :request do
         get admin_integrations_path
         expect(response).to have_http_status(:ok)
       end
+
+      it "renders one tab per integration" do
+        get admin_integrations_path
+
+        Admin::IntegrationsController::TABS.each do |tab|
+          expect(response.body).to include(tab[:label])
+        end
+      end
+
+      it "gives every panel a visible heading" do
+        get admin_integrations_path
+
+        [ "Channel manager", "Storage", "AI providers", "AroundThat" ].each do |title|
+          expect(response.body).to include(%(<h2 class="text-base font-semibold tracking-tight text-foreground">#{title}</h2>))
+        end
+      end
+
+      it "opens the first tab by default" do
+        get admin_integrations_path
+
+        expect(response.body).to include('data-panels-ui--tabs-active-value="channel_manager"')
+      end
+
+      it "opens the tab named in the query string" do
+        get admin_integrations_path(tab: "around_that")
+
+        expect(response.body).to include('data-panels-ui--tabs-active-value="around_that"')
+      end
+
+      it "ignores an unknown tab" do
+        get admin_integrations_path(tab: "nope")
+
+        expect(response.body).to include('data-panels-ui--tabs-active-value="channel_manager"')
+      end
+
+      it "shows a stored key in a maskable field" do
+        AppConfig.set("aroundthat_api_key", "at-stored-key")
+
+        get admin_integrations_path
+
+        expect(response.body).to include('type="password"')
+        expect(response.body).to include("at-stored-key")
+      end
+
+      it "wires the reveal toggle to the password-toggle controller" do
+        get admin_integrations_path
+
+        expect(response.body).to include('data-controller="password-toggle"')
+        expect(response.body).to include("password-toggle#toggle")
+      end
+
+      it "wires both connection tests to the connection-test controller" do
+        get admin_integrations_path
+
+        expect(response.body).to include("connection-test#run")
+        expect(response.body).to include(test_r2_connection_admin_integrations_path)
+        expect(response.body).to include(test_around_that_connection_admin_integrations_path)
+      end
     end
 
     context "as regular user" do
@@ -133,9 +191,21 @@ RSpec.describe "Admin::Integrations", type: :request do
 
     it "redirects back to integrations page with success flash" do
       patch admin_integrations_path, params: { channex_api_key: "ch-123" }
-      expect(response).to redirect_to(admin_integrations_path)
+      expect(response).to redirect_to(admin_integrations_path(tab: "channel_manager"))
       follow_redirect!
       expect(response.body).to include("saved")
+    end
+
+    it "returns to the tab the form was posted from" do
+      patch admin_integrations_path, params: { tab: "around_that", aroundthat_api_key: "at-key" }
+
+      expect(response).to redirect_to(admin_integrations_path(tab: "around_that"))
+    end
+
+    it "falls back to the first tab when the posted tab is unknown" do
+      patch admin_integrations_path, params: { tab: "nope", channex_api_key: "ch-123" }
+
+      expect(response).to redirect_to(admin_integrations_path(tab: "channel_manager"))
     end
   end
 end

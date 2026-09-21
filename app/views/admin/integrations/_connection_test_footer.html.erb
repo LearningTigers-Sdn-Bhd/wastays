@@ -1,0 +1,19 @@
+<%# The test reads the saved settings, not the values currently in the form, so
+    the button sits beside Save rather than inside the field group. %>
+<div class="space-y-3">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <%= render PanelsUI::Button.new(
+          label: "Test connection",
+          variant: :secondary,
+          data: {
+            connection_test_target: "button",
+            action: "click->connection-test#run"
+          }) %>
+    <%= render PanelsUI::Button.new(label: save_label, type: "submit") %>
+  </div>
+
+  <p class="text-sm text-muted-foreground"
+     role="status"
+     aria-live="polite"
+     data-connection-test-target="status"></p>
+</div>
