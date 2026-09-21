@@ -11,7 +11,7 @@ RSpec.describe VendorDirectory::Category do
 
       expect(category.to_param).to eq("food-drink")
       expect(Rails.application.routes.url_helpers.concierge_recommendations_path(
-        hotel_slug: "sample-hotel", category: category
+        hotel_code: "10101", public_id: SecureRandom.uuid, category: category
       )).to include("category=food-drink")
     end
   end
