@@ -207,6 +207,41 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(response.body).to include(new_corporate_ar_payment_submission_path)
   end
 
+  # Travel agents settle by bank transfer only, so the card tile is not offered
+  # and the gateway route refuses them even when posted to directly.
+  it "offers a travel agent bank transfer only on choose method" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active", account_type: "travel_agent")
+    invoice = create_invoice(relationship)
+
+    get choose_method_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id, invoice_ids: [ invoice.id ])
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Bank Transfer")
+    expect(response.body).to include(new_corporate_ar_payment_submission_path)
+    expect(response.body).not_to include("Pay Online")
+    expect(response.body).not_to include(review_corporate_ar_payments_path)
+  end
+
+  it "refuses a gateway payment posted directly by a travel agent" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active", account_type: "travel_agent")
+    invoice = create_invoice(relationship)
+
+    expect {
+      post review_corporate_ar_payments_path, params: {
+        corporate_ar_payment: {
+          hotel_corporate_account_id: relationship.id,
+          currency: invoice.currency,
+          gateway: "razorpay",
+          amount: invoice.outstanding_amount,
+          invoice_ids: [ invoice.id ]
+        }
+      }
+    }.not_to change(CorporateArPaymentIntent, :count)
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("settle by bank transfer")
+  end
+
   it "redirects back to pay invoices when choose method has no invoices selected" do
     relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
 

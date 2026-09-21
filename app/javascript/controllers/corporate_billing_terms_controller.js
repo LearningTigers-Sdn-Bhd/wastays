@@ -7,14 +7,19 @@ import { Controller } from "@hotwired/stimulus"
 // answer those questions on a standard account invites answers that are then
 // stored and never read.
 //
-// Several blocks can carry the target, because the fields do not all live in
+// The payment hold is the mirror image: only a standard account holds rooms
+// against a payment deadline, because a direct-bill account is invoiced after
+// the stay by arrangement. Blocks carrying the "hold" target show exactly when
+// the "terms" blocks hide.
+//
+// Several blocks can carry either target, because the fields do not all live in
 // one partial.
 //
 // The hidden fields are disabled so they do not submit. Credit currency is
 // required, but nothing is lost: a new invitation defaults it to the hotel's
 // currency, and an update leaves an unsubmitted attribute untouched.
 export default class extends Controller {
-  static targets = ["terms"]
+  static targets = ["terms", "hold"]
   static values = { billedRelationship: { type: String, default: "direct_bill" } }
 
   connect() {
@@ -24,15 +29,20 @@ export default class extends Controller {
   refresh() {
     const billed = this.relationshipControl?.value === this.billedRelationshipValue
 
-    this.termsTargets.forEach((block) => {
-      block.hidden = !billed
-      block.classList.toggle("hidden", !billed)
+    this.toggle(this.termsTargets, billed)
+    this.toggle(this.holdTargets, !billed)
+  }
+
+  toggle(blocks, visible) {
+    blocks.forEach((block) => {
+      block.hidden = !visible
+      block.classList.toggle("hidden", !visible)
       // Only the named controls. The trigger button of an enhanced select
       // manages its own disabled state, and re-enabling it here would override
       // that.
       block
         .querySelectorAll("input[name], select[name], textarea[name]")
-        .forEach((control) => { control.disabled = !billed })
+        .forEach((control) => { control.disabled = !visible })
     })
   }
 

@@ -20,7 +20,10 @@ module CorporatePortal
   # room's price follows who is in that room, so a party split unevenly is
   # booked as separate searches rather than averaged.
   #
-  # The bookings are attributed to the agent through hotel_corporate_account_id.
+  # The bookings are attributed to the agent three ways: the agency through
+  # hotel_corporate_account_id, the person who made it through
+  # corporate_booked_by, and the channel through a "travel_agent" source, so
+  # they can be told from a booking keyed at the desk in a source-grouped report.
   # No money is taken: they are created unpaid and settle by the relationship --
   # direct bill is invoiced, standard settles at checkout.
   class CreateAgentBooking
@@ -96,7 +99,19 @@ module CorporatePortal
       raise Failed, Array(result.errors).to_sentence unless result.success?
 
       add_companions(result.booking, guests)
+      stamp_payment_deadline(result.booking)
       result.booking
+    end
+
+    # Standard accounts hold the room against a payment deadline; direct bill is
+    # invoiced after the stay and gets no deadline. Stamped here rather than in
+    # a model callback so the only bookings carrying one are the ones an agent
+    # made, and so the clock starts when the booking was actually taken.
+    def stamp_payment_deadline(booking)
+      due_at = ::Bookings::PaymentHold.due_at(booking: booking)
+      return if due_at.blank?
+
+      booking.update!(payment_due_at: due_at)
     end
 
     def booking_params(room_type, guests, index)
@@ -114,8 +129,13 @@ module CorporatePortal
         # The agent sells the category, not a numbered room. The desk assigns one
         # at arrival, as it does for any unassigned reservation.
         require_room_number: false,
-        source: "internal",
+        source: "travel_agent",
         hotel_corporate_account_id: @relationship.id,
+        # Which agency is already known from the relationship; these say which
+        # person there made it, and when. Wall-clock, not the business date --
+        # it is a record of an action, not of a hotel trading day.
+        corporate_booked_by_id: @user&.id,
+        corporate_booked_at: Time.current,
         special_requests: @params[:special_requests].presence,
         internal_notes: "Booked through the corporate portal by " \
                         "#{@relationship.corporate_account&.name}#{" (room #{index + 1} of #{rooms.size})" if rooms.many?}."

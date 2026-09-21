@@ -37,6 +37,10 @@
     </dl>
   </section>
 
+  <%# Rooms are held against this deadline, so it sits directly under the
+      confirmation rather than at the foot of the page. %>
+  <%= render "corporate_portal/bookings/payment_deadline", booking: @booking, compact: false %>
+
   <% if @bookings.size > 1 %>
     <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div class="border-b border-border px-6 py-4">

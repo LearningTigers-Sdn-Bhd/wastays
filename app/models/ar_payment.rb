@@ -8,6 +8,10 @@ class ArPayment < ApplicationRecord
   has_many :ar_payment_allocations, dependent: :restrict_with_error
   has_many :ar_invoices, through: :ar_payment_allocations
   has_one :receipt, dependent: :restrict_with_error
+  # The agent's remittance proof, when the payment was approved from one. The
+  # slip has to stay reachable from the payment after approval — it is the
+  # evidence behind the money.
+  has_one :ar_payment_submission, dependent: :nullify, inverse_of: :ar_payment
 
   after_create :issue_payment_receipt
 

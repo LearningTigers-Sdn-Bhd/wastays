@@ -120,6 +120,7 @@ module HotelPortal
         :credit_limit,
         :credit_currency,
         :payment_terms_days,
+        :agent_payment_hold_hours,
         :contact_email,
         :contact_phone,
         :billing_address_line1,

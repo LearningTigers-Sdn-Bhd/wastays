@@ -1176,4 +1176,43 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response).to have_http_status(:moved_permanently)
     end
   end
+
+  # An agent booking's `source` is "internal", the same as one keyed at the
+  # desk, so this badge is the only thing on the list that says an agency sold
+  # the room -- and who there sold it.
+  describe "agent bookings" do
+    let(:corporate_user) { create(:user, :corporate) }
+    let(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account, account_type: "travel_agent")
+    end
+
+    it "marks a booking made through the corporate portal, naming the agency and the person" do
+      booking(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+              corporate_booked_at: Time.current)
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response).to have_http_status(:success)
+      body = response.parsed_body.text
+      expect(body).to include("Booked by an agency")
+      expect(body).to include(relationship.corporate_account.name)
+      expect(body).to include(corporate_user.name)
+    end
+
+    it "leaves a staff-keyed booking unmarked" do
+      booking
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response.parsed_body.text).not_to include("Booked by an agency")
+    end
+
+    it "leaves a corporate booking that predates attribution unmarked" do
+      booking(hotel_corporate_account: relationship)
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response.parsed_body.text).not_to include("Booked by an agency")
+    end
+  end
 end

@@ -23,6 +23,11 @@ class HotelCorporateAccount < ApplicationRecord
   validates :credit_currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :credit_limit, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :payment_terms_days, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
+  # How long this agency's bookings are held before payment, overriding the
+  # hotel default. Deliberately separate from payment_terms_days: that is when
+  # an AR invoice falls due, and sharing it would let an invoice-terms change
+  # silently release inventory. See Bookings::PaymentHold.
+  validates :agent_payment_hold_hours, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :agent_code, uniqueness: { scope: :hotel_id }, allow_nil: true
   validate :corporate_account_kind
 
@@ -31,6 +36,13 @@ class HotelCorporateAccount < ApplicationRecord
 
   scope :active, -> { where(status: "active") }
   scope :suspended, -> { where(status: "suspended") }
+
+  # Travel agents settle by bank transfer only: the hotel needs the remittance
+  # slip against the invoice, and card fees on agent volume are not absorbed.
+  # Other corporate account types keep the gateway.
+  def gateway_payments_allowed?
+    !travel_agent?
+  end
 
   def effective_contact_email
     contact_email.presence || corporate_account&.users&.min_by(&:id)&.email

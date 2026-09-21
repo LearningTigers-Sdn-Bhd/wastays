@@ -22,6 +22,7 @@
           <div class="flex items-center gap-1.5">
             <span class="font-semibold text-foreground"><%= presenter.guest_name %></span>
             <%= render "guest_markers", presenter: %>
+            <%= render "hotel_portal/bookings/agent_badge", presenter: presenter, dom_id: "booking-#{booking.id}" %>
           </div>
           <div class="mt-1 text-xs text-muted-foreground"><%= presenter.guest_email_display %> · <span class="font-mono"><%= presenter.guest_phone_display %></span></div>
         </td>

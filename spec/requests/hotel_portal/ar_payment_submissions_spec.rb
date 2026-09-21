@@ -179,4 +179,40 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     get hotel_ar_payment_submission_path(hotel, submission)
     expect(flash[:alert]).to include("not authorized")
   end
+
+  # Staff approve or reject money on the strength of the slip, so it has to be
+  # on the screen where that decision is made, and it has to survive approval.
+  it "shows the agent's slip on the record-payment screen" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-PROOF", amount: 275)
+
+    get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Agent's payment proof")
+    expect(response.body).to include("View transaction slip")
+    expect(response.body).to include(rails_blob_path(submission.slip, disposition: "inline"))
+  end
+
+  it "keeps the slip reachable from the payment once the submission is approved" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-APPROVED", amount: 275)
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 275, currency: "MYR")
+    submission.approve!(ar_payment: payment, reviewed_by: user)
+
+    get hotel_ar_payment_path(hotel, payment)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Payment proof")
+    expect(response.body).to include(rails_blob_path(submission.slip, disposition: "inline"))
+    expect(response.body).to include(hotel_ar_payment_submission_path(hotel, submission))
+  end
+
+  it "says so plainly instead of raising when a submission has no slip" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-MISSING", amount: 275)
+    submission.slip.purge
+
+    get hotel_ar_payment_submission_path(hotel, submission)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("No slip on file")
+  end
 end

@@ -14,6 +14,7 @@ module HotelPortal
       payment = current_hotel.ar_payments
         .includes(
           { ar_payment_allocations: [ :ar_invoice, { reversal: :reversed_by } ] },
+          { ar_payment_submission: [ :submitted_by, { slip_attachment: :blob } ] },
           hotel_corporate_account: :corporate_account
         )
         .find(params[:id])

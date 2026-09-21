@@ -1246,4 +1246,37 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(room_rows.find { |row| row.id == folio.id }).to have_attributes(active: false)
     end
   end
+
+  # The agency is already on the booking; the person who made it is not
+  # recoverable from anywhere else, so the header states both.
+  describe "agent attribution" do
+    let(:corporate_user) { create(:user, :corporate) }
+    let(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account, account_type: "travel_agent")
+    end
+
+    it "names the agency, the person and the time, in the hotel's zone" do
+      booked_at = Time.current
+      booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                      corporate_booked_at: booked_at)
+
+      expect(presenter).to be_agent_booking
+      expect(presenter.agent_attribution).to eq(
+        agency: relationship.corporate_account.name,
+        person: corporate_user.name,
+        booked_at: booked_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y %H:%M")
+      )
+    end
+
+    it "says nothing for a booking keyed at the desk" do
+      expect(presenter).not_to be_agent_booking
+      expect(presenter.agent_attribution).to be_nil
+    end
+
+    it "says nothing for a corporate booking made before attribution was recorded" do
+      booking.update!(hotel_corporate_account: relationship)
+
+      expect(presenter).not_to be_agent_booking
+    end
+  end
 end

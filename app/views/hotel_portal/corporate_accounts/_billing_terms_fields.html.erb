@@ -35,4 +35,20 @@
       <% field.with_input(type: :number, value: payment_terms_days, min: 0, placeholder: "No terms") %>
     <% end %>
   </div>
+
+  <%# The mirror image: only a standard account holds rooms against a payment
+      deadline. Deliberately not the payment terms above -- those say when an
+      invoice falls due, and sharing them would let an invoicing change release
+      inventory.
+
+      Set on the relationship, not proposed on an invitation: until the account
+      exists there is nothing holding rooms, and the hotel default covers it. %>
+  <% if local_assigns.fetch(:agent_payment_hold_hours, :absent) != :absent %>
+  <div data-corporate-billing-terms-target="hold">
+    <%= render PanelsUI::FormField.new(form: form, attribute: :agent_payment_hold_hours, label: "Payment hold (hours)",
+      hint: "How long this account's bookings are held before the rooms are released for non-payment. Leave blank to use the hotel default of #{agent_payment_hold_default} hours. A hold never runs past the arrival date.") do |field| %>
+      <% field.with_input(type: :number, value: agent_payment_hold_hours, min: 1, placeholder: "Hotel default (#{agent_payment_hold_default})") %>
+    <% end %>
+  </div>
+  <% end %>
 </section>

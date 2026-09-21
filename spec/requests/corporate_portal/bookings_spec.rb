@@ -38,7 +38,9 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     get new_corporate_booking_path
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include(hotel.name)
+    # Faker hands out names like "Cormier-O'Reilly"; the rendered page escapes
+    # the apostrophe, so compare against the escaped form.
+    expect(response.body).to include(ERB::Util.html_escape(hotel.name))
   end
 
   it "shows what is available for the dates, priced for the stay" do

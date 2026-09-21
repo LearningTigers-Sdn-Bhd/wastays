@@ -551,6 +551,23 @@ module HotelPortal
       format_date(booking.created_at.in_time_zone(hotel.hotel_time_zone), :long)
     end
 
+    # An agency booking made through the corporate portal. Its `source` is
+    # "internal", the same as a booking keyed at the desk, so the badge this
+    # feeds is the only thing on the list that says an agent sold the room.
+    def agent_booking?
+      booking.hotel_corporate_account_id.present? && booking.corporate_booked_at.present?
+    end
+
+    def agent_attribution
+      return unless agent_booking?
+
+      {
+        agency: booking.hotel_corporate_account&.corporate_account&.name,
+        person: booking.corporate_booked_by&.name,
+        booked_at: booking.corporate_booked_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y %H:%M")
+      }
+    end
+
     def status_variant_class
       booking_styles = {
         "pending" => "border-warning/30 bg-warning/10 text-warning",

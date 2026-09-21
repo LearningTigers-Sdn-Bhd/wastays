@@ -230,6 +230,23 @@ module HotelPortal
       clauses.join(" ")
     end
 
+    # A booking made by an agency through the corporate portal. Its `source` is
+    # "internal", the same as a staff-keyed booking, so without this the desk
+    # cannot tell who sold the room.
+    def agent_booking?
+      booking.hotel_corporate_account_id.present? && booking.corporate_booked_at.present?
+    end
+
+    def agent_attribution
+      return unless agent_booking?
+
+      {
+        agency: booking.hotel_corporate_account&.corporate_account&.name,
+        person: booking.corporate_booked_by&.name,
+        booked_at: time_label(booking.corporate_booked_at)
+      }
+    end
+
     def header_status_badge
       presentable_badge(group_context_enabled? ? group_status_badge : status_badge(booking.status))
     end

@@ -13,6 +13,9 @@ production:
   release_expired_holds:
     class: BookingEngine::ReleaseExpiredHoldsJob
     schedule: every minute
+  release_unpaid_agent_bookings:
+    class: Bookings::ReleaseUnpaidAgentBookingsJob
+    schedule: every 5 minutes
   pull_channex_revisions:
     class: ChannelManagers::PullRevisionsJob
     schedule: every 15 minutes
