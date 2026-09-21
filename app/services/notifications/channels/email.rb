@@ -9,6 +9,10 @@ module Notifications
         "pre_arrival_notification" => :pre_arrival_notification,
         "check_out_receipt_message" => :check_out_receipt_message,
         "in_stay_guest_messaging" => :in_stay_guest_messaging,
+        "agent_payment_reminder" => :agent_payment_reminder,
+        "agent_payment_approved" => :agent_payment_approved,
+        "agent_payment_rejected" => :agent_payment_rejected,
+        "agent_booking_released" => :agent_booking_released,
         "invoice_package" => :invoice_package,
         "guest_registration_card" => :guest_registration_card
       }.freeze

@@ -73,6 +73,23 @@ module HotelPortal
       end
     end
 
+    # The one notification in this set aimed at a business contact rather than a
+    # guest, and the only one whose schedule is counted back from a deadline.
+    def agent_payment_reminder_notification_config
+      @agent_payment_reminder_notification_config ||= begin
+        config = NotificationConfig.find_or_initialize_by(
+          hotel: hotel,
+          notification_type: "agent_payment_reminder"
+        )
+        config.enabled = false if config.new_record?
+        config.channels = [ "email" ] if config.channels.blank?
+        config.settings = config.settings.to_h.reverse_merge(
+          "offsets_hours" => NotificationConfig::DEFAULT_AGENT_REMINDER_OFFSETS
+        )
+        config
+      end
+    end
+
     def check_out_receipt_notification_config
       @check_out_receipt_notification_config ||= begin
         config = NotificationConfig.find_or_initialize_by(

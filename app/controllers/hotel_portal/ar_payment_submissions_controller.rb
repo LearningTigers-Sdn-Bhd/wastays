@@ -9,10 +9,16 @@ module HotelPortal
     def show; end
 
     def reject
-      if @submission.reject!(reason: reject_params[:rejection_reason], reviewed_by: current_user)
+      result = ::ArPaymentSubmissions::Reject.call(
+        submission: @submission,
+        reason: reject_params[:rejection_reason],
+        reviewed_by: current_user
+      )
+
+      if result.success?
         redirect_to hotel_ar_payments_path(current_hotel), notice: "Payment submission rejected."
       else
-        redirect_to hotel_ar_payment_submission_path(current_hotel, @submission), alert: @submission.errors.full_messages.to_sentence
+        redirect_to hotel_ar_payment_submission_path(current_hotel, @submission), alert: result.error
       end
     end
 

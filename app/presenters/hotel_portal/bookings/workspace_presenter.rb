@@ -234,17 +234,13 @@ module HotelPortal
     # "internal", the same as a staff-keyed booking, so without this the desk
     # cannot tell who sold the room.
     def agent_booking?
-      booking.hotel_corporate_account_id.present? && booking.corporate_booked_at.present?
+      AgentAttribution.agent_booking?(booking)
     end
 
+    # Shared with HotelPortal::BookingPresenter, which feeds the same badge on
+    # the reservations list.
     def agent_attribution
-      return unless agent_booking?
-
-      {
-        agency: booking.hotel_corporate_account&.corporate_account&.name,
-        person: booking.corporate_booked_by&.name,
-        booked_at: time_label(booking.corporate_booked_at)
-      }
+      @agent_attribution ||= AgentAttribution.for(booking, time_zone: hotel.hotel_time_zone)
     end
 
     def header_status_badge

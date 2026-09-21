@@ -109,7 +109,7 @@
               credit_limit: @relationship.credit_limit,
               payment_terms_days: @relationship.payment_terms_days,
               agent_payment_hold_hours: @relationship.agent_payment_hold_hours,
-              agent_payment_hold_default: current_hotel.agent_payment_hold_hours,
+              agent_payment_hold_default: current_hotel.agent_payment_hold_label,
               hint: "These terms govern invoicing and credit exposure for this account at this hotel." %>
 
             <%# Allocation applies payments against outstanding invoices, and a

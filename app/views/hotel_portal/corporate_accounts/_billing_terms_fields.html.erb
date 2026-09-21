@@ -45,10 +45,11 @@
       exists there is nothing holding rooms, and the hotel default covers it. %>
   <% if local_assigns.fetch(:agent_payment_hold_hours, :absent) != :absent %>
   <div data-corporate-billing-terms-target="hold">
-    <%= render PanelsUI::FormField.new(form: form, attribute: :agent_payment_hold_hours, label: "Payment hold (hours)",
-      hint: "How long this account's bookings are held before the rooms are released for non-payment. Leave blank to use the hotel default of #{agent_payment_hold_default} hours. A hold never runs past the arrival date.") do |field| %>
-      <% field.with_input(type: :number, value: agent_payment_hold_hours, min: 1, placeholder: "Hotel default (#{agent_payment_hold_default})") %>
-    <% end %>
+    <%= render "hotel_portal/shared/agent_payment_hold_field",
+          form: form,
+          label: "Payment hold",
+          placeholder: "Hotel default (#{agent_payment_hold_default})",
+          hint: "How long this account's bookings are held before the rooms are released for non-payment. Leave blank to use the hotel default of #{agent_payment_hold_default}. A hold never runs past the arrival date." %>
   </div>
   <% end %>
 </section>

@@ -22,8 +22,8 @@ module Bookings
   # review queue -- and resumes only if the submission is rejected.
   class ReleaseUnpaidAgentBookings
     SOURCE = "payment_deadline_sweeper"
-    RELEASABLE_STATUSES = %w[confirmed].freeze
-    UNPAID_PAYMENT_STATUSES = %w[pending failed].freeze
+    RELEASABLE_STATUSES = PaymentHoldScope::HELD_STATUSES
+    UNPAID_PAYMENT_STATUSES = PaymentHoldScope::UNPAID_PAYMENT_STATUSES
 
     Result = Struct.new(:released, :skipped, :failed, keyword_init: true) do
       def released_count = released.size
@@ -49,14 +49,11 @@ module Bookings
 
     private
 
-    # Wall-clock, deliberately: see Bookings::PaymentHold.
+    # Wall-clock, deliberately: see Bookings::PaymentHold. The scope is shared
+    # with the reminder scheduler so the two cannot disagree about which
+    # bookings are held.
     def due_bookings
-      scope = Booking
-        .where.not(payment_due_at: nil)
-        .where(payment_due_at: ..@now)
-        .where(status: RELEASABLE_STATUSES)
-        .where(payment_status: UNPAID_PAYMENT_STATUSES)
-        .where.not(hotel_corporate_account_id: nil)
+      scope = PaymentHoldScope.held.where(payment_due_at: ..@now)
       scope = scope.where(hotel: @hotel) if @hotel
       scope.order(:payment_due_at)
     end
@@ -78,6 +75,7 @@ module Bookings
 
         return failure(booking, result) unless result.success?
 
+        notify(booking)
         { status: :released, booking_id: booking.id }
       end
     # A night audit in progress makes TransitionStatus refuse the change. That is
@@ -99,15 +97,28 @@ module Bookings
         !protected_by_submission?(booking)
     end
 
-    # A slip already uploaded and not yet reviewed stops the clock. A rejected
-    # one does not: rejection restarts it, and the deadline is extended by the
-    # time the hotel spent reviewing (see ArPaymentSubmissions::Reject).
     def protected_by_submission?(booking)
-      ArPaymentSubmission.pending.for_booking(booking).exists?
+      PaymentHoldScope.protected_by_submission?(booking)
     end
 
     def reason_for(booking)
       "Payment not received by #{booking.payment_due_at.in_time_zone(booking.hotel.hotel_time_zone).strftime('%d %b %Y %H:%M %Z')}."
+    end
+
+    # The agent is told their rooms are gone, and the desk is told on the bell,
+    # because a reservation that disappears overnight is otherwise a phone call
+    # nobody can answer. Neither failure is allowed to undo the release itself.
+    def notify(booking)
+      ::Notifications::QueueAgentPaymentNotice.call(
+        booking: booking,
+        notification_type: "agent_booking_released",
+        trigger_event: SOURCE,
+        idempotency_key: "agent_booking_released:#{booking.id}",
+        extra: { released_at: @now.iso8601 }
+      )
+      ::Notifications::PublishAgentPaymentStaffNotification.call(booking: booking, event: :released)
+    rescue StandardError => e
+      Rails.logger.error("[#{SOURCE}] booking #{booking.id} released but not notified: #{e.class}: #{e.message}")
     end
 
     def skip(booking)

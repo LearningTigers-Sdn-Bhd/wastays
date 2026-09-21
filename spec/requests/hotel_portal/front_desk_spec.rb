@@ -1215,4 +1215,38 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.parsed_body.text).not_to include("Booked by an agency")
     end
   end
+
+  # The reservations list is scanned for what needs doing, so a booking that is
+  # over and needs nothing recedes rather than competing for attention.
+  describe "cancelled reservations in the list" do
+    it "dims the cancelled row and leaves a live one at full weight" do
+      cancelled = booking(status: "cancelled")
+      live = booking(status: "confirmed")
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
+
+      rows = response.parsed_body.css("#front-desk-results table tbody tr[data-booking-token]")
+      cancelled_row = rows.find { |row| row["data-booking-token"] == cancelled.confirmation_token }
+      live_row = rows.find { |row| row["data-booking-token"] == live.confirmation_token }
+
+      expect(cancelled_row["class"]).to include("opacity-55")
+      expect(live_row["class"]).not_to include("opacity-55")
+    end
+
+    # The card view is the default on narrow screens, so it has to agree with
+    # the table rather than leaving cancelled stays at full weight there.
+    it "dims the cancelled card in the card view too" do
+      cancelled = booking(status: "cancelled")
+      live = booking(status: "confirmed")
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings" }
+
+      cards = response.parsed_body.css("article.front-desk-stay-card[data-booking-token]")
+      cancelled_card = cards.find { |card| card["data-booking-token"] == cancelled.confirmation_token }
+      live_card = cards.find { |card| card["data-booking-token"] == live.confirmation_token }
+
+      expect(cancelled_card["class"]).to include("opacity-55")
+      expect(live_card["class"]).not_to include("opacity-55")
+    end
+  end
 end

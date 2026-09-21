@@ -1,7 +1,7 @@
 <%# The payment deadline on an agent's booking. The exact time is rendered
     server-side and carries its timezone, so the line still reads correctly with
     JavaScript off; the Stimulus controller only adds the "2d 4h left" part. %>
-<% payment = CorporatePortal::BookingPaymentPresenter.new(booking) %>
+<% payment = local_assigns[:payment] || CorporatePortal::BookingPaymentPresenter.new(booking) %>
 <% if payment.awaiting_payment? %>
   <div class="panel-payment-deadline <%= compact ? "text-xs" : "rounded-xl border border-border bg-muted/40 p-4 text-sm" %>"
        data-controller="payment-deadline"
@@ -15,7 +15,9 @@
         <%= cached_icon "clock", class: "size-3.5 shrink-0 text-muted-foreground", aria: { hidden: true } %>
         <span class="font-bold text-foreground">Pay <%= payment.amount_label %></span>
         <span class="text-muted-foreground">by <%= payment.due_at_label %></span>
-        <span class="font-bold tabular-nums" data-payment-deadline-target="remaining"></span>
+        <%# Rendered server-side so the line still says how long is left with
+            JavaScript off; the controller replaces it with a live count. %>
+        <span class="font-bold tabular-nums" data-payment-deadline-target="remaining"><%= payment.time_left_label %></span>
       <% end %>
     </div>
 

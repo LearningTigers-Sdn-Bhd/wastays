@@ -182,4 +182,66 @@ RSpec.describe NotificationMailer, type: :mailer do
     expect(in_stay_mail.body.encoded).to include("Mid-stay check-in")
     expect(in_stay_mail.body.encoded).to include(delivery.booking.confirmation_token)
   end
+
+  # The only mails in this class addressed to somebody other than the guest.
+  describe "agent payment mails" do
+    let(:hotel) { create(:hotel, name: "Cedar Stay", status: "live") }
+    let(:corporate_user) { create(:user, :corporate, email: "agent@agency.test") }
+    let(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account, account_type: "travel_agent")
+    end
+    let(:booking) do
+      create(:booking, hotel: hotel, hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                       guest_email: "guest@example.com", status: "confirmed", payment_status: "pending",
+                       payment_due_at: 6.hours.from_now)
+    end
+
+    def agent_delivery(type, extra: {})
+      payload = Notifications::PayloadBuilders::AgentPaymentNotice.new(
+        booking: booking, notification_type: type, trigger_event: "spec", extra: extra
+      ).call
+      NotificationDelivery.create!(
+        hotel: hotel, booking: booking, notification_type: type, channel: "email",
+        trigger_event: "spec", status: "pending", idempotency_key: "spec:#{type}", payload: payload
+      )
+    end
+
+    it "writes to the agent, not the guest" do
+      mail = described_class.agent_payment_reminder(agent_delivery("agent_payment_reminder"))
+
+      expect(mail.to).to eq([ "agent@agency.test" ])
+      expect(mail.to).not_to include("guest@example.com")
+    end
+
+    it "names the reservation and states the deadline with its zone" do
+      mail = described_class.agent_payment_reminder(agent_delivery("agent_payment_reminder"))
+
+      expect(mail.subject).to include(booking.formatted_reservation_number)
+      expect(mail.body.encoded).to include("Pay by")
+    end
+
+    it "offers nothing to click once the payment has been accepted" do
+      mail = described_class.agent_payment_approved(agent_delivery("agent_payment_approved"))
+
+      expect(mail.subject).to include("Payment confirmed")
+      expect(mail.body.encoded).not_to include("Send your transfer slip")
+    end
+
+    # A rejection an agent cannot act on costs them the rooms twice.
+    it "quotes the hotel's reason when a slip is rejected" do
+      delivery = agent_delivery("agent_payment_rejected", extra: { rejection_reason: "Amount did not match" })
+
+      mail = described_class.agent_payment_rejected(delivery)
+
+      expect(mail.subject).to include("Action needed")
+      expect(mail.body.encoded).to include("Amount did not match")
+    end
+
+    it "says plainly that the rooms are gone when they have been released" do
+      mail = described_class.agent_booking_released(agent_delivery("agent_booking_released"))
+
+      expect(mail.subject).to start_with("Cancelled:")
+      expect(mail.body.encoded).to include("returned to sale")
+    end
+  end
 end

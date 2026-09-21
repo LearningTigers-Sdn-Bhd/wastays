@@ -181,22 +181,33 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(document.at_css("#hotel_property_policy_attributes_check_out_time")["value"]).to eq("11:00")
     end
 
-    it "renders Notifications as two columns with five independent Panels UI cards" do
+    it "renders Notifications as two columns with six independent Panels UI cards" do
       get hotel_notification_settings_path(hotel)
 
       document = response.parsed_body
       section = document.at_css("section[aria-labelledby='communication-notifications-heading']")
       expect(section.at_css(".grid.lg\\:grid-cols-2")).to be_present
-      expect(section.css("article.panel-card").size).to eq(5)
-      expect(section.css("article.panel-card[data-dividers='none']").size).to eq(5)
+      expect(section.css("article.panel-card").size).to eq(6)
+      expect(section.css("article.panel-card[data-dividers='none']").size).to eq(6)
       expect(section.css("article.panel-card").first(2).map { |card| card["data-notification-type"] }).to eq(
         %w[check_in_confirmation check_out_receipt_message]
       )
-      expect(section.css("form[action='#{hotel_notification_settings_path(hotel)}']").size).to eq(5)
+      expect(section.css("form[action='#{hotel_notification_settings_path(hotel)}']").size).to eq(6)
       in_stay_wrapper = section.at_css("[data-notification-type='in_stay_guest_messaging']").ancestors.find { |node| node["class"].to_s.include?("lg:col-span-2") }
       expect(in_stay_wrapper).to be_present
       expect(section.at_css("input[name='notification_config[settings][review_link]']")).to be_present
       expect(section.at_css("input[name='notification_config[settings][rules][mid_stay][time]']")).to be_present
+      expect(section.at_css("input[name='notification_config[settings][offsets_hours]']")).to be_present
+    end
+
+    # The agent reminder goes to a business contact with no phone number on the
+    # booking, so it must not offer a channel it cannot send on.
+    it "offers the agent payment reminder on email only" do
+      get hotel_notification_settings_path(hotel)
+
+      card = response.parsed_body.at_css("[data-notification-type='agent_payment_reminder']")
+      channels = card.css("input[name='notification_config[channels][]']").filter_map { |input| input["value"].presence }
+      expect(channels).to eq([ "email" ])
     end
 
     it "shows setup tabs in the settings tab bar" do
@@ -626,6 +637,39 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
       expect(config.settings["stages"]).to eq(%w[d2 d1])
+    end
+
+    it "updates agent payment reminder offsets, largest first" do
+      patch hotel_notification_settings_path(hotel), params: {
+        form_id: "notification_settings",
+        notification_config: {
+          notification_type: "agent_payment_reminder",
+          enabled: "1",
+          channels: [ "email" ],
+          settings: { offsets_hours: "4, 48" }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: "agent_payment_reminder")
+      expect(config.enabled).to be(true)
+      expect(config.settings["offsets_hours"]).to eq([ 48, 4 ])
+    end
+
+    # A stray comma should not cost the hotel its reminders.
+    it "drops nonsense offsets rather than refusing the save" do
+      patch hotel_notification_settings_path(hotel), params: {
+        form_id: "notification_settings",
+        notification_config: {
+          notification_type: "agent_payment_reminder",
+          enabled: "1",
+          channels: [ "email" ],
+          settings: { offsets_hours: "24, , abc, 0" }
+        }
+      }
+
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: "agent_payment_reminder")
+      expect(config.settings["offsets_hours"]).to eq([ 24 ])
     end
 
     it "updates check-out receipt message settings with both channels" do

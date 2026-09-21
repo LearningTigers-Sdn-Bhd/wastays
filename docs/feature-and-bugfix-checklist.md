@@ -1,16 +1,19 @@
 # Checklist: TA payments, attribution, Chinese, and four fixes
 
-**Status (18 Sep 2026).** The four bugs, the agent attribution (item 2) and the
-TA payment deadline (item 1) are built on `plan/ta-payments-and-localisation`.
-Still outstanding: the Chinese version (item 3) and the reminder emails (§5).
-Ticked boxes below are done and specced; unticked ones are not.
+**Status (21 Sep 2026).** The four bugs, the agent attribution (item 2), the TA
+payment deadline (item 1) and the reminder/notification work (§5) are built on
+`plan/ta-payments-and-localisation`. **Only the Chinese version (item 3) is
+outstanding.** Ticked boxes below are done and specced; unticked ones are not.
 
-> **None of it is committed.** It is all in the working tree on
-> `plan/ta-payments-and-localisation` (last commit `1bf4c2f44`): ~66 changed and
-> new paths, four migrations, and the hand-edited `db/schema.rb`. Read
-> "Before touching anything" below before you run `db:migrate` or `git add`.
->
-> The dev **and** test databases already have all four migrations applied.
+Item 1 and item 2 were committed in `4674031a5`. On top of that, uncommitted in
+the working tree: payment visibility on the corporate dashboard and both booking
+lists, agent-initiated cancellation, the reminder and accept/reject/release
+notifications, and hours-or-days on the payment hold. **None of that round adds a
+migration** — it uses columns that already exist, which also means `db/schema.rb`
+should not move at all.
+
+> The dev **and** test databases already have all four of `4674031a5`'s
+> migrations applied.
 
 ### Four migrations were added
 
@@ -37,11 +40,33 @@ Ticked boxes below are done and specced; unticked ones are not.
   `app/views/hotel_portal/ar_payment_submissions/_slip.html.erb`,
   `app/views/corporate_portal/ar_payments/_gateway_option.html.erb` — shared partials.
 
+### And from the round after it (uncommitted)
+
+- `app/services/bookings/payment_hold_scope.rb` — **the** predicate for "held"
+  and "clock stopped". The sweeper and the reminder scheduler both call it;
+  neither keeps a copy.
+- `app/services/notifications/` — `agent_payment_reminder_scheduler.rb` (+ its
+  hourly job), `queue_agent_payment_notice.rb`, `agent_recipient.rb`,
+  `publish_agent_payment_staff_notification.rb`,
+  `payload_builders/agent_payment_notice.rb`.
+- `app/services/ar_payment_submissions/{approve,reject}.rb` — wrap the model
+  methods so the notification is a service's side effect, not a callback.
+- `app/services/corporate_portal/cancel_agent_booking.rb` +
+  `app/controllers/corporate_portal/booking_cancellations_controller.rb`.
+- `app/queries/corporate_portal/bookings_awaiting_payment_query.rb` and
+  `app/presenters/corporate_portal/dashboard_payments_presenter.rb`.
+- `app/presenters/hotel_portal/bookings/agent_attribution.rb` — one hash, now
+  read by both hotel-portal presenters that feed the agent badge.
+- `app/models/concerns/agent_payment_hold_unit.rb` — hours or days, no column.
+- `app/views/notification_mailer/_agent_payment_notice.html.erb` + four thin
+  views.
+
 ### Verification at handoff
 
-`bundle exec rspec --exclude-pattern "spec/system/**/*"` → **9,613 examples, 1
-failure**, that one being the pre-existing `panels_ui/table_spec.rb:69` (fails on
-clean `HEAD` too). Rubocop clean; Brakeman 0 warnings. System specs were not run.
+Rubocop clean; Brakeman 0 warnings. System specs were not run. The full run
+(`bundle exec rspec --exclude-pattern "spec/system/**/*"`) has one known
+pre-existing failure, `panels_ui/table_spec.rb:69`, which fails on clean `HEAD`
+too.
 
 Read [ta-payments-and-localisation.md](ta-payments-and-localisation.md) for the
 reasoning behind each decision. This file is the checklist and the traps.
@@ -243,7 +268,6 @@ extension in this branch and the piece most worth reviewing.**
 - Nothing **backfills** `payment_due_at` for agent bookings that already exist.
   They simply have no deadline and are never swept. Decide whether that is right
   before going live.
-- The sweeper cancels; it does not notify. That is §5.
 
 ---
 
@@ -270,6 +294,68 @@ Half done already — `CorporatePortal::CreateAgentBooking` sets
       `HotelPortal::BookingPresenter` both satisfy it. The badge shows only when
       `corporate_booked_at` is present, so pre-existing corporate bookings stay
       unmarked rather than claiming an author nobody recorded.
+
+---
+
+## Feature: payment visibility, and an agent cancelling — **built**
+
+### Where the money shows now
+
+- **Corporate dashboard** — a "Bookings awaiting payment" panel, separate from
+  the outstanding AR tile on purpose: an overdue invoice is chased, but an
+  unpaid booking loses the rooms. Count, total per currency, overdue and
+  under-review counts, the soonest five, and Pay now.
+- **Corporate bookings list and booking page** — a chip per booking, from
+  `BookingPaymentPresenter#badge_label` / `#badge_variant`: Paid · Awaiting
+  payment · 2 days left · Slip under review · Payment overdue · Cancelled.
+- **Hotel portal reservation** — the agent badge's popover now answers "has the
+  agent paid?", and the badge itself turns amber when due and red when overdue.
+  It reads the **same presenter** the agent's own portal reads, so the desk and
+  the agent can never be shown different answers.
+
+`CorporatePortal::BookingsAwaitingPaymentQuery` is the one definition of
+"awaiting payment", so the dashboard, the list and the sweeper agree.
+
+### The N+1 the badge would otherwise have caused
+
+The badge asks about `ArPaymentSubmission` for every row. `Booking` now
+`has_many :ar_payment_submissions` (nullify, not destroy — a submission is a
+record of money that was claimed and outlives the booking), the presenter uses
+that association **when the caller preloaded it** and queries otherwise, and the
+four front-desk queries preload it. Single-booking callers are unaffected.
+
+### Agent-initiated cancellation
+
+`POST /corporate/bookings/:id/cancellation` — its own resource rather than
+`#destroy`, because nothing is deleted. `CorporatePortal::CancelAgentBooking`
+goes through `Bookings::TransitionStatus`, which already releases inventory and
+writes the `BookingAuditLog`, so **the rooms tally through exactly the path a
+desk cancellation takes** and there is no second place for the counts to drift.
+
+- Kept as cancelled history: it stays on the agent's list with a Cancelled chip
+  and in the hotel's reservations like any other cancellation.
+- **Only while unpaid** — confirmed or pending, before arrival, unpaid, and no
+  slip in the review queue. Once money is with the hotel, only the hotel can
+  cancel, because only the hotel can decide what happens to it. A refund an
+  agent triggers themselves was deliberately not built.
+- **The whole group goes.** A multi-room stay is several bookings; releasing
+  three of four rooms would leave a reservation nobody meant to keep.
+- `payment_due_at` is cleared, so the sweeper never looks at it again.
+- The button is rendered from the same object the controller acts through, so
+  the agent is never shown a button that answers with a refusal.
+
+### Hours or days on the payment hold
+
+`AgentPaymentHoldUnit` on `Hotel` and `HotelCorporateAccount`. The stored
+`agent_payment_hold_hours` stays the one canonical number — `Bookings::PaymentHold`
+is unchanged — and the unit is derived on the way out (`72` reads back as
+"3 days", `36` as "36 hours"). **No migration**, which matters given the schema
+drift trap above.
+
+Amount and unit arrive as two params and `assign_attributes` applies them in hash
+order, so neither writer converts anything: a `before_validation` resolves the
+pair. Converting in the writer would make the answer depend on which field the
+form rendered first.
 
 ---
 
@@ -329,30 +415,59 @@ eventually — so the architecture must scale to all of it.
 
 ---
 
-## Feature: payment reminder emails (§5 of the plan)
+## Feature: payment reminder emails (§5 of the plan) — **built**
 
-**Now unblocked** — item 1 is built, so the deadline these remind about exists.
-The hooks to attach to:
+All of it on the existing `notification_configs` / `notification_deliveries`
+rails, with **no migration**: `notification_deliveries` already belongs to a
+booking, and the hold columns already exist.
 
-- `bookings.payment_due_at` is the date to count back from (wall-clock).
-- `Bookings::ReleaseUnpaidAgentBookings` is the sweeper; a reminder job should
-  read the same scope (`confirmed`, unpaid, `payment_due_at` set, corporate) but
-  **must not** reuse the sweeper's "skip" logic verbatim — a booking protected by
-  a pending submission needs no reminder either, which is the same predicate
-  (`ArPaymentSubmission.pending.for_booking`).
-- `ArPaymentSubmission#approve!` / `#reject!` are where the accept/reject
-  notifications belong. `reject!` already extends the deadline, so the rejection
-  email can state the **new** `payment_due_at` rather than a stale one.
-- `booking.corporate_booked_by` gives the person to email, and
-  `hotel_corporate_account.effective_contact_email` the account-level fallback.
+- [x] Reuse `notification_configs`. `agent_payment_reminder` is a new
+      notification type whose `settings` holds `offsets_hours` (default
+      `[24, 4]`), configurable on Settings → Notifications. **Email only** — it
+      goes to a business contact, and the WhatsApp payload builders are all
+      guest-shaped.
+- [x] Reminders stop the moment proof is submitted. The scheduler and the
+      sweeper call one shared predicate, `Bookings::PaymentHoldScope`, rather
+      than each carrying a copy: two copies drifting apart is how an agent gets
+      cancelled without warning, or chased about a booking that was never at
+      risk.
+- [x] Proof accepted **and** rejected both notify. `ArPaymentSubmissions::Approve`
+      and `::Reject` wrap the model methods and fire the mail — a service, not a
+      model callback, so a submission approved in a console does not send.
+      `Reject` reloads the booking first, because `reject!` has already extended
+      `payment_due_at` and quoting the old deadline would be worse than none.
+- [x] Every send recorded. `Notifications::QueueAgentPaymentNotice` writes a
+      delivery even when there is **nobody to write to** (status `skipped`), so
+      "were they warned?" has an answer either way.
+- [x] The sweeper now notifies. `Bookings::ReleaseUnpaidAgentBookings` queues
+      `agent_booking_released` after a successful release; notifying can fail
+      without undoing the cancellation.
 
-- [ ] Reuse `notification_configs` (per hotel, `notification_type`, `channels`
-      array, `settings` jsonb for days-before and frequency) and
-      `notification_deliveries` for the record. Do not add a parallel mailer path.
-- [ ] Reminders stop the moment proof is submitted.
-- [ ] Proof accepted **and** rejected both notify; a rejection must say why and
-      what happens next, because it restarts the release clock.
-- [ ] Every send recorded, so "were they warned?" has an answer.
+### One reminder per run, not the whole series
+
+With offsets of 24 and 4 hours, a booking made three hours before its deadline
+has passed both windows at once. The scheduler sends the **smallest open offset**
+and records the larger ones as `skipped` — so the agent gets one mail, and the
+row still says why the other did not go.
+
+The idempotency key carries `payment_due_at`, so a rejection that extends the
+deadline starts a **fresh** series against the new date, with the old rows
+intact.
+
+`Notifications::AgentPaymentRemindersJob` runs hourly (`config/recurring.yml`).
+Hourly rather than by the minute: the offsets are whole hours and nothing is
+queued ahead, so a finer schedule would only ask the same question sixty times
+as often.
+
+### The hotel's side, on the existing bell
+
+`Notifications::PublishAgentPaymentStaffNotification` raises a `StaffNotification`
+for everyone holding `manage_ar_payments`, on two events:
+
+- **a slip arrived** — the agent's clock is stopped while it sits there, so an
+  unreviewed queue costs the hotel the sale it is holding;
+- **rooms were released** — a reservation disappearing without anyone touching
+  it is otherwise a phone call nobody can answer.
 
 ---
 
@@ -410,7 +525,18 @@ this work — see the migration and new-code lists at the top.
 ### Still true, and still a blocker for demoing any of item 1
 
 The agent-booking login blocker above applies to the payment deadline too: without
-a corporate portal login you cannot see Pay now, the countdown, or submit a slip.
-The sweeper can be exercised without one — set `payment_due_at` into the past on
-an agent booking and run
-`Bookings::ReleaseUnpaidAgentBookings.call` in `bin/rails runner`.
+a corporate portal login you cannot see Pay now, the countdown, the dashboard
+panel, or the Cancel booking button.
+
+What **can** be exercised without one, in `bin/rails runner`: set
+`payment_due_at` on an agent booking, then
+
+```ruby
+Notifications::AgentPaymentReminderScheduler.call   # needs an enabled config
+Bookings::ReleaseUnpaidAgentBookings.call
+```
+
+and read `NotificationDelivery.where(booking: booking)` plus letter_opener. The
+reminder needs a `NotificationConfig` with `notification_type:
+"agent_payment_reminder"` and `enabled: true` for that hotel — there is none by
+default, on purpose.

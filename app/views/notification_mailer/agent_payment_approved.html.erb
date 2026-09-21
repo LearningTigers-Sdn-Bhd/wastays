@@ -1,0 +1,7 @@
+<%# Nothing is at risk any more, so there is nothing to click: no action is left
+    to take. %>
+<%= render "notification_mailer/agent_payment_notice",
+      accent: "#0f4a43",
+      eyebrow: "Payment confirmed",
+      headline: "Thank you — your payment has been received",
+      body: "#{@payload[:hotel_name]} has confirmed your transfer#{@payload[:reference_number].present? ? " (reference #{@payload[:reference_number]})" : ""}. This booking is now paid in full and the rooms are confirmed, with nothing further to do." %>

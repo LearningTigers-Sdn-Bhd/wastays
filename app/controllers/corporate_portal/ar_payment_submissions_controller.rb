@@ -54,6 +54,11 @@ module CorporatePortal
       )
 
       if @ar_payment_submission.save
+        # The agent's clock is now stopped, so the slip sitting unreviewed costs
+        # the hotel the sale it is holding. The desk is told on the bell.
+        ::Notifications::PublishAgentPaymentStaffNotification.call(
+          booking: @booking, event: :submitted, submission: @ar_payment_submission
+        )
         redirect_to corporate_booking_path(@booking),
                     notice: "Payment submitted for hotel review. The payment deadline is paused until they respond."
       else

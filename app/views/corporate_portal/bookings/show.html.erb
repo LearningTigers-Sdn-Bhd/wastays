@@ -1,6 +1,14 @@
 <div class="mx-auto w-full max-w-2xl space-y-6">
-  <section class="rounded-2xl border border-emerald-200 bg-card p-8 shadow-sm">
-    <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Confirmed</p>
+  <% cancelled = @booking.status == "cancelled" %>
+  <%# The card is not dimmed the way a list row is: the agent opened this booking
+      deliberately, so the neutral border and the status carry it. %>
+  <section class="rounded-2xl border bg-card p-8 shadow-sm <%= cancelled ? "border-border" : "border-emerald-200" %>">
+    <div class="flex flex-wrap items-center gap-2">
+      <p class="text-xs font-bold uppercase tracking-[0.2em] <%= cancelled ? "text-muted-foreground" : "text-emerald-700" %>">
+        <%= @booking.status.humanize %>
+      </p>
+      <%= render PanelsUI::Badge.new(label: @payment.badge_label, variant: @payment.badge_variant, size: :sm) %>
+    </div>
     <h1 class="mt-2 text-2xl font-bold text-foreground"><%= @booking.guest_name %></h1>
     <p class="mt-1 text-sm text-muted-foreground">
       <%= @booking.hotel.name %><%= " · #{pluralize(@bookings.size, 'room')}" if @bookings.size > 1 %>
@@ -39,7 +47,7 @@
 
   <%# Rooms are held against this deadline, so it sits directly under the
       confirmation rather than at the foot of the page. %>
-  <%= render "corporate_portal/bookings/payment_deadline", booking: @booking, compact: false %>
+  <%= render "corporate_portal/bookings/payment_deadline", booking: @booking, payment: @payment, compact: false %>
 
   <% if @bookings.size > 1 %>
     <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -70,5 +78,14 @@
           class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
     <%= link_to "All bookings", corporate_bookings_path,
           class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
+
+    <%# Offered only when the service would accept it, so the agent is never
+        shown a button that answers with a refusal. %>
+    <% if @cancellation.cancellable? %>
+      <%= link_to "Cancel booking", new_corporate_booking_cancellation_path(@booking),
+            class: "rounded-xl border border-destructive px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10" %>
+    <% elsif !cancelled %>
+      <p class="self-center text-xs text-muted-foreground"><%= @cancellation.refusal_reason %></p>
+    <% end %>
   </div>
 </div>

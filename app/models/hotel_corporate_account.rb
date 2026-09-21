@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class HotelCorporateAccount < ApplicationRecord
+  include AgentPaymentHoldUnit
+
   belongs_to :hotel
   belongs_to :corporate_account, class_name: "Account"
   has_many :ar_invoices, dependent: :restrict_with_error

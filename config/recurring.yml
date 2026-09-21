@@ -16,6 +16,9 @@ production:
   release_unpaid_agent_bookings:
     class: Bookings::ReleaseUnpaidAgentBookingsJob
     schedule: every 5 minutes
+  agent_payment_reminders:
+    class: Notifications::AgentPaymentRemindersJob
+    schedule: every hour at minute 7
   pull_channex_revisions:
     class: ChannelManagers::PullRevisionsJob
     schedule: every 15 minutes

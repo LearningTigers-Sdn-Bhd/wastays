@@ -43,6 +43,10 @@ class Booking < ApplicationRecord
   has_many :complaint_requests, dependent: :destroy
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  # A remittance an agent sent to meet this booking's payment deadline. Nullified
+  # rather than destroyed: a submission is a record of money that was claimed,
+  # and it outlives the booking it was sent against.
+  has_many :ar_payment_submissions, dependent: :nullify
   has_many :e_invoice_submissions, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_one :booking_confirmation_token, dependent: :destroy

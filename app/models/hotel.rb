@@ -1,5 +1,6 @@
 class Hotel < ApplicationRecord
   include AccountScopable
+  include AgentPaymentHoldUnit
   include PhotoAlbum
   extend FriendlyId
   friendly_id :name, use: :slugged

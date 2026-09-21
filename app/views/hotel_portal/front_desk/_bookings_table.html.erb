@@ -12,7 +12,7 @@
   <% table.with_body do %>
     <% @bookings.each do |booking| %>
       <% presenter = HotelPortal::BookingPresenter.new(booking, current_hotel) %>
-      <tr class="align-top <%= "bg-muted" if presenter.blacklisted? %>" data-booking-token="<%= booking.confirmation_token %>">
+      <tr class="align-top <%= "bg-muted" if presenter.blacklisted? %> <%= presenter.dimmed_class %>" data-booking-token="<%= booking.confirmation_token %>">
         <th scope="row">
           <span class="block font-semibold text-foreground"><%= presenter.confirmation_token %></span>
           <span class="text-xs font-normal text-muted-foreground"><%= presenter.created_at_date %></span>

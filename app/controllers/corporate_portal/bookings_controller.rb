@@ -11,7 +11,13 @@ module CorporatePortal
     before_action :load_relationship, only: %i[create]
 
     def index
-      @bookings = corporate_bookings.includes(:hotel).order(check_in: :asc).limit(50)
+      # Submissions are preloaded: the payment chip asks about them for every one
+      # of these fifty rows.
+      @bookings = corporate_bookings
+        .includes(:hotel, :ar_payment_submissions, :hotel_corporate_account)
+        .order(check_in: :asc)
+        .limit(50)
+      @payment_presenters = payment_presenters_for(@bookings)
     end
 
     # The search form, and its results once dates are given.
@@ -48,7 +54,8 @@ module CorporatePortal
     end
 
     def show
-      @booking = corporate_bookings.find(params[:id])
+      @booking = corporate_bookings.includes(:hotel, :ar_payment_submissions, :hotel_corporate_account).find(params[:id])
+      @payment = payment_presenters_for([ @booking ]).fetch(@booking.id)
       # A multi-room stay is several bookings under one group; the confirmation
       # should show the stay, not one room of it.
       @bookings = if @booking.group_booking_id.present?
@@ -56,9 +63,20 @@ module CorporatePortal
       else
         [ @booking ]
       end
+      # The same object the controller would act through, so the button is shown
+      # only when cancelling would actually be allowed.
+      @cancellation = CancelAgentBooking.new(booking: @booking, user: current_user)
     end
 
     private
+
+    # Keyed by booking id, so a view can ask for one row's payment state without
+    # reaching back into the database.
+    def payment_presenters_for(bookings)
+      bookings.to_a.index_by(&:id).transform_values do |booking|
+        CorporatePortal::BookingPaymentPresenter.new(booking)
+      end
+    end
 
     def load_relationships
       @relationships = corporate_relationships.active.includes(:hotel).order("hotels.name")
@@ -73,11 +91,6 @@ module CorporatePortal
       return nil if id.blank?
 
       @relationships.find { |relationship| relationship.id.to_s == id.to_s }
-    end
-
-    # Only bookings this account is the billed party on.
-    def corporate_bookings
-      Booking.where(hotel_corporate_account_id: corporate_relationships.select(:id))
     end
 
     # Rooms, and the guest blocks inside them, arrive keyed by position. They

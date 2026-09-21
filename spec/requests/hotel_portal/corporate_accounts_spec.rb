@@ -197,6 +197,30 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response.body).to include("external-account-suspend-#{relationship.id}")
   end
 
+  # The stored column is hours; days are a way of typing it. Both ends of the
+  # round trip are checked, because a hold that reads back wrong is one an admin
+  # will "correct" into something else.
+  it "sets an account's payment hold in days and stores it as hours" do
+    relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+
+    patch hotel_corporate_account_path(hotel, relationship), params: {
+      hotel_corporate_account: { agent_payment_hold_amount: "3", agent_payment_hold_unit: "days" }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+    expect(relationship.reload.agent_payment_hold_hours).to eq(72)
+  end
+
+  it "offers a unit beside the hold, and re-opens showing what was saved" do
+    relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent",
+                                                    agent_payment_hold_hours: 72)
+
+    get edit_hotel_corporate_account_path(hotel, relationship)
+
+    document = response.parsed_body
+    expect(document.at_css("#hotel_corporate_account_agent_payment_hold_amount")["value"]).to eq("3")
+    expect(document.at_css("[name='hotel_corporate_account[agent_payment_hold_unit]']")).to be_present
+  end
+
   it "updates the hotel-specific billing address" do
     relationship = create(:hotel_corporate_account, hotel: hotel)
 

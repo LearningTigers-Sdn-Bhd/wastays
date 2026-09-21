@@ -1,0 +1,8 @@
+<%# A courtesy reminder, not a warning shot: it opens with the rooms being held
+    for them and names the release as the policy it is, once, at the end. %>
+<%= render "notification_mailer/agent_payment_notice",
+      accent: "#0f4a43",
+      eyebrow: "Payment reminder",
+      headline: "Payment due in #{@payload[:time_left_label].to_s.sub(' left', '').presence || 'a short while'}",
+      body: "The rooms below are held for you at #{@payload[:hotel_name]} until the deadline shown. Sending your transfer slip before then keeps them reserved. After the deadline the booking is released automatically and the rooms return to sale.",
+      cta_label: "Send your transfer slip" %>

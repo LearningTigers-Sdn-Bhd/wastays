@@ -57,6 +57,57 @@ RSpec.describe Bookings::ReleaseUnpaidAgentBookings do
     expect(booking.reload.status).to eq("cancelled")
   end
 
+  # The sweeper cancels; without this the agent finds out when a guest turns up.
+  describe "telling people the rooms are gone" do
+    let(:corporate_user) { create(:user, :corporate) }
+    let(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account, account_type: "travel_agent")
+    end
+
+    it "writes to the agent who was holding them" do
+      booking = agent_booking(corporate_booked_by: corporate_user)
+
+      described_class.call(now: now)
+
+      delivery = NotificationDelivery.find_by(booking: booking, notification_type: "agent_booking_released")
+      expect(delivery).to have_attributes(status: "pending")
+      expect(delivery.payload["recipient_email"]).to eq(corporate_user.email)
+    end
+
+    it "warns the desk on the bell, so a vanished reservation is not a surprise" do
+      staff = create(:user)
+      role = create(:role, account: hotel.account)
+      role.permissions << Permission.find_or_create_by!(slug: "manage_ar_payments") { |p| p.name = "Manage AR Payments" }
+      create(:user_hotel_access, user: staff, hotel: hotel, role: role)
+      agent_booking
+
+      described_class.call(now: now)
+
+      expect(StaffNotification.where(recipient: staff, notification_type: "agent_booking_released")).to exist
+    end
+
+    it "does not tell the same agent twice when the sweep runs again" do
+      booking = agent_booking(corporate_booked_by: corporate_user)
+      described_class.call(now: now)
+
+      described_class.call(now: now + 5.minutes)
+
+      expect(NotificationDelivery.where(booking: booking, notification_type: "agent_booking_released").count).to eq(1)
+    end
+
+    # The rooms are already back on sale by this point. A mail server being down
+    # must not undo that.
+    it "still releases the rooms when notifying fails" do
+      booking = agent_booking
+      allow(Notifications::QueueAgentPaymentNotice).to receive(:call).and_raise(StandardError, "smtp down")
+
+      result = described_class.call(now: now)
+
+      expect(result.released).to eq([ booking.id ])
+      expect(booking.reload.status).to eq("cancelled")
+    end
+  end
+
   describe "what it leaves alone" do
     it "leaves a booking whose deadline has not passed" do
       booking = agent_booking(payment_due_at: now + 1.hour)

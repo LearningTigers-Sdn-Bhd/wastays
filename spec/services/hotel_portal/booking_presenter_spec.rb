@@ -197,4 +197,28 @@ RSpec.describe HotelPortal::BookingPresenter do
       end
     end
   end
+
+  # A reservation list is scanned for what needs doing. Bookings that are over
+  # and need nothing should not compete with the ones that do.
+  describe "#dimmed_class" do
+    it "dims a cancelled booking" do
+      booking.transition_status_to!("cancelled", event: "cancel")
+
+      expect(subject).to be_inactive
+      expect(subject.dimmed_class).to eq("opacity-55")
+    end
+
+    it "leaves a live booking at full weight" do
+      expect(subject).not_to be_inactive
+      expect(subject.dimmed_class).to be_nil
+    end
+
+    # It looks as final as a cancellation, but the money usually is not settled:
+    # a charge decision, a penalty, sometimes a room still blocked.
+    it "keeps a no-show at full weight" do
+      booking.update_columns(status: "no_show")
+
+      expect(described_class.new(booking.reload, hotel)).not_to be_inactive
+    end
+  end
 end

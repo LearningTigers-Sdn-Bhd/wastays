@@ -1,0 +1,22 @@
+<%# The payment hold, set in hours or days. Both controls write the same stored
+    value: AgentPaymentHoldUnit converts days to hours before validation, so
+    agent_payment_hold_hours stays the one number Bookings::PaymentHold reads.
+
+    Shared between the property default (Settings) and an agency's override
+    (External Accounts), which differ only in their label, hint and whether
+    blank is allowed. %>
+<% record = form.object %>
+<div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
+  <%= render PanelsUI::FormField.new(form: form, attribute: :agent_payment_hold_amount,
+        label: label, hint: hint) do |field| %>
+    <% field.with_input(type: :number, min: 1, step: 1,
+         value: record.agent_payment_hold_amount,
+         placeholder: local_assigns[:placeholder]) %>
+  <% end %>
+
+  <%= render PanelsUI::FormField.new(form: form, attribute: :agent_payment_hold_unit, label: "Unit") do |field| %>
+    <% field.with_select_menu(
+         AgentPaymentHoldUnit::UNITS.map { |unit| { label: unit.capitalize, value: unit } },
+         selected: record.agent_payment_hold_unit) %>
+  <% end %>
+</div>

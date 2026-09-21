@@ -16,15 +16,19 @@
     <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <ul class="divide-y divide-border">
         <% @bookings.each do |booking| %>
-          <li class="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+          <% payment = @payment_presenters.fetch(booking.id) %>
+          <li class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 <%= payment.dimmed_class %>">
             <div class="min-w-0">
-              <p class="font-bold text-foreground"><%= booking.guest_name %></p>
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="font-bold text-foreground"><%= booking.guest_name %></p>
+                <%= render PanelsUI::Badge.new(label: payment.badge_label, variant: payment.badge_variant, size: :sm) %>
+              </div>
               <p class="mt-0.5 text-xs text-muted-foreground">
                 <%= booking.hotel.name %> · <%= booking.check_in.to_date.strftime("%d %b") %> –
                 <%= booking.check_out.to_date.strftime("%d %b %Y") %>
               </p>
               <div class="mt-1.5">
-                <%= render "corporate_portal/bookings/payment_deadline", booking: booking, compact: true %>
+                <%= render "corporate_portal/bookings/payment_deadline", booking: booking, payment: payment, compact: true %>
               </div>
             </div>
             <div class="flex items-center gap-4">

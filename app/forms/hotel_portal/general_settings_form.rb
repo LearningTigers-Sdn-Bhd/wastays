@@ -26,7 +26,7 @@ module HotelPortal
       permitted = params.require(:hotel).permit(
         :default_currency, :time_zone, :geolocation_enabled, :auto_assign_rooms_enabled,
         :business_starts_at, :business_ends_at, :arrival_grace_period_hours,
-        :agent_payment_hold_hours,
+        :agent_payment_hold_amount, :agent_payment_hold_unit,
         :guest_registration_card_terms,
         guest_registration_card_fields: [],
         hotel_boat_setting_attributes: [ :id, :breakfast_time, :lunch_time, :dinner_time ],

@@ -555,18 +555,33 @@ module HotelPortal
     # "internal", the same as a booking keyed at the desk, so the badge this
     # feeds is the only thing on the list that says an agent sold the room.
     def agent_booking?
-      booking.hotel_corporate_account_id.present? && booking.corporate_booked_at.present?
+      HotelPortal::Bookings::AgentAttribution.agent_booking?(booking)
     end
 
+    # Shared with HotelPortal::Bookings::WorkspacePresenter, which feeds the same
+    # badge on the booking workspace.
     def agent_attribution
-      return unless agent_booking?
-
-      {
-        agency: booking.hotel_corporate_account&.corporate_account&.name,
-        person: booking.corporate_booked_by&.name,
-        booked_at: booking.corporate_booked_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y %H:%M")
-      }
+      @agent_attribution ||= HotelPortal::Bookings::AgentAttribution.for(booking, time_zone: hotel.hotel_time_zone)
     end
+
+    # Bookings that are over and need nothing: the record is closed, the
+    # inventory is already back, and there is no decision left for the desk.
+    # They are dimmed so live business reads first.
+    #
+    # no_show is deliberately **not** here. It looks similarly final, but its
+    # money usually is not settled -- a charge decision, a penalty, sometimes a
+    # room still blocked -- so it keeps its weight.
+    INACTIVE_STATUSES = %w[cancelled voided].freeze
+
+    def inactive?
+      status.to_s.in?(INACTIVE_STATUSES)
+    end
+
+    # Applied on top of whatever else a row or card is already saying about the
+    # booking -- a blacklist highlight, for instance -- rather than replacing it,
+    # which is why it is only the dimming and not a whole class list. The table
+    # and the card style blacklisting differently.
+    def dimmed_class = ("opacity-55" if inactive?)
 
     def status_variant_class
       booking_styles = {
