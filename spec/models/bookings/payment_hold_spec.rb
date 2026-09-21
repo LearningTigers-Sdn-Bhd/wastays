@@ -32,6 +32,43 @@ RSpec.describe Bookings::PaymentHold do
       expect(described_class.due_at(booking: booking, from: now)).to eq(booking.check_in)
     end
 
+    # The floor used to be the whole story, which handed a booking taken after
+    # the property's check-in time a deadline in the past: the sweeper cancelled
+    # it within five minutes, before the agent could pay at all.
+    it "never returns a deadline that has already passed" do
+      booking = booking_for(relationship, check_in: now - 1.hour)
+
+      expect(described_class.due_at(booking: booking, from: now)).to eq(now + 30.minutes)
+    end
+
+    it "gives the minimum to a booking taken at the very moment of arrival" do
+      booking = booking_for(relationship, check_in: now)
+
+      expect(described_class.due_at(booking: booking, from: now)).to eq(now + 30.minutes)
+    end
+
+    # Ten minutes of hold is no more usable than none.
+    it "lifts a floor that would leave less than the minimum" do
+      booking = booking_for(relationship, check_in: now + 10.minutes)
+
+      expect(described_class.due_at(booking: booking, from: now)).to eq(now + 30.minutes)
+    end
+
+    # The shortest hold the schema allows is an hour, so the clamp can only ever
+    # lift a floored deadline -- never shorten a configured one.
+    it "leaves the shortest configurable hold intact" do
+      relationship.update!(agent_payment_hold_hours: 1)
+      booking = booking_for(relationship, check_in: now + 30.days)
+
+      expect(described_class.due_at(booking: booking, from: now)).to eq(now + 1.hour)
+    end
+
+    it "leaves an advance booking on its full hold" do
+      booking = booking_for(relationship, check_in: now + 30.days)
+
+      expect(described_class.due_at(booking: booking, from: now)).to eq(now + 48.hours)
+    end
+
     # Direct bill is invoiced after the stay by arrangement; releasing its rooms
     # up front would contradict that arrangement.
     it "gives a direct-bill account no deadline" do
@@ -53,6 +90,23 @@ RSpec.describe Bookings::PaymentHold do
 
       relationship.update!(agent_payment_hold_hours: 6)
       expect(described_class.hours_for(relationship)).to eq(6)
+    end
+  end
+
+  describe ".booked_after_arrival?" do
+    it "is true once the arrival it holds has already come" do
+      expect(described_class.booked_after_arrival?(booking: booking_for(relationship, check_in: now - 1.hour), from: now)).to be(true)
+      expect(described_class.booked_after_arrival?(booking: booking_for(relationship, check_in: now), from: now)).to be(true)
+    end
+
+    it "is false while arrival is still ahead, however close" do
+      expect(described_class.booked_after_arrival?(booking: booking_for(relationship, check_in: now + 1.minute), from: now)).to be(false)
+    end
+
+    it "is false for an account that holds nothing" do
+      direct = create(:hotel_corporate_account, :direct_bill, hotel: hotel, account_type: "travel_agent")
+
+      expect(described_class.booked_after_arrival?(booking: booking_for(direct, check_in: now - 1.hour), from: now)).to be(false)
     end
   end
 

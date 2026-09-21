@@ -3,12 +3,22 @@
     JavaScript off; the Stimulus controller only adds the "2d 4h left" part. %>
 <% payment = local_assigns[:payment] || CorporatePortal::BookingPaymentPresenter.new(booking) %>
 <% if payment.awaiting_payment? %>
+  <%# A guest already in house has no deadline left to count: the rooms cannot be
+      released, so the countdown is dropped rather than shown as permanently
+      overdue. Without the "remaining" target the Stimulus controller renders
+      nothing, so it is simply not attached. %>
   <div class="panel-payment-deadline <%= compact ? "text-xs" : "rounded-xl border border-border bg-muted/40 p-4 text-sm" %>"
-       data-controller="payment-deadline"
-       data-payment-deadline-due-at-value="<%= payment.due_at.iso8601 %>"
-       data-state="<%= payment.under_review? ? "review" : "pending" %>">
+       <% unless payment.in_house? %>
+         data-controller="payment-deadline"
+         data-payment-deadline-due-at-value="<%= payment.due_at.iso8601 %>"
+       <% end %>
+       data-state="<%= payment.deadline_state %>">
     <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <% if payment.under_review? %>
+      <% if payment.in_house? %>
+        <%= cached_icon "bed", class: "size-3.5 shrink-0 text-muted-foreground", aria: { hidden: true } %>
+        <span class="font-bold text-foreground">Pay <%= payment.amount_label %></span>
+        <span class="text-muted-foreground">guest checked in, still unpaid</span>
+      <% elsif payment.under_review? %>
         <%= cached_icon "hourglass", class: "size-3.5 shrink-0 text-muted-foreground", aria: { hidden: true } %>
         <span class="font-bold text-foreground">Slip under review</span>
       <% else %>

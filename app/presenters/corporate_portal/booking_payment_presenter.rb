@@ -18,6 +18,7 @@ module CorporatePortal
       paid: :success,
       under_review: :info,
       overdue: :destructive,
+      in_house: :warning,
       due: :warning,
       cancelled: :neutral
     }.freeze
@@ -32,8 +33,19 @@ module CorporatePortal
 
     def due_at = booking.payment_due_at
 
+    # Follows the money, not the inventory. A checked-in booking is out of the
+    # sweeper's reach (Bookings::PaymentHoldScope) but the agency still owes for
+    # it, and saying otherwise is how an unpaid stay used to reach the checkout
+    # counter with both portals insisting it was paid.
     def awaiting_payment?
-      due_at.present? && booking.status == "confirmed" && unpaid?
+      due_at.present? && booking.status.in?(::Bookings::PaymentHoldScope::SETTLING_STATUSES) && unpaid?
+    end
+
+    # The guest is in the room and the bill is still open. The rooms are no
+    # longer at risk, so this is not a deadline any more -- it is a debt, and the
+    # desk is the one who will meet it.
+    def in_house?
+      awaiting_payment? && booking.status.in?(::Bookings::PaymentHoldScope::IN_HOUSE_STATUSES)
     end
 
     def unpaid?
@@ -53,7 +65,7 @@ module CorporatePortal
     end
 
     def overdue?
-      awaiting_payment? && !under_review? && due_at <= now
+      awaiting_payment? && !under_review? && !in_house? && due_at <= now
     end
 
     # The one word for this booking's money, used by both portals' badges.
@@ -61,6 +73,7 @@ module CorporatePortal
       return :cancelled if booking.status == "cancelled"
       return :paid unless awaiting_payment?
       return :under_review if under_review?
+      return :in_house if in_house?
       return :overdue if overdue?
 
       :due
@@ -68,11 +81,22 @@ module CorporatePortal
 
     def badge_variant = BADGE_VARIANTS.fetch(state, :neutral)
 
+    # The `data-state` the deadline panel styles itself from.
+    # payment_deadline_controller.js overwrites it with "urgent"/"overdue" as the
+    # clock runs, but only where there is a clock to run.
+    def deadline_state
+      return "in-house" if in_house?
+      return "review" if under_review?
+
+      "pending"
+    end
+
     def badge_label
       case state
       when :cancelled then "Cancelled"
       when :paid then "Paid"
       when :under_review then "Slip under review"
+      when :in_house then "Unpaid · guest in house"
       when :overdue then "Payment past due"
       else [ "Awaiting payment", time_left_label ].compact.join(" · ")
       end
@@ -124,11 +148,33 @@ module CorporatePortal
 
     # A hold that would have run past arrival is cut short at it. An agent who
     # is told "48 hours" and sees less needs to be told why.
+    #
+    # Asked of Bookings::PaymentHold against the moment the hold started rather
+    # than compared to the stored deadline: the deadline is clamped to a minimum
+    # when arrival is close, so it no longer equals check_in in exactly the cases
+    # that most need explaining. Recomputing from `now` would be worse still --
+    # every booking arriving inside the hold window would claim to have been cut
+    # short, however long ago it was actually taken.
     def floored_at_arrival?
-      return false if due_at.blank?
+      return false if due_at.blank? || hold_started_at.blank?
 
-      due_at == booking.check_in
+      ::Bookings::PaymentHold.floored_at_arrival?(booking: booking, from: hold_started_at)
     end
+
+    # Sold after the desk was already checking guests in. The hold is the
+    # minimum rather than the configured one, and an agent who set an hour and
+    # sees thirty minutes is owed the reason.
+    def booked_after_arrival?
+      return false if hold_started_at.blank?
+
+      ::Bookings::PaymentHold.booked_after_arrival?(booking: booking, from: hold_started_at)
+    end
+
+    # When the clock started. `corporate_booked_at` is stamped by
+    # CorporatePortal::CreateAgentBooking in the same breath as the deadline, so
+    # the two describe the same moment; `created_at` covers a booking that
+    # acquired an agency some other way.
+    def hold_started_at = booking.corporate_booked_at || booking.created_at
 
     # Written to read as a service message rather than a warning: it leads with
     # what is being held for the agent and what they can do, and states the
@@ -138,7 +184,9 @@ module CorporatePortal
     def status_note
       return "No payment is outstanding on this booking." unless awaiting_payment?
       return "Your transfer slip is with the hotel for review. Your deadline is paused until they respond." if under_review?
+      return "The guest has checked in. Settle this booking with the hotel before they check out." if in_house?
       return "This booking is past its payment deadline. Send your transfer slip or contact the hotel to keep these rooms." if overdue?
+      return "The guest can arrive at any time from now, so this booking has a short hold rather than the usual one." if booked_after_arrival?
       return "These rooms arrive soon, so the deadline falls on the arrival date rather than the usual hold." if floored_at_arrival?
 
       "These rooms are held for you until the deadline above. Send your transfer slip any time before then."

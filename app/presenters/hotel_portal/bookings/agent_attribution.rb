@@ -18,6 +18,7 @@ module HotelPortal
     module AgentAttribution
       BADGE_VARIANTS = {
         overdue: :destructive,
+        in_house: :warning,
         due: :warning,
         under_review: :info
       }.freeze
@@ -37,7 +38,10 @@ module HotelPortal
           payment_label: payment.badge_label,
           payment_due_label: payment.due_at_label,
           # The badge itself turns red only when rooms are genuinely at risk;
-          # a paid booking looks like any other agency booking.
+          # a paid booking looks like any other agency booking. An unpaid guest
+          # already in house is amber rather than red -- nothing will be
+          # cancelled -- but the desk still has to see it before the guest
+          # reaches the checkout counter with an open folio.
           badge_variant: BADGE_VARIANTS.fetch(payment.state, :accent)
         }
       end

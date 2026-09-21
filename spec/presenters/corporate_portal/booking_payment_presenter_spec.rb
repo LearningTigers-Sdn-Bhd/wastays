@@ -70,11 +70,81 @@ RSpec.describe CorporatePortal::BookingPaymentPresenter do
     expect(presenter.rejected_submission.rejection_reason).to eq("Amount did not match")
   end
 
+  # check_in is set explicitly rather than left to the factory, which puts it at
+  # today's check-in time: whether that is ahead of or behind Time.current
+  # decides which of the two arrival messages applies, and the example would
+  # otherwise change meaning at 3pm.
   it "explains a deadline that was cut short by the arrival date" do
-    booking.update!(payment_due_at: booking.check_in)
+    booking.update!(check_in: 6.hours.from_now, check_out: 2.days.from_now,
+                    payment_due_at: 6.hours.from_now)
 
     expect(presenter).to be_floored_at_arrival
+    expect(presenter).not_to be_booked_after_arrival
     expect(presenter.status_note).to include("arrival date")
+  end
+
+  # The case that used to read "Payment past due" the instant it was made: an
+  # agent selling a room this afternoon, after the desk started checking guests
+  # in. The hold is real but short, and the agent is told why.
+  it "explains the short hold on a booking taken after arrival" do
+    booking.update!(check_in: 1.hour.ago, payment_due_at: 29.minutes.from_now)
+
+    expect(presenter).to be_booked_after_arrival
+    expect(presenter).not_to be_overdue
+    expect(presenter.state).to eq(:due)
+    expect(presenter.status_note).to include("arrive at any time")
+  end
+
+  # A booking taken weeks ago, arriving within the hold window, was never cut
+  # short by anything and must not claim it was.
+  it "does not call an advance booking cut short just because arrival is near" do
+    booking.update!(check_in: 6.hours.from_now, check_out: 2.days.from_now,
+                    corporate_booked_at: 30.days.ago, created_at: 30.days.ago)
+
+    expect(presenter).not_to be_floored_at_arrival
+  end
+
+  # Check-in takes the rooms out of the sweeper's reach, but not the bill out of
+  # the agency's hands. Both portals read this presenter, so going quiet here is
+  # what sent an unpaid stay to the checkout counter marked "Paid".
+  describe "once the guest has checked in unpaid" do
+    before do
+      booking.update!(payment_due_at: 1.hour.ago)
+      booking.transition_status_to!("checked_in", event: "check_in")
+    end
+
+    it "still reports the booking as owing" do
+      expect(presenter).to be_awaiting_payment
+      expect(presenter).to be_in_house
+    end
+
+    it "does not call the rooms overdue, because they are no longer at risk" do
+      expect(presenter).not_to be_overdue
+      expect(presenter.state).to eq(:in_house)
+      expect(presenter.badge_label).to eq("Unpaid · guest in house")
+      expect(presenter.badge_variant).to eq(:warning)
+    end
+
+    it "tells the agent the debt outlives the deadline" do
+      expect(presenter.status_note).to eq("The guest has checked in. Settle this booking with the hotel before they check out.")
+    end
+
+    it "drops the countdown, which has nothing left to count" do
+      expect(presenter.deadline_state).to eq("in-house")
+    end
+
+    it "still defers to a slip already with the hotel" do
+      create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, booking: booking)
+
+      expect(presenter.state).to eq(:under_review)
+    end
+
+    it "reads as paid once the money arrives" do
+      booking.update!(payment_status: "captured")
+
+      expect(presenter.state).to eq(:paid)
+      expect(presenter).not_to be_in_house
+    end
   end
 
   # The one word both portals' badges are built from, so the desk and the agent

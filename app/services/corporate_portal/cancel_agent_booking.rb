@@ -54,7 +54,7 @@ module CorporatePortal
 
     def refusal_reason
       return "This booking has already been cancelled." if @booking.status == "cancelled"
-      return "This booking can no longer be cancelled here. Please contact the hotel and they will help." unless CANCELLABLE_STATUSES.include?(@booking.status)
+      return "This booking can no longer be cancelled here. Please contact the hotel to cancel it." unless CANCELLABLE_STATUSES.include?(@booking.status)
       return "This stay has already started. Please contact the hotel to make any changes." if arrival_passed?
       return "This booking has been paid. Please contact the hotel to arrange a cancellation." unless unpaid?
       return "Your transfer slip is with the hotel for review. They will be in touch once it has been looked at." if submission_under_review?

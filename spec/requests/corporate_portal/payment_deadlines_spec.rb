@@ -55,6 +55,44 @@ RSpec.describe "CorporatePortal payment deadlines", type: :request do
     expect(response.parsed_body.text).to include("Pay MYR 500.00")
   end
 
+  # Checking the guest in takes the rooms out of the sweeper's reach, and used to
+  # take the debt off the agent's screen with them: the row vanished from the
+  # list and the booking page called itself paid, right up until the desk hit an
+  # open folio at checkout.
+  describe "once the guest has checked in unpaid" do
+    def checked_in_booking
+      agent_booking(payment_due_at: 1.hour.ago)
+        .tap { |booking| booking.transition_status_to!("checked_in", event: "check_in") }
+    end
+
+    it "keeps the booking on the agent's list, still asking to be paid" do
+      checked_in_booking
+
+      get corporate_bookings_path
+
+      expect(response.parsed_body.text).to include("Pay MYR 500.00")
+    end
+
+    it "asks for settlement rather than reading as a missed deadline" do
+      booking = checked_in_booking
+
+      get corporate_booking_path(booking)
+
+      expect(response).to have_http_status(:success)
+      expect(response.parsed_body.text).to include("guest checked in, still unpaid")
+      expect(response.parsed_body.text).to include("Settle this booking with the hotel before they check out")
+      expect(response.parsed_body.text).not_to include("past its payment deadline")
+    end
+
+    it "still offers the pay-now action" do
+      booking = checked_in_booking
+
+      get corporate_booking_path(booking)
+
+      expect(response.body).to include(new_corporate_ar_payment_submission_path(booking_id: booking.id))
+    end
+  end
+
   it "says nothing about payment on a booking that has none due" do
     agent_booking(payment_due_at: nil)
 
