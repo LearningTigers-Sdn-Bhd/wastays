@@ -33,9 +33,25 @@ export default class extends Controller {
     if (!this.element.open) this.element.showModal()
   }
 
+  // Every dismissal — the ✕, a Cancel button, Escape, a backdrop click — comes
+  // through here, so this is where something inside the sheet gets its say.
   close() {
-    if (!this.element.open || this.closing || !isTopOverlay(this.element)) return
+    if (!this.closable) return
 
+    const request = new CustomEvent("panels-ui:sheet-close-request", { bubbles: true, cancelable: true })
+    this.element.dispatchEvent(request)
+    if (request.defaultPrevented) return
+
+    this.beginClose()
+  }
+
+  // Closes without asking again: for whoever vetoed the close above, once the
+  // person has answered.
+  dismiss() {
+    if (this.closable) this.beginClose()
+  }
+
+  beginClose() {
     this.closing = true
     this.cancelOpenFrame()
 
@@ -52,6 +68,10 @@ export default class extends Controller {
     }
     this.element.addEventListener("transitionend", this.handleTransitionEnd)
     this.closeTimer = window.setTimeout(() => this.finishClose(), EXIT_FALLBACK_MS)
+  }
+
+  get closable() {
+    return this.element.open && !this.closing && isTopOverlay(this.element)
   }
 
   onOpen() {

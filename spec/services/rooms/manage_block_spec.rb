@@ -42,6 +42,31 @@ RSpec.describe Rooms::ManageBlock, type: :service do
       expect(block.reload.completed_at).to be_present
       expect(RoomInventory.find_by(date: Date.current).quantity).to eq(1)
     end
+
+    context "when the block covers today" do
+      let(:room_status) { create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "out_of_service") }
+
+      it "sends the room to housekeeping by default" do
+        room_status
+        subject.finish
+
+        expect(room_status.reload.status).to eq("dirty")
+      end
+
+      it "leaves the room sellable when staff say it is ready" do
+        room_status
+        subject.finish(target_status: "ready")
+
+        expect(room_status.reload.status).to eq("ready")
+      end
+
+      it "falls back to housekeeping for a status it does not recognise" do
+        room_status
+        subject.finish(target_status: "occupied")
+
+        expect(room_status.reload.status).to eq("dirty")
+      end
+    end
   end
 
   describe "#destroy" do

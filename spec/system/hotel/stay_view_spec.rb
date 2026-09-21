@@ -77,6 +77,42 @@ RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zon
     JS
   end
 
+  # Presses on one free cell and releases over another in the same row, which is
+  # how staff draw a stay straight onto the timeline. This one drives Chrome's
+  # own pointer rather than dispatching events: the "+" trigger is stretched
+  # over every free night, so only a real press reaches what staff actually hit.
+  def drag_select_nights(room_number:, from_date:, to_date:)
+    points = page.evaluate_script(<<~JS)
+      (() => {
+        const row = document.querySelector(`[data-room-number="#{room_number}"][data-stay-view--interaction-target~="row"]`)
+        const centre = (date) => {
+          const rect = row.querySelector(`[data-stay-view--interaction-target~="cell"][data-date="${date}"]`).getBoundingClientRect()
+          return { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) }
+        }
+        return { from: centre(#{from_date.iso8601.to_json}), to: centre(#{to_date.iso8601.to_json}) }
+      })()
+    JS
+
+    from = points.fetch("from")
+    to = points.fetch("to")
+    mouse = page.driver.browser.mouse
+    mouse.move(x: from.fetch("x"), y: from.fetch("y"))
+    mouse.down
+    # One move past the drag threshold before the run to the far night, so the
+    # press is promoted to a drag exactly as a hand would promote it.
+    mouse.move(x: from.fetch("x") + 20, y: from.fetch("y"))
+    mouse.move(x: to.fetch("x"), y: to.fetch("y"))
+    mouse.up
+  end
+
+  # A native dialog's backdrop click lands on the dialog element itself, which
+  # is what the sheet distinguishes from a click on its contents.
+  def click_sheet_backdrop(id)
+    page.execute_script(<<~JS, id)
+      document.getElementById(arguments[0]).dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    JS
+  end
+
   def drag_booking(room_number:, day_delta:, edge: nil, pointer_type: "mouse", long_press: false)
     segment_id = "stay_view_booking_room_#{booking.booking_rooms.sole.id}"
     dispatch_pointer_down(segment_id:, edge:, pointer_type:)
@@ -242,6 +278,31 @@ RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zon
     end
   end
 
+  it "draws a multi-night stay across free cells and prefills the booking sheet" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    drag_select_nights(room_number: "102", from_date: Date.current, to_date: Date.current + 2.days)
+
+    within("#booking-creation-sheet") do
+      expect(find("#booking_check_in", visible: :all).value).to start_with(Date.current.iso8601)
+      expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 3.days).iso8601)
+      expect(page).to have_css("[data-preserved-room-number='102']", visible: :all)
+    end
+  end
+
+  it "refuses a selection that runs through an occupied night" do
+    visit hotel_stay_view_path(hotel, view: :timeline, start_date: Date.current, days: 7)
+
+    occupied = find("[data-room-number='101'][data-stay-view--interaction-target~='row'] [data-date='#{Date.current.iso8601}']", visible: :all)
+    expect(occupied[:"data-selectable"]).to be_nil
+
+    drag_select_nights(room_number: "101", from_date: Date.current + 2.days, to_date: Date.current + 4.days)
+    within("#booking-creation-sheet") do
+      expect(find("#booking_check_in", visible: :all).value).to start_with((Date.current + 2.days).iso8601)
+      expect(find("#booking_check_out", visible: :all).value).to start_with((Date.current + 5.days).iso8601)
+    end
+  end
+
   it "opens a booking action from Room View with Stay View return state" do
     return_to = hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
     visit return_to
@@ -277,7 +338,7 @@ RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zon
     end
   end
 
-  it "opens an active block item and finishes it through the existing sheet" do
+  it "opens an active block item and returns the room to service through the existing sheet" do
     block = create(
       :room_block,
       hotel:,
@@ -299,7 +360,9 @@ RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zon
     within("#stay-view-room-block-sheet") do
       expect(page).to have_content("Edit room block")
       expect(find("#room_block_reason").value).to eq("Repair the balcony door")
-      click_in_overlay "Finish block"
+      click_in_overlay "Return to service"
+      expect(page).to have_content("What state is it in?")
+      click_in_overlay "Dirty"
     end
 
     expect(page).to have_css(
@@ -314,6 +377,77 @@ RSpec.describe "Hotel Stay View", type: :system, js: true, frozen_time: Time.zon
     # spec, and is still covered by the Room View housekeeping example below.
     expect(page).to have_no_css("dialog#stay-view-room-block-sheet[open]")
     expect(block.reload.completed_at).to be_present
+  end
+
+  it "warns before a click outside the sheet throws away unsaved block edits" do
+    create(
+      :room_block,
+      hotel:,
+      room_type:,
+      room_number: "102",
+      start_date: Date.current,
+      end_date: Date.current,
+      reason: "Repair the balcony door"
+    )
+    visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+    click_via_javascript("#stay_view_room_#{room_type.id}_102 a[data-slot='stay-view-room-block-item']")
+
+    expect(page).to have_css("#stay-view-room-block-sheet", text: "Edit room block")
+    fill_in "Reason", with: "Balcony door and the window latch"
+    click_sheet_backdrop("stay-view-room-block-sheet")
+
+    expect(page).to have_css("dialog#stay-view-room-block-discard-alert[open]", text: "Discard your progress?")
+    click_in_overlay "Keep editing"
+    expect(page).to have_css("dialog#stay-view-room-block-sheet[open]")
+    expect(find("#room_block_reason").value).to eq("Balcony door and the window latch")
+
+    click_sheet_backdrop("stay-view-room-block-sheet")
+    expect(page).to have_css("dialog#stay-view-room-block-discard-alert[open]")
+    click_in_overlay "Discard changes"
+    expect(page).to have_no_css("dialog#stay-view-room-block-sheet[open]")
+  end
+
+  it "counts a half-finished return to service as progress worth keeping" do
+    create(
+      :room_block,
+      hotel:,
+      room_type:,
+      room_number: "102",
+      start_date: Date.current,
+      end_date: Date.current,
+      reason: "Repair the balcony door"
+    )
+    visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+    click_via_javascript("#stay_view_room_#{room_type.id}_102 a[data-slot='stay-view-room-block-item']")
+
+    expect(page).to have_css("#stay-view-room-block-sheet", text: "Edit room block")
+    click_in_overlay "Return to service"
+    expect(page).to have_content("What state is it in?")
+
+    click_sheet_backdrop("stay-view-room-block-sheet")
+    expect(page).to have_css("dialog#stay-view-room-block-discard-alert[open]", text: "Discard your progress?")
+    click_in_overlay "Keep editing"
+    expect(page).to have_css("dialog#stay-view-room-block-sheet[open]")
+  end
+
+  it "closes an untouched block sheet on a click outside without asking" do
+    create(
+      :room_block,
+      hotel:,
+      room_type:,
+      room_number: "102",
+      start_date: Date.current,
+      end_date: Date.current,
+      reason: "Repair the balcony door"
+    )
+    visit hotel_stay_view_path(hotel, view: :rooms, date: Date.current)
+    click_via_javascript("#stay_view_room_#{room_type.id}_102 a[data-slot='stay-view-room-block-item']")
+
+    expect(page).to have_css("#stay-view-room-block-sheet", text: "Edit room block")
+    click_sheet_backdrop("stay-view-room-block-sheet")
+
+    expect(page).to have_no_css("dialog#stay-view-room-block-sheet[open]")
+    expect(page).to have_no_css("dialog#stay-view-room-block-discard-alert[open]")
   end
 
   it "opens the status guide and changes room status from the timeline badge menu" do

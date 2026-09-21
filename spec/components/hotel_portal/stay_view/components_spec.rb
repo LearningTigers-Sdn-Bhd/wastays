@@ -148,8 +148,8 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Timeline events", visible: :all)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Departure", visible: :all)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "No-show detected", visible: :all)
-    expect(page).to have_css("div[data-slot='stay-view-status-swatch']", count: 17)
-    expect(page).to have_css("div[data-slot='stay-view-status-swatch'] svg.size-3", count: 17)
+    expect(page).to have_css("div[data-slot='stay-view-status-swatch']", count: 18)
+    expect(page).to have_css("div[data-slot='stay-view-status-swatch'] svg.size-3", count: 18)
     expect(page).to have_no_css("#stay-view-status-guide-panel .panel-badge-rounded", visible: :all)
     expect(page).to have_css(
       "[data-slot='stay-view-status-swatch'][data-state='arrival']" \
@@ -624,6 +624,36 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
       text: "Air-conditioning maintenance"
     )
     expect(page).to have_no_link
+  end
+
+  it "carries the block reason beside its label, letting the reason truncate first" do
+    render_inline(HotelPortal::StayView::OperationalBar.new(
+      segment: operational_segment.with(reason: "Compressor replacement, parts on order")
+    ))
+
+    expect(page).to have_css(
+      "[data-slot='stay-view-operational-reason'].truncate",
+      text: "Compressor replacement, parts on order"
+    )
+  end
+
+  it "omits the reason element when the block carries none" do
+    render_inline(HotelPortal::StayView::OperationalBar.new(segment: operational_segment))
+
+    expect(page).to have_no_css("[data-slot='stay-view-operational-reason']")
+  end
+
+  it "links an operational bar to the block sheet when one is offered" do
+    render_inline(HotelPortal::StayView::OperationalBar.new(
+      segment: operational_segment,
+      href: "/hotel/1/stay-view/room_blocks/1/edit",
+      link_attributes: { data: { turbo_frame: "booking_action_sheet" } }
+    ))
+
+    link = page.find("a.panel-timeline__segment-action")
+    expect(link[:href]).to eq("/hotel/1/stay-view/room_blocks/1/edit")
+    expect(link[:"data-turbo-frame"]).to eq("booking_action_sheet")
+    expect(link[:"aria-label"]).to eq(operational_segment.accessible_label)
   end
 
   it "flags smoking and pet restrictions as icon-only circular badges" do

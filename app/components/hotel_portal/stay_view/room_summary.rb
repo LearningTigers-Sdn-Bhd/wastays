@@ -4,15 +4,6 @@ module HotelPortal
   module StayView
     class RoomSummary < PanelsUI::BaseComponent
       STATUS_VARIANTS = ::Rooms::StatusPresentation::BADGE_VARIANTS
-      STATUS_ICONS = {
-        ready: "circle-check",
-        dirty: "spray-can",
-        cleaning: "brush-cleaning",
-        awaiting_inspection: "search-check",
-        inspection_failed: "shield-x",
-        out_of_service: "construction",
-        unknown: "circle-question-mark"
-      }.freeze
 
       LAYOUTS = %i[inline split_controls].freeze
 
@@ -105,7 +96,7 @@ module HotelPortal
           items.each do |item|
             menu.with_item(href: item.fetch(:href), data: item.fetch(:data, {})) do
               safe_join([
-                helpers.app_icon(STATUS_ICONS.fetch(item.fetch(:value).to_sym, STATUS_ICONS[:unknown]), class: "size-4", aria: { hidden: true }),
+                helpers.app_icon(::Rooms::StatusPresentation.icon(item.fetch(:value)), class: "size-4", aria: { hidden: true }),
                 tag.span(item.fetch(:label)),
                 (tag.span("Current", class: "ml-auto text-xs text-muted-foreground") if item[:current])
               ].compact)
@@ -169,7 +160,7 @@ module HotelPortal
           shape: :circular,
           aria: { hidden: true }
         ) do
-          helpers.app_icon(STATUS_ICONS.fetch(status, STATUS_ICONS[:unknown]), class: "size-3", aria: { hidden: true })
+          helpers.app_icon(::Rooms::StatusPresentation.icon(status), class: "size-3", aria: { hidden: true })
         end
       end
 
