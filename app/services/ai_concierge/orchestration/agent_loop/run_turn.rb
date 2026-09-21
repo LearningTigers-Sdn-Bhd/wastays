@@ -12,10 +12,8 @@ module AiConcierge
       class RunTurn
         class HopLimitExceeded < StandardError; end
 
-        # RubyLLM's own tool loop has no ceiling: handle_tool_calls recurses
-        # into complete until the model stops asking. A concierge turn that
-        # needs five tools has misunderstood the guest, and an uncapped loop is
-        # an uncapped bill.
+        # A concierge turn that needs five tools has misunderstood the guest,
+        # and an uncapped loop is an uncapped bill.
         MAX_HOPS = 4
         LLM_TIMEOUT = 30
 
@@ -76,10 +74,19 @@ module AiConcierge
         end
 
         def run
-          response = BuildChat.new(context: context, tools: tools, recorder: recorder, max_hops: MAX_HOPS)
-            .call.ask(context.message)
-          Providers::UsageLog.call(response, hotel: context.hotel, stage: :loop)
-          response
+          chat = BuildChat.new(context: context, tools: tools, recorder: recorder, max_hops: MAX_HOPS).call
+          chat.ask_later(context.message)
+
+          loop do
+            response = chat.generate
+            Providers::UsageLog.call(response, hotel: context.hotel, stage: :loop)
+            return response unless response.tool_call?
+
+            chat.run_tools
+            # A recorded domain outcome is the guest's final answer. Do not
+            # give it back to the model for another completion or a rewrite.
+            return response if recorder.outcome
+          end
         end
 
         # A guest who wants to book gets the booking ladder, not the model's

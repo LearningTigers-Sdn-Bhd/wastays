@@ -6,7 +6,13 @@ RSpec.describe AiConcierge::Providers::UsageLog do
   let(:hotel) { build(:hotel, ai_provider_enabled: true, ai_provider_name: "claude", ai_provider_key: "test-key") }
 
   it "writes what the call cost" do
-    response = instance_double(RubyLLM::Message, input_tokens: 1_400, output_tokens: 80, cached_tokens: 1_127)
+    response = RubyLLM::Message.new(
+      role: :assistant,
+      content: "",
+      input_tokens: 1_400,
+      output_tokens: 80,
+      cache_read_tokens: 1_127
+    )
     allow(Rails.logger).to receive(:info)
 
     described_class.call(response, hotel: hotel, stage: :loop)

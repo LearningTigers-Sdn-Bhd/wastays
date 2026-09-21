@@ -22,7 +22,7 @@ module AiConcierge
           staff request. The application handles those before you run.
         DESCRIPTION
 
-        params do
+        parameters do
           array :questions do
             object do
               string :evidence, description: "Exact words copied from the guest's message"
@@ -79,8 +79,7 @@ module AiConcierge
           return reject_invalid_turn unless valid_turn?(items, values)
 
           if items.empty?
-            advance_booking(values)
-            return halt("The booking system has answered the guest. Stop.")
+            return advance_booking(values)
           end
 
           answers = items.map { |item| resolve(item) }
@@ -105,7 +104,6 @@ module AiConcierge
             )
           )
           record(domain_result, digest: { answered: true, question_count: items.length })
-          halt("The guest turn is complete. Stop.")
         end
 
         private
@@ -128,7 +126,6 @@ module AiConcierge
             extra_context: { message: "Please send your request again in one message." }
           )
           record(domain_result, digest: { answered: false, reason: "invalid evidence" })
-          halt("The evidence was rejected. Stop.")
         end
 
         def resolve(item)

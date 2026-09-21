@@ -64,7 +64,7 @@ gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
 gem "caxlsx", "~> 4.5"
-gem "ruby_llm", "~> 1.16"
+gem "ruby_llm", "~> 2.0"
 gem "pdf-reader", "~> 2.12"
 gem "pgvector", "~> 0.3.0"
 

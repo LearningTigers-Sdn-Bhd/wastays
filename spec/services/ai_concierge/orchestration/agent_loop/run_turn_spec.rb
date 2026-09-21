@@ -54,10 +54,8 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
   end
 
   describe "advancing a booking more than once in a turn" do
-    # RubyLLM runs every tool call in a response before it notices the halt, so
-    # a provider that ignores `calls: :one` could otherwise put the booking
-    # through twice. This, not the halt, is what makes a duplicate quote
-    # structurally impossible.
+    # A provider that ignores `calls: :one` could otherwise put the booking
+    # through twice. This guard makes a duplicate quote structurally impossible.
     it "refuses a second advance and does not run the booking again" do
       turn = run(message: "early august")
       tool = turn.tools.find { |candidate| candidate.name == "handle_guest_turn" }
@@ -65,11 +63,11 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       expect(AiConcierge::Orchestration::Booking::Orchestrator).to receive(:new).once.and_call_original
 
       arguments = { questions: [], commercial: { intent: "booking", slots: {}, signals: {}, evidence: {} } }
-      first = tool.call(arguments)
-      second = tool.call(arguments)
+      first = tool.call(**arguments)
+      second = tool.call(**arguments)
 
-      expect(first).to be_a(RubyLLM::Tool::Halt)
-      expect(second).to be_a(RubyLLM::Tool::Halt)
+      expect(first).to eq(advanced: true)
+      expect(second).to eq(advanced: false, reason: "already advanced this turn")
     end
   end
 
@@ -86,7 +84,8 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
         allow(chat).to receive(:with_temperature)
         allow(chat).to receive(:before_tool_call)
         allow(chat).to receive(:after_tool_result)
-        allow(chat).to receive(:ask).and_raise(RubyLLM::Error.new(nil, "provider down"))
+        allow(chat).to receive(:ask_later)
+        allow(chat).to receive(:generate).and_raise(RubyLLM::Error.new("provider down"))
       end)
 
       before_payload = conversation_state.slots_payload
@@ -110,6 +109,55 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
     end
   end
 
+  describe "the manual tool loop" do
+    def configured_chat
+      instance_double(RubyLLM::Chat).tap do |chat|
+        allow(chat).to receive(:with_instructions)
+        allow(chat).to receive(:with_tools)
+        allow(chat).to receive(:with_temperature)
+        allow(chat).to receive(:before_tool_call)
+        allow(chat).to receive(:after_tool_result)
+        allow(chat).to receive(:ask_later)
+      end
+    end
+
+    let(:tool_response) { Struct.new(:content) { def tool_call? = true }.new(nil) }
+    let(:prose_response) { Struct.new(:content) { def tool_call? = false }.new("Please try again.") }
+
+    it "stops after a tool records the guest answer" do
+      turn = run(message: "early august")
+      tool = turn.tools.find { |candidate| candidate.name == "handle_guest_turn" }
+      chat = configured_chat
+      allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_return(chat)
+
+      expect(chat).to receive(:generate).once.and_return(tool_response)
+      expect(chat).to receive(:run_tools).once do
+        tool.execute(questions: [], commercial: { intent: "booking", slots: {}, signals: {}, evidence: {} })
+      end
+
+      expect(turn.call.domain_result[:active_flow]).to eq("booking_search")
+    end
+
+    it "continues after a tool call that produced no domain outcome" do
+      chat = configured_chat
+      allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_return(chat)
+      allow(chat).to receive(:generate).and_return(tool_response, prose_response)
+      allow(chat).to receive(:run_tools)
+      allow(AiConcierge::Providers::UsageLog).to receive(:call)
+
+      outcome = run.call
+
+      expect(chat).to have_received(:generate).twice
+      expect(AiConcierge::Providers::UsageLog).to have_received(:call).with(
+        tool_response, hotel: hotel, stage: :loop
+      ).once
+      expect(AiConcierge::Providers::UsageLog).to have_received(:call).with(
+        prose_response, hotel: hotel, stage: :loop
+      ).once
+      expect(outcome.domain_result.dig(:extra_context, :message)).to eq("Please try again.")
+    end
+  end
+
   describe "a model that answers without reaching for a tool" do
     it "sends what it said to the guest" do
       chat = instance_double(RubyLLM::Chat)
@@ -118,7 +166,10 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       allow(chat).to receive(:with_temperature)
       allow(chat).to receive(:before_tool_call)
       allow(chat).to receive(:after_tool_result)
-      allow(chat).to receive(:ask).and_return(Struct.new(:content).new("Hello! How can I help?"))
+      allow(chat).to receive(:ask_later)
+      allow(chat).to receive(:generate).and_return(
+        Struct.new(:content) { def tool_call? = false }.new("Hello! How can I help?")
+      )
       allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_return(chat)
 
       expect(run.call.domain_result.dig(:extra_context, :message)).to eq("Hello! How can I help?")
@@ -136,7 +187,10 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::RunTurn do
       allow(chat).to receive(:with_temperature)
       allow(chat).to receive(:before_tool_call)
       allow(chat).to receive(:after_tool_result)
-      allow(chat).to receive(:ask).and_return(Struct.new(:content).new("Okay."))
+      allow(chat).to receive(:ask_later)
+      allow(chat).to receive(:generate).and_return(
+        Struct.new(:content) { def tool_call? = false }.new("Okay.")
+      )
       allow_any_instance_of(AiConcierge::Providers::RubyLlmClient).to receive(:chat).and_return(chat)
 
       result = run(message: "yes").call.domain_result

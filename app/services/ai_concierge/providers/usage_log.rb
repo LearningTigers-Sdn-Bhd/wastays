@@ -30,13 +30,14 @@ module AiConcierge
       # is the normal case in test, not an error. Same guard RunTurn already
       # applies to `content`.
       def call
-        return unless response.respond_to?(:input_tokens)
+        return unless response.respond_to?(:tokens)
+
+        tokens = response.tokens
 
         Rails.logger.info(
           "AiConcierge::Usage #{stage} provider=#{hotel.ai_provider_name} " \
           "model=#{hotel.ai_concierge_model_name} " \
-          "in=#{response.input_tokens} out=#{response.output_tokens} " \
-          "cached=#{response.cached_tokens}"
+          "in=#{tokens.input} out=#{tokens.output} cached=#{tokens.cache_read}"
         )
       end
 

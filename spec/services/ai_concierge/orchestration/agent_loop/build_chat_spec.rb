@@ -12,6 +12,7 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::BuildChat do
   let(:conversation_state) { create(:prospect_conversation_state, prospect: prospect) }
   let(:recorder) { AiConcierge::Orchestration::AgentLoop::ToolRecorder.new }
   let(:chat) { instance_double(RubyLLM::Chat).as_null_object }
+  let(:client) { instance_double(AiConcierge::Providers::RubyLlmClient, chat: chat) }
 
   def build(conversation: nil)
     context = AiConcierge::Orchestration::AgentLoop::TurnContext.new(
@@ -23,16 +24,17 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::BuildChat do
   end
 
   before do
-    allow(AiConcierge::Providers::RubyLlmClient).to receive(:new).and_return(
-      instance_double(AiConcierge::Providers::RubyLlmClient, chat: chat, cacheable: "STABLE")
-    )
+    allow(AiConcierge::Providers::RubyLlmClient).to receive(:new).and_return(client)
+    allow(client).to receive(:add_cacheable_instructions) do |target, _instructions|
+      target.with_instructions("STABLE", cache_until_here: true)
+    end
   end
 
   # The cache breakpoint is a boundary between blocks, so there have to be two.
   it "sends the instructions as a cacheable block and a turn block after it" do
     build
 
-    expect(chat).to have_received(:with_instructions).with("STABLE").ordered
+    expect(chat).to have_received(:with_instructions).with("STABLE", cache_until_here: true).ordered
     expect(chat).to have_received(:with_instructions)
       .with(a_string_including(Date.current.iso8601), append: true).ordered
   end
@@ -45,7 +47,7 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::BuildChat do
 
   # After the instructions, because the providers cache a prefix of tools +
   # system and a message moving above that line would cost every hotel its
-  # cache. Before the current message, which Chat#ask appends itself.
+  # cache. Before the current message, which Chat#ask_later appends itself.
   it "seeds the thread after the instructions, oldest first" do
     conversation = create(:conversation, hotel: hotel, prospect: prospect)
     create(:prospect_message, prospect: prospect, conversation: conversation,
@@ -57,7 +59,7 @@ RSpec.describe AiConcierge::Orchestration::AgentLoop::BuildChat do
 
     build(conversation: conversation)
 
-    expect(chat).to have_received(:with_instructions).with("STABLE").ordered
+    expect(chat).to have_received(:with_instructions).with("STABLE", cache_until_here: true).ordered
     expect(chat).to have_received(:add_message)
       .with(role: :user, content: "do you have a pool").ordered
     expect(chat).to have_received(:add_message)
