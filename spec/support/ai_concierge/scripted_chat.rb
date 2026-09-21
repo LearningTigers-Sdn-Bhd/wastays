@@ -47,7 +47,7 @@ module AiConciergeEval
       raise ArgumentError, "fixture asked for unknown tool #{call[:tool]}" unless tool
 
       @callbacks[:before].each(&:call)
-      result = tool.call(call[:arguments] || {})
+      result = tool.call(**(call[:arguments] || {}))
       @callbacks[:after].each(&:call)
       result
     end

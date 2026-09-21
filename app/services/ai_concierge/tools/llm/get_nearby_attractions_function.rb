@@ -10,7 +10,7 @@ module AiConcierge
           what there is to do around the hotel.
         DESCRIPTION
 
-        param :guest_language, type: "string", required: false,
+        parameter :guest_language, type: "string", required: false,
           desc: "ISO 639-1 code for the language used in the guest's message."
 
         def execute(guest_language: nil)

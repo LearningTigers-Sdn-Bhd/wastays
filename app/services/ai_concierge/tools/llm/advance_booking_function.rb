@@ -35,7 +35,7 @@ module AiConcierge
           system owns both. Call this at most once per turn.
         DESCRIPTION
 
-        params do
+        parameters do
           object :slots, description: "Only what this message states. Omit anything it does not." do
             integer :target_month, description: "1-12, only when the guest names a month without a date. Never today's month by default."
             integer :target_year

@@ -22,7 +22,7 @@ module AiConcierge
           staff request. The application handles those before you run.
         DESCRIPTION
 
-        params do
+        parameters do
           array :questions do
             object do
               string :evidence, description: "Exact words copied from the guest's message"
