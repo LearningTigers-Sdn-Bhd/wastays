@@ -9,7 +9,7 @@
     <div class="flex w-max gap-2">
       <% categories.each do |tab| %>
         <% active = tab.slug == category.slug %>
-        <%= link_to concierge_recommendations_path(@hotel, category: tab.slug),
+        <%= link_to concierge_recommendations_path(@hotel.unique_id, @hotel.public_id, category: tab.slug),
               data: { turbo_frame: "category_content" },
               "aria-current": (active ? "page" : nil),
               class: "flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-center transition-all active:scale-95 #{active ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border/60 bg-white text-muted-foreground hover:border-primary/40'}" do %>
@@ -29,7 +29,7 @@
   <div class="hidden lg:flex lg:flex-wrap lg:gap-2">
     <% categories.each do |tab| %>
       <% active = tab.slug == category.slug %>
-      <%= link_to concierge_recommendations_path(@hotel, category: tab.slug),
+      <%= link_to concierge_recommendations_path(@hotel.unique_id, @hotel.public_id, category: tab.slug),
             data: { turbo_frame: "category_content" },
             "aria-current": (active ? "page" : nil),
             class: "group inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2.5 text-[12px] font-black uppercase tracking-wider transition-all active:scale-95 #{active ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-border/60 bg-white text-muted-foreground hover:border-primary/40 hover:text-primary'}" do %>

@@ -1,5 +1,5 @@
 <% claimed = voucher_wallet&.claimed?(offer) %>
-<%= link_to concierge_recommendation_offer_path(@hotel, vendor, offer),
+<%= link_to concierge_recommendation_offer_path(@hotel.unique_id, @hotel.public_id, vendor, offer),
       class: "group flex items-start gap-3 rounded-xl border bg-white p-3 shadow-sm transition-all hover:shadow-md active:scale-[0.98] #{claimed ? 'border-primary/40' : 'border-border/60'}" do %>
   <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg <%= vendor_accent(vendor, :chip) %>">
     <%= cached_icon(offer.kind == "free_item" ? "gift" : "badge-percent", class: "h-4 w-4") %>

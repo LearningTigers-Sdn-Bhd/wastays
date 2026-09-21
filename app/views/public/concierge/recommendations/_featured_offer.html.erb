@@ -5,7 +5,7 @@
     at four to a row on a phone the card has no room to spare. Fills its grid
     cell rather than carrying a fixed width, since it sits in a still grid
     instead of a scrolling rail. %>
-<%= link_to concierge_recommendation_offer_path(@hotel, vendor, offer),
+<%= link_to concierge_recommendation_offer_path(@hotel.unique_id, @hotel.public_id, vendor, offer),
       data: { turbo_frame: "_top" },
       class: "group flex min-w-0 flex-col rounded-xl border-2 bg-white p-2.5 shadow-sm transition-all hover:shadow-md active:scale-[0.97] #{vendor_accent(vendor, :border)} #{local_assigns[:wrapper_class]}" do %>
   <p class="line-clamp-2 text-[12px] font-black leading-tight text-foreground"><%= offer.title %></p>

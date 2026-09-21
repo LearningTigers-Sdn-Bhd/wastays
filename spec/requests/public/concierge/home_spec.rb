@@ -91,7 +91,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
       ].map do |user_agent|
-        get concierge_home_path(hotel), headers: { "HTTP_USER_AGENT" => user_agent }
+        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => user_agent }
         response.body
       end
 
@@ -99,17 +99,17 @@ RSpec.describe "Public::Concierge::Home", type: :request do
     end
 
     it "links every tile to its concierge path" do
-      get concierge_home_path(hotel)
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
 
-      expect(response.body).to include(concierge_check_in_path(hotel))
-      expect(response.body).to include(concierge_check_out_path(hotel))
-      expect(response.body).to include(concierge_new_request_path(hotel))
-      expect(response.body).to include(concierge_contact_path(hotel))
-      expect(response.body).to include(concierge_recommendations_path(hotel))
+      expect(response.body).to include(concierge_check_in_path(hotel.unique_id, hotel.public_id))
+      expect(response.body).to include(concierge_check_out_path(hotel.unique_id, hotel.public_id))
+      expect(response.body).to include(concierge_new_request_path(hotel.unique_id, hotel.public_id))
+      expect(response.body).to include(concierge_contact_path(hotel.unique_id, hotel.public_id))
+      expect(response.body).to include(concierge_recommendations_path(hotel.unique_id, hotel.public_id))
     end
 
     it "leads with the hotel's own photograph rather than a stock background" do
-      get concierge_home_path(hotel)
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
 
       expect(response.body).to include("landing/bg-1")
     end

@@ -6,7 +6,7 @@
            locals: { content_class: "flex-1 px-4 pt-4 pb-16 sm:px-6 md:pt-6",
                      container_class: "w-full max-w-5xl" } do %>
   <%= render "public/concierge/shared/back_button",
-             back_path: concierge_recommendations_path(@hotel, category: @vendor.category_slug),
+             back_path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id, category: @vendor.category_slug),
              back_label: "Back to #{VendorDirectory.category(@vendor.category_slug)&.name || 'Recommendations'}",
              wrapper_class: "#{desktop_only_back_class} mb-3" %>
 
@@ -91,7 +91,7 @@
     <button type="button"
             data-controller="concierge-share"
             data-concierge-share-title-value="<%= @vendor.name %>"
-            data-concierge-share-url-value="<%= concierge_recommendation_vendor_url(@hotel, @vendor) %>"
+            data-concierge-share-url-value="<%= concierge_recommendation_vendor_url(@hotel.unique_id, @hotel.public_id, @vendor) %>"
             data-action="concierge-share#share"
             class="flex items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-white p-3 shadow-sm transition-all hover:shadow-md active:scale-[0.98]">
       <%= cached_icon "share", class: "h-4 w-4 text-primary" %>

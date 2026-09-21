@@ -10,7 +10,7 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
 
   before { create(:plan_feature, plan: plan, feature: concierge_page_feature, enabled: true) }
 
-  def path(suffix = "") = "/concierge/#{hotel.to_param}/recommendations#{suffix}"
+  def path(suffix = "") = "/concierge/#{hotel.unique_id}/#{hotel.public_id}/recommendations#{suffix}"
 
   describe "GET index" do
     it "opens on the first category and lists its vendors" do
@@ -39,14 +39,14 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
       get path
 
       expect(response.body).to include("Leave Recommendations?")
-      expect(response.body).to include(concierge_home_path(hotel))
+      expect(response.body).to include(concierge_home_path(hotel.unique_id, hotel.public_id))
       # The photo itself is a button now, not a direct link home -- confirm
       # first is the whole point.
-      expect(response.body).not_to match(%r{<a[^>]*href="#{Regexp.escape(concierge_home_path(hotel))}"[^>]*>\s*<img})
+      expect(response.body).not_to match(%r{<a[^>]*href="#{Regexp.escape(concierge_home_path(hotel.unique_id, hotel.public_id))}"[^>]*>\s*<img})
     end
 
     it "does not gate the top bar on a shorter page like Contact" do
-      get "/concierge/#{hotel.to_param}/contact"
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
 
       expect(response.body).not_to include("Leave Recommendations?")
     end

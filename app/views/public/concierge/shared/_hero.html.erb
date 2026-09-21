@@ -43,13 +43,13 @@
                   class="rounded-xl border border-border/60 bg-white px-4 py-3 text-[12px] font-black uppercase tracking-wider text-foreground transition-colors active:bg-muted">
             Stay here
           </button>
-          <%= link_to "Go home", concierge_home_path(@hotel),
+          <%= link_to "Go home", concierge_home_path(@hotel.unique_id, @hotel.public_id),
                 class: "rounded-xl bg-primary px-4 py-3 text-center text-[12px] font-black uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-hover" %>
         </div>
       </div>
     </dialog>
   <% else %>
-    <%= link_to concierge_home_path(@hotel), class: "absolute inset-0 z-0", "aria-label": "#{@hotel.name} concierge home" do %>
+    <%= link_to concierge_home_path(@hotel.unique_id, @hotel.public_id), class: "absolute inset-0 z-0", "aria-label": "#{@hotel.name} concierge home" do %>
       <%= hero_photo %>
     <% end %>
   <% end %>

@@ -5,7 +5,7 @@
            locals: { content_class: "flex-1 flex items-center justify-center px-4 py-10 sm:px-6",
                      container_class: "w-full max-w-xl" } do %>
   <%= render "public/concierge/shared/page_header",
-             back_path: concierge_recommendations_path(@hotel),
+             back_path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id),
              back_label: "Back to Recommendations",
              back_wrapper_class: desktop_only_back_class,
              eyebrow: "Guest Verification",
@@ -15,7 +15,7 @@
 
   <%= render "public/concierge/shared/error_alert", message: @error %>
 
-  <%= form_with url: concierge_recommendations_lookup_path(@hotel), method: :post, local: true,
+  <%= form_with url: concierge_recommendations_lookup_path(@hotel.unique_id, @hotel.public_id), method: :post, local: true,
         class: "rounded-2xl border border-border/60 bg-white p-6 shadow-sm" do |form| %>
     <%= hidden_field_tag :return_to, @return_to %>
 
@@ -35,7 +35,7 @@
   <% end %>
 
   <p class="mt-5 text-center text-[11px] font-medium leading-relaxed text-muted-foreground">
-    Cannot find your code? <%= link_to "Contact the front desk", concierge_contact_path(@hotel), class: "font-bold text-primary underline underline-offset-4" %>.
+    Cannot find your code? <%= link_to "Contact the front desk", concierge_contact_path(@hotel.unique_id, @hotel.public_id), class: "font-bold text-primary underline underline-offset-4" %>.
   </p>
 
   <%# Local-only: a real confirmation code from this hotel's own data, one tap
@@ -50,7 +50,7 @@
         <span class="font-mono font-bold tracking-wider"><%= @dev_sample_code %></span>.
       </p>
       <%= button_to "Use sample code",
-            concierge_recommendations_lookup_path(@hotel),
+            concierge_recommendations_lookup_path(@hotel.unique_id, @hotel.public_id),
             params: { confirmation_token: @dev_sample_code, return_to: @return_to },
             class: "mt-3 w-full cursor-pointer rounded-lg border border-amber-400/60 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-amber-800 transition-colors hover:bg-amber-100" %>
     </div>

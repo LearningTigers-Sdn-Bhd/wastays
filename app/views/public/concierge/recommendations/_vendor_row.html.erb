@@ -2,7 +2,7 @@
     the tagline, a line of the description, distance and price, not only the
     name. Horizontal from sm up so the photo doesn't eat the row's height
     budget on a wider screen; stacked on a phone, where width is scarce. %>
-<%= link_to concierge_recommendation_vendor_path(@hotel, vendor),
+<%= link_to concierge_recommendation_vendor_path(@hotel.unique_id, @hotel.public_id, vendor),
       data: { turbo_frame: "_top", concierge_dietary_filter_target: "item", dietary: vendor.dietary_tags.first.to_s },
       class: "group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm transition-all hover:shadow-md active:scale-[0.99] sm:flex-row" do %>
   <div class="relative h-36 w-full flex-shrink-0 overflow-hidden bg-muted sm:h-auto sm:w-56">

@@ -3,7 +3,7 @@
            locals: { content_class: "flex-1 px-4 pt-8 pb-16 sm:px-6 md:pt-12",
                      container_class: "w-full max-w-2xl" } do %>
   <%= render "public/concierge/shared/back_button",
-             back_path: concierge_recommendation_vendor_path(@hotel, @vendor),
+             back_path: concierge_recommendation_vendor_path(@hotel.unique_id, @hotel.public_id, @vendor),
              back_label: "Back to #{@vendor.name}",
              wrapper_class: desktop_only_back_class %>
 
@@ -23,7 +23,7 @@
         the code is issued to you and can only be used once.
       </p>
 
-      <%= button_to concierge_claim_recommendation_offer_path(@hotel, @vendor, @offer),
+      <%= button_to concierge_claim_recommendation_offer_path(@hotel.unique_id, @hotel.public_id, @vendor, @offer),
             class: "mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-[13px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" do %>
         <%= cached_icon "ticket", class: "h-4 w-4" %> Claim this voucher
       <% end %>
@@ -55,7 +55,7 @@
     </ul>
   </div>
 
-  <%= link_to concierge_recommendation_vendor_path(@hotel, @vendor),
+  <%= link_to concierge_recommendation_vendor_path(@hotel.unique_id, @hotel.public_id, @vendor),
         class: "group mt-3 flex items-center gap-4 rounded-2xl border border-border/60 bg-white p-4 shadow-sm transition-all hover:shadow-md active:scale-[0.98]" do %>
     <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl <%= vendor_accent(@vendor, :chip) %>">
       <%= cached_icon category_icon_for(@vendor.category_slug), class: "h-5 w-5" %>

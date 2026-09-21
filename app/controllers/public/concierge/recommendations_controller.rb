@@ -39,7 +39,7 @@ module Public
         if @review_form.valid?
           review_book.add!(vendor_id: @vendor.id, guest_name: @review_form.guest_name,
                             rating: @review_form.rating, comment: @review_form.comment)
-          redirect_to concierge_recommendation_vendor_path(@hotel, @vendor, anchor: "reviews"),
+          redirect_to concierge_recommendation_vendor_path(@hotel.unique_id, @hotel.public_id, @vendor, anchor: "reviews"),
                       notice: "Thanks for the review!"
         else
           @reviews = review_book.for(@vendor)
@@ -53,7 +53,7 @@ module Public
 
       def claim
         @entry = voucher_wallet.claim!(@offer)
-        redirect_to concierge_recommendation_offer_path(@hotel, @vendor, @offer),
+        redirect_to concierge_recommendation_offer_path(@hotel.unique_id, @hotel.public_id, @vendor, @offer),
                     notice: "Voucher claimed. Show the QR code at #{@vendor.name}."
       end
 
@@ -104,7 +104,7 @@ module Public
         vendor = VendorDirectory.vendor(match[:vendor_id])
         offer = VendorDirectory.offer(vendor.id, match[:offer_id])
         voucher_wallet.claim!(offer)
-        concierge_recommendation_offer_path(@hotel, vendor, offer)
+        concierge_recommendation_offer_path(@hotel.unique_id, @hotel.public_id, vendor, offer)
       rescue VendorDirectory::VendorNotFound, VendorDirectory::OfferNotFound
         @return_to
       end
@@ -173,7 +173,7 @@ module Public
       def require_booking!
         return if current_concierge_booking.present?
 
-        redirect_to concierge_recommendations_unlock_path(@hotel, return_to: request.fullpath)
+        redirect_to concierge_recommendations_unlock_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath)
       end
 
       # A voucher is a benefit of the stay, so the stay has to be happening.
@@ -188,14 +188,14 @@ module Public
       # into an open redirect.
       def safe_return_to
         candidate = params[:return_to].to_s
-        prefix = concierge_recommendations_path(@hotel)
+        prefix = concierge_recommendations_path(@hotel.unique_id, @hotel.public_id)
         return candidate if candidate.start_with?("#{prefix}/") || candidate.split("?").first == prefix
 
         prefix
       end
 
       def vendor_not_found
-        redirect_to concierge_recommendations_path(@hotel),
+        redirect_to concierge_recommendations_path(@hotel.unique_id, @hotel.public_id),
                     alert: "That listing is no longer available."
       end
     end
