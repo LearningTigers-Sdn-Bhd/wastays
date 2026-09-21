@@ -9,6 +9,11 @@ module AroundThat
   # status code says whether the API key was accepted. That is all an admin
   # needs before saving the settings.
   class TestConnection
+    # The API root has no route, so the probe asks a real endpoint. /places is a
+    # read endpoint that answers 401 without a credential, which makes it a
+    # cheap proof of both the host and the key.
+    PROBE_PATH = "places"
+
     OPEN_TIMEOUT_SECONDS = 5
     READ_TIMEOUT_SECONDS = 10
 
@@ -26,7 +31,7 @@ module AroundThat
       return failure("Base URL is missing.") if @base_url.blank?
       return failure("API key is missing.") if @api_key.blank?
 
-      uri = URI.parse(@base_url)
+      uri = probe_uri
       return failure("Base URL must be an http or https address.") unless uri.is_a?(URI::HTTP)
 
       classify(uri, perform(uri))
@@ -37,6 +42,10 @@ module AroundThat
     end
 
     private
+
+    def probe_uri
+      URI.parse("#{@base_url.delete_suffix('/')}/#{PROBE_PATH}")
+    end
 
     def perform(uri)
       request = Net::HTTP::Get.new(uri)
@@ -56,7 +65,7 @@ module AroundThat
       case code
       when 200..299 then success("AroundThat answered at #{uri.host} (#{@environment}).")
       when 401, 403 then failure("AroundThat reached #{uri.host}, but rejected the API key.")
-      when 404 then failure("AroundThat reached #{uri.host}, but the path returned 404. Check the base URL.")
+      when 404 then failure("AroundThat reached #{uri.host}, but #{uri.path} returned 404. Check the base URL.")
       else failure("AroundThat reached #{uri.host}, but returned HTTP #{code}.")
       end
     end

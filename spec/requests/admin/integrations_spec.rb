@@ -90,6 +90,7 @@ RSpec.describe "Admin::Integrations", type: :request do
 
   describe "POST /admin/integrations/test_around_that_connection" do
     let(:base_url) { "https://api.aroundthat.test/v1" }
+    let(:probe_url) { "#{base_url}/places" }
 
     before do
       AppConfig.set("aroundthat_api_key", "at-key")
@@ -107,7 +108,7 @@ RSpec.describe "Admin::Integrations", type: :request do
 
     it "returns the success message when AroundThat answers" do
       sign_in_as(superadmin)
-      stub_request(:get, base_url).to_return(status: 200, body: "{}")
+      stub_request(:get, probe_url).to_return(status: 200, body: "{}")
 
       post test_around_that_connection_admin_integrations_path
 
@@ -116,15 +117,81 @@ RSpec.describe "Admin::Integrations", type: :request do
       expect(response.parsed_body["message"]).to include("api.aroundthat.test")
     end
 
+    it "tests the settings the form posted, not the saved ones" do
+      sign_in_as(superadmin)
+      typed_url = "https://typed.aroundthat.test/v1"
+      request = stub_request(:get, "#{typed_url}/places")
+        .with(headers: { "Authorization" => "Bearer typed-key" })
+        .to_return(status: 200, body: "{}")
+
+      post test_around_that_connection_admin_integrations_path, params: {
+        aroundthat_api_key: "typed-key",
+        aroundthat_base_url: typed_url,
+        aroundthat_environment: "production"
+      }
+
+      expect(request).to have_been_requested
+      expect(response.parsed_body["message"]).to include("typed.aroundthat.test", "production")
+    end
+
+    it "reports an empty form field instead of falling back to the saved value" do
+      sign_in_as(superadmin)
+
+      post test_around_that_connection_admin_integrations_path, params: { aroundthat_base_url: "" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["message"]).to eq("Base URL is missing.")
+    end
+
     it "returns the failure message when AroundThat rejects the key" do
       sign_in_as(superadmin)
-      stub_request(:get, base_url).to_return(status: 401)
+      stub_request(:get, probe_url).to_return(status: 401)
 
       post test_around_that_connection_admin_integrations_path
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body["success"]).to be(false)
       expect(response.parsed_body["message"]).to include("rejected the API key")
+    end
+  end
+
+  describe "POST /admin/integrations/test_r2_connection" do
+    let(:s3_client) { Aws::S3::Client.new(stub_responses: true) }
+
+    before { allow(Aws::S3::Client).to receive(:new).and_return(s3_client) }
+
+    it "tests the settings the form posted, not the saved ones" do
+      sign_in_as(superadmin)
+      AppConfig.set("r2_bucket", "saved-bucket")
+
+      post test_r2_connection_admin_integrations_path, params: {
+        r2_access_key_id: "typed-access",
+        r2_secret_access_key: "typed-secret",
+        r2_bucket: "typed-bucket",
+        r2_endpoint: "https://typed.r2.cloudflarestorage.com",
+        r2_region: "auto"
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["message"]).to eq("Connected to the R2 bucket typed-bucket.")
+    end
+
+    it "reports an empty form field instead of falling back to the saved value" do
+      sign_in_as(superadmin)
+      AppConfig.set("r2_bucket", "saved-bucket")
+
+      post test_r2_connection_admin_integrations_path, params: { r2_bucket: "" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["message"]).to eq("Bucket name is missing.")
+    end
+
+    it "keeps a regular user out" do
+      sign_in_as(regular_user)
+
+      post test_r2_connection_admin_integrations_path
+
+      expect(response).not_to have_http_status(:ok)
     end
   end
 

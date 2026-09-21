@@ -4,6 +4,7 @@ require "rails_helper"
 
 RSpec.describe AroundThat::TestConnection do
   let(:base_url) { "https://api.aroundthat.test/v1" }
+  let(:probe_url) { "#{base_url}/places" }
 
   def service(**overrides)
     described_class.new(api_key: "at-key", base_url: base_url, environment: "staging", **overrides)
@@ -22,7 +23,7 @@ RSpec.describe AroundThat::TestConnection do
   end
 
   it "sends the API key as a bearer token" do
-    request = stub_request(:get, base_url)
+    request = stub_request(:get, probe_url)
       .with(headers: { "Authorization" => "Bearer at-key", "Accept" => "application/json" })
       .to_return(status: 200, body: "{}")
 
@@ -32,7 +33,7 @@ RSpec.describe AroundThat::TestConnection do
   end
 
   it "succeeds on a 2xx and names the host and environment" do
-    stub_request(:get, base_url).to_return(status: 200, body: "{}")
+    stub_request(:get, probe_url).to_return(status: 200, body: "{}")
 
     result = service.call
 
@@ -41,30 +42,46 @@ RSpec.describe AroundThat::TestConnection do
   end
 
   it "reports a rejected key on 401 and 403" do
-    stub_request(:get, base_url).to_return(status: 401)
+    stub_request(:get, probe_url).to_return(status: 401)
     expect(service.call.message).to eq("AroundThat reached api.aroundthat.test, but rejected the API key.")
 
-    stub_request(:get, base_url).to_return(status: 403)
+    stub_request(:get, probe_url).to_return(status: 403)
     expect(service.call.message).to eq("AroundThat reached api.aroundthat.test, but rejected the API key.")
   end
 
-  it "points at the base URL on a 404" do
-    stub_request(:get, base_url).to_return(status: 404)
+  it "names the probe path on a 404" do
+    stub_request(:get, probe_url).to_return(status: 404)
 
     result = service.call
 
     expect(result).not_to be_success
-    expect(result.message).to include("returned 404")
+    expect(result.message).to include("/v1/places returned 404")
+  end
+
+  it "asks the probe endpoint, not the base URL" do
+    request = stub_request(:get, probe_url).to_return(status: 200, body: "{}")
+
+    service.call
+
+    expect(request).to have_been_requested
+  end
+
+  it "joins the probe path when the base URL ends with a slash" do
+    request = stub_request(:get, probe_url).to_return(status: 200, body: "{}")
+
+    service(base_url: "#{base_url}/").call
+
+    expect(request).to have_been_requested
   end
 
   it "reports any other status code" do
-    stub_request(:get, base_url).to_return(status: 503)
+    stub_request(:get, probe_url).to_return(status: 503)
 
     expect(service.call.message).to eq("AroundThat reached api.aroundthat.test, but returned HTTP 503.")
   end
 
   it "reports a network failure instead of raising" do
-    stub_request(:get, base_url).to_timeout
+    stub_request(:get, probe_url).to_timeout
 
     result = service.call
 
@@ -77,7 +94,7 @@ RSpec.describe AroundThat::TestConnection do
     AppConfig.set("aroundthat_base_url", base_url)
     AppConfig.set("aroundthat_environment", "production")
 
-    request = stub_request(:get, base_url)
+    request = stub_request(:get, probe_url)
       .with(headers: { "Authorization" => "Bearer stored-key" })
       .to_return(status: 200, body: "{}")
 

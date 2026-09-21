@@ -1,5 +1,5 @@
-<%# The test reads the saved settings, not the values currently in the form, so
-    the button sits beside Save rather than inside the field group. %>
+<%# The test posts the whole form, so it tries the values on screen rather than
+    the saved ones. The button sits beside Save for that reason. %>
 <div class="space-y-3">
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <%= render PanelsUI::Button.new(

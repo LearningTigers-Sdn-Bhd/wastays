@@ -2,8 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 
 // Posts to a "test this integration" endpoint and reports the reply in place.
 //
-// The endpoint reads the SAVED settings, not what is currently typed in the
-// form, so the status line says so while the request is in flight.
+// It sends the form with the request, so an admin can try settings before
+// saving them. The controller is mounted on the <form>, so this.element is it.
 export default class extends Controller {
   static targets = ["button", "status"]
   static values = { url: String, testingLabel: { type: String, default: "Testing..." } }
@@ -14,16 +14,22 @@ export default class extends Controller {
 
     button.disabled = true
     button.textContent = this.testingLabelValue
-    this.report("Testing the saved settings...", "text-muted-foreground")
+    this.report("Testing these settings...", "text-muted-foreground")
+
+    // The form saves with PATCH, so it carries a _method field. Rack rewrites
+    // the verb from it, which would turn this POST into a PATCH and miss the
+    // route. The test endpoint is POST only, so the field goes.
+    const body = new URLSearchParams(new FormData(this.element))
+    body.delete("_method")
 
     try {
       const response = await fetch(this.urlValue, {
         method: "POST",
         headers: {
           "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content ?? "",
-          "Content-Type": "application/json",
           Accept: "application/json"
-        }
+        },
+        body
       })
 
       const data = await response.json()

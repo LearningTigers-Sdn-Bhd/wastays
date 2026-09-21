@@ -67,13 +67,7 @@ module Admin
 
       # Cloudflare R2 Settings
       bucket_name = params[:r2_bucket].to_s.strip
-      endpoint = params[:r2_endpoint].to_s.strip
-
-      # Sanitize endpoint: If the user pasted the bucket URL (e.g., https://.../bucket-name),
-      # strip the bucket name from the end as S3 client expects the base endpoint.
-      if bucket_name.present? && endpoint.end_with?("/#{bucket_name}")
-        endpoint = endpoint.delete_suffix("/#{bucket_name}")
-      end
+      endpoint = Storage::TestConnection.normalize_endpoint(params[:r2_endpoint], bucket_name)
 
       AppConfig.set("r2_access_key_id", params[:r2_access_key_id].to_s.strip) if params.key?(:r2_access_key_id)
       AppConfig.set("r2_secret_access_key", params[:r2_secret_access_key].to_s.strip) if params.key?(:r2_secret_access_key)
@@ -96,50 +90,42 @@ module Admin
       redirect_to admin_integrations_path(tab: requested_tab), notice: "Settings saved successfully."
     end
 
+    # Both tests read the values the form posted, so an admin can try settings
+    # before saving them. A field that is absent falls back to the saved value.
     def test_around_that_connection
-      result = AroundThat::TestConnection.new.call
-
-      if result.success?
-        render json: { success: true, message: result.message }
-      else
-        render json: { success: false, message: result.message }, status: :unprocessable_content
-      end
+      render_connection_result(
+        AroundThat::TestConnection.new(
+          api_key: params[:aroundthat_api_key],
+          base_url: params[:aroundthat_base_url],
+          environment: params[:aroundthat_environment]
+        ).call
+      )
     end
 
     def test_r2_connection
-      # We use the service logic to test connection
-      begin
-        s3_options = {
-          access_key_id: AppConfig.get("r2_access_key_id"),
-          secret_access_key: AppConfig.get("r2_secret_access_key"),
-          region: AppConfig.get("r2_region") || "auto",
-          endpoint: AppConfig.get("r2_endpoint"),
-          force_path_style: true
-        }.compact
-
-        client = Aws::S3::Client.new(**s3_options)
-        bucket_name = AppConfig.get("r2_bucket")
-
-        if bucket_name.blank?
-          render json: { success: false, message: "Bucket name is missing." }, status: :unprocessable_content
-          return
-        end
-
-        # Attempt to list objects (limited to 1) to verify connectivity and permissions
-        client.list_objects_v2(bucket: bucket_name, max_keys: 1)
-
-        render json: { success: true, message: "Successfully connected to Cloudflare R2 bucket: #{bucket_name}" }
-      rescue Aws::S3::Errors::ServiceError => e
-        render json: { success: false, message: "Connection failed: #{e.message}" }, status: :internal_server_error
-      rescue StandardError => e
-        render json: { success: false, message: "An error occurred: #{e.message}" }, status: :internal_server_error
-      end
+      render_connection_result(
+        Storage::TestConnection.new(
+          access_key_id: params[:r2_access_key_id],
+          secret_access_key: params[:r2_secret_access_key],
+          bucket: params[:r2_bucket],
+          endpoint: params[:r2_endpoint],
+          region: params[:r2_region]
+        ).call
+      )
     end
 
     private
 
     def requested_tab
       TAB_NAMES.include?(params[:tab]) ? params[:tab] : TAB_NAMES.first
+    end
+
+    def render_connection_result(result)
+      if result.success?
+        render json: { success: true, message: result.message }
+      else
+        render json: { success: false, message: result.message }, status: :unprocessable_content
+      end
     end
   end
 end
