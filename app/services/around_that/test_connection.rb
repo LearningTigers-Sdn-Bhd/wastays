@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "net/http"
+require "json"
 
 module AroundThat
   # Checks that the stored AroundThat settings reach the API.
@@ -61,13 +62,33 @@ module AroundThat
 
     def classify(uri, response)
       code = response.code.to_i
+      return success("AroundThat answered at #{uri.host} (#{@environment}).") if code.between?(200, 299)
+
+      reported = reported_error(response)
+      return failure("AroundThat refused the request: #{reported}") if reported
 
       case code
-      when 200..299 then success("AroundThat answered at #{uri.host} (#{@environment}).")
       when 401, 403 then failure("AroundThat reached #{uri.host}, but rejected the API key.")
       when 404 then failure("AroundThat reached #{uri.host}, but #{uri.path} returned 404. Check the base URL.")
       else failure("AroundThat reached #{uri.host}, but returned HTTP #{code}.")
       end
+    end
+
+    # AroundThat answers a failure with { "error": { "code", "message" } }. Its
+    # own message names the real cause, such as a missing capability, which a
+    # status code on its own cannot. A reply that is not an error document
+    # leaves the status-based message in place.
+    def reported_error(response)
+      error = JSON.parse(response.body.to_s)["error"]
+      return unless error.is_a?(Hash)
+
+      message = error["message"].to_s.strip.presence
+      code = error["code"].to_s.strip.presence
+      return unless message || code
+
+      [ message, ("(#{code})" if code) ].compact.join(" ")
+    rescue JSON::ParserError, TypeError
+      nil
     end
 
     def success(message) = Result.new(success: true, message: message)

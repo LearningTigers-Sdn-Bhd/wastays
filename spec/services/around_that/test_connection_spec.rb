@@ -80,6 +80,35 @@ RSpec.describe AroundThat::TestConnection do
     expect(service.call.message).to eq("AroundThat reached api.aroundthat.test, but returned HTTP 503.")
   end
 
+  it "shows the message AroundThat sent for a bad credential" do
+    stub_request(:get, probe_url).to_return(
+      status: 401,
+      body: { error: { code: "invalid_credential", message: "The integration credential is not valid." } }.to_json
+    )
+
+    result = service.call
+
+    expect(result).not_to be_success
+    expect(result.message).to eq(
+      "AroundThat refused the request: The integration credential is not valid. (invalid_credential)"
+    )
+  end
+
+  it "shows the message AroundThat sent for a missing capability" do
+    stub_request(:get, probe_url).to_return(
+      status: 403,
+      body: { error: { code: "capability_required", message: "The integration cannot perform this operation." } }.to_json
+    )
+
+    expect(service.call.message).to include("cannot perform this operation", "capability_required")
+  end
+
+  it "keeps the status message when the body is not an error document" do
+    stub_request(:get, probe_url).to_return(status: 503, body: "<html>gateway</html>")
+
+    expect(service.call.message).to eq("AroundThat reached api.aroundthat.test, but returned HTTP 503.")
+  end
+
   it "reports a network failure instead of raising" do
     stub_request(:get, probe_url).to_timeout
 
