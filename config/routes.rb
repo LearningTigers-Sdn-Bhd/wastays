@@ -385,6 +385,7 @@ Rails.application.routes.draw do
     end
     resource :integrations, only: [ :show, :update, :destroy ] do
       post :test_r2_connection, on: :collection
+      post :test_around_that_connection, on: :collection
     end
     resources :plans, only: [ :index ] do
       collection do

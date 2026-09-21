@@ -30,6 +30,46 @@ RSpec.describe "Admin::Integrations", type: :request do
     end
   end
 
+  describe "POST /admin/integrations/test_around_that_connection" do
+    let(:base_url) { "https://api.aroundthat.test/v1" }
+
+    before do
+      AppConfig.set("aroundthat_api_key", "at-key")
+      AppConfig.set("aroundthat_base_url", base_url)
+      AppConfig.set("aroundthat_environment", "staging")
+    end
+
+    it "keeps a regular user out" do
+      sign_in_as(regular_user)
+
+      post test_around_that_connection_admin_integrations_path
+
+      expect(response).not_to have_http_status(:ok)
+    end
+
+    it "returns the success message when AroundThat answers" do
+      sign_in_as(superadmin)
+      stub_request(:get, base_url).to_return(status: 200, body: "{}")
+
+      post test_around_that_connection_admin_integrations_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["success"]).to be(true)
+      expect(response.parsed_body["message"]).to include("api.aroundthat.test")
+    end
+
+    it "returns the failure message when AroundThat rejects the key" do
+      sign_in_as(superadmin)
+      stub_request(:get, base_url).to_return(status: 401)
+
+      post test_around_that_connection_admin_integrations_path
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["success"]).to be(false)
+      expect(response.parsed_body["message"]).to include("rejected the API key")
+    end
+  end
+
   describe "PATCH /admin/integrations" do
     before { sign_in_as(superadmin) }
 
@@ -69,6 +109,26 @@ RSpec.describe "Admin::Integrations", type: :request do
       expect(AppConfig.get("openai_api_key")).to eq("openai-key")
       expect(AppConfig.get("deepseek_api_key")).to eq("deepseek-key")
       expect(AppConfig.get("anthropic_api_key")).to eq("anthropic-key")
+    end
+
+    it "saves AroundThat settings to AppConfig" do
+      patch admin_integrations_path, params: {
+        aroundthat_api_key: "at-key",
+        aroundthat_base_url: "https://api.aroundthat.example/v1",
+        aroundthat_environment: "production"
+      }
+
+      expect(AppConfig.get("aroundthat_api_key")).to eq("at-key")
+      expect(AppConfig.get("aroundthat_base_url")).to eq("https://api.aroundthat.example/v1")
+      expect(AppConfig.get("aroundthat_environment")).to eq("production")
+    end
+
+    it "clears an AroundThat value when the field is submitted empty" do
+      AppConfig.set("aroundthat_api_key", "at-key")
+
+      patch admin_integrations_path, params: { aroundthat_api_key: "" }
+
+      expect(AppConfig.get("aroundthat_api_key")).to eq("")
     end
 
     it "redirects back to integrations page with success flash" do

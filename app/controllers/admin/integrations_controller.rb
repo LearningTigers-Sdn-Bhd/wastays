@@ -9,6 +9,17 @@ module Admin
       anthropic_api_key
     ].freeze
 
+    AROUND_THAT_CONFIG_KEYS = %w[
+      aroundthat_api_key
+      aroundthat_base_url
+      aroundthat_environment
+    ].freeze
+
+    AROUND_THAT_ENVIRONMENTS = [
+      { label: "Staging", value: "staging" },
+      { label: "Production", value: "production" }
+    ].freeze
+
     def show
       @channex_api_key = AppConfig.get("channex_api_key")
       @channex_environment = AppConfig.get("channex_environment") || "staging"
@@ -22,6 +33,11 @@ module Admin
       @r2_public_url = AppConfig.get("r2_public_url")
 
       @ai_provider_keys = AI_PROVIDER_CONFIG_KEYS.index_with { |key| AppConfig.get(key) }
+
+      # AroundThat: the base URL stays a stored value so staging and production
+      # can be switched without a deploy.
+      @around_that_values = AROUND_THAT_CONFIG_KEYS.index_with { |key| AppConfig.get(key) }
+      @around_that_values["aroundthat_environment"] ||= "staging"
     end
 
     def update
@@ -50,7 +66,22 @@ module Admin
         AppConfig.set(key, params[key].to_s.strip) if params.key?(key)
       end
 
+      # AroundThat Settings
+      AROUND_THAT_CONFIG_KEYS.each do |key|
+        AppConfig.set(key, params[key].to_s.strip) if params.key?(key)
+      end
+
       redirect_to admin_integrations_path, notice: "Settings saved successfully."
+    end
+
+    def test_around_that_connection
+      result = AroundThat::TestConnection.new.call
+
+      if result.success?
+        render json: { success: true, message: result.message }
+      else
+        render json: { success: false, message: result.message }, status: :unprocessable_content
+      end
     end
 
     def test_r2_connection
