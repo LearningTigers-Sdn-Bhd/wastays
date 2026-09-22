@@ -830,6 +830,28 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(summary.at_xpath('.//button[normalize-space()="Actions"]')).to be_nil
     end
 
+    it "renders the stay-link resend button in the Documents tab" do
+      role.permissions << manage_bookings
+      booking.update_columns(status: "checked_in", guest_email: "guest@example.com")
+      create(:concierge_stay_access, hotel: hotel, booking: booking)
+
+      path = hotel_booking_workspace_path(hotel, booking, tab: "documents")
+      get path
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      summary = document.at_css('[data-testid="booking-workspace-header"]')
+      section = document.at_css('[data-document-section="stay_concierge"]')
+      form = section&.at_css("form[action='#{hotel_booking_action_resend_stay_link_path(hotel, booking, return_to: path)}']")
+      button = form&.at_css("button[type='submit']")
+
+      expect(section.at_css("h2").text.squish).to eq("Stay Concierge page")
+      expect(section.text.squish).to include(booking.formatted_reservation_number, "g•••@example.com", "Available")
+      expect(button&.text&.squish).to eq("Resend stay link")
+      expect(button&.at_css("svg")).to be_present
+      expect(summary.text.squish).not_to include("Resend stay link")
+    end
+
     it "renders only the workspace frame for workspace turbo requests" do
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "208")

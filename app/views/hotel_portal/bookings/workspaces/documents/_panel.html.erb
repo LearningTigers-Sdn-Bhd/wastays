@@ -122,6 +122,72 @@
       </section>
     <% end %>
 
+    <% if presenter.stay_concierge_rows.any? %>
+      <section aria-labelledby="documents-stay-concierge-heading" class="min-w-0 space-y-3" data-document-section="stay_concierge">
+        <h2 id="documents-stay-concierge-heading" class="text-base font-semibold text-foreground">Stay Concierge page</h2>
+
+        <%= render PanelsUI::Table.new(
+              caption: "Stay Concierge page access for this booking",
+              density: :compact,
+              hoverable: true,
+              bordered: true,
+              wrapper_class: "rounded-md border border-border",
+              class: "table-fixed min-w-[680px] xl:min-w-0") do |table| %>
+          <% table.with_header do %>
+            <tr>
+              <th scope="col" class="w-1/4">Page</th>
+              <th scope="col" class="w-1/4">Booking / room</th>
+              <th scope="col" class="w-1/4">Guest email</th>
+              <th scope="col" class="w-32">Last sent</th>
+              <th scope="col" class="w-40"><span class="sr-only">Actions</span></th>
+            </tr>
+          <% end %>
+          <% table.with_body do %>
+            <% presenter.stay_concierge_rows.each do |row| %>
+              <tr data-stay-concierge-booking-id="<%= row.booking.id %>">
+                <th scope="row" class="text-left font-normal">
+                  <div class="space-y-1.5">
+                    <span class="block font-medium text-foreground">Stay Concierge page</span>
+                    <%= render PanelsUI::Badge.new(
+                          label: row.status,
+                          variant: row.status == "Available" ? :success : :warning,
+                          size: :sm) %>
+                  </div>
+                </th>
+                <td>
+                  <span class="block text-foreground"><%= row.booking_number %></span>
+                  <span class="mt-0.5 block text-xs text-muted-foreground"><%= row.room %></span>
+                </td>
+                <td><%= row.email || "No email available" %></td>
+                <td class="whitespace-nowrap">
+                  <%= row.last_sent_at ? row.last_sent_at.in_time_zone(current_hotel.hotel_time_zone).strftime("%d %b %Y %H:%M") : "Never" %>
+                </td>
+                <td>
+                  <% if row.sendable %>
+                    <%= form_with url: hotel_booking_action_resend_stay_link_path(
+                          current_hotel,
+                          row.booking,
+                          return_to: hotel_booking_workspace_path(current_hotel, booking, tab: "documents")
+                        ), method: :post do %>
+                      <%= render PanelsUI::Button.new(
+                            as: :button,
+                            type: :submit,
+                            variant: :secondary,
+                            size: :xs,
+                            data: { turbo_submits_with: "Sending…" }) do %>
+                        <%= app_icon "mail", class: "size-4", aria: { hidden: true } %>
+                        <span>Resend stay link</span>
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        <% end %>
+      </section>
+    <% end %>
+
     <%# LHDN e-invoicing is a separate filing lifecycle from the folio documents
         above: each record has a status with the tax authority, not just a file. %>
     <% if current_hotel.e_invoice_setting&.enabled? %>
