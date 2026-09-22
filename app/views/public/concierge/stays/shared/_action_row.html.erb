@@ -1,0 +1,11 @@
+<%# A secondary service. A row, not a card, so the tiles above it stay the
+    primary actions. At least 44px tall for a thumb. %>
+<%= link_to path, class: "group flex min-h-[44px] items-center justify-between gap-4 border-b border-border/60 py-4 last:border-b-0" do %>
+  <span>
+    <span class="block text-[13px] font-bold text-foreground"><%= label %></span>
+    <% if local_assigns[:hint].present? %>
+      <span class="mt-0.5 block text-[11px] font-medium text-muted-foreground"><%= hint %></span>
+    <% end %>
+  </span>
+  <span aria-hidden="true" class="text-base font-black text-muted-foreground transition-colors group-hover:text-primary">&rsaquo;</span>
+<% end %>

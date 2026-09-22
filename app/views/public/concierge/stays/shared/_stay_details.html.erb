@@ -1,0 +1,32 @@
+<%# The stay facts. Shown only to a verified device. %>
+<%= render layout: "public/concierge/stays/shared/panel", locals: { title: "Your Stay" } do %>
+  <dl class="space-y-4">
+    <div>
+      <dt class="text-[11px] font-medium text-muted-foreground">Room</dt>
+      <dd class="text-lg font-black text-foreground"><%= presenter.room_label %></dd>
+    </div>
+    <div>
+      <dt class="text-[11px] font-medium text-muted-foreground">Dates</dt>
+      <dd class="text-[13px] font-bold text-foreground">
+        <%= l(presenter.booking.check_in.to_date, format: :long) %> &ndash;
+        <%= l(presenter.booking.check_out.to_date, format: :long) %>
+      </dd>
+      <dd class="text-[11px] font-medium text-muted-foreground"><%= pluralize(presenter.nights, "night") %></dd>
+    </div>
+    <div>
+      <dt class="text-[11px] font-medium text-muted-foreground">Status</dt>
+      <dd class="text-[13px] font-bold text-foreground"><%= presenter.status_label %></dd>
+    </div>
+    <div>
+      <dt class="text-[11px] font-medium text-muted-foreground">Booking</dt>
+      <dd class="font-mono text-[13px] font-bold tracking-wider text-foreground"><%= presenter.confirmation_code %></dd>
+    </div>
+  </dl>
+
+  <% if presenter.checked_out? && presenter.grace_period_ends_at %>
+    <p class="mt-5 border-t border-border/60 pt-4 text-[11px] font-medium leading-relaxed text-muted-foreground">
+      You checked out. This page stays open until
+      <%= l(presenter.grace_period_ends_at.to_date, format: :long) %>.
+    </p>
+  <% end %>
+<% end %>

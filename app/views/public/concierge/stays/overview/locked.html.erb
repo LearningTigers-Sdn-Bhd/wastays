@@ -1,58 +1,74 @@
-<%# The locked stay page. It names the hotel, which the QR code already makes
-    public, and nothing about the stay. Plain markup for now: the design comes
-    with the Guest Concierge UI work. %>
+<%# The locked stay page. Same hero and same two columns as the verified page,
+    per LAYOUTING.md, but the left column explains the access instead of
+    showing the stay. It names the hotel, which the QR code already makes
+    public, and nothing about the guest, the room, the dates, the status, or
+    the money. %>
 <% content_for :title, "Your stay | #{@hotel.name}" %>
-<%= render layout: "public/concierge/shared/page_shell",
-           locals: { content_class: "flex-1 flex items-center justify-center px-4 py-10 sm:px-6",
-                     container_class: "w-full max-w-xl" } do %>
-  <%= render "public/concierge/shared/page_header",
-             back: false,
-             eyebrow: "Guest Verification",
-             title_prefix: "Open your",
-             title_accent: "Stay",
-             subtitle: "Enter the confirmation code from your booking email. You do this one time on each device." %>
+
+<% content_for :context do %>
+  <%= render layout: "public/concierge/stays/shared/panel", locals: { title: "About This Access" } do %>
+    <p class="text-[13px] font-medium leading-relaxed text-foreground">
+      This link gives access to one hotel stay.
+    </p>
+    <p class="mt-3 text-[11px] font-medium leading-relaxed text-muted-foreground">
+      Your stay details stay hidden until you verify this device. You do this one
+      time on each device you use.
+    </p>
+  <% end %>
+<% end %>
+
+<% content_for :actions do %>
+  <div>
+    <h2 class="font-serif text-2xl text-foreground md:text-3xl">
+      Open your <span class="italic text-primary">Stay</span>
+    </h2>
+    <p class="mt-1.5 text-xs font-medium text-muted-foreground md:text-sm">
+      Enter the confirmation code from your booking email.
+    </p>
+  </div>
 
   <%= render "public/concierge/shared/error_alert", message: @error %>
 
   <% if @notice.present? %>
-    <p class="rounded-xl border border-border/60 bg-white p-6 text-sm font-medium text-foreground">
-      <%= @notice %>
-    </p>
+    <%= render layout: "public/concierge/stays/shared/panel", locals: {} do %>
+      <p class="text-[13px] font-medium leading-relaxed text-foreground"><%= @notice %></p>
+    <% end %>
   <% end %>
 
   <% if @locked %>
     <%# The way out of a lock. The mail goes to the booking email, which the
         guest never types here. %>
-    <div class="rounded-2xl border border-border/60 bg-white p-6 shadow-sm">
-      <p class="text-sm font-medium leading-relaxed text-foreground">
+    <%= render layout: "public/concierge/stays/shared/panel", locals: {} do %>
+      <p class="text-[13px] font-medium leading-relaxed text-foreground">
         This stay page is locked. We can send a new link to the email on the booking.
       </p>
-      <%= button_to "Email me a new link",
-            concierge_stay_recovery_path(@hotel.unique_id, @hotel.public_id, params[:stay_access_id]),
-            class: "mt-5 w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
-    </div>
+      <%= button_to "Email me a new link", concierge_stay_recovery_path(*stay_route_args),
+            class: "mt-5 min-h-[44px] w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+    <% end %>
   <% else %>
-    <%= form_with url: concierge_stay_verification_path(@hotel.unique_id, @hotel.public_id, params[:stay_access_id]),
-          method: :post, local: true,
-          class: "rounded-2xl border border-border/60 bg-white p-6 shadow-sm" do |form| %>
-      <%= form.label :confirmation_token, "Booking confirmation code",
-            class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground" %>
-      <%= form.text_field :confirmation_token,
-            value: nil,
-            autofocus: true,
-            autocomplete: "off",
-            autocapitalize: "characters",
-            spellcheck: false,
-            class: "mt-3 w-full rounded-xl border border-border bg-background px-4 py-4 text-center font-mono text-xl font-bold uppercase tracking-[0.3em] text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" %>
+    <%= render layout: "public/concierge/stays/shared/panel", locals: {} do %>
+      <%= form_with url: concierge_stay_verification_path(*stay_route_args), method: :post, local: true do |form| %>
+        <%= form.label :confirmation_token, "Booking confirmation code",
+              class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground" %>
+        <%= form.text_field :confirmation_token,
+              value: nil,
+              autofocus: true,
+              autocomplete: "off",
+              autocapitalize: "characters",
+              spellcheck: false,
+              class: "mt-3 min-h-[44px] w-full rounded-xl border border-border bg-background px-4 py-4 text-center font-mono text-xl font-bold uppercase tracking-[0.3em] text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" %>
 
-      <%= form.submit "Open my stay",
-            class: "mt-5 w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+        <%= form.submit "Verify this device",
+              class: "mt-5 min-h-[44px] w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+      <% end %>
     <% end %>
   <% end %>
 
-  <p class="mt-5 text-center text-[11px] font-medium leading-relaxed text-muted-foreground">
+  <p class="text-center text-[11px] font-medium leading-relaxed text-muted-foreground">
     Cannot find your code?
     <%= link_to "Contact the front desk", concierge_contact_path(@hotel.unique_id, @hotel.public_id),
           class: "font-bold text-primary underline underline-offset-4" %>.
   </p>
 <% end %>
+
+<%= render "public/concierge/stays/shared/shell" %>

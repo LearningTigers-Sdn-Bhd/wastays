@@ -59,8 +59,29 @@ module Public
           render "public/concierge/stays/overview/unavailable", status: :not_found
         end
 
-        def stay_path
-          concierge_stay_path(@hotel.unique_id, @hotel.public_id, params[:stay_access_id])
+        # Every stay page reads the same presenter, so the views hold no rules.
+        def stay_presenter
+          @stay_presenter ||= Public::Concierge::StayPresenter.new(
+            stay_access: @stay_access,
+            expires_at: @stay_expires_at,
+            view: view_context
+          )
+        end
+        helper_method :stay_presenter
+
+        # The path helpers take the hotel and the route id every time. Wrapping
+        # them here keeps three arguments out of every controller and view.
+        def stay_path = concierge_stay_path(*stay_route_args)
+        def stay_e_invoice_path = concierge_stay_e_invoice_path(*stay_route_args)
+        def stay_refund_path = concierge_stay_refund_path(*stay_route_args)
+        def stay_check_out_path = concierge_stay_check_out_path(*stay_route_args)
+        def stay_document_path(kind) = concierge_stay_document_path(*stay_route_args, kind)
+
+        helper_method :stay_path, :stay_e_invoice_path, :stay_refund_path,
+          :stay_check_out_path, :stay_document_path, :stay_route_args
+
+        def stay_route_args
+          [ @hotel.unique_id, @hotel.public_id, params[:stay_access_id] ]
         end
       end
     end

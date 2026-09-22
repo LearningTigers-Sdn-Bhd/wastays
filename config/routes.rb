@@ -138,6 +138,21 @@ Rails.application.routes.draw do
       get  "/",       to: "overview#show",         as: :stay
       post "verify",  to: "verifications#create",  as: :stay_verification
       post "recover", to: "verifications#recover", as: :stay_recovery
+
+      # The stay features. Each one gets its booking from the stay session, so
+      # no route carries a booking id or a confirmation code.
+      get    "documents/:kind", to: "documents#show",       as: :stay_document,
+             constraints: { kind: /receipt|invoice|summary|voucher_pack|e_invoice/ }
+      get    "e-invoice",       to: "e_invoices#show",      as: :stay_e_invoice
+      post   "e-invoice",       to: "e_invoices#create",    as: :stay_e_invoice_request
+      get    "e-invoice/status", to: "e_invoices#status",   as: :stay_e_invoice_status
+      get    "refund",          to: "refunds#new",          as: :stay_refund
+      post   "refund",          to: "refunds#create",       as: :stay_refunds
+      get    "check-out",       to: "check_outs#new",       as: :stay_check_out
+      post   "check-out",       to: "check_outs#create",    as: :stay_check_outs
+      get    "requests/new",    to: "requests#new",         as: :new_stay_request
+      post   "requests",        to: "requests#create",      as: :stay_requests
+      patch  "do-not-disturb",  to: "do_not_disturbs#update", as: :stay_do_not_disturb
     end
   end
 

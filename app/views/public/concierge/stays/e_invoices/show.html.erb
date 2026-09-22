@@ -1,0 +1,33 @@
+<% content_for :title, "E-invoice | #{@hotel.name}" %>
+
+<%= render layout: "public/concierge/stays/shared/form_page",
+           locals: {
+             presenter: @presenter,
+             title: "Your e-invoice",
+             subtitle: "A tax invoice that LHDN has validated."
+           } do %>
+  <dl class="space-y-4">
+    <div>
+      <dt class="text-[11px] font-medium text-muted-foreground">Status</dt>
+      <dd class="text-lg font-black text-foreground"><%= @status[:status].humanize %></dd>
+    </div>
+    <div>
+      <dt class="text-[11px] font-medium text-muted-foreground">What this means</dt>
+      <dd class="text-[13px] font-medium leading-relaxed text-foreground"><%= @status[:message] %></dd>
+    </div>
+    <% if @status[:document_label].present? %>
+      <div>
+        <dt class="text-[11px] font-medium text-muted-foreground">Document</dt>
+        <dd class="text-[13px] font-bold text-foreground"><%= @status[:document_label] %></dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <% if @status[:download_url].present? %>
+    <%= link_to "Download the e-invoice", @status[:download_url],
+          class: "mt-5 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+  <% elsif @presenter.can_request_e_invoice? %>
+    <%= button_to "Request my e-invoice", concierge_stay_e_invoice_request_path(*stay_route_args),
+          class: "mt-5 min-h-[44px] w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+  <% end %>
+<% end %>

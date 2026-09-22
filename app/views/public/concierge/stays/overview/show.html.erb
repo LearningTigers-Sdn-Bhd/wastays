@@ -1,28 +1,115 @@
-<%# Checked-in Concierge. Plain markup for now. The stay tiles and the design
-    come with the Guest Concierge UI work. %>
 <% content_for :title, "Your stay | #{@hotel.name}" %>
-<%= render layout: "public/concierge/shared/page_shell" do %>
-  <%= render "public/concierge/shared/page_header",
-             back: false,
-             eyebrow: "Your Stay",
-             title_prefix: "Welcome to",
-             title_accent: @hotel.name,
-             subtitle: "Everything for this stay is on this page." %>
+<%
+  presenter = @presenter
+%>
 
-  <dl class="mt-6 grid gap-4 rounded-2xl border border-border/60 bg-white p-6 shadow-sm sm:grid-cols-3">
-    <div>
-      <dt class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Room</dt>
-      <dd class="mt-1 text-sm font-bold text-foreground"><%= @booking.room_numbers.presence || "To be assigned" %></dd>
-    </div>
-    <div>
-      <dt class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Dates</dt>
-      <dd class="mt-1 text-sm font-bold text-foreground">
-        <%= l(@booking.check_in.to_date, format: :long) %> &ndash; <%= l(@booking.check_out.to_date, format: :long) %>
-      </dd>
-    </div>
-    <div>
-      <dt class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Status</dt>
-      <dd class="mt-1 text-sm font-bold text-foreground"><%= @booking.status.humanize %></dd>
-    </div>
-  </dl>
+<% content_for :context do %>
+  <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
 <% end %>
+
+<% content_for :actions do %>
+  <div>
+    <h2 class="font-serif text-2xl text-foreground md:text-3xl">
+      Hello, <span class="italic text-primary"><%= presenter.greeting_name %></span>
+    </h2>
+    <p class="mt-1.5 text-xs font-medium text-muted-foreground md:text-sm">What do you need?</p>
+  </div>
+
+  <%# Primary actions. Two tiles, because these are the two a guest reaches for
+      most while in house. %>
+  <% if presenter.in_house? %>
+    <div class="grid grid-cols-2 gap-3.5 md:gap-4">
+      <% if presenter.can_send_request? %>
+        <%= link_to concierge_new_stay_request_path(*stay_route_args, kind: "housekeeping"),
+              class: "group flex min-h-[44px] flex-col gap-3 rounded-2xl bg-primary p-5 shadow-md transition-transform active:scale-[0.98] md:p-6" do %>
+          <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-lg text-white md:h-14 md:w-14">&#9788;</span>
+          <span class="text-[12px] font-black uppercase tracking-[0.15em] text-white md:text-base">Housekeeping</span>
+        <% end %>
+      <% end %>
+
+      <% if presenter.can_request_check_out? %>
+        <%= link_to stay_check_out_path,
+              class: "group flex min-h-[44px] flex-col gap-3 rounded-2xl border border-border/60 bg-white p-5 shadow-sm transition-transform active:scale-[0.98] md:p-6" do %>
+          <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/10 bg-primary/5 text-lg text-primary transition-colors group-hover:bg-primary group-hover:text-white md:h-14 md:w-14">&#8599;</span>
+          <span class="text-[12px] font-black uppercase tracking-[0.15em] text-foreground md:text-base">Check Out</span>
+        <% end %>
+      <% elsif presenter.check_out_pending? %>
+        <div class="flex min-h-[44px] flex-col gap-3 rounded-2xl border border-dashed border-border bg-white p-5 md:p-6">
+          <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/5 text-lg text-primary md:h-14 md:w-14">&#10003;</span>
+          <span class="text-[12px] font-black uppercase tracking-[0.15em] text-muted-foreground md:text-base">Check-out asked</span>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# Stay controls. %>
+  <% if presenter.can_toggle_do_not_disturb? %>
+    <%= render layout: "public/concierge/stays/shared/panel", locals: {} do %>
+      <div class="flex items-center justify-between gap-4">
+        <span>
+          <span class="block text-[13px] font-bold text-foreground">Do not disturb</span>
+          <span class="mt-0.5 block text-[11px] font-medium text-muted-foreground">Housekeeping will keep away from your room.</span>
+        </span>
+        <%= button_to "Switch", concierge_stay_do_not_disturb_path(*stay_route_args),
+              method: :patch,
+              class: "min-h-[44px] cursor-pointer rounded-xl border border-primary/20 bg-primary/5 px-5 text-[11px] font-black uppercase tracking-widest text-primary transition-colors hover:bg-primary hover:text-white" %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# Secondary services. %>
+  <%= render layout: "public/concierge/stays/shared/panel", locals: { title: "Hotel Services" } do %>
+    <div>
+      <% if presenter.can_send_request? %>
+        <%= render "public/concierge/stays/shared/action_row",
+              path: concierge_new_stay_request_path(*stay_route_args, kind: "complaint"),
+              label: "Report a problem",
+              hint: "Tell the hotel team what is wrong." %>
+      <% end %>
+      <%= render "public/concierge/stays/shared/action_row",
+            path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id),
+            label: "Recommendations and offers" %>
+      <%= render "public/concierge/stays/shared/action_row",
+            path: concierge_contact_path(@hotel.unique_id, @hotel.public_id),
+            label: "Contact the front desk" %>
+      <% if presenter.chat_available? %>
+        <%= render "public/concierge/stays/shared/action_row",
+              path: concierge_chat_path(@hotel.unique_id, @hotel.public_id),
+              label: "Chat with us" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# Booking documents and money. Last, because a guest reaches for these once. %>
+  <%= render layout: "public/concierge/stays/shared/panel", locals: { title: "Booking and Billing" } do %>
+    <div>
+      <%= render "public/concierge/stays/shared/action_row",
+            path: stay_document_path(:receipt),
+            label: "Booking receipt",
+            hint: "PDF" %>
+      <% if presenter.invoice_available? %>
+        <%= render "public/concierge/stays/shared/action_row",
+              path: stay_document_path(:invoice),
+              label: "Invoice",
+              hint: "PDF" %>
+      <% end %>
+      <%= render "public/concierge/stays/shared/action_row",
+            path: stay_e_invoice_path,
+            label: "E-invoice",
+            hint: presenter.e_invoice_ready? ? "Ready to download" : nil %>
+      <% if presenter.can_request_refund? %>
+        <%= render "public/concierge/stays/shared/action_row",
+              path: stay_refund_path,
+              label: "Ask for a refund",
+              hint: "The hotel replies to you." %>
+      <% elsif presenter.refund_request %>
+        <%= render "public/concierge/stays/shared/action_row",
+              path: stay_refund_path,
+              label: "Your refund request",
+              hint: presenter.refund_request.status.humanize %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<%= render "public/concierge/stays/shared/shell" %>

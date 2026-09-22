@@ -1,0 +1,21 @@
+<% content_for :title, "Request check-out | #{@hotel.name}" %>
+
+<%= render layout: "public/concierge/stays/shared/form_page",
+           locals: {
+             presenter: @presenter,
+             error: @error,
+             title: "Request check-out",
+             subtitle: "The front desk will get your request and prepare your folio."
+           } do %>
+  <%= form_with url: concierge_stay_check_outs_path(*stay_route_args), method: :post, local: true do |form| %>
+    <%= form.label :guest_notes, "Anything we should know? (optional)",
+          class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground" %>
+    <%= form.text_area :guest_notes,
+          value: params[:guest_notes],
+          rows: 4,
+          class: "mt-3 w-full rounded-xl border border-border bg-background px-4 py-3 text-[14px] font-medium leading-relaxed text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" %>
+
+    <%= form.submit "Ask to check out",
+          class: "mt-5 min-h-[44px] w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+  <% end %>
+<% end %>

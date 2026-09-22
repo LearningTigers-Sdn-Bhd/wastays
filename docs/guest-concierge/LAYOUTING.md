@@ -244,6 +244,26 @@ The DOM order must match the mobile reading order:
 
 CSS grid can place the sections into columns on desktop. It must not change the reading or focus order.
 
+## Prototype Status
+
+The stay page is built. The markup is a prototype, not a contract.
+
+It uses the Public Concierge shared partials and hand-written Tailwind classes,
+because no page under `app/views/public/concierge/` uses PanelsUI. It adds no
+component and no color token.
+
+The structure in this document is implemented:
+
+- The full-width hotel hero in Row 1.
+- Two columns in Row 2, at about one third and two thirds.
+- One column on mobile, with the stay details before the actions.
+- A DOM order that matches the mobile reading order.
+- Touch targets of at least 44 CSS pixels.
+
+A later session owns the visual system. That session can rebuild the markup. The
+page rules live in `Public::Concierge::StayPresenter`, not in the views, so a
+rebuild does not move a rule.
+
 ## Decisions
 
 These numbers get decided during implementation, with real content on screen:

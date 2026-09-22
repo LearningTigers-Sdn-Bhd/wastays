@@ -1,0 +1,25 @@
+<%# A one-form stay page. The left column keeps the stay context, so the guest
+    never loses track of which stay they are acting on. %>
+<% content_for :context do %>
+  <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
+<% end %>
+
+<% content_for :actions do %>
+  <div>
+    <%= link_to stay_path, class: "inline-flex min-h-[44px] items-center text-[11px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary" do %>
+      &lsaquo;&nbsp; Back to my stay
+    <% end %>
+    <h2 class="mt-2 font-serif text-2xl text-foreground md:text-3xl"><%= title %></h2>
+    <% if local_assigns[:subtitle].present? %>
+      <p class="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground md:text-sm"><%= subtitle %></p>
+    <% end %>
+  </div>
+
+  <%= render "public/concierge/shared/error_alert", message: local_assigns[:error] %>
+
+  <%= render layout: "public/concierge/stays/shared/panel", locals: {} do %>
+    <%= yield %>
+  <% end %>
+<% end %>
+
+<%= render "public/concierge/stays/shared/shell" %>
