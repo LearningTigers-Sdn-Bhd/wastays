@@ -155,11 +155,12 @@ module Public
       # Nil until a stay is confirmed, which is exactly what the views want to
       # branch on: no booking means nothing has been claimed and nothing can be.
       def voucher_wallet
-        return if current_concierge_booking.blank?
+        booking = concierge_guest_booking
+        return if booking.blank?
 
         @voucher_wallet ||= ::Concierge::VoucherWallet.new(
           session: session,
-          booking: current_concierge_booking
+          booking: booking
         )
       end
       helper_method :voucher_wallet
@@ -171,7 +172,7 @@ module Public
       end
 
       def require_booking!
-        return if current_concierge_booking.present?
+        return if concierge_guest_booking.present?
 
         redirect_to concierge_recommendations_unlock_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath)
       end

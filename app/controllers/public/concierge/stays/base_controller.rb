@@ -5,8 +5,6 @@ module Public
       # service always receives its booking from a verified session and never
       # from a request parameter.
       class BaseController < Public::Concierge::BaseController
-        include ConciergeStaySession
-
         before_action :set_stay_access
         before_action :require_stay_session
 

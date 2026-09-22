@@ -3,7 +3,9 @@
 
 <%= render GuestUI::Page.new do |page| %>
   <% page.with_hero do %>
-    <%= render "public/concierge/shared/hero" %>
+    <%= render "public/concierge/shared/hero",
+               home_path: stay_path,
+               home_label: "Your stay at #{@hotel.name}" %>
   <% end %>
   <% page.with_context do %>
     <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
@@ -13,6 +15,8 @@
              title: "Hello,",
              title_accent: presenter.greeting_name,
              subtitle: "What do you need?" %>
+
+  <%= render "public/concierge/stays/shared/flash" %>
 
   <%# Primary actions. Two tiles, because these are the two a guest reaches for
       most while in house. %>
@@ -43,18 +47,11 @@
   <%# Stay controls. %>
   <% if presenter.can_toggle_do_not_disturb? %>
     <%= render GuestUI::Card.new do %>
-      <div class="flex items-center justify-between gap-4">
-        <span>
-          <span class="block text-[13px] font-bold text-foreground">Do not disturb</span>
-          <span class="mt-0.5 block text-[11px] font-medium text-muted-foreground">Housekeeping will keep away from your room.</span>
-        </span>
-        <%= render GuestUI::Button.new(
-              label: "Switch",
-              href: concierge_stay_do_not_disturb_path(*stay_route_args),
-              method: :patch,
-              variant: :secondary,
-              size: :sm) %>
-      </div>
+      <%= render GuestUI::Switch.new(
+            label: "Do not disturb",
+            hint: "Housekeeping will keep away from your room.",
+            url: concierge_stay_do_not_disturb_path(*stay_route_args),
+            checked: presenter.do_not_disturb_active?) %>
     <% end %>
   <% end %>
 

@@ -142,6 +142,42 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
       expect(response).to redirect_to(path("/unlock?return_to=#{CGI.escape(claim_path)}"))
     end
 
+    # A guest proves who they are two ways: a confirmation code, which leaves a
+    # booking cookie, or a verified stay link, which leaves a stay cookie. The
+    # gate read only the first, so a guest who had already opened their stay
+    # page was asked for the code they had just entered.
+    context "with a verified stay and no booking cookie" do
+      let!(:booking) do
+        create(:booking, hotel: hotel, status: "checked_in",
+                         check_in: 1.day.ago, check_out: 2.days.from_now)
+      end
+      let(:stay_access) { create(:concierge_stay_access, hotel: hotel, booking: booking) }
+
+      before do
+        post concierge_stay_verification_path(hotel.unique_id, hotel.public_id, stay_access.stay_access_id),
+             params: { confirmation_token: booking.confirmation_token }
+      end
+
+      it "claims without sending the guest back to the gate" do
+        post claim_path
+
+        expect(response).to redirect_to(path("/nook-rooftop/nook-house-pour"))
+      end
+
+      it "lists the claim in the wallet" do
+        post claim_path
+        get path("/wallet")
+
+        expect(response).to have_http_status(:success)
+      end
+
+      it "stops warning about a code it will not ask for" do
+        get path("/nook-rooftop/nook-house-pour")
+
+        expect(response.body).not_to include("We will ask for your booking confirmation code first")
+      end
+    end
+
     context "with a live stay" do
       let!(:booking) do
         create(:booking, hotel: hotel, status: "checked_in",

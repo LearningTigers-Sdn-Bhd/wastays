@@ -28,7 +28,10 @@
         <%= cached_icon "ticket", class: "h-4 w-4" %> Claim this voucher
       <% end %>
 
-      <% if current_concierge_booking.blank? %>
+      <%# The same test the claim gate runs. It used to read the booking cookie
+          only, so a guest who had already verified their stay was warned they
+          would be asked for a code they will not be asked for. %>
+      <% if concierge_guest_booking.blank? %>
         <p class="mt-3 flex items-start gap-1.5 text-[12px] font-medium leading-relaxed text-muted-foreground">
           <%= cached_icon "lock", class: "mt-px h-3.5 w-3.5 flex-shrink-0" %>
           We will ask for your booking confirmation code first — vouchers are for guests staying with us.

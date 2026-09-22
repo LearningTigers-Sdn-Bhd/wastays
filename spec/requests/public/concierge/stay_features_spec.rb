@@ -214,5 +214,76 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(response).to redirect_to(concierge_stay_path(*args))
       expect(flash[:alert]).to be_nil
     end
+
+    it "draws the switch off before anything is set" do
+      get concierge_stay_path(*args)
+
+      expect(response.body).to include(%(role="switch"))
+      expect(response.body).to include(%(aria-checked="false"))
+    end
+
+    it "draws the switch on once the room carries the flag" do
+      patch concierge_stay_do_not_disturb_path(*args)
+      get concierge_stay_path(*args)
+
+      expect(response.body).to include(%(aria-checked="true"))
+    end
+  end
+
+  # Seven stay actions redirect with a notice or an alert, and nothing on the
+  # page drew either. A guest sent a request to the hotel and landed back on a
+  # page that looked exactly as it had a moment before.
+  describe "what the page says after an action" do
+    it "shows the notice after a housekeeping request" do
+      post concierge_stay_requests_path(*args), params: { kind: "housekeeping", details: "Two more towels." }
+      follow_redirect!
+
+      expect(response.body).to include("We have your request. The hotel team is on it.")
+      expect(response.body).to include(%(data-variant="success"))
+    end
+
+    it "shows the notice after a check-out request" do
+      post concierge_stay_check_outs_path(*args), params: { guest_notes: "" }
+      follow_redirect!
+
+      expect(response.body).to include("The front desk has your check-out request.")
+    end
+
+    it "shows the alert when an e-invoice request is refused" do
+      post concierge_stay_e_invoice_request_path(*args)
+      follow_redirect!
+
+      expect(response.body).to include(%(data-variant="danger"))
+      expect(response.body).to include(%(role="alert"))
+    end
+  end
+
+  # The hero runs the full width at the top of the screen, so on a stay page
+  # the concierge home was the largest tap target on a page the guest had just
+  # verified a device to open.
+  describe "the hero on a stay page" do
+    it "points at the stay, not the public concierge home" do
+      get concierge_stay_path(*args)
+
+      hero = response.body[/<a class="absolute inset-0 z-0"[^>]*>/]
+
+      expect(hero).to include(concierge_stay_path(*args))
+      expect(hero).not_to include(%(href="#{concierge_home_path(hotel.unique_id, hotel.public_id)}"))
+      expect(hero).to include("Your stay at")
+    end
+
+    it "points at the stay from a form page too" do
+      get concierge_stay_check_out_path(*args)
+
+      hero = response.body[/<a class="absolute inset-0 z-0"[^>]*>/]
+
+      expect(hero).to include(concierge_stay_path(*args))
+    end
+
+    it "still points at the concierge home away from a stay" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      expect(response.body).to include(concierge_home_path(hotel.unique_id, hotel.public_id))
+    end
   end
 end

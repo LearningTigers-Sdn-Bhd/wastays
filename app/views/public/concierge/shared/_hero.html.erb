@@ -6,8 +6,15 @@
 
     It carries the page's h1: the templates below it are all sections of one
     property's concierge, so their own headings stay h2. %>
+<%# `home_path` is where the photograph goes. It defaults to the concierge home,
+    which is right for every page a guest reaches by scanning the QR code. A stay
+    page passes its own path: the hero runs the full width at the top of the
+    screen, so on a stay page the default made the largest tap target on the page
+    the way out of the stay the guest had just verified a device to open. %>
 <%
   confirm_home_link = local_assigns[:confirm_home_link]
+  home_path = local_assigns[:home_path].presence || concierge_home_path(@hotel.unique_id, @hotel.public_id)
+  home_label = local_assigns[:home_label].presence || "#{@hotel.name} concierge home"
   hero_photo = if @hotel.featured_photo_attachment.present?
     image_tag(@hotel.featured_photo_attachment, class: "absolute inset-0 h-full w-full object-cover opacity-80")
   else
@@ -25,7 +32,7 @@
         with, and a confirmation there would just be friction with nothing
         behind it. %>
     <button type="button" data-action="concierge-modal#open" aria-haspopup="dialog"
-            aria-label="<%= @hotel.name %> concierge home" class="absolute inset-0 z-0">
+            aria-label="<%= home_label %>" class="absolute inset-0 z-0">
       <%= hero_photo %>
     </button>
 
@@ -49,7 +56,7 @@
       </div>
     </dialog>
   <% else %>
-    <%= link_to concierge_home_path(@hotel.unique_id, @hotel.public_id), class: "absolute inset-0 z-0", "aria-label": "#{@hotel.name} concierge home" do %>
+    <%= link_to home_path, class: "absolute inset-0 z-0", "aria-label": home_label do %>
       <%= hero_photo %>
     <% end %>
   <% end %>

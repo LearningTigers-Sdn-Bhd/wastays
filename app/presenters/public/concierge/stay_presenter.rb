@@ -56,7 +56,22 @@ module Public
       end
 
       def can_toggle_do_not_disturb?
-        booking.status == "checked_in" && booking.booking_rooms.where.not(room_number: [ nil, "" ]).exists?
+        booking.status == "checked_in" && assigned_rooms.any?
+      end
+
+      # Whether housekeeping is being kept away right now.
+      #
+      # A switch has to show its state, and the state is not on the booking --
+      # it is on the room, and it lasts one business date. A guest who turned
+      # it on yesterday is not still on it today, which is what active_dnd?
+      # settles.
+      #
+      # Read-only on purpose. Toggling creates the room status row when it is
+      # missing; a page that only draws the switch must not write one.
+      def do_not_disturb_active?
+        return false if assigned_rooms.empty?
+
+        room_statuses.any?(&:active_dnd?)
       end
 
       def can_request_refund?
@@ -88,6 +103,23 @@ module Public
       private
 
       attr_reader :stay_access, :view
+
+      # A room the hotel has actually given the guest. Until then there is
+      # nothing for housekeeping to keep away from.
+      def assigned_rooms
+        @assigned_rooms ||= booking.booking_rooms.where.not(room_number: [ nil, "" ]).to_a
+      end
+
+      # One query for the whole booking, then matched in memory: a booking
+      # holds a handful of rooms, and a pair of columns cannot be matched as a
+      # pair in a WHERE clause without naming every combination of the two.
+      def room_statuses
+        pairs = assigned_rooms.map { |room| [ room.room_type_id, room.room_number ] }
+
+        RoomStatus.where(hotel_id: booking.hotel_id)
+          .where(room_type_id: pairs.map(&:first), room_number: pairs.map(&:last))
+          .select { |status| pairs.include?([ status.room_type_id, status.room_number ]) }
+      end
     end
   end
 end

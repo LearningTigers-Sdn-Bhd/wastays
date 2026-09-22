@@ -6,7 +6,9 @@
 
 <%= render GuestUI::Page.new do |page| %>
   <% page.with_hero do %>
-    <%= render "public/concierge/shared/hero" %>
+    <%= render "public/concierge/shared/hero",
+               home_path: stay_path,
+               home_label: "Your stay at #{@hotel.name}" %>
   <% end %>
   <% page.with_context do %>
     <%= render GuestUI::Card.new(title: "About This Access") do %>
@@ -25,6 +27,7 @@
              title_accent: "Stay",
              subtitle: "Enter the confirmation code from your booking email." %>
 
+  <%= render "public/concierge/stays/shared/flash" %>
   <%= render GuestUI::Notice.new(message: @error, variant: :danger) %>
   <%= render GuestUI::Notice.new(message: @notice, variant: :success) %>
 
