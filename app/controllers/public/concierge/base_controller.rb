@@ -18,10 +18,6 @@ module Public
       # so overriding the instance method here is the correct way to neutralise it.
       def allow_browser(versions:, block:); end
 
-      def mobile_request?
-        request.user_agent.to_s =~ /Mobile|Android|iPhone/i
-      end
-
       def set_hotel
         @hotel = Hotel.locate_public!(code: params[:hotel_code], public_id: params[:public_id])
       rescue ActiveRecord::RecordNotFound

@@ -3,7 +3,6 @@ module Public
     class CheckOutsController < BaseController
       def new
         @booking = checkout_lookup_stage? ? current_concierge_booking : nil
-        render "new_mobile" if mobile_request?
       end
 
       def create
@@ -28,7 +27,7 @@ module Public
         else
           @error = result.message
           @booking = booking
-          render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
+          render(:new, status: :unprocessable_content)
         end
       end
 
@@ -59,7 +58,7 @@ module Public
         else
           "Checkout can only be requested for checked-in bookings."
         end
-        render(mobile_request? ? "new_mobile" : :new, status: :unprocessable_content)
+        render(:new, status: :unprocessable_content)
       end
     end
   end

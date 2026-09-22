@@ -18,6 +18,21 @@ RSpec.describe "Public::Concierge::Requests", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Confirmation Code")
     end
+
+    # One responsive template now serves both. The concierge is reached by
+    # scanning a QR code in the room, so a page that depends on how a user
+    # agent string is read is a page most guests see the wrong half of.
+    it "serves the same page to phones and desktops" do
+      bodies = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].map do |user_agent|
+        get concierge_new_request_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => user_agent }
+        response.body
+      end
+
+      expect(bodies.first).to eq(bodies.last)
+    end
   end
 
   describe "POST /h/:hotel_slug/concierge/requests" do

@@ -31,6 +31,21 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("I have a booking")
     end
+
+    # One responsive template now serves both. The concierge is reached by
+    # scanning a QR code in the room, so a page that depends on how a user
+    # agent string is read is a page most guests see the wrong half of.
+    it "serves the same page to phones and desktops" do
+      bodies = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].map do |user_agent|
+        get concierge_check_in_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => user_agent }
+        response.body
+      end
+
+      expect(bodies.first).to eq(bodies.last)
+    end
   end
 
   describe "POST /concierge/:hotel_slug/check-in/lookup" do
@@ -76,6 +91,22 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
                                   signature_status: "signed", completed_at: Time.current)
       post concierge_check_in_lookup_path(hotel.unique_id, hotel.public_id),
            params: { confirmation_token: booking.confirmation_token }
+    end
+
+    # The registration form and the confirmation both used to have a second,
+    # phone-only template. They no longer do, so neither can drift from the
+    # other and leave a field on one device and not the other.
+    it "serves the same registration form to phones and desktops" do
+      bodies = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].map do |user_agent|
+        get concierge_check_in_now_path(hotel.unique_id, hotel.public_id),
+            headers: { "HTTP_USER_AGENT" => user_agent }
+        response.body
+      end
+
+      expect(bodies.first).to eq(bodies.last)
     end
 
     context "room available", frozen_time: -> { Time.find_zone("Kuala Lumpur").parse("#{Date.today} 15:00") } do
