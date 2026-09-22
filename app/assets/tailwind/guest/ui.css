@@ -1,7 +1,7 @@
 @layer components {
   /* GuestUI (GuestUI::*). The component language of the concierge, the one
      place a hotel guest sees. Public pages sit outside DESIGN.md, so this
-     follows the concierge's own voice -- serif headings, uppercase
+     follows the concierge's own voice -- Playfair Display headings, uppercase
      tracking-widest eyebrows, soft 2xl surfaces -- not the panel/ theme.
 
      Two rules hold across every class in this file.
@@ -314,7 +314,7 @@
      that reading order, so the grid never moves focus away from the order the
      page is read in. */
   .guest-page {
-    @apply flex min-h-screen flex-col overflow-x-hidden bg-background font-sans;
+    @apply flex min-h-screen flex-col overflow-x-hidden bg-background font-guest-interface;
   }
 
   .guest-page__main {

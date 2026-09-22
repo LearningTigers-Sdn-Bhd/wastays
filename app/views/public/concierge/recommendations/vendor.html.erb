@@ -28,7 +28,7 @@
       <span class="inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider backdrop-blur-sm">
         <%= VendorDirectory.category(@vendor.category_slug)&.name %>
       </span>
-      <h2 class="mt-2.5 text-xl font-black leading-tight sm:font-serif sm:text-2xl sm:font-normal"><%= @vendor.name %></h2>
+      <h2 class="mt-2.5 font-guest-display text-xl font-semibold leading-tight sm:text-2xl"><%= @vendor.name %></h2>
       <p class="mt-1 text-[13px] font-medium leading-snug text-white/85"><%= @vendor.tagline %></p>
 
       <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-white/20 pt-2.5 text-[11px] font-bold">
@@ -49,7 +49,7 @@
   <% if @vendor.summary.present? %>
     <div class="mt-3.5" data-controller="concierge-read-more">
       <p data-concierge-read-more-target="text"
-         class="line-clamp-4 text-[13px] font-medium leading-relaxed text-muted-foreground md:line-clamp-none"><%= @vendor.summary %></p>
+         class="line-clamp-4 font-guest-editorial text-sm leading-relaxed text-muted-foreground md:line-clamp-none"><%= @vendor.summary %></p>
       <button type="button"
               data-concierge-read-more-target="button"
               data-action="concierge-read-more#toggle"

@@ -3,7 +3,7 @@
 <%# A full-bleed confirmation, not a page in the concierge shell: this screen ends
     the journey, so there is nothing left to navigate to but Done. %>
 <div data-controller="scroll-reveal"
-     class="flex min-h-screen flex-col bg-primary font-sans">
+     class="flex min-h-screen flex-col bg-primary font-guest-interface">
 
   <div class="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
 
@@ -28,7 +28,7 @@
 
     <div class="mx-auto mb-8 w-full max-w-[280px] border-t border-white/20 pt-6" data-animate style="transition-delay: 0.2s">
       <p class="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-accent/80">Your check-out time</p>
-      <p class="font-serif text-5xl tracking-tighter text-white [text-shadow:0_4px_12px_rgba(0,0,0,0.3)]">
+      <p class="font-guest-display text-5xl font-semibold tracking-tighter text-white [text-shadow:0_4px_12px_rgba(0,0,0,0.3)]">
         <%= Time.current.strftime("%I:%M %p") %>
       </p>
     </div>

@@ -10,7 +10,7 @@ module GuestUI
   # that says where one ends.
   #
   # The title is an eyebrow rather than a heading face. These name a group of
-  # controls, and a serif heading on each would compete with the page's own.
+  # controls, and a display heading on each would compete with the page's own.
   class Card < GuestUI::BaseComponent
     PADDINGS = %i[default tight].freeze
     VARIANTS = %i[default dashed].freeze

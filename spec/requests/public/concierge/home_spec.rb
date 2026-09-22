@@ -113,6 +113,19 @@ RSpec.describe "Public::Concierge::Home", type: :request do
 
       expect(response.body).to include("landing/bg-1")
     end
+
+    it "uses the concierge typography roles" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      font_stylesheet = document.css("link[rel='stylesheet']").find do |link|
+        link["href"]&.include?("fonts.googleapis.com")
+      end
+
+      expect(document.at_css("body")["class"]).to include("font-guest-interface")
+      expect(document.at_css("h1")["class"]).to include("font-guest-display")
+      expect(font_stylesheet["href"]).to include("family=Lato", "family=Playfair+Display")
+    end
   end
 
   describe "GET /concierge/:hotel_code/:public_id/book" do

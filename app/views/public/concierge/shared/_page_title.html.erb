@@ -1,5 +1,4 @@
-<%# One title for both templates: the phone's tight sans headline below sm, the
-    concierge's serif headline above it. Callers own the wording and the tag —
+<%# One display title for both templates. Callers own the wording and the tag —
     it defaults to h2 because the shell's top bar already spends the page's h1
     on the hotel name. %>
 <%# .presence rather than fetch's key-presence check: page_header always
@@ -8,7 +7,7 @@
     instead of falling back to the default. %>
 <div class="<%= local_assigns[:wrapper_class].presence || "mb-6 sm:mb-8" %>">
   <%= content_tag local_assigns.fetch(:tag, "h2"),
-        class: "mb-2 text-2xl font-black leading-tight text-foreground sm:font-serif sm:text-3xl sm:font-normal" do %>
+        class: "mb-2 font-guest-display text-2xl font-semibold leading-tight text-foreground sm:text-3xl" do %>
     <%= title_prefix %><% if local_assigns[:title_accent].present? %> <span class="text-primary sm:italic"><%= title_accent %></span><% end %>
   <% end %>
 
