@@ -65,6 +65,16 @@ module HotelPortal
         payment.notes.presence || "—"
       end
 
+      # Present when the payment was recorded off an agent's bank-transfer
+      # submission; the slip behind it stays reachable from the payment.
+      def submission
+        payment.ar_payment_submission
+      end
+
+      def submitted_by_label
+        submission&.submitted_by&.name
+      end
+
       def corporate_gateway_payment?
         payment.metadata.to_h["source"] == "corporate_portal_gateway"
       end

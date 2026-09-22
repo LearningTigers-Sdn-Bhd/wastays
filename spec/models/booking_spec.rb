@@ -329,4 +329,85 @@ RSpec.describe Booking, type: :model do
       expect(booking.reload).to be_valid
     end
   end
+
+  describe "stay window normalisation" do
+    let(:hotel) { create(:hotel, time_zone: "Asia/Kuala_Lumpur") }
+
+    before do
+      hotel.create_property_policy!(check_in_time: "14:00", check_out_time: "12:00")
+      hotel.reload
+    end
+
+    def local(booking, attribute)
+      booking.public_send(attribute).in_time_zone(hotel.hotel_time_zone).strftime("%Y-%m-%d %H:%M")
+    end
+
+    it "applies the property policy times to a date-only stay window" do
+      booking = build(:booking, hotel: hotel, check_in: "2026-09-20", check_out: "2026-09-22")
+
+      expect(local(booking, :check_in)).to eq("2026-09-20 14:00")
+      expect(local(booking, :check_out)).to eq("2026-09-22 12:00")
+    end
+
+    # `hotel.bookings.build(check_in:)` assigns the attributes before the
+    # association sets the owner, so the setters run with no hotel to consult.
+    it "applies the policy times when the hotel arrives after the dates" do
+      booking = hotel.bookings.build(check_in: "2026-09-20", check_out: "2026-09-22", adults: 2)
+      booking.valid?
+
+      expect(local(booking, :check_in)).to eq("2026-09-20 14:00")
+      expect(local(booking, :check_out)).to eq("2026-09-22 12:00")
+    end
+
+    it "keeps a time the caller supplied" do
+      booking = hotel.bookings.build(check_in: "2026-09-20 09:30", check_out: "2026-09-22 18:45", adults: 2)
+      booking.valid?
+
+      expect(local(booking, :check_in)).to eq("2026-09-20 09:30")
+      expect(local(booking, :check_out)).to eq("2026-09-22 18:45")
+    end
+
+    it "falls back to the default times when the hotel has no policy" do
+      hotel.property_policy.destroy!
+      hotel.reload
+      booking = hotel.bookings.build(check_in: "2026-09-20", check_out: "2026-09-22", adults: 2)
+      booking.valid?
+
+      expect(local(booking, :check_in)).to eq("2026-09-20 #{Bookings::ScheduledStay::DEFAULT_CHECK_IN_TIME}")
+      expect(local(booking, :check_out)).to eq("2026-09-22 #{Bookings::ScheduledStay::DEFAULT_CHECK_OUT_TIME}")
+    end
+
+    it "leaves a persisted stay window alone when the record is reloaded" do
+      booking = create(:booking, hotel: hotel, check_in: "2026-09-20 09:30", check_out: "2026-09-22 18:45")
+      booking.reload
+      booking.valid?
+
+      expect(local(booking, :check_in)).to eq("2026-09-20 09:30")
+    end
+  end
+
+  describe "#closed?" do
+    it "is closed once cancelled" do
+      booking = create(:booking, status: "confirmed")
+      booking.transition_status_to!("cancelled", event: "cancel")
+
+      expect(booking).to be_closed
+    end
+
+    # Bookings::VoidBooking releases inventory the same way; a caller checking
+    # only "cancelled" is exactly how a voided booking once read as "Paid" in
+    # CorporatePortal::BookingPaymentPresenter.
+    it "is closed once voided" do
+      booking = create(:booking, status: "confirmed")
+      booking.transition_status_to!("voided", event: "void")
+
+      expect(booking).to be_closed
+    end
+
+    it "is not closed while confirmed" do
+      booking = create(:booking, status: "confirmed")
+
+      expect(booking).not_to be_closed
+    end
+  end
 end

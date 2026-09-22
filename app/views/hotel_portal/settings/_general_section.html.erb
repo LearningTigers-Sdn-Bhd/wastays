@@ -213,6 +213,15 @@
               variant: :card) %>
       </div>
 
+      <%# The default hold behind every agent booking. An agency can be given
+          its own on its External Account. %>
+      <div class="sm:col-span-2">
+        <%= render "hotel_portal/shared/agent_payment_hold_field",
+              form: f,
+              label: "Agent payment hold",
+              hint: "How long an agent's booking is held before the rooms are released for non-payment. The clock stops when the agent uploads a transfer slip, and a hold never runs past the arrival date. An individual agency can override this." %>
+      </div>
+
     </div>
   </section>
 

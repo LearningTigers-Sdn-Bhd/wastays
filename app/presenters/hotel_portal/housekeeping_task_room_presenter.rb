@@ -50,6 +50,14 @@ module HotelPortal
       ::Rooms::StatusPresentation.badge_variant(resolved_status)
     end
 
+    def status_icon
+      ::Rooms::StatusPresentation.icon(resolved_status)
+    end
+
+    def status_assignable?
+      ::Rooms::StatusPresentation.assignable?(resolved_status)
+    end
+
     def booking_status_badge_variant
       BOOKING_STATUS_BADGE_VARIANTS.fetch(booking_status, :neutral)
     end

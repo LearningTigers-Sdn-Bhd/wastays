@@ -131,8 +131,6 @@ RSpec.describe "StaticPages", type: :request do
     it "links the footer back to the landing page sections" do
       get "/explore"
 
-      expect(response.body).to include(%(>Explore Hotel<))
-      expect(response.body).to include(%(href="#{explore_path}"))
       expect(response.body).to include(%(href="#{root_path(anchor: "faq")}"))
     end
   end

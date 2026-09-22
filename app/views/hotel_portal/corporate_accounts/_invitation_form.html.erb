@@ -35,13 +35,16 @@
             <% end %>
           </section>
 
-          <%= render "hotel_portal/corporate_accounts/billing_terms_fields",
-            form: form,
-            relationship_type: @corporate_invitation.relationship_type,
-            credit_currency: @corporate_invitation.credit_currency,
-            credit_limit: @corporate_invitation.credit_limit,
-            payment_terms_days: @corporate_invitation.payment_terms_days,
-            hint: "These proposed terms become the relationship when the invitation is accepted." %>
+          <div data-controller="corporate-billing-terms"
+               data-action="change->corporate-billing-terms#refresh">
+            <%= render "hotel_portal/corporate_accounts/billing_terms_fields",
+              form: form,
+              relationship_type: @corporate_invitation.relationship_type,
+              credit_currency: @corporate_invitation.credit_currency,
+              credit_limit: @corporate_invitation.credit_limit,
+              payment_terms_days: @corporate_invitation.payment_terms_days,
+              hint: "These proposed terms become the relationship when the invitation is accepted." %>
+          </div>
         </div>
 
         <div class="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-muted/50 px-4 py-3">

@@ -1,0 +1,48 @@
+<%# An agency booking. `source` is "internal" for these, the same as a booking
+    keyed at the desk, so the badge is the only thing on screen that says the
+    room was sold by an agent -- and the popover says by whom, and when. %>
+<% attribution = presenter.agent_attribution %>
+<% if attribution.present? %>
+  <%= render PanelsUI::Popover.new(
+        id: "#{dom_id}-agent-attribution",
+        placement: :bottom,
+        trigger_on: :hover,
+        delay: 100,
+        close_delay: 150,
+        class: "w-72 p-0") do |popover| %>
+    <% popover.with_trigger(
+         unstyled: true,
+         aria_label: "Booked by #{attribution[:agency] || "an agency"}",
+         class: "inline-flex rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring") do %>
+      <%# The variant follows the money: an agency booking whose rooms are at
+          risk of being released should not look like one that is paid for. %>
+      <%= render PanelsUI::Badge.new(variant: attribution[:badge_variant] || :accent, size: :sm, class: "gap-1.5") do %>
+        <%= cached_icon "briefcase", class: "size-3 shrink-0", aria: { hidden: true } %>
+        <span>Agent</span>
+      <% end %>
+    <% end %>
+    <div class="w-72 text-left font-normal">
+      <div class="border-b border-border px-3 py-2.5">
+        <p class="text-sm font-semibold text-foreground">Booked by an agency</p>
+        <% if attribution[:payment_state] == :overdue %>
+          <p class="mt-0.5 text-xs font-semibold text-destructive">Past its payment deadline. The rooms may be released.</p>
+        <% end %>
+      </div>
+      <dl class="divide-y divide-border">
+        <% rows = [
+             [ "Agency", attribution[:agency] ],
+             [ "Booked by", attribution[:person] ],
+             [ "Booked at", attribution[:booked_at] ],
+             [ "Payment", attribution[:payment_label] ]
+           ]
+           rows << [ "Due", attribution[:payment_due_label] ] if attribution[:payment_due_label].present? %>
+        <% rows.each do |label, value| %>
+          <div class="flex items-start justify-between gap-3 px-3 py-2.5">
+            <dt class="text-xs text-muted-foreground"><%= label %></dt>
+            <dd class="min-w-0 truncate text-xs font-medium text-foreground"><%= value.presence || blank_value %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+  <% end %>
+<% end %>

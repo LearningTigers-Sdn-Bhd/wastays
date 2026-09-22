@@ -3,7 +3,8 @@
 # A RubyLLM::Chat that decides with ReferenceClassifier instead of a provider.
 #
 # It stands where the model stands, so everything below it -- tool dispatch,
-# the halt, the hop cap, the recorder, the orchestrators -- is the real thing.
+# the stop boundary, the hop cap, the recorder, the orchestrators -- is the real
+# thing.
 # Faking any lower would mean the agent_loop column tested the harness rather
 # than the loop.
 module AiConciergeEval
@@ -32,7 +33,13 @@ module AiConciergeEval
     # alone, which keeps every existing fixture answering exactly as before.
     def add_message(attributes) = tap { @seeded_messages << attributes }
 
-    def ask(message)
+    def ask_later(message, with: nil)
+      @staged_message = message
+      self
+    end
+
+    def generate
+      message = @staged_message
       call = tool_call_for(message)
       return Response.new(content: "Hello! How can I help you today?") unless call
 
@@ -41,15 +48,29 @@ module AiConciergeEval
       # the guards that exist to catch it would have nothing to catch.
       return Response.new(content: call[:prose]) if call[:prose].present?
 
-      call = normalize_legacy_call(call, message)
+      @pending_call = normalize_legacy_call(call, message)
+      Response.new(tool_call: true)
+    end
+
+    def run_tools
+      call = @pending_call
+      return self unless call
 
       tool = tools.find { |candidate| candidate.name == call.fetch(:tool) }
       raise ArgumentError, "fixture asked for unknown tool #{call[:tool]}" unless tool
 
       @callbacks[:before].each(&:call)
-      result = tool.call(call[:arguments] || {})
-      @callbacks[:after].each(&:call)
-      result
+      result = tool.call(**(call[:arguments] || {}))
+      @callbacks[:after].each { |callback| callback.call(result) }
+      @pending_call = nil
+      self
+    end
+
+    def ask(message)
+      ask_later(message)
+      response = generate
+      run_tools if response.tool_call?
+      response
     end
 
     attr_reader :seeded_messages
@@ -116,7 +137,9 @@ module AiConciergeEval
       ).call
     end
 
-    Response = Struct.new(:content, keyword_init: true)
+    Response = Struct.new(:content, :tool_call, keyword_init: true) do
+      def tool_call? = tool_call || false
+    end
 
     class ToolChoice
       def initialize(interpretation:, message:)

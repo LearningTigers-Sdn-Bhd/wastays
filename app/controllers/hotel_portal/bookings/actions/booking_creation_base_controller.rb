@@ -21,7 +21,11 @@ module HotelPortal
         def build_booking(source: nil)
           incoming = booking_params
           check_in = incoming[:check_in].presence || params[:check_in].presence || ::Bookings::ScheduledStay.at_hotel_time(hotel: current_hotel, value: Date.current, kind: :check_in)
-          @booking = current_hotel.bookings.build(
+          # Built empty first: `bookings.build(check_in:)` assigns before the
+          # association sets the owner, so the stay setters would see no hotel
+          # and a date-only value would render as midnight in the form.
+          @booking = current_hotel.bookings.build
+          @booking.assign_attributes(
             check_in: check_in,
             check_out: incoming[:check_out].presence || params[:check_out].presence || ::Bookings::ScheduledStay.at_hotel_time(hotel: current_hotel, value: check_in.to_date + 1.day, kind: :check_out),
             adults: 2, source: source
@@ -80,7 +84,8 @@ module HotelPortal
 
         def render_new_booking_failure(transaction:, errors:)
           alert = Array(errors).to_sentence.presence || "Booking could not be created."
-          @booking = current_hotel.bookings.build(model_booking_params)
+          @booking = current_hotel.bookings.build
+          @booking.assign_attributes(model_booking_params)
           @initial_room_rows = staff_room_rows.map(&:to_h)
           @booking.errors.add(:base, alert)
           @transaction = transaction

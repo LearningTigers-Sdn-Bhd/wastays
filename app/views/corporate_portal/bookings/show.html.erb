@@ -1,0 +1,157 @@
+<div class="mx-auto w-full max-w-2xl space-y-6">
+  <% cancelled = @booking.status == "cancelled" %>
+  <%# The card is not dimmed the way a list row is: the agent opened this booking
+      deliberately, so the neutral border and the status carry it. %>
+  <section class="rounded-2xl border bg-card p-8 shadow-sm <%= cancelled ? "border-border" : "border-emerald-200" %>">
+    <div class="flex flex-wrap items-center gap-2">
+      <p class="text-xs font-bold uppercase tracking-[0.2em] <%= cancelled ? "text-muted-foreground" : "text-emerald-700" %>">
+        <%= @booking.status.humanize %>
+      </p>
+      <%= render PanelsUI::Badge.new(label: @payment.badge_label, variant: @payment.badge_variant, size: :sm) %>
+    </div>
+    <h1 class="mt-2 text-2xl font-bold text-foreground"><%= @booking.guest_name %></h1>
+    <p class="mt-1 text-sm text-muted-foreground">
+      <%= @booking.hotel.name %><%= " · #{pluralize(@bookings.size, 'room')}" if @bookings.size > 1 %>
+    </p>
+
+    <dl class="mt-6 grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <dt class="text-muted-foreground">Reservation</dt>
+        <dd class="font-bold"><%= @booking.formatted_reservation_number %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Status</dt>
+        <dd class="font-bold"><%= @booking.status.humanize %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Arrival</dt>
+        <dd class="font-bold"><%= @booking.check_in.to_date.strftime("%d %b %Y") %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Departure</dt>
+        <dd class="font-bold"><%= @booking.check_out.to_date.strftime("%d %b %Y") %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Guests</dt>
+        <dd class="font-bold"><%= pluralize(@booking.adults, "adult") %><%= ", #{pluralize(@booking.children, 'child')}" if @booking.children.to_i.positive? %></dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">Total</dt>
+        <dd class="font-bold">
+          <%= @booking.currency %>
+          <%= number_with_precision(@bookings.sum { |booking| booking.total_amount.to_d }, precision: 2) %>
+        </dd>
+      </div>
+    </dl>
+
+    <%# The total above is one number; a TA billing a client on top of it needs
+        to know what is tax rather than room revenue. Grouped by name and
+        summed across every room in the stay. %>
+    <% tax_totals = @bookings.flat_map { |booking| Array(booking.tax_lines) }
+                             .reject { |line| Booking.tourism_tax_line?(line) }
+                             .group_by { |line| line["name"] }
+                             .transform_values { |lines| lines.sum { |line| line["amount"].to_d } } %>
+    <% room_subtotal = @bookings.sum { |booking| booking.total_amount.to_d } - tax_totals.values.sum %>
+    <% if tax_totals.present? %>
+      <dl class="mt-4 space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
+        <div class="flex justify-between">
+          <dt>Room charges</dt>
+          <dd class="tabular-nums"><%= @booking.currency %> <%= number_with_precision(room_subtotal, precision: 2) %></dd>
+        </div>
+        <% tax_totals.each do |name, amount| %>
+          <div class="flex justify-between">
+            <dt><%= name %></dt>
+            <dd class="tabular-nums"><%= @booking.currency %> <%= number_with_precision(amount, precision: 2) %></dd>
+          </div>
+        <% end %>
+      </dl>
+    <% end %>
+    <% if @booking.hotel.tourism_tax_enabled? %>
+      <p class="mt-2 text-xs text-muted-foreground">
+        Tourism tax of <%= @booking.currency %> <%= number_with_precision(@booking.hotel.tourism_tax_amount, precision: 2) %>
+        per room, per night applies to guests with passports from outside Malaysia and is settled at checkout.
+      </p>
+    <% end %>
+  </section>
+
+  <%# Rooms are held against this deadline, so it sits directly under the
+      confirmation rather than at the foot of the page. %>
+  <%= render "corporate_portal/bookings/payment_deadline", booking: @booking, payment: @payment, compact: false %>
+
+  <%# The deadline panel above only renders while awaiting_payment?, so once a
+      slip is approved (or the booking closes) it disappears -- and with it,
+      the only other place the agent could see what they had sent was their
+      one-time submission confirmation page. This shows every slip sent for
+      this booking regardless of state, reusing the same partial the hotel
+      reviews it through. %>
+  <% if @payment.submissions_with_slips.any? %>
+    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="border-b border-border px-6 py-4">
+        <h2 class="text-sm font-bold text-foreground">Payment slips</h2>
+      </div>
+      <ul class="divide-y divide-border">
+        <% @payment.submissions_with_slips.each do |submission| %>
+          <li class="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm">
+            <div>
+              <p class="font-bold text-foreground"><%= submission.reference_number %></p>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                <%= submission.currency %> <%= number_with_precision(submission.amount, precision: 2) %> ·
+                submitted <%= submission.created_at.strftime("%d %b %Y") %>
+              </p>
+              <% if submission.rejected? && submission.rejection_reason.present? %>
+                <p class="mt-1 text-xs font-semibold text-destructive">Rejected: <%= submission.rejection_reason %></p>
+              <% end %>
+            </div>
+            <div class="flex items-center gap-2">
+              <%= render PanelsUI::Badge.new(
+                    label: submission.status.humanize,
+                    variant: { "pending" => :info, "approved" => :success, "rejected" => :destructive }.fetch(submission.status, :neutral),
+                    size: :sm) %>
+              <%= render "hotel_portal/ar_payment_submissions/slip", submission: submission %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if @bookings.size > 1 %>
+    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="border-b border-border px-6 py-4">
+        <h2 class="text-sm font-bold text-foreground">Rooms in this stay</h2>
+      </div>
+      <ul class="divide-y divide-border">
+        <% @bookings.each_with_index do |booking, index| %>
+          <li class="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm">
+            <div>
+              <p class="font-bold text-foreground">Room <%= index + 1 %> · <%= booking.guest_name %></p>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                <%= booking.formatted_reservation_number %> ·
+                <%= booking.guests.map(&:name).to_sentence %>
+              </p>
+            </div>
+            <span class="font-bold tabular-nums text-foreground">
+              <%= booking.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <div class="flex flex-wrap gap-3">
+    <%= link_to "Book another stay", new_corporate_booking_path,
+          class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+    <%= link_to "All bookings", corporate_bookings_path,
+          class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
+
+    <%# Offered only when the service would accept it, so the agent is never
+        shown a button that answers with a refusal. %>
+    <% if @cancellation.cancellable? %>
+      <%= link_to "Cancel booking", new_corporate_booking_cancellation_path(@booking),
+            class: "rounded-xl border border-destructive px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10" %>
+    <% elsif !cancelled %>
+      <p class="self-center text-xs text-muted-foreground"><%= @cancellation.refusal_reason %></p>
+    <% end %>
+  </div>
+</div>

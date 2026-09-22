@@ -99,6 +99,32 @@
       <% end %>
     <% end %>
 
+    <%# Not a guest message: this one goes to a travel agent whose rooms are
+        about to be released for non-payment. It sits here because the schedule,
+        the channels and the record of what was sent are the same machinery. %>
+    <% agent_reminder_config = @presenter.agent_payment_reminder_notification_config %>
+    <%= render "hotel_portal/settings/notification_module",
+               config: agent_reminder_config,
+               notification_type: "agent_payment_reminder",
+               title: "Agent Payment Reminder",
+               subtitle: "Travel Agents",
+               description: "Remind a travel agent before their booking's payment deadline passes and the rooms are released.",
+               channels: [ "email" ],
+               icon: nil do |f| %>
+      <%= render PanelsUI::FormField.new(
+            form: f,
+            attribute: :agent_reminder_offsets,
+            label: "Send Before Deadline",
+            hint: "Hours before the deadline, separated by commas. Only the nearest one still due is sent, so a booking made inside the window gets one reminder rather than all of them.",
+            size: :sm) do |field| %>
+        <% field.with_input(
+             name: "notification_config[settings][offsets_hours]",
+             id: "notification_config_agent_reminder_offsets",
+             value: agent_reminder_config.agent_reminder_offsets_hours.join(", "),
+             placeholder: "24, 4") %>
+      <% end %>
+    <% end %>
+
     <% in_stay_config = @presenter.in_stay_guest_notification_config %>
     <div class="lg:col-span-2">
       <%= render "hotel_portal/settings/notification_module",

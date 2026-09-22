@@ -14,6 +14,7 @@ module HotelPortal
       payment = current_hotel.ar_payments
         .includes(
           { ar_payment_allocations: [ :ar_invoice, { reversal: :reversed_by } ] },
+          { ar_payment_submission: [ :submitted_by, { slip_attachment: :blob } ] },
           hotel_corporate_account: :corporate_account
         )
         .find(params[:id])
@@ -48,7 +49,11 @@ module HotelPortal
       )
 
       if result.success?
-        submission&.approve!(ar_payment: result.ar_payment, reviewed_by: current_user)
+        if submission.present?
+          ::ArPaymentSubmissions::Approve.call(
+            submission: submission, ar_payment: result.ar_payment, reviewed_by: current_user
+          )
+        end
         redirect_to hotel_ar_payment_path(current_hotel, result.ar_payment), notice: "Corporate payment recorded."
       else
         set_context

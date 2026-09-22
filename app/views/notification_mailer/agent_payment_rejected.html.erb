@@ -1,0 +1,11 @@
+<%# The rejection restarts the release clock, so this mail has to carry both
+    halves: why it was turned down, and the new deadline. The deadline in the
+    payload is the extended one -- ArPaymentSubmissions::Reject reloads the
+    booking before building it. %>
+<%= render "notification_mailer/agent_payment_notice",
+      accent: "#b42318",
+      eyebrow: "Payment not accepted",
+      headline: "We could not accept your transfer slip",
+      body: "#{@payload[:hotel_name]} was unable to accept the slip you sent#{@payload[:reference_number].present? ? " (reference #{@payload[:reference_number]})" : ""}. Your rooms are still held: the deadline has been extended by the time the review took, and now falls on the date shown below.",
+      note: @payload[:rejection_reason],
+      cta_label: "Send a new slip" %>

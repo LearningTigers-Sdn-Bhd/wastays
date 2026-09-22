@@ -1,4 +1,18 @@
 module ApplicationHelper
+  # Where the account links in the shared layout point.
+  #
+  # A staff profile lives under a hotel, so the path needs one -- but the layout
+  # is rendered on public, token-addressed pages too, where there is no
+  # :hotel_id and current_hotel falls back to the user's first hotel. A user
+  # with no hotel at all (a corporate account, or staff not yet given access)
+  # left that nil and took the whole page down with a routing error.
+  def account_settings_path_for(user)
+    return edit_admin_profile_path if user&.superadmin?
+
+    hotel = current_hotel
+    hotel && edit_hotel_user_profile_path(hotel)
+  end
+
   # Flash keys that carry structured payloads for a specific view to render,
   # rather than a message meant for the generic toast stack.
   NON_TOAST_FLASH_KEYS = %i[toast owner_credentials].freeze

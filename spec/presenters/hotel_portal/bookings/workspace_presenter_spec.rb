@@ -1246,4 +1246,61 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(room_rows.find { |row| row.id == folio.id }).to have_attributes(active: false)
     end
   end
+
+  # The agency is already on the booking; the person who made it is not
+  # recoverable from anywhere else, so the header states both.
+  describe "agent attribution" do
+    let(:corporate_user) { create(:user, :corporate) }
+    let(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account, account_type: "travel_agent")
+    end
+
+    it "names the agency, the person and the time, in the hotel's zone" do
+      booked_at = Time.current
+      booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                      corporate_booked_at: booked_at)
+
+      expect(presenter).to be_agent_booking
+      expect(presenter.agent_attribution).to include(
+        agency: relationship.corporate_account.name,
+        person: corporate_user.name,
+        booked_at: booked_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y %H:%M")
+      )
+    end
+
+    # The desk is asked "have they paid?" on the phone, so the badge answers it
+    # rather than only saying an agent sold the room.
+    it "carries the payment state, and turns the badge red once the deadline has passed" do
+      booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                      corporate_booked_at: Time.current, payment_status: "pending",
+                      status: "confirmed", payment_due_at: 1.hour.ago)
+
+      expect(presenter.agent_attribution).to include(
+        payment_state: :overdue,
+        payment_label: "Payment past due",
+        badge_variant: :destructive
+      )
+      expect(presenter.agent_attribution[:payment_due_label]).to be_present
+    end
+
+    it "reads as paid, in the ordinary badge colour, once there is no deadline left" do
+      booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                      corporate_booked_at: Time.current, payment_due_at: nil)
+
+      expect(presenter.agent_attribution).to include(
+        payment_state: :paid, payment_label: "Paid", badge_variant: :accent
+      )
+    end
+
+    it "says nothing for a booking keyed at the desk" do
+      expect(presenter).not_to be_agent_booking
+      expect(presenter.agent_attribution).to be_nil
+    end
+
+    it "says nothing for a corporate booking made before attribution was recorded" do
+      booking.update!(hotel_corporate_account: relationship)
+
+      expect(presenter).not_to be_agent_booking
+    end
+  end
 end

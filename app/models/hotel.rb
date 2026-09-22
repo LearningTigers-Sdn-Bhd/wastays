@@ -1,5 +1,6 @@
 class Hotel < ApplicationRecord
   include AccountScopable
+  include AgentPaymentHoldUnit
   include PhotoAlbum
   extend FriendlyId
   friendly_id :name, use: :slugged
@@ -27,6 +28,9 @@ class Hotel < ApplicationRecord
   }.freeze
 
   validates :ai_provider_name, presence: true, if: :ai_provider_enabled?
+  # The property default for how long an agent booking is held before payment.
+  # See Bookings::PaymentHold.
+  validates :agent_payment_hold_hours, numericality: { only_integer: true, greater_than: 0 }
   validates :ai_provider_key, presence: true, if: :ai_provider_enabled?
 
   has_one_attached :icon, dependent: :purge_later do |attachable|

@@ -130,7 +130,7 @@ RSpec.describe HotelPortal::StayViewHelper, type: :helper, frozen_time: Time.zon
 
   it "reframes the board header copy per view mode" do
     expect(helper.stay_view_board_description(:timeline)).to include("across the coming days")
-    expect(helper.stay_view_board_caption(:timeline)).to include("middle of check-in day")
+    expect(helper.stay_view_board_caption(:timeline)).to be_nil
     expect(helper.stay_view_board_description(:rooms)).to include("single day")
     expect(helper.stay_view_board_caption(:rooms)).to include("arrivals, departures, and turnovers")
   end

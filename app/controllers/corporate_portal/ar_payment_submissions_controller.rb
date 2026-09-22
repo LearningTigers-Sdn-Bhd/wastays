@@ -9,7 +9,9 @@ module CorporatePortal
     end
 
     def new
-      if lump_sum?
+      if booking_prepayment?
+        build_booking_context
+      elsif lump_sum?
         build_lump_sum_context
       else
         @invoices = corporate_open_invoices.where(id: requested_invoice_ids)
@@ -22,10 +24,74 @@ module CorporatePortal
     end
 
     def create
-      lump_sum? ? create_lump_sum : create_for_selected_invoices
+      if booking_prepayment?
+        create_for_booking
+      elsif lump_sum?
+        create_lump_sum
+      else
+        create_for_selected_invoices
+      end
     end
 
     private
+
+    # A standard account has no invoice until the folio closes at checkout, so a
+    # payment sent to meet a booking's deadline targets the booking itself.
+    def create_for_booking
+      build_booking_context
+
+      return redirect_to corporate_bookings_path, alert: "That booking could not be found." if @booking.blank?
+
+      relationship = @booking.hotel_corporate_account
+      @ar_payment_submission = relationship.ar_payment_submissions.build(
+        submission_params.except(:ar_invoice_ids, :hotel_corporate_account_id, :amount, :lump_sum, :booking_id).merge(
+          hotel: @booking.hotel,
+          booking: @booking,
+          submitted_by: current_user,
+          amount: @booking.total_amount,
+          currency: @booking.currency
+        )
+      )
+
+      if @ar_payment_submission.save
+        # The agent's clock is now stopped, so the slip sitting unreviewed costs
+        # the hotel the sale it is holding. The desk is told on the bell.
+        ::Notifications::PublishAgentPaymentStaffNotification.call(
+          booking: @booking, event: :submitted, submission: @ar_payment_submission
+        )
+        redirect_to corporate_booking_path(@booking),
+                    notice: "Payment submitted for hotel review. The payment deadline is paused until they respond."
+      else
+        flash.now[:alert] = @ar_payment_submission.errors.full_messages.to_sentence
+        render :new, status: :unprocessable_content
+      end
+    end
+
+    def build_booking_context
+      @booking = corporate_bookings.find_by(id: requested_booking_id)
+      return if @booking.blank?
+
+      @ar_payment_submission ||= ArPaymentSubmission.new(
+        currency: @booking.currency,
+        amount: @booking.total_amount,
+        payment_method: "bank_transfer",
+        received_at: Date.current
+      )
+    end
+
+    def corporate_bookings
+      Booking.joins(:hotel_corporate_account)
+        .where(hotel_corporate_accounts: { corporate_account_id: current_user.account_id })
+        .includes(:hotel, :hotel_corporate_account)
+    end
+
+    def requested_booking_id
+      params[:booking_id].presence || submission_params[:booking_id].presence
+    end
+
+    def booking_prepayment?
+      requested_booking_id.present?
+    end
 
     def create_for_selected_invoices
       invoices = corporate_open_invoices.where(id: requested_invoice_ids)
@@ -142,7 +208,7 @@ module CorporatePortal
     end
 
     def submission_params
-      params.fetch(:ar_payment_submission, {}).permit(:reference_number, :currency, :received_at, :payment_method, :notes, :slip, :hotel_corporate_account_id, :amount, :lump_sum, ar_invoice_ids: [])
+      params.fetch(:ar_payment_submission, {}).permit(:reference_number, :currency, :received_at, :payment_method, :notes, :slip, :hotel_corporate_account_id, :amount, :lump_sum, :booking_id, ar_invoice_ids: [])
     end
   end
 end

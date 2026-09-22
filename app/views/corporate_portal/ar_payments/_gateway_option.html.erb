@@ -1,0 +1,20 @@
+<%# Card payment. Not rendered at all for travel agents — see
+    HotelCorporateAccount#gateway_payments_allowed?. %>
+<%= form_with url: review_corporate_ar_payments_path, method: :post, scope: :corporate_ar_payment, class: "flex" do %>
+  <%= hidden_field_tag "corporate_ar_payment[hotel_corporate_account_id]", presenter.relationship&.id %>
+  <%= hidden_field_tag "corporate_ar_payment[currency]", presenter.currency %>
+  <%= hidden_field_tag "corporate_ar_payment[gateway]", "razorpay" %>
+  <%= hidden_field_tag "corporate_ar_payment[amount]", presenter.total_amount %>
+  <% presenter.invoices.each do |invoice| %>
+    <%= hidden_field_tag "corporate_ar_payment[invoice_ids][]", invoice.id %>
+  <% end %>
+  <button type="submit"
+          <%= "disabled" unless presenter.gateway_ready? %>
+          class="flex w-full flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+    <span class="inline-flex size-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+      <%= cached_icon "credit-card", class: "size-5", aria: { hidden: true } %>
+    </span>
+    <span class="text-sm font-bold text-slate-950">Pay Online</span>
+    <span class="text-xs text-slate-500"><%= presenter.gateway_ready? ? "Pay instantly by card." : "Online payments aren't set up for this hotel yet." %></span>
+  </button>
+<% end %>

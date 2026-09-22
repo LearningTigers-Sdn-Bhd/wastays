@@ -1,0 +1,13 @@
+<%# The agent's remittance proof. Staff approve or reject money on the strength
+    of this, so every screen that reviews or records the payment renders it the
+    same way — and says so plainly when there is nothing to show. %>
+<% if submission&.slip&.attached? %>
+  <%= link_to rails_blob_path(submission.slip, disposition: "inline"),
+        target: "_blank", rel: "noopener",
+        class: "inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 hover:bg-slate-50" do %>
+    <%= cached_icon "paperclip", class: "size-4" %>
+    <span>View transaction slip</span>
+  <% end %>
+<% else %>
+  <%= blank_value "No slip on file" %>
+<% end %>

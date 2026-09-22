@@ -4,6 +4,13 @@ require "ostruct"
 
 module Rooms
   class ManageBlock
+    # What a room can be worth once a block ends. Staff choose between them when
+    # they return the room to service, because this is the one thing they know
+    # and the record does not -- a technician who left the room filthy and one
+    # who never turned up both end the block, and only one of them owes
+    # housekeeping a visit.
+    FINISH_STATUSES = %w[dirty ready].freeze
+
     def initialize(hotel:, user:, params: nil, block: nil)
       @hotel = hotel
       @user = user
@@ -69,9 +76,12 @@ module Rooms
       end
     end
 
-    def finish
+    # Ends a block without destroying it: the row stays for the audit trail and
+    # only stops counting as active.
+    def finish(target_status: "dirty")
       return failure("Block not found") unless @block
 
+      target_status = "dirty" unless FINISH_STATUSES.include?(target_status.to_s)
       was_active_today = @block.active_on?(@hotel.business_date_for)
       start_date = @block.start_date
       end_date = @block.end_date
@@ -80,7 +90,7 @@ module Rooms
       @block.completed_at = Time.current
 
       if @block.save
-        sync_room_status_on_removal(@block.room_type, @block.room_number, target_status: "dirty") if was_active_today
+        sync_room_status_on_removal(@block.room_type, @block.room_number, target_status: target_status) if was_active_today
         sync_inventory(start_date, end_date)
         success(@block)
       else

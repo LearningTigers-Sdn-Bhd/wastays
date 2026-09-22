@@ -247,6 +247,18 @@
     background: color-mix(in oklab, var(--primary) 5%, var(--card));
   }
 
+  /* A free night can start a drag that proposes a stay, so it takes the
+     selection cursor before the drag begins rather than after. */
+  .panel-timeline__cell[data-selectable="true"],
+  .panel-timeline__cell[data-selectable="true"] .panel-timeline__cell-action.panel-button {
+    cursor: cell;
+  }
+
+  [data-interaction-state="create"] {
+    cursor: cell;
+    user-select: none;
+  }
+
   /* DropdownMenu's root is normally an inline-flex positioning context. Fill
      the timeline cell so its absolute trigger—and Floating UI's reference
      rectangle—use the whole cell instead of the root's intrinsic width. */

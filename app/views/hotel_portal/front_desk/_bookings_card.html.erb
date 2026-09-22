@@ -4,7 +4,7 @@
 <% room_details = booking.booking_rooms.group_by { |room| room.room_type_snapshot["name"].presence || room.room_type.name }.map { |name, rooms| "#{rooms.size}x #{name}" }.join(", ").presence || "No rooms assigned" %>
 <% nights = booking.check_in && booking.check_out ? (booking.check_out.to_date - booking.check_in.to_date).to_i : nil %>
 <% totals = HotelPortal::FrontDesk::StayTotalsPresenter.new(booking) %>
-<article class="front-desk-stay-card min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm <%= 'border-destructive bg-muted' if presenter.blacklisted? %>" data-booking-token="<%= booking.confirmation_token %>">
+<article class="front-desk-stay-card min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm <%= 'border-destructive bg-muted' if presenter.blacklisted? %> <%= presenter.dimmed_class %>" data-booking-token="<%= booking.confirmation_token %>">
   <header class="flex min-w-0 items-stretch gap-2 border-b border-border p-3">
     <span class="flex max-w-[35%] shrink-0 items-center border-r border-border pr-3 <%= room_numbers == 'Unassigned' ? 'flex-col justify-center text-xs font-medium leading-tight text-muted-foreground' : 'truncate text-lg font-semibold tracking-tight text-primary' %>"><span><%= room_numbers %></span><% if room_numbers == "Unassigned" %><span class="mt-1">Room</span><% end %></span>
     <div class="min-w-0 flex-1">

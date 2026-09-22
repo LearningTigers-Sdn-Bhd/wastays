@@ -278,8 +278,14 @@
                             class: "w-48", choices: room.status_choices, selected: room.resolved_status) %>
                     <% end %>
                   <% else %>
-                    <%= render PanelsUI::Badge.new(label: room.display_status, variant: room.status_badge_variant,
-                          size: :sm, class: "w-full justify-center") %>
+                    <%# Colour alone cannot separate seven statuses, and three of
+                        them share a badge variant, so the icon carries the
+                        distinction. Same pairing as Stay View. %>
+                    <%= render PanelsUI::Badge.new(variant: room.status_badge_variant,
+                          size: :sm, class: "w-full justify-center gap-1.5") do %>
+                      <%= cached_icon room.status_icon, class: "size-3.5 shrink-0", aria: { hidden: true } %>
+                      <span><%= room.display_status %></span>
+                    <% end %>
                   <% end %>
                 </td>
               <% end %>
