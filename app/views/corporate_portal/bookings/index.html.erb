@@ -1,46 +1,92 @@
 <div class="mx-auto w-full max-w-4xl space-y-6">
-  <header class="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h1 class="text-2xl font-bold text-foreground">Bookings</h1>
-      <p class="mt-1 text-sm text-muted-foreground">Stays booked on this account.</p>
-    </div>
-    <%= link_to "Book a stay", new_corporate_booking_path,
-          class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
-  </header>
+  <%# The header itself stacks title above actions below `lg` by default, and
+      the actions slot is full-width there too (built for a row of several
+      buttons); overridden so "Bookings" and "Book a stay" share one line and
+      the button sits snug at its own size, even on a phone. %>
+  <%= render PanelsUI::PageHeader.new(title: "Bookings", description: "Stays booked on this account.",
+        class: "flex-row items-center justify-between [&>.panel-page-header__actions]:w-auto") do |header| %>
+    <% header.with_actions do %>
+      <%= link_to "Book a stay", new_corporate_booking_path,
+            class: "shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: corporate_bookings_path, method: :get,
+        class: "grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
+        data: { controller: "auto-submit", turbo_action: "advance" } do |form| %>
+    <%= form.hidden_field :per_page, value: @index.page_size unless @index.default_page_size? %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search", label_hidden: true,
+          class: "sm:col-span-2 lg:col-span-2") do |field| %>
+      <% field.with_input(type: :search, value: params[:q], placeholder: "Search by guest name",
+           data: { action: "input->auto-submit#submit" }) %>
+    <% end %>
+    <% if @index.multiple_hotels? %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :hotel_relationship_id, label: "Hotel", label_hidden: true) do |field| %>
+        <% field.with_select_menu(@index.hotel_choices, selected: @index.selected_relationship&.id.to_s,
+             data: { action: "change->auto-submit#submitNow" }) %>
+      <% end %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :status, label: "Status", label_hidden: true) do |field| %>
+      <% field.with_select_menu(@index.status_choices, selected: @index.selected_status,
+           data: { action: "change->auto-submit#submitNow" }) %>
+    <% end %>
+  <% end %>
 
   <% if @bookings.empty? %>
     <div class="rounded-2xl border border-dashed border-border-interactive bg-card px-6 py-12 text-center text-muted-foreground">
-      No bookings yet.
+      <%= params[:q].present? || @index.selected_status || @index.selected_relationship ? "No bookings match these filters." : "No bookings yet." %>
     </div>
   <% else %>
     <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <ul class="divide-y divide-border">
         <% @bookings.each do |booking| %>
           <% payment = @payment_presenters.fetch(booking.id) %>
-          <li class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 <%= payment.dimmed_class %>">
+          <li class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 <%= payment.dimmed_class %>">
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
                 <p class="font-bold text-foreground"><%= booking.guest_name %></p>
                 <%= render PanelsUI::Badge.new(label: payment.badge_label, variant: payment.badge_variant, size: :sm) %>
               </div>
               <p class="mt-0.5 text-xs text-muted-foreground">
-                <%= booking.hotel.name %> · <%= booking.check_in.to_date.strftime("%d %b") %> –
+                <%# The hotel name earns its place only when this list could hold more
+                    than one -- once a single hotel is chosen (or is the only one this
+                    account has), repeating its name on every row says nothing new. %>
+                <% unless @index.selected_relationship || !@index.multiple_hotels? %>
+                  <%= booking.hotel.name %> ·
+                <% end %>
+                <%= booking.check_in.to_date.strftime("%d %b") %> –
                 <%= booking.check_out.to_date.strftime("%d %b %Y") %>
               </p>
               <div class="mt-1.5">
                 <%= render "corporate_portal/bookings/payment_deadline", booking: booking, payment: payment, compact: true %>
               </div>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center justify-between gap-4 sm:justify-end sm:shrink-0">
               <span class="text-sm font-bold tabular-nums text-foreground">
                 <%= booking.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %>
               </span>
               <%= link_to "View", corporate_booking_path(booking),
-                    class: "rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted" %>
+                    class: "shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted" %>
             </div>
           </li>
         <% end %>
       </ul>
     </section>
+
+    <div class="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+      <%= form_with url: corporate_bookings_path, method: :get,
+            class: "w-full sm:w-auto",
+            data: { controller: "auto-submit", turbo_action: "advance" } do |form| %>
+        <%= form.hidden_field :q, value: params[:q] if params[:q].present? %>
+        <%= form.hidden_field :hotel_relationship_id, value: @index.selected_relationship.id if @index.selected_relationship %>
+        <%= form.hidden_field :status, value: @index.selected_status if @index.selected_status %>
+        <%= render PanelsUI::FormField.new(form: form, attribute: :per_page, label: "Rows per page", size: :sm) do |field| %>
+          <% field.with_select_menu(@index.page_size_choices, selected: @index.page_size,
+               data: { action: "change->auto-submit#submitNow" }) %>
+        <% end %>
+      <% end %>
+
+      <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true, link_data: { turbo_action: "advance" }) %>
+    </div>
   <% end %>
 </div>

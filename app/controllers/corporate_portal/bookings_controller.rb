@@ -11,18 +11,32 @@ module CorporatePortal
     before_action :load_relationship, only: %i[create]
 
     def index
-      # Submissions are preloaded: the payment chip asks about them for every one
-      # of these fifty rows.
-      @bookings = corporate_bookings
-        .includes(:hotel, :ar_payment_submissions, :hotel_corporate_account)
-        .order(check_in: :asc)
-        .limit(50)
+      page_size = CorporatePortal::BookingsIndexPresenter.normalize_page_size(params[:per_page])
+      @index = CorporatePortal::BookingsIndexPresenter.new(
+        relationships: @relationships,
+        hotel_relationship_id: params[:hotel_relationship_id],
+        status: params[:status],
+        statuses_present: corporate_bookings.distinct.order(:status).pluck(:status),
+        page_size: page_size
+      )
+
+      scope = corporate_bookings
+      scope = scope.where(hotel_corporate_account_id: @index.selected_relationship.id) if @index.selected_relationship
+      scope = scope.where(status: @index.selected_status) if @index.selected_status
+      scope = scope.search(params[:q]) if params[:q].present?
+
+      # Submissions are preloaded: the payment chip asks about them for every
+      # row on the page.
+      @pagy, @bookings = pagy(:offset,
+        scope.includes(:hotel, :ar_payment_submissions, :hotel_corporate_account)
+             .order(created_at: :desc, id: :desc),
+        limit: page_size)
       @payment_presenters = payment_presenters_for(@bookings)
     end
 
     # The search form, and its results once dates are given.
     def new
-      @relationship = find_relationship(params[:hotel_relationship_id])
+      @relationship = relationship_for_request
       @check_in = parse_date(params[:check_in])
       @check_out = parse_date(params[:check_out])
       @adults = (params[:adults].presence || 2).to_i
@@ -83,8 +97,20 @@ module CorporatePortal
     end
 
     def load_relationship
-      @relationship = find_relationship(params[:hotel_relationship_id])
+      @relationship = relationship_for_request
       redirect_to new_corporate_booking_path, alert: "Choose a hotel to book." if @relationship.blank?
+    end
+
+    # A single linked hotel is not a choice, so a request that names none
+    # still resolves to it -- the form's own hidden field sends it on every
+    # real submission, but a bookmarked or hand-built URL works the same way.
+    # An id that was given and simply does not match, though, must still
+    # refuse outright: silently substituting this account's own hotel for one
+    # it is not linked to would hide exactly the request this guards against.
+    def relationship_for_request
+      return find_relationship(params[:hotel_relationship_id]) if params[:hotel_relationship_id].present?
+
+      @relationships.first if @relationships.one?
     end
 
     def find_relationship(id)
