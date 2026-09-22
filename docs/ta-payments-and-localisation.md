@@ -1,7 +1,10 @@
 # Travel agent payments, attribution, and a Chinese version
 
-**Status: plan.** Nothing below is built. Decisions marked *settled* are agreed;
-the rest are called out as open.
+**Status (21 Sep 2026): mostly built.** Sections 1, 2, 4 and 5 shipped on
+`plan/ta-payments-and-localisation`; **section 3 (Chinese) is the only strand
+not started.** Boxes below are ticked against the code, not the intent. See
+[feature-and-bugfix-checklist.md](feature-and-bugfix-checklist.md) for what was
+found while building each one, and for the traps.
 
 Four strands, in the order they were raised: a payment deadline that releases
 rooms, marking a booking as an agent's, a Chinese translation of the product,
@@ -49,6 +52,11 @@ started and left. Before adding a third idea in this area, decide whether that
 column is the one to revive, rename, or drop — two half-built hold mechanisms
 would be worse than either alone.
 
+**[ ] Still open.** This branch added its own `agent_payment_hold_hours` rather
+than reviving that column, which is in the local database (from another
+branch's migration) but not in this branch's `db/schema.rb`. Reconcile the two
+when that branch merges — one of them should go.
+
 ### The status question, which decides the whole design
 
 `Booking::STATUSES` includes `pending`, and it is tempting to hold unpaid agent
@@ -68,32 +76,59 @@ cancelled booking. Nothing new is needed to free the room — only to decide whe
 
 ### What has to be built
 
-- A deadline on the relationship (and a hotel-level default), admin-editable.
-- `payment_due_at` on the booking, stamped at creation from that setting.
-- A state for "proof submitted, clock stopped" that the sweeper honours. The
-  existing `ArPaymentSubmission` is the natural carrier; the sweeper skips any
-  booking with a submission awaiting review.
-- A recurring sweeper that cancels expired, unpaid, unprotected bookings. It
-  must be idempotent and must log what it released — an automated cancellation
-  nobody can audit is not acceptable in a money path.
-- **Pay now** in the TA portal: the amount, the deadline, and a countdown, on
-  both the booking list and the booking itself.
+- [x] A deadline on the relationship (and a hotel-level default),
+  admin-editable. `hotels.agent_payment_hold_hours` (default 48) with a
+  nullable override on `hotel_corporate_accounts`, entered as hours or days.
+- [x] `payment_due_at` on the booking, stamped at creation from that setting.
+  `Bookings::PaymentHold` is the one place that decides a deadline.
+- [x] A state for "proof submitted, clock stopped" that the sweeper honours.
+  `ar_payment_submissions` gained an optional `booking_id` so a standard agent
+  with no invoice has something to pay against; the sweeper skips any booking
+  with a submission awaiting review.
+- [x] A recurring sweeper that cancels expired, unpaid, unprotected bookings.
+  `Bookings::ReleaseUnpaidAgentBookings` + its job, every 5 minutes in
+  `config/recurring.yml`, cancelling through `Bookings::TransitionStatus` so
+  the release is audited like any desk cancellation.
+- [x] **Pay now** in the TA portal: the amount, the deadline, and a countdown,
+  on both the booking list and the booking itself — plus a dashboard panel and
+  agent-initiated cancellation while unpaid, which were not in this plan.
+
+**Resolved:** `bin/rails agent_payment_hold:backfill_payment_due_at` stamps a
+fresh deadline (anchored to when it runs, not to each booking's original
+creation time, so nothing is cancelled the instant it runs with no warning
+ever sent) onto every pre-existing confirmed, unpaid, standard-agency booking
+that has none. Idempotent; run it once before turning the sweeper on for a
+property with existing agent bookings.
 
 ### Risks worth naming before building
 
-- **This is an automated, destructive, money-adjacent action.** Every guard
+- [x] **This is an automated, destructive, money-adjacent action.** Every guard
   (proof pending, already paid, already cancelled, hotel disabled the policy)
   has to be checked in the sweeper, not only in the UI.
-- **Clock skew against the business date.** The rest of the product reasons in
+- [x] **Clock skew against the business date.** The rest of the product reasons in
   the hotel's business date, which does not move until the night audit runs and
   can sit days behind the calendar. A payment deadline is a wall-clock promise
   to an agent. These must not be conflated: use wall-clock time, and say so in
   the code, or a property that skips audits will hold rooms indefinitely.
-- **Timezone.** "3 days from now" is in the hotel's timezone, and the agent may
+- [x] **Timezone.** "3 days from now" is in the hotel's timezone, and the agent may
   be in another. The displayed deadline should state which.
-- **What if the stay starts inside the window?** A booking made for tomorrow
+- [x] **What if the stay starts inside the window?** A booking made for tomorrow
   with a three-day deadline cannot wait three days. The deadline needs a floor
   at arrival, and the UI has to explain it.
+- [x] **An approved slip only settled the AR ledger, not the booking.**
+  `ArPaymentSubmission#approve!` cleared `payment_due_at` but never posted
+  anything to the booking's own folio, so the desk still saw the stay as fully
+  unpaid at checkout despite the hotel having told the agent it was settled.
+  `ArPaymentSubmissions::Approve` now posts the payment to `booking.booking_folio`
+  (`Folios::Transactions::InsertTransaction`, `system_posting: true`) and syncs
+  `payment_status` through `Deposits::SyncBookingPaymentStatus`, inside the same
+  transaction as the approval — a folio that cannot take the posting fails the
+  approval rather than leaving it half-recorded.
+- [x] **A released multi-room booking left its group reading "active."** Each
+  room of an agent's group booking has its own deadline, so the sweeper could
+  release every one of them and never touch `GroupBooking#status`.
+  `Bookings::ReleaseUnpaidAgentBookings` now closes the group once none of its
+  rooms are still held.
 
 ---
 
@@ -105,16 +140,23 @@ from an agent, which agent, which person there, and when.
 The attribution is half-built already. `CreateAgentBooking` sets
 `hotel_corporate_account_id`, so the booking already knows the agency. Two gaps:
 
-- **`source` is `"internal"`**, which is what a staff-keyed booking uses. In any
+- [x] **`source` is `"internal"`**, which is what a staff-keyed booking uses. In any
   report grouping by source, agent bookings are invisible. `BookingSource` has
   no agent key; adding one is a registry change and affects every hotel's source
   list, so it is a decision rather than a detail.
-- **The acting person is not recorded.** `CreateManualBooking` receives the
+- [x] **The acting person is not recorded.** `CreateManualBooking` receives the
   corporate user and writes audit logs, but nothing on the booking names who at
   the agency made it. Worth capturing at creation; painful to backfill.
 
-Both are cheap now. The UI half — a badge on the reservation and the workspace,
-showing agency, person and time — is small once the data is there.
+Both were cheap, and both are done. `travel_agent` is now a seeded `manual`
+`BookingSource` that `CreateAgentBooking` writes (client's decision; existing
+agent bookings keep `internal`, no backfill), and `bookings.corporate_booked_by_id`
+/ `corporate_booked_at` record who acted.
+
+- [x] The UI half — a badge on the reservation and the workspace, showing
+  agency, person and time, from one shared partial fed by
+  `HotelPortal::Bookings::AgentAttribution`. It also answers "has the agent
+  paid?" from the same presenter the agent's own portal reads.
 
 ---
 
@@ -128,6 +170,10 @@ string is hardcoded English.
 
 So this is not "add a translation provider". It is "introduce i18n to a mature
 product", and the provider is the small part.
+
+**Not started.** Still 37 `t()` calls across 867 templates and a single 31-line
+`en.yml`; there is no translation store, no provider adapter and no locale
+switch. Everything in this section is outstanding.
 
 ### Scope, settled
 
@@ -195,17 +241,17 @@ Translate once, cache in the database, fall back to the source string, allow
 manual correction, allow marking a string "never translate". That is the right
 shape. Specifics worth fixing now:
 
-- **Corrections outrank machine output permanently.** A re-translation must
+- [ ] **Corrections outrank machine output permanently.** A re-translation must
   never overwrite a human-corrected string.
-- **Financial, legal and tax strings should be human-translated from the
+- [ ] **Financial, legal and tax strings should be human-translated from the
   start** — e-invoice terminology, "non-refundable", "credit limit", tourism
   tax. A wrong machine rendering of those is a commercial or compliance problem,
   not a typo. Machine translation is for the long tail.
-- **Never translate data.** Only keys. Guest names, hotel names, agency names,
+- [ ] **Never translate data.** Only keys. Guest names, hotel names, agency names,
   amounts and free text pass through untouched.
-- **Translate per page, on demand**, as proposed — the first request for a
+- [ ] **Translate per page, on demand**, as proposed — the first request for a
   locale populates what that page needs, rather than the whole catalogue.
-- **A superadmin screen** to review, correct, search and lock strings.
+- [ ] **A superadmin screen** to review, correct, search and lock strings.
 
 ### Open
 
@@ -219,7 +265,7 @@ shape. Specifics worth fixing now:
 
 ## 4. The checklist
 
-### i. StayView booking takes 00:00 instead of the hotel's hours
+### [x] i. StayView booking takes 00:00 instead of the hotel's hours
 
 Real. `Bookings::ScheduledStay.at_hotel_time` applies the property policy time
 **only when handed a date-only value**; anything matching `\d[T ]\d` is parsed
@@ -230,7 +276,12 @@ The fix is at the boundary — send a date and let the service apply the policy 
 not in the service. Worth checking the other creation paths for the same shape
 while in there.
 
-### ii. Payment proof does not display for the hotel admin
+**Built.** The real cause was `hotel.bookings.build` assigning attributes before
+the association set the owner, so `at_hotel_time` never ran. `Booking` now
+re-applies the policy in a `before_validation` (covering every creation path)
+and the Sheet controller assigns the hotel first.
+
+### [x] ii. Payment proof does not display for the hotel admin
 
 **Needs reproducing before it is scoped.** In
 `hotel_portal/ar_payment_submissions/show`, the slip link renders
@@ -243,14 +294,24 @@ Reproduce first: upload a proof as a TA, then open it as hotel admin, and
 establish whether the blob exists. Fixing the guard is a minute's work and may
 fix nothing.
 
-### iii. Remove card payment for TAs, bank transfer only
+**Built.** Slips attached fine; the gap was reachability — the approve/reject
+screen showed no slip at all, and `ArPayment` had no inverse association. A
+shared `_slip` partial now appears on all three screens, and the unguarded
+`rails_blob_path` says "No slip on file" instead of raising.
+
+### [x] iii. Remove card payment for TAs, bank transfer only
 
 Small. `corporate_portal/ar_payments/choose_method` offers a Razorpay card path
 alongside the submission route. Removing the option is straightforward; decide
 whether the gateway path is removed for TAs only or disabled outright, and
 whether any in-flight card payments need handling.
 
-### iv. Colour-code housekeeping room status
+**Built.** TAs only, via `HotelCorporateAccount#gateway_payments_allowed?`;
+other corporate types keep the gateway. Zero in-flight intents, so nothing had
+to be drained. Enforced in the view *and* in `CorporateArPayments::CreateIntent`,
+since hiding a tile does not stop a POST.
+
+### [x] iv. Colour-code housekeeping room status
 
 Agreed, and larger than described. `RoomStatus::STATUSES` holds **seven**
 values, not three: `ready`, `dirty`, `cleaning`, `awaiting_inspection`,
@@ -261,6 +322,11 @@ Seven states cannot be separated by hue alone, and colour alone fails a
 colourblind user in any case. Each state needs a colour **and** an icon or
 shape, with the pair used consistently in the housekeeping page, StayView and
 the room cards — the same status should not look different in two places.
+
+**Built.** `Rooms::StatusPresentation` is now the single colour *and* icon map
+(StayView's private, divergent copy is gone), the legend is derived from
+`RoomStatus::STATUSES` so a new status cannot ship undocumented, and a spec
+asserts that statuses sharing a badge variant have distinct icons.
 
 ---
 
@@ -274,13 +340,19 @@ outside this would duplicate both.
 
 The policy needs its own short spec, but three rules are already clear:
 
-- **Reminders stop the moment payment proof is submitted**, for the same reason
-  the release clock does.
-- **Proof accepted and proof rejected both notify**, and a rejection must say
-  why and what happens next — a rejection that silently restarts a release clock
-  is how an agent loses rooms without understanding it.
-- **Every send is recorded**, so a dispute about whether an agent was warned has
-  an answer.
+- [x] **Reminders stop the moment payment proof is submitted**, for the same
+  reason the release clock does. The scheduler and the sweeper share one
+  predicate, `Bookings::PaymentHoldScope`, rather than each keeping a copy.
+- [x] **Proof accepted and proof rejected both notify**, and a rejection must
+  say why and what happens next. `ArPaymentSubmissions::Approve` / `::Reject`
+  fire the mail as a service's side effect, not a model callback.
+- [x] **Every send is recorded**, so a dispute about whether an agent was warned
+  has an answer — including a `skipped` row when there is nobody to write to.
+
+Built on the existing `notification_configs` / `notification_deliveries` rails
+with no migration: `agent_payment_reminder` is a new type whose `settings` holds
+`offsets_hours` (default `[24, 4]`), editable on Settings → Notifications, email
+only. The scheduler runs hourly and sends the smallest open offset.
 
 ---
 
@@ -292,13 +364,13 @@ and most mechanical but carries the least risk of breaking existing behaviour.
 
 A reasonable order:
 
-1. **The checklist** (§4) — four small items, immediate value, no design debt.
-   Item ii needs reproducing first.
-2. **TA attribution** (§2) — small, and the data half should land before more
-   agent bookings exist to backfill.
-3. **The payment hold** (§1) with its reminder policy (§5) — the substantial
+1. [x] **The checklist** (§4) — four small items, immediate value, no design
+   debt. Item ii needs reproducing first.
+2. [x] **TA attribution** (§2) — small, and the data half should land before
+   more agent bookings exist to backfill.
+3. [x] **The payment hold** (§1) with its reminder policy (§5) — the substantial
    feature, and the one that needs the most care in review.
-4. **Chinese** (§3) — the TA portal's 29 templates as a first slice, proving the
-   architecture before the 553.
+4. [ ] **Chinese** (§3) — the TA portal's 29 templates as a first slice, proving
+   the architecture before the 553.
 
 Nothing here forces that order; the strands are independent.

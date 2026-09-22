@@ -116,6 +116,37 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(ArPayment.last.unallocated_amount).to eq(500.to_d)
   end
 
+  # Approving a booking's remittance slip through the ordinary "record a
+  # payment" screen has to reach the booking's own folio, not only the AR
+  # ledger -- otherwise the desk still finds the stay unpaid at checkout
+  # despite the hotel having already told the agent it was settled.
+  it "posts a booking prepayment slip's approval to the booking's own folio" do
+    relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship,
+                               status: "confirmed", payment_status: "pending",
+                               payment_due_at: 6.hours.from_now, total_amount: 300.0, currency: hotel.default_currency)
+    folio = create(:booking_folio, booking: booking, hotel: hotel, currency: hotel.default_currency)
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, booking: booking,
+                                                auto_invoice: nil, amount: 300.0, currency: hotel.default_currency)
+
+    post hotel_ar_payments_path(hotel), params: {
+      ar_payment_submission_id: submission.id,
+      ar_payment: {
+        hotel_corporate_account_id: relationship.id,
+        amount: "300.00",
+        currency: hotel.default_currency,
+        reference_number: submission.reference_number,
+        received_at: Date.current.iso8601,
+        payment_method: "bank_transfer"
+      },
+      allocations: {}
+    }
+
+    expect(submission.reload.status).to eq("approved")
+    expect(booking.reload).to have_attributes(payment_status: "captured", payment_due_at: nil)
+    expect(folio.folio_transactions.payment.sum(:amount)).to eq(300.to_d)
+  end
+
   it "refreshes eligible invoices for the selected corporate account" do
     relationship = create(:hotel_corporate_account, hotel: hotel)
     invoice = create_invoice(relationship: relationship, amount: 250)

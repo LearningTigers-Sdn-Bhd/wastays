@@ -75,6 +75,7 @@ module Bookings
 
         return failure(booking, result) unless result.success?
 
+        close_group_if_emptied(booking)
         notify(booking)
         { status: :released, booking_id: booking.id }
       end
@@ -87,6 +88,19 @@ module Bookings
         "[#{SOURCE}] booking #{booking.id} could not be released: #{e.class}: #{e.message}"
       )
       { status: :failed, booking_id: booking.id }
+    end
+
+    # A multi-room agent booking is several bookings under one group
+    # (CorporatePortal::CreateAgentBooking), each with its own deadline. When
+    # the last of them is released, the group is left behind reading "active"
+    # unless something closes it -- so the desk's group list would still show a
+    # stay nobody is holding rooms for.
+    def close_group_if_emptied(booking)
+      group = booking.group_booking
+      return if group.blank? || group.status == "cancelled"
+      return if group.bookings.where.not(status: "cancelled").exists?
+
+      group.update!(status: "cancelled")
     end
 
     def releasable?(booking)
