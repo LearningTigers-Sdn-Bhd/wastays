@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_031500) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_063000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1905,6 +1905,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_031500) do
     t.string "fixed_line_number"
     t.boolean "geolocation_enabled", default: true, null: false
     t.string "google_map_link"
+    t.boolean "grc_tablet_signing_enabled", default: false, null: false
     t.boolean "guest_chat_enabled", default: true, null: false
     t.jsonb "guest_registration_card_fields"
     t.text "guest_registration_card_terms"
@@ -3046,6 +3047,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_031500) do
     t.index ["status"], name: "index_setup_fee_rules_on_active_global_default", unique: true, where: "(((status)::text = 'active'::text) AND (settable_type IS NULL) AND (settable_id IS NULL))"
   end
 
+  create_table "signing_device_pairings", force: :cascade do |t|
+    t.datetime "claimed_at"
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_user_id"
+    t.datetime "expires_at", null: false
+    t.bigint "hotel_id", null: false
+    t.bigint "signing_device_id"
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_signing_device_pairings_on_code", unique: true
+    t.index ["created_by_user_id"], name: "index_signing_device_pairings_on_created_by_user_id"
+    t.index ["hotel_id", "claimed_at", "expires_at"], name: "index_signing_device_pairings_on_hotel_and_state"
+    t.index ["hotel_id"], name: "index_signing_device_pairings_on_hotel_id"
+    t.index ["signing_device_id"], name: "index_signing_device_pairings_on_signing_device_id"
+    t.index ["token"], name: "index_signing_device_pairings_on_token", unique: true
+  end
+
   create_table "signing_devices", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "current_booking_id"
@@ -3494,6 +3513,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_031500) do
   add_foreign_key "rooms", "hotels"
   add_foreign_key "rooms", "room_groups"
   add_foreign_key "rooms", "room_types"
+  add_foreign_key "signing_device_pairings", "hotels"
+  add_foreign_key "signing_device_pairings", "signing_devices", on_delete: :nullify
+  add_foreign_key "signing_device_pairings", "users", column: "created_by_user_id", on_delete: :nullify
   add_foreign_key "signing_devices", "bookings", column: "current_booking_id", on_delete: :nullify
   add_foreign_key "signing_devices", "hotels"
   add_foreign_key "staff_notifications", "hotels"

@@ -187,6 +187,14 @@ Rails.application.routes.draw do
       # once and went to sleep.
       post :heartbeat, on: :member
     end
+    # Pairing a tablet, unauthenticated: the code IS the credential, and it is
+    # single use and measured in minutes. Kept short because it is read off one
+    # screen and typed into another.
+    get  "pair", to: "signing_device_pairings#new", as: :pair
+    post "pair", to: "signing_device_pairings#lookup", as: :pair_lookup
+    get  "pair/:token", to: "signing_device_pairings#show", as: :pair_token
+    post "pair/:token", to: "signing_device_pairings#create", as: :claim_pair_token
+
     post "payments/checkout_session", to: "payments#checkout_session", as: :checkout_payment_session
     get "payments/verify", to: "payments#verify"
     post "payments/verify", to: "payments#verify", as: :verify_payment
@@ -388,9 +396,11 @@ Rails.application.routes.draw do
 
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
 
-    # Enrolling a tablet. Staff reach this signed in, on the tablet itself, and
-    # leave it holding a device token instead of their session.
-    resource :signing_device, only: [ :new, :create ], controller: "signing_devices"
+    # Managing the tablets a property signs on. Pairing is not here: the device
+    # that ends up holding the token has to be the one that claims it, so this
+    # screen only mints the QR and the tablet claims it under /pair.
+    resources :signing_devices, only: [ :index, :update, :destroy ]
+    resources :signing_device_pairings, only: [ :create, :destroy ]
     get "onboarding", to: "onboarding#index", as: :onboarding
     get "onboarding/:section_key", to: "onboarding#show", as: :onboarding_section
     patch "onboarding/:section_key", to: "onboarding#update"

@@ -12,6 +12,9 @@ class SigningDevice < ApplicationRecord
   # standing between a stranger and a stream of other people's passport numbers.
   TOKEN_BYTES = 20
 
+  # What a tablet is called when whoever paired it did not bother to name it.
+  DEFAULT_LABEL = "Front desk tablet"
+
   # The one region of the idle screen the desk can write to. Replacing it is
   # how a tablet is told to move: the incoming element carries the path, and
   # its Stimulus controller navigates as soon as it connects.
@@ -25,6 +28,10 @@ class SigningDevice < ApplicationRecord
 
   belongs_to :hotel
   belongs_to :current_booking, class_name: "Booking", optional: true
+  # Kept after the fact rather than destroyed with the device: pairing is the
+  # moment a tablet gained access to guest data, and revoking the tablet should
+  # not erase the record of who let it in.
+  has_many :signing_device_pairings, dependent: :nullify
 
   validates :public_token, presence: true, uniqueness: true
   validates :label, presence: true

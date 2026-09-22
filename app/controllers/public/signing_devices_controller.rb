@@ -14,6 +14,15 @@ class Public::SigningDevicesController < ApplicationController
 
   def show
     @device.touch_seen!
+
+    # A tablet that was asleep or backgrounded when the desk pressed send missed
+    # the broadcast entirely -- the socket it would have arrived on did not
+    # exist. But the stay was still handed over, so the work is sitting here
+    # waiting. Picking it up on load is what lets a property leave the screen
+    # off between guests: wake the tablet and it opens on the card, instead of
+    # showing "Ready to sign" while holding a stay it never mentions.
+    return redirect_to next_signing_device_path(@device.public_token) if @device.busy?
+
     @hotel = @device.hotel
   end
 
@@ -42,8 +51,13 @@ class Public::SigningDevicesController < ApplicationController
 
   private
 
+  # Scoped to properties that still have the feature, rather than found and then
+  # checked: a withdrawn grant should stop a tablet the same way an unknown
+  # token does, and there is then no second check to forget.
   def set_device
-    @device = SigningDevice.find_by!(public_token: params[:token])
+    @device = SigningDevice.joins(:hotel)
+      .where(hotels: { grc_tablet_signing_enabled: true })
+      .find_by!(public_token: params[:token])
   end
 
   # The card pages are reached by the guest's own token and know nothing about

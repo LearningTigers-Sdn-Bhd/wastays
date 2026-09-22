@@ -3,7 +3,8 @@
 <% can_view_grc = presenter.can_view_grc?(current_user) %>
 <%# Ordered by last beat, so a tablet that is actually listening sorts above one
     that went to sleep hours ago. %>
-<% signing_devices = can_manage ? current_hotel.signing_devices.recently_seen_first.to_a : [] %>
+<% tablet_signing = can_manage && current_hotel.grc_tablet_signing_enabled? %>
+<% signing_devices = tablet_signing ? current_hotel.signing_devices.recently_seen_first.to_a : [] %>
 <% return_to = presenter.guest_details_return_to_path(booking, booking_guest) %>
 <% grc_path = presenter.guest_registration_card_path(booking, booking_guest) %>
 

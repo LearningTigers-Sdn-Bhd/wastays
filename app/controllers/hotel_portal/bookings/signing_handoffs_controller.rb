@@ -8,6 +8,7 @@
 # navigates itself, which is why a tablet that is asleep or off that page
 # receives nothing at all.
 class HotelPortal::Bookings::SigningHandoffsController < HotelPortal::BaseController
+  before_action :require_grc_tablet_signing!
   before_action :authorize_manage_bookings!
   before_action :set_booking
 
@@ -89,6 +90,17 @@ class HotelPortal::Bookings::SigningHandoffsController < HotelPortal::BaseContro
 
   def redirect_back_with(**flash_args)
     redirect_back(fallback_location: hotel_booking_workspace_path(current_hotel, @booking, tab: "guest_details"), **flash_args)
+  end
+
+  # The property must have been granted the feature by a superadmin. Checked on
+  # every entry point rather than trusted from the navigation: the nav only
+  # hides the link, and a hotel can have the grant withdrawn while a staff
+  # member is sitting on one of these pages.
+  def require_grc_tablet_signing!
+    return if current_hotel.grc_tablet_signing_enabled?
+
+    redirect_to hotel_dashboard_path(current_hotel),
+      alert: "Registration card tablet signing is not enabled for this property."
   end
 
   def authorize_manage_bookings!

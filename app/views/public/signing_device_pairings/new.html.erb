@@ -1,0 +1,37 @@
+<% content_for :title, "Pair this tablet" %>
+
+<%# The fallback for a tablet whose camera will not focus on a monitor, which is
+    common enough that the QR alone would strand people. %>
+<div class="flex min-h-dvh flex-col items-center justify-center gap-8 bg-muted px-6 text-center">
+  <div>
+    <p class="text-xs font-black uppercase tracking-widest text-primary">Guest registration</p>
+    <h1 class="mt-3 text-3xl font-black text-foreground">Pair this tablet</h1>
+  </div>
+
+  <div class="card w-full max-w-sm space-y-5 p-8">
+    <p class="text-sm text-muted-foreground">
+      Enter the code shown on the front desk screen.
+    </p>
+
+    <%= form_with url: pair_lookup_path, method: :post, class: "space-y-4" do %>
+      <label class="sr-only" for="pairing-code">Pairing code</label>
+      <%# Uppercased and unspaced on the way in anyway (see
+          SigningDevicePairing.normalize_code); these just stop the on-screen
+          keyboard fighting the person typing. %>
+      <%= text_field_tag :code, nil,
+            id: "pairing-code",
+            class: "form-input w-full text-center font-mono text-2xl font-black tracking-[0.2em] uppercase",
+            placeholder: "K7M-24Q",
+            autocomplete: "off",
+            autocapitalize: "characters",
+            autocorrect: "off",
+            spellcheck: false,
+            inputmode: "text",
+            required: true %>
+
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :lg, class: "w-full") do %>
+        Continue
+      <% end %>
+    <% end %>
+  </div>
+</div>

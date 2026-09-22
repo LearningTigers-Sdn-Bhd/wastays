@@ -3,7 +3,10 @@
 require "rails_helper"
 
 RSpec.describe "HotelPortal::Bookings::SigningHandoffs", type: :request do
-  let(:hotel) { create(:hotel, status: "live", guest_registration_card_terms: "House rules apply.") }
+  let(:hotel) do
+    create(:hotel, status: "live", guest_registration_card_terms: "House rules apply.",
+                   grc_tablet_signing_enabled: true)
+  end
   let(:user) { create(:user, account: hotel.account) }
   let(:role) { create(:role, account: hotel.account) }
   let(:booking) { create(:booking, hotel: hotel) }
@@ -107,5 +110,14 @@ RSpec.describe "HotelPortal::Bookings::SigningHandoffs", type: :request do
 
     expect { handoff(token: other.public_token) }.not_to change { other.reload.current_booking }
     expect(flash[:alert]).to be_present
+  end
+
+  # Granted per property by a superadmin, and re-checked here rather than
+  # trusted from the footer that renders the button.
+  it "refuses the push outright when the property has no grant" do
+    hotel.update!(grc_tablet_signing_enabled: false)
+
+    expect { handoff }.not_to change { device.reload.current_booking }
+    expect(response).to redirect_to(hotel_dashboard_path(hotel))
   end
 end

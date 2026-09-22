@@ -20,14 +20,17 @@ RSpec.describe "Signing device queue", frozen_time: :business_day, type: :system
     create(:booking_guest, booking: booking, guest: create(:guest, name: "Second Guest"), is_primary: false)
   end
 
-  before { hotel.update!(guest_registration_card_terms: "House rules apply.") }
+  before do
+    hotel.update!(guest_registration_card_terms: "House rules apply.",
+                  grc_tablet_signing_enabled: true)
+  end
 
   it "walks every unsigned guest, then returns to an idle screen", js: true do
-    device.hand_stay(booking)
-
     visit signing_device_path(device.public_token)
     expect(page).to have_content("Ready to sign")
     expect(page).to have_content("Front desk tablet")
+
+    device.hand_stay(booking)
 
     # First guest. Headings on this page are uppercased in CSS, so the assertions
     # go through the signature pad and the field ids, which styling cannot move.

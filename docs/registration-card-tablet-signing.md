@@ -67,24 +67,42 @@ The signing page itself is **not** new. The tablet is sent to
 phone. That is deliberate: one signing surface to build and to test, rather than
 two that have to agree with each other.
 
-## Enrolling a tablet
+## Who may use this at all
 
-Done **on the tablet**, once, by someone who can manage bookings:
+`hotels.grc_tablet_signing_enabled`, off by default, set by a **superadmin only**
+on Admin → Hotels → edit. The feature parks a device holding guest identity data
+on a public counter, so it is granted per property rather than shipped to every
+hotel that registers.
 
-1. Open `/hotel/:hotel_id/signing_device/new` on the tablet and sign in.
-2. Name it — "Front desk tablet", "Lobby" — and tap **Use this tablet**.
-3. The tablet is redirected to `/signing-device/:token` and **the staff session
-   is destroyed**.
-4. Leave it on that page. That is its resting state.
+Without the grant the Settings tab is hidden and the workspace footer's "Send to
+tablet" block does not render. Every entry point re-checks anyway
+(`require_grc_tablet_signing!`, and the public lookups scope to granted hotels),
+because the navigation only hides a link, and a grant can be withdrawn while
+someone is sitting on the page. Withdrawing it stops tablets that were already
+paired.
 
-Step 3 is the whole security model, not a courtesy. What is left on the counter
-holds a device token and nothing else, so a guest who wanders off the page
-cannot reach bookings, folios or guest records. `reset_session` is doing that
-work, and there is a spec asserting the portal is unreachable afterwards — if
-that spec ever goes green while the session survives, the feature is unsafe.
+## Pairing a tablet
 
-Enrolling again adds another tablet rather than replacing one. Once a property
-has more than one, the footer button grows a picker.
+Staff open **Settings → Property → Signing Tablets** on their own machine and
+press **Generate pairing code**. The screen shows a QR and a short code. On the
+tablet, scan it — or open `/pair` and type the code — name the tablet, and it is
+done.
+
+The tablet **never signs in**. The pairing *is* the credential: single use,
+10 minutes, and a six-character code from an alphabet with no O/0 or I/1. The
+`/pair` code form is rate limited to 10 attempts a minute, which is what keeps a
+billion-code space from being worth grinding.
+
+This replaced an earlier flow where staff signed in on the tablet and the
+controller called `reset_session` to sign them out again. That worked, but it
+put real portal credentials on a counter device and required someone to type a
+URL from memory. The security property is now structural rather than a
+clean-up step.
+
+Pairing again adds another tablet rather than replacing one. Once a property has
+more than one, the footer button grows a picker. Tablets are renamed and revoked
+from the same screen; **revoking deletes the row**, because the token is the
+whole of the device's access and a flag would leave it working.
 
 ## Trying it locally
 
@@ -92,16 +110,19 @@ Two prerequisites, both of which the handoff refuses without: the hotel needs
 **registration card terms** (Settings → General), and the booking needs at least
 two unsigned guests, so the queue visibly advances.
 
-Then the part that catches everyone: **enrolment destroys the staff session**,
-so enrolling in the browser you are using as the front desk logs you out of the
-portal. Use a normal window as the PC and an incognito window as the tablet.
+Use a normal window as the PC and an incognito window as the tablet — the
+tablet holds a device session of its own, and sharing one browser between the
+two roles will confuse which is which.
 
 ```
 bin/dev
 
-incognito  →  /hotel/:hotel_id/signing_device/new, sign in, name it, enrol
-              land on /signing-device/:token, signed out. Leave it in the
-              FOREGROUND -- it must say "Ready", not "Not connected".
+normal     →  Admin → Hotels → edit → turn on "Registration card tablet
+              signing" for this property
+normal     →  Settings → Property → Signing Tablets → Generate pairing code
+incognito  →  /pair, type the code, name it. Lands on /signing-device/:token.
+              Leave it in the FOREGROUND -- it must say "Ready", not
+              "Not connected".
 normal     →  booking workspace, Guest details tab, Send to tablet
 ```
 
@@ -110,8 +131,17 @@ only**. One `bin/rails server` is fine; a broadcast triggered from `bin/rails
 console` in a terminal reaches nothing, because that is a different process.
 
 For a real tablet on the LAN: `bin/rails s -b 0.0.0.0`, then browse to your
-machine's IP. Development `config.hosts` already permits IP addresses, so
-nothing needs configuring. This is worth doing — see the status note at the top.
+machine's IP. Over a Cloudflare tunnel: `cloudflared tunnel --url http://localhost:3000`.
+
+**Both need two separate allowances, and passing the first tells you nothing
+about the second.** `config.hosts` governs the page load; Action Cable keeps its
+own origin list, and in development Rails defaults it to localhost only
+(`actioncable/lib/action_cable/engine.rb`). Miss that and the page loads
+perfectly, the WebSocket handshake is rejected, and the only symptom is a tablet
+stuck on "Not connected". `config/environments/development.rb` now lists
+localhost, LAN IPs, `*.trycloudflare.com` and `*.wastays.com` explicitly —
+anchored, and not via `disable_request_forgery_protection`, which would drop the
+check for every origin including a hostile one.
 
 ## What the queue is
 
@@ -251,6 +281,10 @@ Roughly in the order they will bite:
 
 1. **No abandonment timeout.** A card left open stays open. It wants a timer on
    the card page that returns the tablet to idle after a few quiet minutes.
+   Partly mitigated: the idle screen now picks up a waiting stay on load, so a
+   tablet that slept through a push opens on the card when it is woken instead
+   of needing a second press at the desk. That is the sleep case, not the
+   abandonment case.
 2. **No way to recall a tablet.** `Signing::HandStayToDevice.release` exists and
    is unused — nothing in the UI calls it yet. Worse, it would not work on the
    case it was written for: a guest who has wandered off is sitting on the
@@ -264,11 +298,13 @@ Roughly in the order they will bite:
    tablet. Until then the busy refusal is what stands in for it.
 3. **Nothing tells the PC that signing finished.** Staff push, then guess. The
    return leg wants a broadcast to the workspace so the footer updates itself.
-4. **Devices cannot be renamed or revoked.** No settings screen; a lost tablet's
-   token is valid until the row is deleted by hand. This is the one to fix
-   before a real property uses it.
+4. ~~**Devices cannot be renamed or revoked.**~~ Done — Settings → Property →
+   Signing Tablets renames and revokes, and revoking deletes the row so the
+   token dies with it.
 5. **No audit trail of pushes.** Who sent which stay to which tablet, and when,
-   is not recorded anywhere.
+   is not recorded anywhere. Pairing *is* recorded — `signing_device_pairings`
+   keeps who minted it, when it was claimed and what it became — so the shape to
+   copy already exists.
 6. **Terms are required.** A property with no registration card terms cannot use
    this at all — the card page refuses to collect a signature without them, so
    the handoff refuses up front and says so.

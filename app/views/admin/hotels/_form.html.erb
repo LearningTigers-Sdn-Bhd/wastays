@@ -183,6 +183,18 @@
                   description: "For island and jetty-served properties: boat schedules, boat in/out times on bookings, and the BIBO and meal prep reports.") %>
           </div>
 
+          <%# Off unless a superadmin turns it on. The feature parks a device
+              holding guest identity data on a public counter, so it is granted
+              per property rather than shipped to everyone. %>
+          <div>
+            <%= render PanelsUI::Switch.new(
+                  form: f,
+                  attribute: :grc_tablet_signing_enabled,
+                  variant: :card,
+                  label: "Registration card tablet signing",
+                  description: "Lets this property pair front-desk tablets and send a guest's registration card to one to sign. Off, the tablet settings and the \"Send to tablet\" action are hidden.") %>
+          </div>
+
           <div>
             <%= render PanelsUI::Switch.new(
                   form: f,
