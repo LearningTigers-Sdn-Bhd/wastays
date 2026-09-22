@@ -191,7 +191,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(panel.css('[data-document-section="ledgers"] tbody td:nth-child(2)').map { |cell| cell.text.squish }).to include("Guest", "External")
       expect(panel.text).to include(ar_invoice.formatted_invoice_number, direct_bill_account.corporate_account.name, "Consolidated AR")
       expect(panel.text).not_to include("Not issued", "Folio still open", "Permission required")
-      expect(panel.at_css('[data-controller="panels-ui--popover"]')).to be_nil
+      expect(panel.at_css('[data-controller="ui--popover"]')).to be_nil
       expect(panel.at_css("a[href='#{hotel_folio_ledger_path(hotel, guest_folio, format: :pdf)}'][target='_blank'][data-turbo='false']")).to be_present
 
       get hotel_booking_workspace_path(hotel, booking, tab: "documents", child_booking_id: sibling.id)
@@ -496,10 +496,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Acme Engineering")
       expect(response.body).to include("City Ledger · Direct bill enabled")
       panel = Nokogiri::HTML(response.body).at_css("#billing-preferences-panel")
-      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-panels-ui--popover-trigger-on-value='hover']]")
+      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-ui--popover-trigger-on-value='hover']]")
       expect(panel.at_css("th:nth-child(4)").text.squish).to eq("Outstanding (MYR)")
       expect(folio_cell.at_xpath("./span/span").text.squish).to eq("1")
-      expect(panel.at_css("[data-panels-ui--popover-trigger-on-value='hover']")).to be_present
+      expect(panel.at_css("[data-ui--popover-trigger-on-value='hover']")).to be_present
       expect(panel.at_css("[role='dialog']").text).to include("Corporate Folio")
       expect(panel.at_css("td[data-column='outstanding']").text.squish).to match(/\A\d[\d,.]*\z/)
       expect(panel.at_css("td[data-column='outstanding']").text).not_to include("MYR")
@@ -527,7 +527,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(text).to include("Child Booking Guest", account.corporate_account.name,
         "Add billing party", "Edit terms")
       panel = document.at_css("#billing-preferences-panel")
-      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-panels-ui--popover-trigger-on-value='hover']]")
+      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-ui--popover-trigger-on-value='hover']]")
       expect(folio_cell.at_xpath("./span/span").text.squish).to eq("1")
       expect(panel.at_css("[role='dialog']").text).to include("Child Corporate Folio")
       expect(text).not_to include("Booking-local billing exception", "Group accommodation payer")
@@ -881,7 +881,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include('data-layout-mode="entity"')
       expect(response.body).to include('role="alertdialog"')
       expect(response.body).to include("Change this room’s rate?")
-      expect(response.body).to include('data-controller="panels-ui--dialog warning-dialog"')
+      expect(response.body).to include('data-controller="ui--dialog warning-dialog"')
       expect(response.body).not_to include('data-testid="workspace-action-drawer"')
     end
 

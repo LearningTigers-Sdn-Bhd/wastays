@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Identifier: panels-ui--sidebar-search
+// Identifier: ui--sidebar-search
 //
 // Type-to-filter the nav. Hides items whose search text doesn't match, hides sections
 // left with no visible items, and reveals the empty-state message when nothing matches.
@@ -18,7 +18,7 @@ export default class extends Controller {
     this.sectionTargets.forEach((section) => {
       let sectionVisible = 0
 
-      section.querySelectorAll('[data-panels-ui--sidebar-search-target="item"]').forEach((item) => {
+      section.querySelectorAll('[data-ui--sidebar-search-target="item"]').forEach((item) => {
         const text = (item.dataset.searchText || item.textContent).trim().toLowerCase()
         const matches = query === "" || text.includes(query)
         item.classList.toggle("hidden", !matches)

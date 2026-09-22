@@ -14,7 +14,7 @@
 <% selected_guest_id = params.dig(:guest, :existing_guest_id).presence %>
 <% footer = capture do %>
   <div class="flex w-full items-center justify-end gap-2">
-    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
     <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Adding…" }) do %>Add guest<% end %>
   </div>
 <% end %>
@@ -34,7 +34,7 @@
         data: {
           controller: "guest-dob guest-identity booking-guest-autofill tin-validation",
           tin_validation_url_value: hotel_validate_tin_path(current_hotel),
-          action: "panels-ui:autocomplete-select->booking-guest-autofill#selectGuest"
+          action: "ui:autocomplete-select->booking-guest-autofill#selectGuest"
         } do |form| %>
     <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
 

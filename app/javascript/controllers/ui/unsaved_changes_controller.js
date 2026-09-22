@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
-import { serializeForm } from "controllers/panels_ui/support/form_state"
+import { serializeForm } from "controllers/ui/support/form_state"
 
-// Identifier: panels-ui--unsaved-changes
+// Identifier: ui--unsaved-changes
 //
 // Attach to an element that wraps a PanelsUI::Sheet together with the forms
 // inside it. The sheet asks permission before every dismissal — the ✕, a Cancel
@@ -30,8 +30,8 @@ export default class extends Controller {
     // Controls inside the sheet (a date picker, a select menu) normalise their
     // own fields as they connect, so the values the person actually starts from
     // are the ones in place once the sheet is open, not the ones just rendered.
-    this.element.addEventListener("panels-ui:sheet-open", () => this.formTargets.forEach((form) => this.snapshot(form)), { signal })
-    this.element.addEventListener("panels-ui:sheet-close-request", (event) => this.onCloseRequest(event), { signal })
+    this.element.addEventListener("ui:sheet-open", () => this.formTargets.forEach((form) => this.snapshot(form)), { signal })
+    this.element.addEventListener("ui:sheet-close-request", (event) => this.onCloseRequest(event), { signal })
     // A submit is the person saving, so the close that follows is not a loss.
     this.element.addEventListener("submit", () => { this.submitting = true }, { capture: true, signal })
     this.element.addEventListener("turbo:submit-end", (event) => { this.submitting = event.detail?.success === true }, { signal })
@@ -85,6 +85,6 @@ export default class extends Controller {
   }
 
   sheetControllerFor(sheet) {
-    return this.application.getControllerForElementAndIdentifier(sheet, "panels-ui--sheet")
+    return this.application.getControllerForElementAndIdentifier(sheet, "ui--sheet")
   }
 }

@@ -22,7 +22,7 @@
             class: "mt-1 inline-flex items-center gap-1 rounded-md px-1 py-1 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             data: {
               turbo_frame: "folio_action_sheet",
-              action: ("panels-ui--sheet#close" if mobile_entity_selection)
+              action: ("ui--sheet#close" if mobile_entity_selection)
             }.compact do %>
           <span aria-hidden="true">+</span> Add folio<span class="sr-only"> to <%= group.label %></span>
         <% end %>

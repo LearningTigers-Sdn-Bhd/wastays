@@ -12,10 +12,10 @@ module PanelsUI
   #     <% s.with_header do %> … brand / context … <% end %>
   #   <% end %>
   #
-  # Behavior is split across small Stimulus controllers, all namespaced panels-ui--sidebar*:
-  #   • panels-ui--sidebar        active-link resync + scroll persistence
-  #   • panels-ui--sidebar-toggle desktop hover expansion + navigation-scoped lock
-  #   • panels-ui--sidebar-search type-to-filter (only when searchable:)
+  # Behavior is split across small Stimulus controllers, all namespaced ui--sidebar*:
+  #   • ui--sidebar        active-link resync + scroll persistence
+  #   • ui--sidebar-toggle desktop hover expansion + navigation-scoped lock
+  #   • ui--sidebar-search type-to-filter (only when searchable:)
   #
   # Collapsible, Tooltip, and Popover own their interaction and accessibility contracts;
   # Sidebar only composes them according to the expanded/collapsed presentation.
@@ -53,7 +53,7 @@ module PanelsUI
     def desktop_search_id = "#{@key}-sidebar-search-desktop"
     def mobile_search_id = "#{@key}-sidebar-search-mobile"
 
-    # Cookie written by panels-ui--sidebar (client) so the server can render each
+    # Cookie written by ui--sidebar (client) so the server can render each
     # group's persisted open/closed state on first paint — no post-hydration flash.
     GROUP_STATE_COOKIE = "sidebar_groups"
 
@@ -78,11 +78,11 @@ module PanelsUI
 
     # data-controller list for the desktop aside.
     def desktop_controllers
-      [ "panels-ui--sidebar", (@searchable ? "panels-ui--sidebar-search" : nil) ].compact.join(" ")
+      [ "ui--sidebar", (@searchable ? "ui--sidebar-search" : nil) ].compact.join(" ")
     end
 
     def mobile_controllers
-      [ "panels-ui--sidebar", (@searchable ? "panels-ui--sidebar-search" : nil) ].compact.join(" ")
+      [ "ui--sidebar", (@searchable ? "ui--sidebar-search" : nil) ].compact.join(" ")
     end
 
     private

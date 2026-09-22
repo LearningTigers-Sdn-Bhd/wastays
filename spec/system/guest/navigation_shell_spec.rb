@@ -23,10 +23,10 @@ RSpec.describe "Guest navigation shell", type: :system do
     end
 
     expect(page).to have_css(
-      "#guest-sidebar[data-turbo-permanent][data-controller~='panels-ui--sidebar'][data-panels-ui--sidebar-key-value='guest']"
+      "#guest-sidebar[data-turbo-permanent][data-controller~='ui--sidebar'][data-ui--sidebar-key-value='guest']"
     )
     expect(page).to have_css("header.panel-navbar[data-sticky='true']")
-    expect(page).to have_css("#guest-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("#guest-profile[data-controller='ui--dropdown-menu']")
     expect(page).to have_css("button[command='show-modal'][commandfor='guest-sidebar-mobile']")
 
     within("#guest-sidebar-mobile", visible: :all) do
@@ -35,6 +35,6 @@ RSpec.describe "Guest navigation shell", type: :system do
       expect(page).to have_link("Refunds", href: guest_refund_requests_path, visible: :all)
     end
 
-    expect(page).to have_css("#guest-breadcrumb[data-controller='panels-ui--breadcrumb']", text: "My Account")
+    expect(page).to have_css("#guest-breadcrumb[data-controller='ui--breadcrumb']", text: "My Account")
   end
 end

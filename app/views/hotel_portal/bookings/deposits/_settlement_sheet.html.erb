@@ -68,7 +68,7 @@
         <% end %>
       </div>
       <div class="flex justify-end gap-2 border-t border-border p-4">
-        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
         <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: apply_operation ? :primary : (deposit.kind_security? ? :secondary : :destructive), data: { turbo_submits_with: "Recording…" }) do %>
           <%= apply_operation ? "Apply deposit" : return_label %>
         <% end %>

@@ -182,7 +182,7 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response.body).to include("Corporate contact email")
     expect(response.body).not_to include("Company name")
     # DESIGN.md 6: portal forms use SelectMenu, never a native select.
-    expect(Nokogiri::HTML(response.body).css("select:not([data-panels-ui--select-menu-target]):not([data-panels-ui--combobox-target])")).to be_empty
+    expect(Nokogiri::HTML(response.body).css("select:not([data-ui--select-menu-target]):not([data-ui--combobox-target])")).to be_empty
   end
 
   it "renders the edit form in the sheet frame" do

@@ -67,11 +67,11 @@ export default class extends Controller {
   }
 
   owns(element) {
-    return element.closest('[data-controller~="panels-ui--accordion"]') === this.element
+    return element.closest('[data-controller~="ui--accordion"]') === this.element
   }
 
   collapsible(item) {
-    return this.application.getControllerForElementAndIdentifier(item, "panels-ui--collapsible")
+    return this.application.getControllerForElementAndIdentifier(item, "ui--collapsible")
   }
 
   get items() {

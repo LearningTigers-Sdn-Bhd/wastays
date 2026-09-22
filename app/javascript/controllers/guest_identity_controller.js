@@ -42,7 +42,7 @@ export default class extends Controller {
   filterOptions(malaysia) {
     const unavailable = malaysia ? "national_id" : "malaysian_nric"
     const available = malaysia ? "malaysian_nric" : "national_id"
-    const root = this.documentTypeTarget.closest?.("[data-controller~='searchable-select'], [data-controller~='panels-ui--select-menu']") || this.documentTypeTarget
+    const root = this.documentTypeTarget.closest?.("[data-controller~='searchable-select'], [data-controller~='ui--select-menu']") || this.documentTypeTarget
     root.querySelectorAll?.(`option[value="${unavailable}"], [role="option"][data-value="${unavailable}"]`).forEach((option) => {
       option.hidden = true
       option.setAttribute("aria-disabled", "true")

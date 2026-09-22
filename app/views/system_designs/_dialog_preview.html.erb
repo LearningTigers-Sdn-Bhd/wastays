@@ -29,7 +29,7 @@
         </div>
       <% end %>
       <% dialog.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "panels-ui--dialog#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "ui--dialog#close" }) do %>
           Cancel
         <% end %>
         <%= render PanelsUI::Button.new(variant: :primary) do %>
@@ -48,7 +48,7 @@
         <p>The invitation dialog remains open and inert underneath this confirmation.</p>
       <% end %>
       <% dialog.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--dialog#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--dialog#close" }) do %>
           Back to invitation
         <% end %>
       <% end %>
@@ -71,7 +71,7 @@
         </div>
       <% end %>
       <% dialog.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--dialog#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--dialog#close" }) do %>
           Done
         <% end %>
       <% end %>
@@ -90,7 +90,7 @@
         <p>Occupies the whole viewport — useful for immersive editors or wizards.</p>
       <% end %>
       <% dialog.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--dialog#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--dialog#close" }) do %>
           Close
         <% end %>
       <% end %>
@@ -107,7 +107,7 @@
           title: "Heads up",
           description: "Not dismissible — closes only via an explicit action.") do |dialog| %>
       <% dialog.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--dialog#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--dialog#close" }) do %>
           Got it
         <% end %>
       <% end %>

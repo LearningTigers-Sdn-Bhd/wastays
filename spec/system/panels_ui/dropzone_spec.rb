@@ -126,7 +126,7 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
   end
 
   it "rejects dropped files with invalid types or excessive sizes" do
-    dropzone = page.find("[data-theme='panel-light'] .panel-dropzone[data-panels-ui--dropzone-presentation-value='files']")
+    dropzone = page.find("[data-theme='panel-light'] .panel-dropzone[data-ui--dropzone-presentation-value='files']")
 
     page.execute_script(<<~JS, dropzone)
       const transfer = new DataTransfer()
@@ -176,7 +176,7 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
 
   it "tracks nested drag entry without flickering the drag state" do
     surface = page.find(
-      "[data-theme='panel-light'] .panel-dropzone[data-panels-ui--dropzone-presentation-value='files'] " \
+      "[data-theme='panel-light'] .panel-dropzone[data-ui--dropzone-presentation-value='files'] " \
       ".panel-dropzone__surface"
     )
 
@@ -205,7 +205,7 @@ RSpec.describe "PanelsUI::Dropzone", type: :system do
   end
 
   it "replaces, stages removal, undoes removal, and exposes keyboard-focusable image actions" do
-    dropzone = page.find("[data-theme='panel-light'] .panel-dropzone[data-panels-ui--dropzone-presentation-value='single_image']")
+    dropzone = page.find("[data-theme='panel-light'] .panel-dropzone[data-ui--dropzone-presentation-value='single_image']")
     expect(dropzone).to have_css("img[alt='Current hotel icon'][src='/icon.png']")
     image_layout = page.evaluate_script(<<~JS, dropzone)
       (() => {

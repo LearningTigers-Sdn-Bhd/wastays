@@ -43,7 +43,7 @@ RSpec.describe "Guest navigation", type: :request do
 
   def breadcrumb_labels
     document = Nokogiri::HTML(response.body)
-    bar = document.at_css("[data-controller='panels-ui--breadcrumb'] ol.breadcrumb-list")
+    bar = document.at_css("[data-controller='ui--breadcrumb'] ol.breadcrumb-list")
 
     bar.element_children.filter_map do |segment|
       next unless segment["class"].to_s.split.include?("breadcrumb-item")

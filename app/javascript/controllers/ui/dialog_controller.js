@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
-import { isTopOverlay, lockScroll, unlockScroll } from "controllers/panels_ui/support/overlay"
+import { isTopOverlay, lockScroll, unlockScroll } from "controllers/ui/support/overlay"
 
-// Identifier: panels-ui--dialog  (attached directly to the native <dialog>)
+// Identifier: ui--dialog  (attached directly to the native <dialog>)
 //
 // The component renders no trigger — the dialog is opened externally with the
 // native invoker commands (`<button command="show-modal" commandfor="id">`) or

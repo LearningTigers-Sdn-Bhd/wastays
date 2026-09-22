@@ -1,8 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom"
-import { positionArrow } from "controllers/panels_ui/support/floating_arrow"
+import { positionArrow } from "controllers/ui/support/floating_arrow"
 
-// Text-only tooltip. A stripped-down sibling of panels-ui--dropdown-menu: reuses
+// Text-only tooltip. A stripped-down sibling of ui--dropdown-menu: reuses
 // the same @floating-ui positioning, drops all menu/roving/selection machinery.
 
 export default class extends Controller {
@@ -18,15 +18,15 @@ export default class extends Controller {
     this.cleanupPosition = null
     this.showTimer = null
     this.onOtherLayerOpen = this.handleOtherLayerOpen.bind(this)
-    window.addEventListener("panels-ui:layer-open", this.onOtherLayerOpen)
+    window.addEventListener("ui:layer-open", this.onOtherLayerOpen)
     // aria-describedby belongs on the focusable trigger itself, not the wrapper.
-    this.trigger = this.element.querySelector(":scope > :not([data-panels-ui--tooltip-target='bubble'])")
+    this.trigger = this.element.querySelector(":scope > :not([data-ui--tooltip-target='bubble'])")
     this.trigger?.setAttribute("aria-describedby", this.tooltipIdValue)
   }
 
   disconnect() {
     this.cancelShow()
-    window.removeEventListener("panels-ui:layer-open", this.onOtherLayerOpen)
+    window.removeEventListener("ui:layer-open", this.onOtherLayerOpen)
     this.stopPositioning()
     if (this.isOpen) this.bubbleTarget.hidePopover()
   }
@@ -50,7 +50,7 @@ export default class extends Controller {
   }
 
   reveal() {
-    window.dispatchEvent(new CustomEvent("panels-ui:layer-open", { detail: { controller: this } }))
+    window.dispatchEvent(new CustomEvent("ui:layer-open", { detail: { controller: this } }))
     this.bubbleTarget.showPopover()
     this.bubbleTarget.dataset.state = "open"
     this.startPositioning()

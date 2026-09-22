@@ -85,7 +85,7 @@ export default class extends Controller {
   // value into the hidden check_in / check_out fields the backend and the rest
   // of this controller already consume, then re-run the stay-dependent loads.
   rangeChanged(event) {
-    if (!event.target.matches('[data-panels-ui--date-time-picker-target="input"]')) return
+    if (!event.target.matches('[data-ui--date-time-picker-target="input"]')) return
 
     const [start = "", end = ""] = (event.target.value || "").split("/")
     if (this.hasCheckInTarget) this.checkInTarget.value = start
@@ -552,8 +552,8 @@ export default class extends Controller {
   // (which SelectMenu reads verbatim on connect).
   setChoices(wrapper, choices, selectedValue = "") {
     if (!wrapper) return
-    const host = wrapper.querySelector('[data-controller~="panels-ui--select-menu"]')
-    const controller = host && this.application.getControllerForElementAndIdentifier(host, "panels-ui--select-menu")
+    const host = wrapper.querySelector('[data-controller~="ui--select-menu"]')
+    const controller = host && this.application.getControllerForElementAndIdentifier(host, "ui--select-menu")
     if (controller) {
       controller.replaceOptions(choices, selectedValue)
       return

@@ -46,7 +46,7 @@ RSpec.describe "HotelPortal::Folios::Actions billing routes", type: :request do
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      expect(document.at_css("turbo-frame#folio_action_sheet dialog#folio-billing-routes-sheet[data-controller='panels-ui--sheet']")).to be_present
+      expect(document.at_css("turbo-frame#folio_action_sheet dialog#folio-billing-routes-sheet[data-controller='ui--sheet']")).to be_present
       expect(document.at_css("select[name^='routes['][name$='[billing_party_id]']")).to be_present
       expect(document.at_css("select[name^='routes['][name$='[target_folio_id]']")).to be_present
       expect(response.body).to include("Change billing routes", "Billing party", "Target folio", "Room charge")

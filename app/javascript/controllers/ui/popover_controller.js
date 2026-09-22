@@ -1,15 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom"
-import { createTrap, onDismiss } from "controllers/panels_ui/support/overlay"
-import { positionArrow } from "controllers/panels_ui/support/floating_arrow"
+import { createTrap, onDismiss } from "controllers/ui/support/overlay"
+import { positionArrow } from "controllers/ui/support/floating_arrow"
 
-// Identifier: panels-ui--popover
+// Identifier: ui--popover
 //
 // Click- (or hover-) triggered container yielding arbitrary content. Reuses the
 // @floating-ui positioning spine and shared bordered arrow; dismissal (Escape + outside
 // pointer) comes from support/overlay's onDismiss. `focus: true` adds a focus trap only —
 // no scroll lock, no inert backdrop (see PanelsUI::Popover). One layer open at a time via
-// the shared `panels-ui:layer-open` channel.
+// the shared `ui:layer-open` channel.
 export default class extends Controller {
   static targets = ["trigger", "panel", "arrow"]
   static values = {
@@ -31,13 +31,13 @@ export default class extends Controller {
     this.pinned = false
     this.onOtherLayerOpen = this.handleOtherLayerOpen.bind(this)
     this.onLayerClose = this.handleLayerClose.bind(this)
-    window.addEventListener("panels-ui:layer-open", this.onOtherLayerOpen)
-    window.addEventListener("panels-ui:layer-close", this.onLayerClose)
+    window.addEventListener("ui:layer-open", this.onOtherLayerOpen)
+    window.addEventListener("ui:layer-close", this.onLayerClose)
   }
 
   disconnect() {
-    window.removeEventListener("panels-ui:layer-open", this.onOtherLayerOpen)
-    window.removeEventListener("panels-ui:layer-close", this.onLayerClose)
+    window.removeEventListener("ui:layer-open", this.onOtherLayerOpen)
+    window.removeEventListener("ui:layer-close", this.onLayerClose)
     this.cancelShow()
     this.cancelClose()
     this.trap?.deactivate()
@@ -76,12 +76,12 @@ export default class extends Controller {
     if (this.isOpen) return
     this.cancelClose()
 
-    window.dispatchEvent(new CustomEvent("panels-ui:layer-open", { detail: { controller: this, owner: this.hasOwnerValue ? this.ownerValue : null } }))
+    window.dispatchEvent(new CustomEvent("ui:layer-open", { detail: { controller: this, owner: this.hasOwnerValue ? this.ownerValue : null } }))
     this.openedEmbedded = this.embeddedMobile
     if (this.openedEmbedded) this.panelTarget.dataset.embeddedOpen = "true"
     else this.panelTarget.showPopover()
     this.panelTarget.dataset.state = "open"
-    this.element.dispatchEvent(new CustomEvent("panels-ui:popover-open", { bubbles: true }))
+    this.element.dispatchEvent(new CustomEvent("ui:popover-open", { bubbles: true }))
     this.triggerTarget?.setAttribute("aria-expanded", "true")
     this.startPositioning()
 
@@ -120,7 +120,7 @@ export default class extends Controller {
     this.stopPositioning()
     this.cleanupDismiss?.()
     this.cleanupDismiss = null
-    window.dispatchEvent(new CustomEvent("panels-ui:layer-close", { detail: { controller: this, owner: this.hasOwnerValue ? this.ownerValue : null } }))
+    window.dispatchEvent(new CustomEvent("ui:layer-close", { detail: { controller: this, owner: this.hasOwnerValue ? this.ownerValue : null } }))
     // Resume an owning trap before restoring focus so it does not pull focus back to
     // the parent surface after the child trigger has been focused.
     if (restoreFocus || this.focusValue) {
@@ -175,12 +175,12 @@ export default class extends Controller {
   }
 
   get hasOpenOwnedPanel() {
-    return [...document.querySelectorAll(`[data-panels-ui--popover-owner-value="${this.panelTarget.id}"]`)]
+    return [...document.querySelectorAll(`[data-ui--popover-owner-value="${this.panelTarget.id}"]`)]
       .some((root) => root.querySelector(":scope > .popover[data-state='open']"))
   }
 
   ownedOpenPanelContains(target) {
-    return [...document.querySelectorAll(`[data-panels-ui--popover-owner-value="${this.panelTarget.id}"]`)]
+    return [...document.querySelectorAll(`[data-ui--popover-owner-value="${this.panelTarget.id}"]`)]
       .some((root) => root.querySelector(":scope > .popover[data-state='open']")?.contains(target))
   }
 

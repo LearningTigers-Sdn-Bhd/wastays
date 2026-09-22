@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Identifier: panels-ui--sheet-frame
+// Identifier: ui--sheet-frame
 //
 // Wraps a PanelsUI::Sheet that is lazy-loaded into a <turbo-frame>. Auto-opens
 // the native <dialog> on connect (the fragment arrives over Turbo, so there is

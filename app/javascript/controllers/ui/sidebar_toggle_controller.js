@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 // Module state survives Turbo page renders but resets on a full browser refresh.
 const lockStates = new Map()
 
-// Identifier: panels-ui--sidebar-toggle
+// Identifier: ui--sidebar-toggle
 //
 // Lives on the desktop lock trigger. Mobile navigation is a PanelsUI::Sheet and
 // uses the native command/commandfor contract instead of sidebar-owned overlay state.
@@ -143,7 +143,7 @@ export default class extends Controller {
   }
 
   closeFloatingLayers() {
-    window.dispatchEvent(new CustomEvent("panels-ui:layer-open", { detail: { controller: null } }))
+    window.dispatchEvent(new CustomEvent("ui:layer-open", { detail: { controller: null } }))
   }
 
   get lockKey() {

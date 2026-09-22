@@ -1,8 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
-import { applyBounds, formatRange } from "controllers/panels_ui/support/cally_calendar"
-import { connectCalendarControls, disconnectCalendarControls, syncCaption, toggleCaption, selectCaption, onCaptionTriggerKeydown, onCaptionListboxKeydown, closeCaptions } from "controllers/panels_ui/support/calendar_controls"
+import { applyBounds, formatRange } from "controllers/ui/support/cally_calendar"
+import { connectCalendarControls, disconnectCalendarControls, syncCaption, toggleCaption, selectCaption, onCaptionTriggerKeydown, onCaptionListboxKeydown, closeCaptions } from "controllers/ui/support/calendar_controls"
 
-// Identifier: panels-ui--date-picker
+// Identifier: ui--date-picker
 //
 // A hidden <input> (ISO form source of truth) plus a themed button (the popover
 // trigger) that displays the value and opens a nested PanelsUI::Popover holding a
@@ -10,7 +10,7 @@ import { connectCalendarControls, disconnectCalendarControls, syncCaption, toggl
 // the display; the popover closes on selection via its outlet.
 export default class extends Controller {
   static targets = ["input", "calendar", "display", "months", "caption", "monthButton", "monthLabel", "monthListbox", "yearButton", "yearLabel", "yearListbox"]
-  static outlets = ["panels-ui--popover"]
+  static outlets = ["ui--popover"]
   static values = {
     mode: { type: String, default: "single" }, // single | range
     dateFormat: String,
@@ -111,7 +111,7 @@ export default class extends Controller {
 
     const endEl = document.getElementById(this.linkedToValue)
     const endPicker = endEl?.closest(".panel-date-picker")
-    const endCalendar = endPicker?.querySelector("[data-panels-ui--date-picker-target='calendar']")
+    const endCalendar = endPicker?.querySelector("[data-ui--date-picker-target='calendar']")
     if (!endCalendar) return
 
     const endWasEmpty = !endEl.value
@@ -127,7 +127,7 @@ export default class extends Controller {
 
     endEl.value = ""
     endCalendar.value = ""
-    const display = endPicker.querySelector("[data-panels-ui--date-picker-target='display']")
+    const display = endPicker.querySelector("[data-ui--date-picker-target='display']")
     if (display) display.textContent = ""
     endEl.dispatchEvent(new Event("input", { bubbles: true }))
     endEl.dispatchEvent(new Event("change", { bubbles: true }))
@@ -143,12 +143,12 @@ export default class extends Controller {
     const popoverElement = document.getElementById(`${endEl.id}-calendar`)
     if (!popoverElement) return
 
-    const controller = this.application.getControllerForElementAndIdentifier(popoverElement, "panels-ui--popover")
+    const controller = this.application.getControllerForElementAndIdentifier(popoverElement, "ui--popover")
     controller?.open()
   }
 
   closePopover() {
-    if (this.hasPanelsUiPopoverOutlet) this.panelsUiPopoverOutlet.close()
+    if (this.hasUiPopoverOutlet) this.uiPopoverOutlet.close()
   }
 
   emitInput() {

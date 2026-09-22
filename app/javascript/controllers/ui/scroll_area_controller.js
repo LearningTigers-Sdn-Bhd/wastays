@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Identifier: panels-ui--scroll-area
+// Identifier: ui--scroll-area
 //
 // Custom-scrollbar overlay for server-rendered Rails markup (shadcn/Radix ScrollArea).
 // Native scrolling is preserved; this controller hides the OS bar (via CSS) and paints a

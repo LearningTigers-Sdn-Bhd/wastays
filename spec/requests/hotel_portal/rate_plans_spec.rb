@@ -44,7 +44,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(sheet["class"]).to include("w-[48rem]")
       expect(sheet["data-panels-ui-sheet-side"]).to eq("right")
       expect(sheet["data-panels-ui-sheet-variant"]).to eq("edge")
-      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+      expect(sheet["data-ui--sheet-dismissible-value"]).to eq("false")
     end
 
     it 'puts the full-width room context first and uses a two-column occupancy grid' do
@@ -139,7 +139,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(sheet["class"]).to include("w-[48rem]")
       expect(sheet["data-panels-ui-sheet-side"]).to eq("right")
       expect(sheet["data-panels-ui-sheet-variant"]).to eq("edge")
-      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+      expect(sheet["data-ui--sheet-dismissible-value"]).to eq("false")
       expect(doc.at_css("form#edit-rate-plan-#{rate_plan.id}-form")).to be_present
       expect(doc.css('[role="tab"]')).to be_empty
       expect(doc.text.squish).to include("Plan details")

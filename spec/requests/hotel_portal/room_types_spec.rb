@@ -54,8 +54,8 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(document.at_css("[aria-label='Room categories and rate plans']")).to be_present
 
       accordion = document.at_css("#room-inventory-accordion")
-      expect(accordion["data-panels-ui--accordion-type-value"]).to eq("single")
-      expect(accordion["data-panels-ui--accordion-collapsible-value"]).to eq("true")
+      expect(accordion["data-ui--accordion-type-value"]).to eq("single")
+      expect(accordion["data-ui--accordion-collapsible-value"]).to eq("true")
       expect(accordion["aria-label"]).to eq("Room inventory")
       expect(document.css("[data-room-type-id]")).to all(satisfy { |room| room["data-state"] == "closed" })
       expect(document.css("[data-room-type-id] .panel-collapsible__content")).to all(
@@ -112,7 +112,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(archive_form["data-turbo-confirm-tone"]).to eq("warning")
       # A declined confirm has to put the switch back — it has already moved by
       # the time the dialog opens.
-      expect(archive_form["data-action"]).to include("panels-ui:confirm-settled->tax-registry-status#settled")
+      expect(archive_form["data-action"]).to include("ui:confirm-settled->tax-registry-status#settled")
       expect(archive_form.at_css("input[role='switch']")["checked"]).to eq("checked")
 
       standard_assignment = grouped_room_type.room_type_rate_plans.find { |assignment| assignment.rate_plan.standard_rate? }
@@ -242,7 +242,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       capacity_fields = document.at_css("section[aria-labelledby='room-category-capacity-heading'] > div:nth-child(2)")
       restriction_fields = document.at_css("section[aria-labelledby='room-category-restrictions-heading'] > div:nth-child(2)")
 
-      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+      expect(sheet["data-ui--sheet-dismissible-value"]).to eq("false")
       expect(sheet["class"].split).to include("right-0", "w-[48rem]")
       expect(sheet["class"].split).not_to include("left-0", "bottom-0", "w-dvw")
       expect(form["class"].split).to include("space-y-8")
@@ -261,7 +261,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(document.at_css("#room-type-photos-manager")).to be_nil
       expect(document.at_css("#bulk-delete-photos-form")).to be_nil
       expect(document.at_css("input[type='file']")).to be_nil
-      expect(document.at_css('[data-panels-ui--tabs-target="tab"]')).to be_nil
+      expect(document.at_css('[data-ui--tabs-target="tab"]')).to be_nil
       expect(document.at_css("select[name='room_type[room_group_id]']")).to be_nil
     end
   end
@@ -282,7 +282,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       restriction_fields = document.at_css("section[aria-labelledby='room-category-restrictions-heading'] > div:nth-child(2)")
       rendered_classes = form.css("[class]").flat_map { |element| element["class"].split }
 
-      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+      expect(sheet["data-ui--sheet-dismissible-value"]).to eq("false")
       expect(sheet["class"].split).to include("bottom-0", "h-dvh", "rounded-none")
       expect(sheet["class"].split).not_to include("left-0", "w-[48rem]")
       expect(form["class"].split).to include("lg:grid-cols-2")

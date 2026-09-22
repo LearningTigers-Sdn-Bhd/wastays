@@ -28,7 +28,7 @@ RSpec.describe PanelsUI::ToggleGroup, type: :component do
     expect(root["aria-label"]).to eq("Example choices")
     expect(root["aria-orientation"]).to eq("horizontal")
     expect(root["aria-required"]).to eq("true")
-    expect(root["data-controller"]).to eq("panels-ui--toggle-group")
+    expect(root["data-controller"]).to eq("ui--toggle-group")
     expect(root["data-type"]).to eq("single")
     expect(root["data-variant"]).to eq("outline")
     expect(root["data-size"]).to eq("sm")
@@ -92,11 +92,11 @@ RSpec.describe PanelsUI::ToggleGroup, type: :component do
     expect(root["aria-orientation"]).to eq("vertical")
     expect(root["aria-disabled"]).to eq("true")
     expect(root["aria-describedby"]).to eq("group-help")
-    expect(root["data-controller"]).to include("probe", "panels-ui--toggle-group")
+    expect(root["data-controller"]).to include("probe", "ui--toggle-group")
     expect(root[:class]).to include("w-full")
     item = page.find("button", text: "One")
     expect(item[:class]).to include("custom-item")
-    expect(item["data-action"]).to include("click->panels-ui--toggle-group#toggle", "click->probe#record")
+    expect(item["data-action"]).to include("click->ui--toggle-group#toggle", "click->probe#record")
     expect(item).to be_disabled
   end
 

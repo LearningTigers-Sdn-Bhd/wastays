@@ -11,7 +11,7 @@ const ACTION_VARIANTS = {
 }
 
 // Installs a native AlertDialog as Turbo's asynchronous form confirmation host.
-// The dialog lifecycle itself remains owned by panels-ui--dialog; this controller
+// The dialog lifecycle itself remains owned by ui--dialog; this controller
 // only maps Turbo metadata into the surface and settles Turbo's pending promise.
 export default class extends Controller {
   connect() {
@@ -80,7 +80,7 @@ export default class extends Controller {
     // already moved (a switch, a checkbox) has no other signal telling it to go
     // back. Announce the outcome on the form either way and let it decide.
     form?.dispatchEvent(
-      new CustomEvent("panels-ui:confirm-settled", {
+      new CustomEvent("ui:confirm-settled", {
         bubbles: true,
         detail: { confirmed: result },
       })

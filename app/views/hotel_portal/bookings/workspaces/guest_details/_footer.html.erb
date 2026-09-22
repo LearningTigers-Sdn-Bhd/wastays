@@ -124,7 +124,7 @@
         </fieldset>
       <% end %>
       <% dialog.with_footer do %>
-        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "ui--dialog#close" }) do %>Cancel<% end %>
         <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :sm, form: "guest-details-form") do %>Save<% end %>
       <% end %>
     <% end %>

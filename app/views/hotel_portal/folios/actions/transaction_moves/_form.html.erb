@@ -2,7 +2,7 @@
 <% target_choices = @target_folios.map { |folio| { label: folio.display_option_label, value: folio.id } } %>
 <% open_choices = @open_folios.map { |folio| { label: folio.display_option_label, value: folio.id } } %>
 
-<div data-controller="panels-ui--sheet-frame">
+<div data-controller="ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
         id: "folio-move-transaction-sheet",
         side: :right,
@@ -20,7 +20,7 @@
             <% end %>
           <% end %>
           <div class="flex justify-end">
-            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Close<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Close<% end %>
           </div>
         </div>
       <% else %>
@@ -78,7 +78,7 @@
           </div>
 
           <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
-            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
             <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Moving…" }) do %>Move transaction<% end %>
           </div>
         <% end %>

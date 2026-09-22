@@ -2,7 +2,7 @@
 
 module PanelsUIInteractionHelper
   def open_panels_ui_popover(trigger:, panel:)
-    wait_for_stimulus_controller(trigger, "panels-ui--popover")
+    wait_for_stimulus_controller(trigger, "ui--popover")
     page.execute_script(<<~JS)
       (() => {
         const trigger = document.querySelector(#{trigger.to_json})

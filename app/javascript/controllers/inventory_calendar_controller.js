@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
+import { syncSelectMenu } from "controllers/ui/select_menu_sync"
 
 // Staged-change field name -> the Stimulus target holding it in the editor.
 const FIELD_TARGETS = {
@@ -330,7 +330,7 @@ export default class extends Controller {
     const dialog = this.sheetFrame?.querySelector("dialog")
     if (!dialog) return
 
-    const sheet = this.application.getControllerForElementAndIdentifier(dialog, "panels-ui--sheet")
+    const sheet = this.application.getControllerForElementAndIdentifier(dialog, "ui--sheet")
     if (sheet) sheet.close()
     else dialog.close()
   }

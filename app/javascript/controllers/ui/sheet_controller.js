@@ -1,10 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
-import { isTopOverlay, lockScroll, unlockScroll } from "controllers/panels_ui/support/overlay"
+import { isTopOverlay, lockScroll, unlockScroll } from "controllers/ui/support/overlay"
 
 const EXIT_DURATION_MS = 300
 const EXIT_FALLBACK_MS = EXIT_DURATION_MS + 50
 
-// Identifier: panels-ui--sheet (attached directly to the native <dialog>).
+// Identifier: ui--sheet (attached directly to the native <dialog>).
 // Native dialog owns the top layer, inert background, focus trap, and focus
 // restoration. This controller adds slide motion and shared overlay-stack rules.
 export default class extends Controller {
@@ -38,7 +38,7 @@ export default class extends Controller {
   close() {
     if (!this.closable) return
 
-    const request = new CustomEvent("panels-ui:sheet-close-request", { bubbles: true, cancelable: true })
+    const request = new CustomEvent("ui:sheet-close-request", { bubbles: true, cancelable: true })
     this.element.dispatchEvent(request)
     if (request.defaultPrevented) return
 
@@ -91,7 +91,7 @@ export default class extends Controller {
       this.openFrame = null
       if (this.element.open && !this.closing) {
         this.element.setAttribute("data-panels-open", "")
-        this.element.dispatchEvent(new CustomEvent("panels-ui:sheet-open", { bubbles: true }))
+        this.element.dispatchEvent(new CustomEvent("ui:sheet-open", { bubbles: true }))
       }
     })
   }
@@ -127,7 +127,7 @@ export default class extends Controller {
       // stays as an idempotent safety net for closes that bypass finishClose.
       unlockScroll(this.element)
       this.element.close()
-      window.dispatchEvent(new CustomEvent("panels-ui:sheet-closed"))
+      window.dispatchEvent(new CustomEvent("ui:sheet-closed"))
     }
   }
 

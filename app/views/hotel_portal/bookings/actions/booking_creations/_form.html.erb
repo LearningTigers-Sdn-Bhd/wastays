@@ -29,7 +29,7 @@ end %>
 <% collect_security_deposit = ActiveModel::Type::Boolean.new.cast(params.dig(:booking, :collect_security_deposit)) %>
 <% tourism_tax_collected = params.dig(:booking, :tourism_tax_collected).nil? ? initial_type != "reservation" : ActiveModel::Type::Boolean.new.cast(params.dig(:booking, :tourism_tax_collected)) %>
 
-<div data-controller="panels-ui--sheet-frame">
+<div data-controller="ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
         id: "booking-creation-sheet",
         side: quick ? :right : :bottom,
@@ -44,7 +44,7 @@ end %>
            data-booking-room-rows-auto-assign-enabled-value="<%= current_hotel.auto_assign_rooms_enabled? %>"
            data-booking-room-rows-room-row-url-value="<%= room_row_hotel_bookings_path(current_hotel) %>">
         <%= form_with model: @booking, url: form_url, local: true, class: "flex min-h-0 flex-1 flex-col", id: "manual_booking_form",
-              data: { controller: "booking-guest-autofill", action: "panels-ui:autocomplete-select->booking-guest-autofill#selectGuest" } do |f| %>
+              data: { controller: "booking-guest-autofill", action: "ui:autocomplete-select->booking-guest-autofill#selectGuest" } do |f| %>
           <%# Backend param contract: the range picker feeds these hidden fields. %>
           <%= f.hidden_field :check_in, value: check_in_value, data: { booking_room_rows_target: "checkIn" } %>
           <%= f.hidden_field :check_out, value: check_out_value, data: { booking_room_rows_target: "checkOut" } %>
@@ -328,7 +328,7 @@ end %>
                 booking_form_transfer_frame_value: "booking_action_sheet"
               } %>
       <% end %>
-      <button type="button" class="px-4 py-2 text-sm font-semibold text-muted-foreground" data-action="panels-ui--sheet#close">Cancel</button>
+      <button type="button" class="px-4 py-2 text-sm font-semibold text-muted-foreground" data-action="ui--sheet#close">Cancel</button>
       <button type="submit" form="manual_booking_form" class="rounded-md bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" data-turbo-submits-with="Creating…"><%= quick ? "Confirm booking" : "Create booking" %></button>
     <% end %>
   <% end %>

@@ -1,11 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
-import { applyBounds } from "controllers/panels_ui/support/cally_calendar"
-import { createTimeControl } from "controllers/panels_ui/support/time_control"
-import { connectCalendarControls, disconnectCalendarControls, syncCaption, toggleCaption, selectCaption, onCaptionTriggerKeydown, onCaptionListboxKeydown, closeCaptions } from "controllers/panels_ui/support/calendar_controls"
+import { applyBounds } from "controllers/ui/support/cally_calendar"
+import { createTimeControl } from "controllers/ui/support/time_control"
+import { connectCalendarControls, disconnectCalendarControls, syncCaption, toggleCaption, selectCaption, onCaptionTriggerKeydown, onCaptionListboxKeydown, closeCaptions } from "controllers/ui/support/calendar_controls"
 
 export default class extends Controller {
   static targets = ["input", "calendar", "display", "months", "timeControl", "startTimeControl", "endTimeControl", "timeDisplay", "startTimeDisplay", "endTimeDisplay", "caption", "monthButton", "monthLabel", "monthListbox", "yearButton", "yearLabel", "yearListbox"]
-  static outlets = ["panels-ui--popover"]
+  static outlets = ["ui--popover"]
   static values = {
     min: String, max: String,
     step: { type: Number, default: 1 },
@@ -30,7 +30,7 @@ export default class extends Controller {
       const root = event.target.querySelector?.(".panel-time-control")
       this.controls.get(root)?.scrollSelected()
     })
-    this.element.addEventListener("panels-ui:popover-open", this.onPopoverOpen)
+    this.element.addEventListener("ui:popover-open", this.onPopoverOpen)
     connectCalendarControls(this)
     this.element.dataset.enhanced = "true"
   }
@@ -38,7 +38,7 @@ export default class extends Controller {
   disconnect() {
     this.controls?.forEach((control) => control.destroy())
     this.inputTarget.form?.removeEventListener("reset", this.onFormReset)
-    this.element.removeEventListener("panels-ui:popover-open", this.onPopoverOpen)
+    this.element.removeEventListener("ui:popover-open", this.onPopoverOpen)
     disconnectCalendarControls(this)
     delete this.element.dataset.enhanced
   }
@@ -145,14 +145,14 @@ export default class extends Controller {
     const endInput = document.getElementById(this.linkedToValue)
     const endPicker = endInput?.closest(".panel-date-time-picker")
     if (!endPicker) return
-    endPicker.setAttribute("data-panels-ui--date-time-picker-min-value", start)
-    const calendar = endPicker.querySelector("[data-panels-ui--date-time-picker-target='calendar']")
+    endPicker.setAttribute("data-ui--date-time-picker-min-value", start)
+    const calendar = endPicker.querySelector("[data-ui--date-time-picker-target='calendar']")
     if (calendar) calendar.min = this.dateOnly(start)
   }
 
   closeChildPopover(root) {
-    const popoverRoot = root.closest("[data-controller~='panels-ui--popover']")
-    this.application.getControllerForElementAndIdentifier(popoverRoot, "panels-ui--popover")?.close(true)
+    const popoverRoot = root.closest("[data-controller~='ui--popover']")
+    this.application.getControllerForElementAndIdentifier(popoverRoot, "ui--popover")?.close(true)
   }
 
   get isRange() { return this.modeValue === "range" }

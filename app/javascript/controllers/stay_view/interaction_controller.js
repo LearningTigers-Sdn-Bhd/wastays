@@ -175,7 +175,7 @@ export default class extends Controller {
       this.closeSegmentPopover(segment)
     }
     this.element.dataset.interactionState = mode
-    window.dispatchEvent(new CustomEvent("panels-ui:layer-open"))
+    window.dispatchEvent(new CustomEvent("ui:layer-open"))
     this.createGhost(segment)
     this.updateProposal(lastX, lastY)
     this.startAutoScroll()
@@ -327,7 +327,7 @@ export default class extends Controller {
   }
 
   closeSegmentPopover(segment) {
-    const controller = window.Stimulus?.getControllerForElementAndIdentifier(segment, "panels-ui--popover")
+    const controller = window.Stimulus?.getControllerForElementAndIdentifier(segment, "ui--popover")
     controller?.close()
   }
 

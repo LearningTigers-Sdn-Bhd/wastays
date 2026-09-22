@@ -187,7 +187,7 @@ export default class extends Controller {
       const image = fragment.querySelector(".panel-dropzone__thumbnail")
       const title = fragment.querySelector(".panel-attachment__title")
       const description = fragment.querySelector(".panel-attachment__description")
-      const remove = fragment.querySelector("[data-action~='panels-ui--dropzone#remove']")
+      const remove = fragment.querySelector("[data-action~='ui--dropzone#remove']")
       const key = this.fileKey(file)
 
       attachment.dataset.fileKey = key

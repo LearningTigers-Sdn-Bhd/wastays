@@ -4,14 +4,14 @@
         <% if @title.present? %>aria-labelledby="<%= title_id %>"<% end %>
         <% if @title.blank? %>aria-label="<%= @aria_label %>"<% end %>
         <% if @description.present? %>aria-describedby="<%= desc_id %>"<% end %>
-        data-controller="panels-ui--sheet"
-        data-panels-ui--sheet-dismissible-value="<%= @dismissible %>"
+        data-controller="ui--sheet"
+        data-ui--sheet-dismissible-value="<%= @dismissible %>"
         data-panels-ui-sheet-side="<%= @side %>"
         data-panels-ui-sheet-variant="<%= @variant %>"
-        data-action="close->panels-ui--sheet#onClose cancel->panels-ui--sheet#onCancel click->panels-ui--sheet#backdropClose">
+        data-action="close->ui--sheet#onClose cancel->ui--sheet#onCancel click->ui--sheet#backdropClose">
   <div class="flex min-h-0 min-w-0 w-full flex-1 flex-col focus:outline-none"
        tabindex="-1"
-       data-panels-ui--sheet-target="panel">
+       data-ui--sheet-target="panel">
     <% if header? %>
       <%= header %>
     <% elsif @title.present? || @description.present? || @dismissible %>
@@ -21,7 +21,7 @@
             <h2 id="<%= title_id %>"
                 class="text-base font-semibold leading-5 focus:outline-none"
                 tabindex="-1"
-                data-panels-ui--sheet-target="initialFocus"><%= @title %></h2>
+                data-ui--sheet-target="initialFocus"><%= @title %></h2>
           <% end %>
           <% if @description.present? %>
             <p id="<%= desc_id %>" class="mt-1 text-sm text-muted-foreground"><%= @description %></p>
@@ -31,7 +31,7 @@
           <button type="button"
                   class="panel-sheet__dismiss ml-auto -mr-1 -mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
                   aria-label="Close"
-                  data-action="panels-ui--sheet#close">
+                  data-action="ui--sheet#close">
             <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
             </svg>

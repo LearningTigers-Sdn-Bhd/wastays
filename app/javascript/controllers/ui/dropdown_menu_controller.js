@@ -21,11 +21,11 @@ export default class extends Controller {
     this.onOtherMenuOpen = this.handleOtherMenuOpen.bind(this)
     // Shared singleton channel across floating layers (dropdown, popover): opening one
     // closes any other that's open.
-    window.addEventListener("panels-ui:layer-open", this.onOtherMenuOpen)
+    window.addEventListener("ui:layer-open", this.onOtherMenuOpen)
   }
 
   disconnect() {
-    window.removeEventListener("panels-ui:layer-open", this.onOtherMenuOpen)
+    window.removeEventListener("ui:layer-open", this.onOtherMenuOpen)
     this.cancelTypeahead()
     this.cancelSubmenuClose()
     this.stopPositioning()
@@ -50,7 +50,7 @@ export default class extends Controller {
   open(focus = "first") {
     if (this.isOpen(this.menuTarget)) return
 
-    window.dispatchEvent(new CustomEvent("panels-ui:layer-open", { detail: { controller: this } }))
+    window.dispatchEvent(new CustomEvent("ui:layer-open", { detail: { controller: this } }))
     this.menuTarget.showPopover()
     this.triggerTarget.setAttribute("aria-expanded", "true")
     this.startPositioning(this.triggerTarget, this.menuTarget, this.placementValue)
@@ -95,7 +95,7 @@ export default class extends Controller {
 
   onMenuKeydown(event) {
     const menu = event.target.closest('[role="menu"]')
-    const item = event.target.closest('[data-panels-ui--dropdown-menu-target~="item"]')
+    const item = event.target.closest('[data-ui--dropdown-menu-target~="item"]')
     if (!menu || !item) return
 
     const items = this.itemsFor(menu)
@@ -125,14 +125,14 @@ export default class extends Controller {
         }
         break
       case "ArrowLeft":
-        if (menu.matches("[data-panels-ui--dropdown-menu-target~='submenuPanel']")) {
+        if (menu.matches("[data-ui--dropdown-menu-target~='submenuPanel']")) {
           event.preventDefault()
           this.closeSubmenuPanel(menu, true)
         }
         break
       case "Escape":
         event.preventDefault()
-        if (menu.matches("[data-panels-ui--dropdown-menu-target~='submenuPanel']")) {
+        if (menu.matches("[data-ui--dropdown-menu-target~='submenuPanel']")) {
           this.closeSubmenuPanel(menu, true)
         } else {
           this.close(true)
@@ -152,7 +152,7 @@ export default class extends Controller {
   }
 
   onMenuClick(event) {
-    const item = event.target.closest('[data-panels-ui--dropdown-menu-target~="item"]')
+    const item = event.target.closest('[data-ui--dropdown-menu-target~="item"]')
     if (!item) return
 
     if (item.getAttribute("aria-disabled") === "true") {
@@ -182,7 +182,7 @@ export default class extends Controller {
   }
 
   toggleSelection(item) {
-    const input = item.querySelector('[data-panels-ui--dropdown-menu-target~="selectionInput"]')
+    const input = item.querySelector('[data-ui--dropdown-menu-target~="selectionInput"]')
     if (!input) return
 
     if (input.type === "radio") {
@@ -199,7 +199,7 @@ export default class extends Controller {
 
   setSelection(input, checked) {
     input.checked = checked
-    input.closest('[data-panels-ui--dropdown-menu-target~="item"]')?.setAttribute("aria-checked", checked.toString())
+    input.closest('[data-ui--dropdown-menu-target~="item"]')?.setAttribute("aria-checked", checked.toString())
   }
 
   openSubmenuFromPointer(event) {
@@ -209,7 +209,7 @@ export default class extends Controller {
   }
 
   scheduleSubmenuClose(event) {
-    const trigger = event.currentTarget.querySelector(':scope > [data-panels-ui--dropdown-menu-target~="submenuTrigger"]')
+    const trigger = event.currentTarget.querySelector(':scope > [data-ui--dropdown-menu-target~="submenuTrigger"]')
     if (!trigger) return
     if (this.submenuOpenSources.get(trigger) !== "hover") return
 
@@ -284,7 +284,7 @@ export default class extends Controller {
   }
 
   itemsFor(menu) {
-    return Array.from(menu.querySelectorAll('[data-panels-ui--dropdown-menu-target~="item"]'))
+    return Array.from(menu.querySelectorAll('[data-ui--dropdown-menu-target~="item"]'))
       .filter(item => item.closest('[role="menu"]') === menu)
   }
 

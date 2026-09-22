@@ -38,19 +38,19 @@ RSpec.describe "Admin::Integrations", type: :request do
       it "opens the first tab by default" do
         get admin_integrations_path
 
-        expect(response.body).to include('data-panels-ui--tabs-active-value="channel_manager"')
+        expect(response.body).to include('data-ui--tabs-active-value="channel_manager"')
       end
 
       it "opens the tab named in the query string" do
         get admin_integrations_path(tab: "around_that")
 
-        expect(response.body).to include('data-panels-ui--tabs-active-value="around_that"')
+        expect(response.body).to include('data-ui--tabs-active-value="around_that"')
       end
 
       it "ignores an unknown tab" do
         get admin_integrations_path(tab: "nope")
 
-        expect(response.body).to include('data-panels-ui--tabs-active-value="channel_manager"')
+        expect(response.body).to include('data-ui--tabs-active-value="channel_manager"')
       end
 
       it "shows a stored key in a maskable field" do

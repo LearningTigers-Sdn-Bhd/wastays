@@ -1,11 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Identifier: panels-ui--command-palette
+// Identifier: ui--command-palette
 //
 // Owns the trigger, the global ⌘K / "/" shortcut, the debounced async search,
 // the listbox keyboard navigation, and navigate-on-select. Overlay concerns —
 // scroll-lock, backdrop dismissal, Escape, focus-trapping and the top layer —
-// belong to the nested `panels-ui--dialog` controller on the <dialog> element
+// belong to the nested `ui--dialog` controller on the <dialog> element
 // and to the native <dialog> itself, so none of that is re-implemented here.
 export default class extends Controller {
   static targets = ["dialog", "input", "results", "empty", "shortcut", "loading", "scroll"]

@@ -16,7 +16,7 @@ RSpec.describe PanelsUI::Toggle, type: :component do
   it "renders an unpressed button with stable state semantics" do
     render_toggle { "Show rates" }
 
-    expect(page).to have_css(".panel-toggle-root[data-slot='toggle-root'][data-controller='panels-ui--toggle']")
+    expect(page).to have_css(".panel-toggle-root[data-slot='toggle-root'][data-controller='ui--toggle']")
     expect(page).to have_button("Show rates")
     expect(page).to have_css(
       "button.panel-toggle[data-slot='toggle'][data-state='off'][data-variant='default'][data-size='md']" \
@@ -44,7 +44,7 @@ RSpec.describe PanelsUI::Toggle, type: :component do
     expect(button["data-variant"]).to eq("outline")
     expect(button["data-size"]).to eq("sm")
     expect(button["data-controller"]).to eq("probe")
-    expect(button["data-action"]).to include("click->panels-ui--toggle#toggle", "click->probe#record")
+    expect(button["data-action"]).to include("click->ui--toggle#toggle", "click->probe#record")
     expect(button[:class]).to include("w-full")
     expect(button).to be_disabled
   end
@@ -56,7 +56,7 @@ RSpec.describe PanelsUI::Toggle, type: :component do
     expect(input.value).to eq("yes")
     expect(input["data-pressed-value"]).to eq("yes")
     expect(input["data-unpressed-value"]).to eq("no")
-    expect(input["data-panels-ui--toggle-target"]).to eq("input")
+    expect(input["data-ui--toggle-target"]).to eq("input")
   end
 
   it "derives a builder-backed initial state and field name from the object" do

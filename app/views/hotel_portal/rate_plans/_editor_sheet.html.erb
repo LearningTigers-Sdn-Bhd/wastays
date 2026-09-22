@@ -5,7 +5,7 @@
 <% editable = selected_room_type.present? %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame rate-plan-editor"
+  <div data-controller="ui--sheet-frame rate-plan-editor"
        data-rate-plan-editor-edit-url-value="<%= edit_hotel_rate_plan_path(current_hotel, rate_plan) %>"
        data-rate-plan-editor-room-type-id-value="<%= selected_room_type&.id %>">
     <%= render PanelsUI::Sheet.new(
@@ -21,7 +21,7 @@
           <div class="flex w-full items-start justify-between gap-4">
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <h2 class="truncate text-base font-semibold text-foreground" tabindex="-1" data-panels-ui--sheet-target="initialFocus"><%= rate_plan.name %></h2>
+                <h2 class="truncate text-base font-semibold text-foreground" tabindex="-1" data-ui--sheet-target="initialFocus"><%= rate_plan.name %></h2>
                 <%= render PanelsUI::Badge.new(label: rate_plan.archived? ? "Archived" : "Active", variant: rate_plan.archived? ? :warning : :success, size: :sm) %>
               </div>
               <p class="mt-1 text-sm text-muted-foreground">

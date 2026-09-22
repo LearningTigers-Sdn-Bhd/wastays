@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Identifier: panels-ui--collapsible
+// Identifier: ui--collapsible
 //
 // shadcn/Radix-style disclosure state for server-rendered Rails markup. The
 // controller mirrors `open` to data-state + aria-expanded, exposes open/close

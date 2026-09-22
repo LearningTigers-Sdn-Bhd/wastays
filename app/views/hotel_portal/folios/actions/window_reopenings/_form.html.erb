@@ -1,4 +1,4 @@
-<div data-controller="panels-ui--sheet-frame">
+<div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "folio-reopen-window-sheet",
           side: :right,
@@ -20,7 +20,7 @@
           </div>
 
           <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
-            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
             <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Reopening…" }) do %>Reopen folio<% end %>
           </div>
         <% end %>

@@ -63,7 +63,7 @@ export default class extends Controller {
   }
 
   dispatchChange(name, trigger, panel) {
-    window.dispatchEvent(new CustomEvent("panels-ui--tabs:change", {
+    window.dispatchEvent(new CustomEvent("ui--tabs:change", {
       detail: {
         id: this.element.id,
         name,

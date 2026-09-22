@@ -1,9 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
-import { createTimeControl } from "controllers/panels_ui/support/time_control"
+import { createTimeControl } from "controllers/ui/support/time_control"
 
 export default class extends Controller {
   static targets = ["input", "display", "timeControl"]
-  static outlets = ["panels-ui--popover"]
+  static outlets = ["ui--popover"]
   static values = {
     min: String, max: String,
     step: { type: Number, default: 1 },
@@ -32,14 +32,14 @@ export default class extends Controller {
     })
     this.inputTarget.form?.addEventListener("reset", this.onFormReset)
     this.onPopoverOpen = () => requestAnimationFrame(() => this.control.scrollSelected())
-    this.element.addEventListener("panels-ui:popover-open", this.onPopoverOpen)
+    this.element.addEventListener("ui:popover-open", this.onPopoverOpen)
     this.element.dataset.enhanced = "true"
   }
 
   disconnect() {
     this.control?.destroy()
     this.inputTarget.form?.removeEventListener("reset", this.onFormReset)
-    this.element.removeEventListener("panels-ui:popover-open", this.onPopoverOpen)
+    this.element.removeEventListener("ui:popover-open", this.onPopoverOpen)
     delete this.element.dataset.enhanced
   }
 
@@ -60,5 +60,5 @@ export default class extends Controller {
     if (this.hasDisplayTarget) this.displayTarget.textContent = value ? this.control.formatValue(value) : ""
   }
 
-  closePopover() { if (this.hasPanelsUiPopoverOutlet) this.panelsUiPopoverOutlet.close(true) }
+  closePopover() { if (this.hasUiPopoverOutlet) this.uiPopoverOutlet.close(true) }
 }

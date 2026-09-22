@@ -170,7 +170,7 @@ export default class extends Controller {
     this.inputTarget.value = result.label || ""
     this.inputTarget.dispatchEvent(new Event("input", { bubbles: true }))
     this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
-    this.element.dispatchEvent(new CustomEvent("panels-ui:autocomplete-select", {
+    this.element.dispatchEvent(new CustomEvent("ui:autocomplete-select", {
       bubbles: true,
       detail: { result }
     }))

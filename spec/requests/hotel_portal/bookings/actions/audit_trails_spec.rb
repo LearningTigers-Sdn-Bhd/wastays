@@ -31,7 +31,7 @@ RSpec.describe "HotelPortal::Bookings::Actions::AuditTrails", type: :request do
       document = Nokogiri::HTML(response.body)
       frame = document.at_css("turbo-frame#booking_action_sheet")
       expect(frame).to be_present
-      dialog = frame.at_css("dialog[data-controller='panels-ui--sheet']")
+      dialog = frame.at_css("dialog[data-controller='ui--sheet']")
       expect(dialog).to be_present
       expect(dialog["aria-label"]).to eq("Audit Trail")
       expect(dialog.text).to include("Audit Trail", "View Changes", "Pending", "Confirmed")

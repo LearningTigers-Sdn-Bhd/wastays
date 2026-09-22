@@ -34,8 +34,8 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
 
   it "keeps stacked overlays in LIFO order and preserves the scroll lock" do
     original_overflow = page.evaluate_script("document.body.style.overflow")
-    wait_for_stimulus_controller("#sd-dialog", "panels-ui--dialog")
-    wait_for_stimulus_controller("#sd-alert-dialog-basic", "panels-ui--dialog")
+    wait_for_stimulus_controller("#sd-dialog", "ui--dialog")
+    wait_for_stimulus_controller("#sd-alert-dialog-basic", "ui--dialog")
 
     show_modal("sd-dialog")
     show_modal("sd-alert-dialog-basic")
@@ -55,7 +55,7 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
     expect(page).to have_css("dialog#sd-dialog[open]")
     wait_for_body_overflow("hidden")
 
-    click_via_javascript("#sd-dialog [data-action='panels-ui--dialog#close']")
+    click_via_javascript("#sd-dialog [data-action='ui--dialog#close']")
     wait_for_dialog_closed("sd-dialog")
     wait_for_body_overflow(original_overflow)
   end
@@ -119,7 +119,7 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
 
   it "reinstalls one Turbo handler after a Turbo page replacement" do
     visit_when_loaded "/system-design?only=alert_dialog_preview"
-    wait_for_stimulus_controller("#turbo-confirm-dialog", "panels-ui--turbo-confirm")
+    wait_for_stimulus_controller("#turbo-confirm-dialog", "ui--turbo-confirm")
     open_turbo_confirmation(message: "Still connected?", attributes: {})
 
     click_via_javascript("#turbo-cancel-button")
@@ -128,7 +128,7 @@ RSpec.describe "PanelsUI::AlertDialog", type: :system do
   end
 
   def open_turbo_confirmation(message:, attributes:)
-    wait_for_stimulus_controller("#turbo-confirm-dialog", "panels-ui--turbo-confirm")
+    wait_for_stimulus_controller("#turbo-confirm-dialog", "ui--turbo-confirm")
     page.execute_script(<<~JS)
       const form = document.createElement("form")
       const source = document.createElement("button")

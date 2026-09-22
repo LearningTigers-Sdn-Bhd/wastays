@@ -24,12 +24,12 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
   it "renders the desktop aside and mobile Sheet wired to their controllers" do
     render_sidebar
 
-    expect(page).to have_css("aside#hotel-sidebar.panel-sidebar[data-collapsed='true'][data-collapsible='true'][data-locked='false'][data-panels-ui--sidebar-key-value='hotel']")
+    expect(page).to have_css("aside#hotel-sidebar.panel-sidebar[data-collapsed='true'][data-collapsible='true'][data-locked='false'][data-ui--sidebar-key-value='hotel']")
     expect(page).to have_css("aside#hotel-sidebar [data-sidebar-presentation='collapsed']:not([hidden])", visible: :all)
-    expect(page).to have_css("aside#hotel-sidebar[data-controller~='panels-ui--sidebar']")
-    expect(page).to have_css("dialog#hotel-sidebar-mobile.panel-sidebar--mobile-sheet[data-controller='panels-ui--sheet']", visible: :all)
+    expect(page).to have_css("aside#hotel-sidebar[data-controller~='ui--sidebar']")
+    expect(page).to have_css("dialog#hotel-sidebar-mobile.panel-sidebar--mobile-sheet[data-controller='ui--sheet']", visible: :all)
     expect(page).to have_css(
-      "#hotel-sidebar-mobile [data-controller~='panels-ui--sidebar'][data-panels-ui--sidebar-surface-value='mobile']",
+      "#hotel-sidebar-mobile [data-controller~='ui--sidebar'][data-ui--sidebar-surface-value='mobile']",
       visible: :all
     )
     expect(page).to have_no_css("#hotel-sidebar-overlay", visible: :all)
@@ -55,8 +55,8 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
     render_inline(described_class.new(key: "hotel", home_path: "/", sections: action_sections))
 
     expect(page).to have_css("aside#hotel-sidebar a[href='/night-audit-run'][data-turbo-frame='booking_action_sheet']")
-    expect(page).to have_no_css("aside#hotel-sidebar a[data-action='click->panels-ui--sheet#close']")
-    expect(page).to have_css("dialog#hotel-sidebar-mobile a[href='/night-audit-run'][data-turbo-frame='booking_action_sheet'][data-action='click->panels-ui--sheet#close']", visible: :all)
+    expect(page).to have_no_css("aside#hotel-sidebar a[data-action='click->ui--sheet#close']")
+    expect(page).to have_css("dialog#hotel-sidebar-mobile a[href='/night-audit-run'][data-turbo-frame='booking_action_sheet'][data-action='click->ui--sheet#close']", visible: :all)
   end
 
   it "renders an active parent as an open collapsible group with its child link" do
@@ -71,17 +71,17 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
     render_sidebar
 
     within("aside#hotel-sidebar") do
-      expect(page).to have_css("[data-controller~='panels-ui--collapsible']")
-      expect(page).to have_css("[data-controller='panels-ui--popover']", visible: :all)
-      expect(page).to have_css("[data-controller='panels-ui--tooltip']", visible: :all)
+      expect(page).to have_css("[data-controller~='ui--collapsible']")
+      expect(page).to have_css("[data-controller='ui--popover']", visible: :all)
+      expect(page).to have_css("[data-controller='ui--tooltip']", visible: :all)
       trigger = page.find("#hotel-sidebar-desktop-section-1-item-1-popover-trigger", visible: :all)
       expect(trigger[:class]).to include("panel-sidebar__link")
       expect(trigger[:class]).not_to include("panel-button")
       expect(trigger["data-variant"]).to be_nil
       expect(trigger["data-size"]).to be_nil
-      root = trigger.find(:xpath, "ancestor::span[@data-controller='panels-ui--popover']", visible: :all)
-      expect(root["data-panels-ui--popover-offset-value"]).to eq("4.0")
-      expect(root["data-panels-ui--popover-close-delay-value"]).to eq("180")
+      root = trigger.find(:xpath, "ancestor::span[@data-controller='ui--popover']", visible: :all)
+      expect(root["data-ui--popover-offset-value"]).to eq("4.0")
+      expect(root["data-ui--popover-close-delay-value"]).to eq("180")
       expect(page).to have_css("#hotel-sidebar-desktop-section-1-item-1-popover-panel .floating-arrow", visible: :all)
     end
   end
@@ -90,9 +90,9 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
     render_sidebar
 
     within(page.find("dialog#hotel-sidebar-mobile", visible: :all)) do
-      expect(page).to have_css("[data-controller~='panels-ui--collapsible']", visible: :all)
-      expect(page).to have_no_css("[data-controller='panels-ui--popover']", visible: :all)
-      expect(page).to have_no_css("[data-controller='panels-ui--tooltip']", visible: :all)
+      expect(page).to have_css("[data-controller~='ui--collapsible']", visible: :all)
+      expect(page).to have_no_css("[data-controller='ui--popover']", visible: :all)
+      expect(page).to have_no_css("[data-controller='ui--tooltip']", visible: :all)
     end
   end
 
@@ -111,9 +111,9 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
   it "renders the search box and search targets only when searchable" do
     render_sidebar(searchable: true)
     within("aside#hotel-sidebar") do
-      expect(page).to have_css("input#hotel-sidebar-search-desktop[data-panels-ui--sidebar-search-target='input']")
-      expect(page).to have_css("[data-panels-ui--sidebar-search-target='section']")
-      expect(page).to have_css("[data-panels-ui--sidebar-search-target='item'][data-search-text]", count: 3)
+      expect(page).to have_css("input#hotel-sidebar-search-desktop[data-ui--sidebar-search-target='input']")
+      expect(page).to have_css("[data-ui--sidebar-search-target='section']")
+      expect(page).to have_css("[data-ui--sidebar-search-target='item'][data-search-text]", count: 3)
     end
 
     render_sidebar(searchable: false)
@@ -165,7 +165,7 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
     render_sidebar(searchable: true, permanent: true)
 
     aside = page.find("aside#hotel-sidebar")
-    expect(aside["data-controller"]).to include("panels-ui--sidebar-search")
+    expect(aside["data-controller"]).to include("ui--sidebar-search")
     expect(aside["data-turbo-permanent"]).not_to be_nil
   end
 
@@ -175,8 +175,8 @@ RSpec.describe PanelsUI::Sidebar, type: :component do
 
     expect(page).to have_css("#hotel-sidebar[data-collapsible='false']")
     expect(page).to have_no_css("#hotel-sidebar [data-sidebar-presentation='collapsed']", visible: :all)
-    expect(page).to have_no_css("#hotel-sidebar [data-controller='panels-ui--popover']", visible: :all)
-    expect(page).to have_no_css("#hotel-sidebar [data-controller='panels-ui--tooltip']", visible: :all)
+    expect(page).to have_no_css("#hotel-sidebar [data-controller='ui--popover']", visible: :all)
+    expect(page).to have_no_css("#hotel-sidebar [data-controller='ui--tooltip']", visible: :all)
   end
 
   it "preserves secure external-link attributes in every presentation" do

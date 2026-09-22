@@ -18,7 +18,7 @@
 <% item_data = if direct_post
   { turbo_frame: turbo_frame_request_id, turbo_method: :post, turbo_submits_with: "Working…" }
 else
-  { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }
+  { turbo_frame: "booking_action_sheet_secondary", action: "click->ui--dropdown-menu#restoreTriggerFocus" }
 end %>
 <% query_params = {
   return_to: @return_to,

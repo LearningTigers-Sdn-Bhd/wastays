@@ -127,7 +127,7 @@ export default class extends Controller {
   // ── Selection ──────────────────────────────────────────────────────────────
 
   onOptionClick(event) {
-    const option = event.target.closest('[data-panels-ui--select-menu-target~="option"]')
+    const option = event.target.closest('[data-ui--select-menu-target~="option"]')
     if (!option) return
 
     if (option.getAttribute("aria-disabled") === "true") {
@@ -139,7 +139,7 @@ export default class extends Controller {
 
   onListboxKeydown(event) {
     const options = this.enabledOptions
-    const current = document.activeElement.closest('[data-panels-ui--select-menu-target~="option"]')
+    const current = document.activeElement.closest('[data-ui--select-menu-target~="option"]')
     const index = options.indexOf(current)
 
     switch (event.key) {
@@ -222,7 +222,7 @@ export default class extends Controller {
       option.className = "panel-select-menu__option"
       option.setAttribute("role", "option")
       option.setAttribute("tabindex", "-1")
-      option.setAttribute("data-panels-ui--select-menu-target", "option")
+      option.setAttribute("data-ui--select-menu-target", "option")
       option.dataset.value = choice.value
       if (choice.disabled) option.setAttribute("aria-disabled", "true")
 

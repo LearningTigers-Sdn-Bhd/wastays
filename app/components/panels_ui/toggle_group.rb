@@ -62,8 +62,8 @@ module PanelsUI
               variant: @variant,
               size: @size,
               icon_only: (ICON_SIZES.include?(@size) ? "true" : nil),
-              panels_ui__toggle_group_target: "item",
-              action: [ "click->panels-ui--toggle-group#toggle", action ].compact.join(" ")
+              ui__toggle_group_target: "item",
+              action: [ "click->ui--toggle-group#toggle", action ].compact.join(" ")
             ).compact
           )
         )
@@ -121,8 +121,8 @@ module PanelsUI
           ).compact,
           data: data.merge(
             slot: "toggle-group",
-            controller: [ controller, "panels-ui--toggle-group" ].compact.join(" "),
-            action: [ action, "keydown->panels-ui--toggle-group#onKeydown" ].compact.join(" "),
+            controller: [ controller, "ui--toggle-group" ].compact.join(" "),
+            action: [ action, "keydown->ui--toggle-group#onKeydown" ].compact.join(" "),
             type: @type,
             variant: @variant,
             size: @size,
@@ -218,7 +218,7 @@ module PanelsUI
         type: "hidden",
         name: input_name,
         value: @selected_values.first.to_s,
-        data: { panels_ui__toggle_group_target: "input" }
+        data: { ui__toggle_group_target: "input" }
       )
     end
 
@@ -231,7 +231,7 @@ module PanelsUI
           value: item.value,
           disabled: !@selected_values.include?(item.value),
           data: {
-            panels_ui__toggle_group_target: "input",
+            ui__toggle_group_target: "input",
             value: item.value
           }
         )

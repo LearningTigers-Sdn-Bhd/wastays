@@ -71,8 +71,8 @@ RSpec.describe "PanelsUI::Popover", type: :system do
   end
 
   it "closes an open dropdown menu when a popover opens (shared layer channel)" do
-    wait_for_stimulus_controller("#sd-dropdown", "panels-ui--dropdown-menu")
-    wait_for_stimulus_controller("#popover-default-trigger", "panels-ui--popover")
+    wait_for_stimulus_controller("#sd-dropdown", "ui--dropdown-menu")
+    wait_for_stimulus_controller("#popover-default-trigger", "ui--popover")
 
     # Query and click atomically because Floating UI can invalidate a previously
     # captured element handle while positioning the full preview catalogue.

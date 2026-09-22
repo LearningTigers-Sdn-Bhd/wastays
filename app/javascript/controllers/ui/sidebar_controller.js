@@ -6,7 +6,7 @@ import { Controller } from "@hotwired/stimulus"
 // server render plus Turbo's permanent sidebar are the single source of truth.
 const GROUP_STATE_COOKIE = "sidebar_groups"
 
-// Identifier: panels-ui--sidebar
+// Identifier: ui--sidebar
 //
 // Sidebar-wide state only. Collapsible, Tooltip, and Popover own their interaction,
 // accessibility, dismissal, and Floating UI positioning contracts.
@@ -24,11 +24,11 @@ export default class extends Controller {
     document.addEventListener("turbo:load", this.onTurboLoad)
     document.addEventListener("turbo:click", this.onTurboClick)
     document.addEventListener("turbo:before-visit", this.onBeforeVisit)
-    this.element.addEventListener("panels-ui--collapsible:change", this.onCollapsibleChange)
+    this.element.addEventListener("ui--collapsible:change", this.onCollapsibleChange)
 
-    this.sheet = this.element.closest("dialog[data-controller~='panels-ui--sheet']")
+    this.sheet = this.element.closest("dialog[data-controller~='ui--sheet']")
     this.onSheetOpen = () => this.restoreScroll()
-    this.sheet?.addEventListener("panels-ui:sheet-open", this.onSheetOpen)
+    this.sheet?.addEventListener("ui:sheet-open", this.onSheetOpen)
 
     this.syncActiveLinks()
     this.restoreScroll()
@@ -39,8 +39,8 @@ export default class extends Controller {
     document.removeEventListener("turbo:load", this.onTurboLoad)
     document.removeEventListener("turbo:click", this.onTurboClick)
     document.removeEventListener("turbo:before-visit", this.onBeforeVisit)
-    this.element.removeEventListener("panels-ui--collapsible:change", this.onCollapsibleChange)
-    this.sheet?.removeEventListener("panels-ui:sheet-open", this.onSheetOpen)
+    this.element.removeEventListener("ui--collapsible:change", this.onCollapsibleChange)
+    this.sheet?.removeEventListener("ui:sheet-open", this.onSheetOpen)
   }
 
   get scrollable() {
@@ -91,7 +91,7 @@ export default class extends Controller {
   }
 
   persistGroupState(event) {
-    const root = event.target.closest('[data-controller~="panels-ui--collapsible"]')
+    const root = event.target.closest('[data-controller~="ui--collapsible"]')
     if (!root?.id || !this.element.contains(root)) return
 
     const states = this.groupStates

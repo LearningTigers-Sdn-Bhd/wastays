@@ -74,8 +74,8 @@ RSpec.describe PanelsUI::Checkbox, type: :component do
   it "wires indeterminate checkboxes to the scoped controller without replacing native semantics" do
     render_inline(described_class.new(name: "select_all", label: "Select all", indeterminate: true))
 
-    expect(page).to have_css("input[type='checkbox'][data-controller='panels-ui--checkbox'][data-action='change->panels-ui--checkbox#clearIndeterminate'][data-panels-ui--checkbox-indeterminate-value='true']")
-    expect(page).to have_css("input[data-panels-ui--checkbox-target='input']")
+    expect(page).to have_css("input[type='checkbox'][data-controller='ui--checkbox'][data-action='change->ui--checkbox#clearIndeterminate'][data-ui--checkbox-indeterminate-value='true']")
+    expect(page).to have_css("input[data-ui--checkbox-target='input']")
   end
 
   it "keeps a hidden label available to assistive technology and drops the gap beside it" do

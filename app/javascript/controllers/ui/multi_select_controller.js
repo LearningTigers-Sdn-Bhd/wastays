@@ -1,4 +1,4 @@
-import ComboboxController from "controllers/panels_ui/combobox_controller"
+import ComboboxController from "controllers/ui/combobox_controller"
 
 // A searchable multi-select. Everything — the class-strip, aria copying, form
 // reset resync, Turbo-reconnect dedup, and empty-text override — is inherited

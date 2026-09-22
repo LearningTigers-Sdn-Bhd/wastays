@@ -77,7 +77,7 @@ export default class extends Controller {
 
     const datePicker = container.matches(".panel-date-picker") ? container : container.querySelector(".panel-date-picker")
     if (datePicker) {
-      const controller = this.application.getControllerForElementAndIdentifier(datePicker, "panels-ui--date-picker")
+      const controller = this.application.getControllerForElementAndIdentifier(datePicker, "ui--date-picker")
       controller?.resetFromInput()
     }
   }

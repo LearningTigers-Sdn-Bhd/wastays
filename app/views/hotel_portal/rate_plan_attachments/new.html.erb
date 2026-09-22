@@ -2,7 +2,7 @@
 <% form_id = "attach-rate-plan-form" %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "assign-room-rate-sheet",
           side: :right,
@@ -18,7 +18,7 @@
               class: "space-y-5 py-2",
               data: {
                 controller: "rate-plan-attachment",
-                action: "input->rate-plan-attachment#clearRatePlanSelection panels-ui:autocomplete-select->rate-plan-attachment#selectRatePlan"
+                action: "input->rate-plan-attachment#clearRatePlanSelection ui:autocomplete-select->rate-plan-attachment#selectRatePlan"
               } do |form| %>
           <%= form.hidden_field :rate_plan_id,
                 data: { rate_plan_attachment_target: "ratePlanId" } %>
@@ -67,7 +67,7 @@
               type: :button,
               variant: :secondary,
               size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
+              data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <% if @room_types.any? %>

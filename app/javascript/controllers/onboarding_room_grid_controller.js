@@ -96,7 +96,7 @@ export default class extends Controller {
 
   closeSheet() {
     const trigger = this.activeTrigger
-    const controller = window.Stimulus?.getControllerForElementAndIdentifier(this.sheet, "panels-ui--sheet")
+    const controller = window.Stimulus?.getControllerForElementAndIdentifier(this.sheet, "ui--sheet")
     if (controller) controller.close()
     else if (this.sheet.open) this.sheet.close()
 

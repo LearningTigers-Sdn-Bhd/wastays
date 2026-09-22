@@ -78,7 +78,7 @@ module PanelsUI
         class: "panel-toggle-root",
         data: {
           slot: "toggle-root",
-          controller: "panels-ui--toggle"
+          controller: "ui--toggle"
         }
       }
     end
@@ -104,8 +104,8 @@ module PanelsUI
             variant: @variant,
             size: @size,
             icon_only: (@icon_only ? "true" : nil),
-            panels_ui__toggle_target: "button",
-            action: [ "click->panels-ui--toggle#toggle", action ].compact.join(" ")
+            ui__toggle_target: "button",
+            action: [ "click->ui--toggle#toggle", action ].compact.join(" ")
           ).compact
         )
       )
@@ -120,7 +120,7 @@ module PanelsUI
         name: input_name,
         value: (@pressed ? @value : @unchecked_value),
         data: {
-          panels_ui__toggle_target: "input",
+          ui__toggle_target: "input",
           pressed_value: @value,
           unpressed_value: @unchecked_value
         }
