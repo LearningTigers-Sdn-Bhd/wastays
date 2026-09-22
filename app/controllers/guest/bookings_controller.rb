@@ -45,63 +45,21 @@ class Guest::BookingsController < Guest::BaseController
   end
 
   def receipt
-    @booking = current_guest.bookings.find(params[:id])
-    pdf_bytes = Reports::Bookings::GenerateConfirmation.new(@booking).generate
-    send_data pdf_bytes,
-      filename: "wastays-receipt-#{@booking.confirmation_token}.pdf",
-      type: "application/pdf",
-      disposition: "attachment"
-  rescue ActiveRecord::RecordNotFound
-    redirect_to guest_bookings_path, alert: "Booking not found."
+    send_guest_document(:receipt)
   end
 
   def invoice
-    @booking = current_guest.bookings.find(params[:id])
-    pdf_bytes = ::Reports::Bookings::GeneratePrimaryGuestInvoice.new(booking: @booking).generate
-    send_data pdf_bytes,
-      filename: "wastays-invoice-#{@booking.confirmation_token}.pdf",
-      type: "application/pdf",
-      disposition: "attachment"
-  rescue ::Reports::Bookings::GenerateFolioRecords::UnavailableError
-    redirect_to guest_bookings_path, alert: "No finalized guest invoice is available for this booking."
-  rescue ActiveRecord::RecordNotFound
-    redirect_to guest_bookings_path, alert: "Booking not found."
+    send_guest_document(:invoice, failure_path: guest_bookings_path)
   end
 
   # The guest is signed in, so the group is reached through a room they own rather than
   # through a code they were sent.
   def voucher_pack
-    booking = current_guest.bookings.includes(:group_booking).find(params[:id])
-    group_booking = booking.group_booking
-    return redirect_to guest_booking_path(booking), alert: "This booking is not part of a group." if group_booking.blank?
-
-    send_data Reports::Bookings::GenerateVoucherPack.new(group_booking).generate,
-      filename: "wastays-vouchers-#{group_booking.confirmation_token}.pdf",
-      type: "application/pdf",
-      disposition: "attachment"
-  rescue Reports::Bookings::GenerateVoucherPack::EmptyGroupError
-    redirect_to guest_booking_path(booking), alert: "This group has no rooms to print."
-  rescue ActiveRecord::RecordNotFound
-    redirect_to guest_bookings_path, alert: "Booking not found."
+    send_guest_document(:voucher_pack)
   end
 
-  # A room in a group reports the group's position, because that is the position anyone
-  # settles.
   def summary
-    booking = current_guest.bookings.includes(:group_booking).find(params[:id])
-    subject = booking.group_booking || booking
-    pdf_bytes = if subject.is_a?(GroupBooking)
-      Reports::Bookings::GenerateBookingSummary.new(group_booking: subject).generate
-    else
-      Reports::Bookings::GenerateBookingSummary.new(booking: subject).generate
-    end
-
-    send_data pdf_bytes,
-      filename: "wastays-booking-summary-#{subject.confirmation_token}.pdf",
-      type: "application/pdf",
-      disposition: "attachment"
-  rescue ActiveRecord::RecordNotFound
-    redirect_to guest_bookings_path, alert: "Booking not found."
+    send_guest_document(:summary)
   end
 
   def toggle_dnd
@@ -119,49 +77,25 @@ class Guest::BookingsController < Guest::BaseController
 
   def e_invoice
     @booking = current_guest.bookings.find(params[:id])
-    submission = selected_guest_e_invoice_submission(@booking)
+    submission = EInvoice::SelectGuestSubmission.new(
+      booking: @booking,
+      submission_id: params[:submission_id]
+    ).call
     raise ActiveRecord::RecordNotFound unless submission
 
-    pdf_bytes = EInvoicePdfService.new(@booking, submission: submission).generate
-    send_data pdf_bytes,
-      filename: "wastays-e-invoice-#{submission.internal_id || @booking.confirmation_token}.pdf",
-      type: "application/pdf",
-      disposition: "attachment"
+    send_guest_document(:e_invoice, booking: @booking, submission: submission)
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end
 
   def request_e_invoice
     @booking = current_guest.bookings.find(params[:id])
+    result = EInvoice::RequestForGuest.new(booking: @booking).call
 
-    unless @booking.payment_concluded?
-      return respond_to_e_invoice_request_error("This booking's payment has not concluded yet.")
+    unless result.success?
+      status = result.already_queued ? :accepted : :unprocessable_content
+      return respond_to_e_invoice_request_error(result.error, status)
     end
-
-    unless @booking.e_invoice_requestable?
-      return respond_to_e_invoice_request_error("E-invoice requests are only available within the same calendar month as the payment.")
-    end
-
-    if @booking.e_invoice_already_issued?
-      return respond_to_e_invoice_request_error("An e-invoice has already been issued for this booking.")
-    end
-
-    # Say what is missing while the guest can still supply it, rather than
-    # accepting the request and failing LHDN validation days later.
-    missing = @booking.e_invoice_buyer_details_missing
-    if missing.any?
-      return respond_to_e_invoice_request_error(
-        "We need your #{missing.to_sentence} before we can request the e-invoice. Please contact the hotel to update your details."
-      )
-    end
-
-    existing_pending = @booking.pending_guest_e_invoice_submission
-
-    if existing_pending
-      return respond_to_e_invoice_request_error("Your e-invoice is already being prepared. You will receive it shortly.", :accepted)
-    end
-
-    EInvoice::AutoIssueJob.perform_later(@booking.id, requested_by_guest: true)
 
     respond_to do |format|
       format.html do
@@ -181,57 +115,32 @@ class Guest::BookingsController < Guest::BaseController
 
   def status_e_invoice
     @booking = current_guest.bookings.find(params[:id])
-    render json: e_invoice_status_payload(@booking)
+    render json: EInvoice::GuestStatusPayload.new(
+      booking: @booking,
+      download_url: e_invoice_guest_booking_path(@booking)
+    ).call
   rescue ActiveRecord::RecordNotFound
     redirect_to guest_bookings_path, alert: "Booking not found."
   end
 
   private
 
-  def selected_guest_e_invoice_submission(booking)
-    return booking.latest_ready_guest_e_invoice_submission if params[:submission_id].blank?
+  # Every document goes out through Bookings::GuestDocument, so the bytes, the
+  # filename, and the reason one is unavailable live in one place.
+  # failure_path keeps each action's own landing page. The invoice has always
+  # sent an unavailable document back to the list, and the group documents have
+  # always stayed on the booking.
+  def send_guest_document(kind, booking: nil, submission: nil, failure_path: nil)
+    booking ||= current_guest.bookings.includes(:group_booking).find(params[:id])
+    result = Bookings::GuestDocument.new(booking: booking, kind: kind, submission: submission).call
 
-    booking.e_invoice_submissions.guest_facing.valid.find_by(id: params[:submission_id])
-  end
-
-  def e_invoice_status_payload(booking)
-    if (submission = booking.latest_ready_guest_e_invoice_submission)
-      {
-        status: "ready",
-        message: ready_e_invoice_message(submission),
-        document_label: submission.document_type_label,
-        download_url: e_invoice_guest_booking_path(booking)
-      }
-    elsif (submission = booking.latest_pending_guest_e_invoice_submission)
-      {
-        status: "processing",
-        message: "We are preparing your e-invoice with LHDN now.",
-        document_label: submission.document_type_label,
-        download_url: nil
-      }
-    elsif (submission = booking.latest_failed_guest_e_invoice_submission)
-      {
-        status: "failed",
-        message: submission.error_message.presence || "We could not generate the e-invoice yet. Our hotel team can help retry it.",
-        document_label: submission.document_type_label,
-        download_url: nil
-      }
-    else
-      {
-        status: "idle",
-        message: "No guest e-invoice request has been submitted yet.",
-        document_label: nil,
-        download_url: nil
-      }
+    unless result.success?
+      return redirect_to(failure_path || guest_booking_path(booking), alert: result.error)
     end
-  end
 
-  def ready_e_invoice_message(submission)
-    if submission.adjustment?
-      "Your updated e-invoice is ready."
-    else
-      "Your e-invoice is ready."
-    end
+    send_data result.bytes, filename: result.filename, type: "application/pdf", disposition: "attachment"
+  rescue ActiveRecord::RecordNotFound
+    redirect_to guest_bookings_path, alert: "Booking not found."
   end
 
   def respond_to_e_invoice_request_error(message, status = :unprocessable_content)
