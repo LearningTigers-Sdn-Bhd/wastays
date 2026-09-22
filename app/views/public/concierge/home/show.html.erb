@@ -8,70 +8,51 @@
 
   <%= render "public/concierge/shared/hero" %>
 
-  <div class="mx-auto w-full max-w-5xl px-6 pb-6 pt-5 md:px-10 md:pt-12">
+  <div class="mx-auto w-full max-w-4xl px-5 pb-6 pt-5 md:px-8 md:pt-12">
     <h2 class="font-guest-display text-2xl font-semibold text-foreground md:text-3xl">
       Hello, <span class="italic text-primary">Guest</span>
     </h2>
-    <p class="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground md:text-sm">How can we assist you today?</p>
+    <p class="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground md:text-sm">How can we help with your stay?</p>
   </div>
 
-  <div class="mx-auto w-full max-w-5xl space-y-3.5 px-6 pb-12 md:space-y-4 md:px-10 md:pb-20">
+  <div class="mx-auto w-full max-w-4xl space-y-3 px-5 pb-12 md:space-y-4 md:px-8 md:pb-20">
 
-    <%# Check In and Check Out are the two ends of one stay, so they share a row
-        rather than one standing alone above a grid the other sits inside. Check
-        In keeps the solid primary treatment as the more likely first tap; Check
-        Out mirrors its shape and size in an outlined form so the pair reads as
-        equals, not as a hero and an afterthought. %>
-    <%# Every tile below is icon plus label only now -- no caption line -- so
-        heights come down across the board to match the lighter content. %>
-    <div class="grid grid-cols-2 gap-3.5 md:gap-4">
-      <%= link_to concierge_check_in_path(@hotel.unique_id, @hotel.public_id),
-            class: "group relative flex min-h-[92px] flex-col justify-between overflow-hidden rounded-[2rem] border border-white/5 bg-primary p-5 shadow-xl shadow-primary/20 transition-all duration-300 active:scale-[0.98] md:min-h-[112px] md:p-8" do %>
-        <div class="relative z-10 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 md:h-14 md:w-14">
-          <%= cached_icon "log-in", class: "h-5 w-5 text-accent md:h-6 md:w-6" %>
-        </div>
-        <p class="relative z-10 text-[12px] font-black uppercase tracking-[0.15em] text-white md:text-base">Check In</p>
-      <% end %>
+    <%# Every tile is one generous tap target. Shape and colour establish the
+        hierarchy; shadows, nested icon boxes and scale effects do not. %>
+    <%= link_to concierge_check_in_path(@hotel.unique_id, @hotel.public_id),
+          class: "flex min-h-20 touch-manipulation items-center gap-3 rounded-xl bg-primary px-4 py-4 text-primary-foreground transition-colors hover:bg-primary-hover active:bg-primary-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:px-5" do %>
+      <%= cached_icon "log-in", class: "h-6 w-6 shrink-0 text-accent", aria: { hidden: true } %>
+      <span class="min-w-0">
+        <span class="block text-sm font-bold md:text-base">Pre-check in</span>
+        <span class="mt-0.5 block text-xs leading-snug text-primary-foreground/75">Complete your details before arrival</span>
+      </span>
+      <%= cached_icon "chevron-right", class: "ml-auto h-4 w-4 shrink-0 text-primary-foreground/70", aria: { hidden: true } %>
+    <% end %>
 
-      <%= link_to concierge_check_out_path(@hotel.unique_id, @hotel.public_id),
-            class: "group relative flex min-h-[92px] flex-col justify-between overflow-hidden rounded-[2rem] border border-primary/15 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-[0.98] md:min-h-[112px] md:p-8" do %>
-        <div class="relative z-10 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white md:h-14 md:w-14">
-          <%= cached_icon "log-out", class: "h-5 w-5 md:h-6 md:w-6" %>
-        </div>
-        <p class="relative z-10 text-[12px] font-black uppercase tracking-[0.15em] text-foreground md:text-base">Check Out</p>
-      <% end %>
-    </div>
+    <%
+      service_tiles = [
+        { path: concierge_book_path(@hotel.unique_id, @hotel.public_id), label: "Book a Room", description: "View available rooms", icon: "calendar-days" },
+        { path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id), label: "Recommendations", description: "Places and guest offers", icon: "sparkles" },
+        { path: concierge_contact_path(@hotel.unique_id, @hotel.public_id), label: "Contact Us", description: "Call or get directions", icon: "phone" }
+      ]
 
-    <%# Grid order is row order: Recommendations sits immediately before Contact
-        Us so the pair lands in the same row at every width -- two columns on a
-        phone puts them together as row two, four columns on desktop puts all
-        four in the one row. %>
-    <div class="grid grid-cols-2 gap-3.5 md:grid-cols-4 md:gap-4">
-      <% [
-        { path: concierge_book_path(@hotel.unique_id, @hotel.public_id), label: "Book a Room", icon: "calendar-days" },
-        { path: concierge_new_request_path(@hotel.unique_id, @hotel.public_id), label: "Request", icon: "message-square-more" },
-        { path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id), label: "Recommendations", icon: "sparkles" },
-        { path: concierge_contact_path(@hotel.unique_id, @hotel.public_id), label: "Contact Us", icon: "phone" }
-      ].each do |tile| %>
+      if @hotel.concierge_chat_available?
+        service_tiles << { path: concierge_chat_path(@hotel.unique_id, @hotel.public_id), label: "Chat With Us", description: "Ask us anything", icon: "message-circle" }
+      end
+    %>
+
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+      <% service_tiles.each do |tile| %>
         <%= link_to tile[:path],
-              class: "group flex min-h-[104px] flex-col justify-between rounded-[2rem] border border-border/60 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-95" do %>
-          <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
-            <%= cached_icon tile[:icon], class: "h-5 w-5" %>
-          </div>
-          <p class="text-[12px] font-black uppercase leading-tight tracking-wider text-foreground md:text-[13px]"><%= tile[:label] %></p>
+              class: "flex min-h-24 touch-manipulation flex-col justify-between rounded-xl border border-border bg-card p-4 text-foreground transition-colors hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" do %>
+          <%= cached_icon tile[:icon], class: "h-5 w-5 text-primary", aria: { hidden: true } %>
+          <span>
+            <span class="block text-sm font-bold leading-tight"><%= tile[:label] %></span>
+            <span class="mt-1 block text-xs leading-snug text-muted-foreground"><%= tile[:description] %></span>
+          </span>
         <% end %>
       <% end %>
     </div>
-
-    <% if @hotel.concierge_chat_available? %>
-      <%= link_to concierge_chat_path(@hotel.unique_id, @hotel.public_id),
-            class: "group flex items-center gap-4 rounded-[2rem] border border-border/60 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md active:scale-[0.98]" do %>
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
-          <%= cached_icon "message-circle", class: "h-6 w-6" %>
-        </div>
-        <p class="text-[12px] font-black uppercase leading-tight tracking-wider text-foreground md:text-[13px]">Chat With Us</p>
-      <% end %>
-    <% end %>
   </div>
 
   <div class="mt-auto px-4 pb-10 text-center">

@@ -16,13 +16,14 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response).to have_http_status(:ok)
     end
 
-    it "renders all five tiles" do
+    it "renders the public concierge actions" do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
-      expect(response.body).to include("Check In")
-      expect(response.body).to include("Check Out")
+
+      expect(response.body).to include("Pre-check in")
       expect(response.body).to include("Book a Room")
-      expect(response.body).to include("Request")
+      expect(response.body).to include("Recommendations")
       expect(response.body).to include("Contact Us")
+      expect(response.body).to include("Chat With Us")
     end
 
     it "keeps the page but drops the chat tile when guest chat is off" do
@@ -101,11 +102,42 @@ RSpec.describe "Public::Concierge::Home", type: :request do
     it "links every tile to its concierge path" do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 
-      expect(response.body).to include(concierge_check_in_path(hotel.unique_id, hotel.public_id))
-      expect(response.body).to include(concierge_check_out_path(hotel.unique_id, hotel.public_id))
-      expect(response.body).to include(concierge_new_request_path(hotel.unique_id, hotel.public_id))
-      expect(response.body).to include(concierge_contact_path(hotel.unique_id, hotel.public_id))
-      expect(response.body).to include(concierge_recommendations_path(hotel.unique_id, hotel.public_id))
+      document = response.parsed_body
+      public_paths = [
+        concierge_check_in_path(hotel.unique_id, hotel.public_id),
+        concierge_book_path(hotel.unique_id, hotel.public_id),
+        concierge_recommendations_path(hotel.unique_id, hotel.public_id),
+        concierge_contact_path(hotel.unique_id, hotel.public_id),
+        concierge_chat_path(hotel.unique_id, hotel.public_id)
+      ]
+
+      public_paths.each do |path|
+        expect(document.at_css("a[href='#{path}']")).to be_present
+      end
+
+      expect(document.at_css("a[href='#{concierge_check_out_path(hotel.unique_id, hotel.public_id)}']")).to be_nil
+      expect(document.at_css("a[href='#{concierge_new_request_path(hotel.unique_id, hotel.public_id)}']")).to be_nil
+    end
+
+    it "keeps every action card flat and touch-sized" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      paths = [
+        concierge_check_in_path(hotel.unique_id, hotel.public_id),
+        concierge_book_path(hotel.unique_id, hotel.public_id),
+        concierge_recommendations_path(hotel.unique_id, hotel.public_id),
+        concierge_contact_path(hotel.unique_id, hotel.public_id),
+        concierge_chat_path(hotel.unique_id, hotel.public_id)
+      ]
+
+      paths.each do |path|
+        card = document.at_css("a[href='#{path}']")
+
+        expect(card["class"]).to include("touch-manipulation", "rounded-xl")
+        expect(card["class"]).not_to match(/shadow|rounded-\[2rem\]|active:scale/)
+        expect(card.element_children.any? { |child| child.name == "svg" }).to be(true)
+      end
     end
 
     it "leads with the hotel's own photograph rather than a stock background" do
