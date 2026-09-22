@@ -87,9 +87,9 @@ The guest does not enter the confirmation code again while the session remains v
 1. The guest opens the stable stay link on another device.
 2. The server finds no valid stay session for that browser.
 3. The server shows the locked stay page at the same URL.
-4. The guest enters the booking confirmation code and the guest last name.
+4. The guest enters the booking confirmation code.
 5. The browser submits the form to the verification route.
-6. The server validates the code and the last name against the stay booking.
+6. The server tests the code against the stay booking.
 7. The server creates a new stay session for that browser.
 8. The server redirects to the stable stay URL.
 9. The server shows Checked-in Concierge.
@@ -98,7 +98,7 @@ The first device keeps its session. The second device receives an independent se
 
 ## Flow 5: Incorrect Confirmation Code
 
-1. The guest submits an incorrect confirmation code or last name.
+1. The guest submits an incorrect confirmation code.
 2. The server records the unsuccessful attempt without the raw code.
 3. The server applies the applicable delay.
 4. The server shows a generic error on the locked stay page.

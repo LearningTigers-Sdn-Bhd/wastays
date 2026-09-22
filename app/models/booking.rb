@@ -50,6 +50,9 @@ class Booking < ApplicationRecord
   has_many :e_invoice_submissions, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_one :booking_confirmation_token, dependent: :destroy
+  has_many :concierge_stay_accesses, dependent: :destroy
+  has_one :live_concierge_stay_access, -> { where(revoked_at: nil) },
+    class_name: "ConciergeStayAccess", inverse_of: :booking, dependent: nil
   has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :guest_date_of_birth,

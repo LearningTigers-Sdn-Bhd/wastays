@@ -94,7 +94,7 @@ The system must not depend on email, WhatsApp, SMS, or an API to authenticate a 
 
 ### Unknown device
 
-An unknown device must show a locked stay page. The page must request the booking confirmation code and the guest last name.
+An unknown device must show a locked stay page. The page must request the booking confirmation code.
 
 The locked page can show the hotel hero and the hotel name. The hotel is already public through the QR code.
 
@@ -228,7 +228,7 @@ The checked-in controller must apply the stay-session scope before it calls a sh
 | Eligible booking statuses | `checked_in`, `due_out_detected`, `checkout_required`, and `completed` during the grace period |
 | Entry point | Staff check-in only |
 | Stay-link delivery | Email, through the existing magic-link mailer |
-| Second identity field | Yes. The guest last name |
+| Second identity field | No. The schema holds one full name, not a surname. The confirmation code is the only field |
 | Session lifetime | Checkout plus 7 days |
 | Recovery after a lock | Email magic link |
 | `stay_access_id` rotation | Never. Revoke the record and create a new one |

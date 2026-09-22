@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_063000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -872,6 +872,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_063000) do
     t.index ["hotel_id", "status"], name: "index_concierge_booking_verifications_on_hotel_id_and_status"
     t.index ["hotel_id"], name: "index_concierge_booking_verifications_on_hotel_id"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'sent'::character varying, 'verified'::character varying, 'expired'::character varying, 'locked'::character varying, 'delivery_failed'::character varying]::text[])", name: "concierge_booking_verifications_status_allowed"
+  end
+
+  create_table "concierge_stay_accesses", force: :cascade do |t|
+    t.integer "attempt_count", default: 0, null: false
+    t.datetime "attempt_window_started_at"
+    t.bigint "booking_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.datetime "last_attempt_at"
+    t.datetime "locked_until"
+    t.datetime "revoked_at"
+    t.string "stay_access_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_concierge_stay_accesses_on_booking_id"
+    t.index ["booking_id"], name: "index_concierge_stay_accesses_on_live_booking", unique: true, where: "(revoked_at IS NULL)"
+    t.index ["hotel_id"], name: "index_concierge_stay_accesses_on_hotel_id"
+    t.index ["stay_access_id"], name: "index_concierge_stay_accesses_on_stay_access_id", unique: true
   end
 
   create_table "conversations", force: :cascade do |t|
@@ -3282,6 +3299,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_063000) do
   add_foreign_key "concierge_booking_verifications", "bookings"
   add_foreign_key "concierge_booking_verifications", "conversations"
   add_foreign_key "concierge_booking_verifications", "hotels"
+  add_foreign_key "concierge_stay_accesses", "bookings"
+  add_foreign_key "concierge_stay_accesses", "hotels"
   add_foreign_key "conversations", "hotels"
   add_foreign_key "conversations", "prospects"
   add_foreign_key "conversations", "users", column: "assigned_user_id"
