@@ -24,10 +24,11 @@
   </dl>
 
   <% if @status[:download_url].present? %>
-    <%= link_to "Download the e-invoice", @status[:download_url],
-          class: "mt-5 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+    <%= render GuestUI::Button.new(label: "Download the e-invoice", href: @status[:download_url],
+                                   icon: "download", size: :lg, block: true, class: "mt-5") %>
   <% elsif @presenter.can_request_e_invoice? %>
-    <%= button_to "Request my e-invoice", concierge_stay_e_invoice_request_path(*stay_route_args),
-          class: "mt-5 min-h-[44px] w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+    <%= render GuestUI::Button.new(label: "Request my e-invoice",
+                                   href: concierge_stay_e_invoice_request_path(*stay_route_args),
+                                   method: :post, size: :lg, block: true, class: "mt-5") %>
   <% end %>
 <% end %>

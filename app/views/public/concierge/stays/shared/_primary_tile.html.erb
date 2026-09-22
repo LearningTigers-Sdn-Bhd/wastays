@@ -1,0 +1,48 @@
+<%# One of the two actions a guest in house reaches for most. A tile rather
+    than a row, because these two are the page's answer to "what do you need?"
+    and a row would put them in the same tier as the services below.
+
+    Page composition, not a primitive: the pair exists on the stay page and
+    nowhere else. `pending` draws the same tile with no link, for an action the
+    hotel already has.
+    -----------------------------------------------------------------------
+    Locals: icon, label. One of path (a link) or pending: true (a flat tile).
+    tone: :primary fills, :secondary borders. %>
+<%
+  tone = local_assigns.fetch(:tone, :secondary)
+  pending = local_assigns.fetch(:pending, false)
+  surface = if pending
+    "border border-dashed border-border bg-card"
+  elsif tone == :primary
+    "bg-primary shadow-md transition-transform active:scale-[0.98]"
+  else
+    "border border-border/60 bg-card shadow-sm transition-transform active:scale-[0.98]"
+  end
+  badge = if pending
+    "bg-primary/5 text-primary"
+  elsif tone == :primary
+    "border border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground"
+  else
+    "border border-primary/10 bg-primary/5 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
+  end
+  caption = if pending
+    "text-muted-foreground"
+  elsif tone == :primary
+    "text-primary-foreground"
+  else
+    "text-foreground"
+  end
+%>
+<% tile = capture do %>
+  <span class="flex size-11 items-center justify-center rounded-2xl md:size-14 <%= badge %>">
+    <%= app_icon icon, class: "size-5 md:size-6", aria: { hidden: "true" } %>
+  </span>
+  <span class="text-[12px] font-black uppercase tracking-[0.15em] md:text-base <%= caption %>"><%= label %></span>
+<% end %>
+
+<% classes = "group flex min-h-11 flex-col gap-3 rounded-2xl p-5 md:p-6 #{surface}" %>
+<% if pending %>
+  <div class="<%= classes %>"><%= tile %></div>
+<% else %>
+  <%= link_to path, class: classes do %><%= tile %><% end %>
+<% end %>

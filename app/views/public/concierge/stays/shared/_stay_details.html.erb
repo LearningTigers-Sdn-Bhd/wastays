@@ -1,5 +1,6 @@
-<%# The stay facts. Shown only to a verified device. %>
-<%= render layout: "public/concierge/stays/shared/panel", locals: { title: "Your Stay" } do %>
+<%# The stay facts. Shown only to a verified device -- the locked page renders
+    the access explanation in this column instead. %>
+<%= render GuestUI::Card.new(title: "Your Stay") do %>
   <dl class="space-y-4">
     <div>
       <dt class="text-[11px] font-medium text-muted-foreground">Room</dt>

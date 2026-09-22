@@ -1,19 +1,24 @@
 <%# A neutral page. It says nothing about the booking or the guest, because a
     stranger can reach this URL with a revoked or expired link. %>
 <% content_for :title, "Stay not available | #{@hotel.name}" %>
-<%= render layout: "public/concierge/shared/page_shell",
-           locals: { content_class: "flex-1 flex items-center justify-center px-4 py-10 sm:px-6",
-                     container_class: "w-full max-w-xl" } do %>
-  <%= render "public/concierge/shared/page_header",
-             back: false,
-             eyebrow: "Stay Page",
-             title_prefix: "This link is not",
-             title_accent: "Available",
-             subtitle: "The link has ended. Please contact the front desk for help." %>
 
-  <div class="mt-6 text-center">
-    <%= link_to "Go to the concierge home",
-          concierge_home_path(@hotel.unique_id, @hotel.public_id),
-          class: "font-bold text-primary underline underline-offset-4" %>
-  </div>
+<%= render GuestUI::Page.new(variant: :centered) do |page| %>
+  <% page.with_hero do %>
+    <%= render "public/concierge/shared/hero" %>
+  <% end %>
+
+  <%= render GuestUI::Card.new(class: "text-center") do %>
+    <h2 class="font-serif text-2xl text-foreground md:text-3xl">
+      This link is not <span class="italic text-primary">available</span>
+    </h2>
+    <p class="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground md:text-sm">
+      The link has ended. Please contact the front desk for help.
+    </p>
+
+    <p class="mt-6">
+      <%= link_to "Go to the concierge home",
+            concierge_home_path(@hotel.unique_id, @hotel.public_id),
+            class: "font-bold text-primary underline underline-offset-4" %>
+    </p>
+  <% end %>
 <% end %>

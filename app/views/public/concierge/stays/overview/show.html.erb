@@ -1,115 +1,97 @@
 <% content_for :title, "Your stay | #{@hotel.name}" %>
-<%
-  presenter = @presenter
-%>
+<% presenter = @presenter %>
 
-<% content_for :context do %>
-  <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
-<% end %>
+<%= render GuestUI::Page.new do |page| %>
+  <% page.with_hero do %>
+    <%= render "public/concierge/shared/hero" %>
+  <% end %>
+  <% page.with_context do %>
+    <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
+  <% end %>
 
-<% content_for :actions do %>
-  <div>
-    <h2 class="font-serif text-2xl text-foreground md:text-3xl">
-      Hello, <span class="italic text-primary"><%= presenter.greeting_name %></span>
-    </h2>
-    <p class="mt-1.5 text-xs font-medium text-muted-foreground md:text-sm">What do you need?</p>
-  </div>
+  <%= render "public/concierge/stays/shared/page_heading",
+             title: "Hello,",
+             title_accent: presenter.greeting_name,
+             subtitle: "What do you need?" %>
 
   <%# Primary actions. Two tiles, because these are the two a guest reaches for
       most while in house. %>
   <% if presenter.in_house? %>
     <div class="grid grid-cols-2 gap-3.5 md:gap-4">
       <% if presenter.can_send_request? %>
-        <%= link_to concierge_new_stay_request_path(*stay_route_args, kind: "housekeeping"),
-              class: "group flex min-h-[44px] flex-col gap-3 rounded-2xl bg-primary p-5 shadow-md transition-transform active:scale-[0.98] md:p-6" do %>
-          <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-lg text-white md:h-14 md:w-14">&#9788;</span>
-          <span class="text-[12px] font-black uppercase tracking-[0.15em] text-white md:text-base">Housekeeping</span>
-        <% end %>
+        <%= render "public/concierge/stays/shared/primary_tile",
+                   tone: :primary,
+                   icon: "sparkles",
+                   label: "Housekeeping",
+                   path: concierge_new_stay_request_path(*stay_route_args, kind: "housekeeping") %>
       <% end %>
 
       <% if presenter.can_request_check_out? %>
-        <%= link_to stay_check_out_path,
-              class: "group flex min-h-[44px] flex-col gap-3 rounded-2xl border border-border/60 bg-white p-5 shadow-sm transition-transform active:scale-[0.98] md:p-6" do %>
-          <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/10 bg-primary/5 text-lg text-primary transition-colors group-hover:bg-primary group-hover:text-white md:h-14 md:w-14">&#8599;</span>
-          <span class="text-[12px] font-black uppercase tracking-[0.15em] text-foreground md:text-base">Check Out</span>
-        <% end %>
+        <%= render "public/concierge/stays/shared/primary_tile",
+                   icon: "log-out",
+                   label: "Check Out",
+                   path: stay_check_out_path %>
       <% elsif presenter.check_out_pending? %>
-        <div class="flex min-h-[44px] flex-col gap-3 rounded-2xl border border-dashed border-border bg-white p-5 md:p-6">
-          <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/5 text-lg text-primary md:h-14 md:w-14">&#10003;</span>
-          <span class="text-[12px] font-black uppercase tracking-[0.15em] text-muted-foreground md:text-base">Check-out asked</span>
-        </div>
+        <%= render "public/concierge/stays/shared/primary_tile",
+                   pending: true,
+                   icon: "circle-check",
+                   label: "Check-out asked" %>
       <% end %>
     </div>
   <% end %>
 
   <%# Stay controls. %>
   <% if presenter.can_toggle_do_not_disturb? %>
-    <%= render layout: "public/concierge/stays/shared/panel", locals: {} do %>
+    <%= render GuestUI::Card.new do %>
       <div class="flex items-center justify-between gap-4">
         <span>
           <span class="block text-[13px] font-bold text-foreground">Do not disturb</span>
           <span class="mt-0.5 block text-[11px] font-medium text-muted-foreground">Housekeeping will keep away from your room.</span>
         </span>
-        <%= button_to "Switch", concierge_stay_do_not_disturb_path(*stay_route_args),
+        <%= render GuestUI::Button.new(
+              label: "Switch",
+              href: concierge_stay_do_not_disturb_path(*stay_route_args),
               method: :patch,
-              class: "min-h-[44px] cursor-pointer rounded-xl border border-primary/20 bg-primary/5 px-5 text-[11px] font-black uppercase tracking-widest text-primary transition-colors hover:bg-primary hover:text-white" %>
+              variant: :secondary,
+              size: :sm) %>
       </div>
     <% end %>
   <% end %>
 
   <%# Secondary services. %>
-  <%= render layout: "public/concierge/stays/shared/panel", locals: { title: "Hotel Services" } do %>
-    <div>
-      <% if presenter.can_send_request? %>
-        <%= render "public/concierge/stays/shared/action_row",
-              path: concierge_new_stay_request_path(*stay_route_args, kind: "complaint"),
-              label: "Report a problem",
-              hint: "Tell the hotel team what is wrong." %>
-      <% end %>
-      <%= render "public/concierge/stays/shared/action_row",
-            path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id),
-            label: "Recommendations and offers" %>
-      <%= render "public/concierge/stays/shared/action_row",
-            path: concierge_contact_path(@hotel.unique_id, @hotel.public_id),
-            label: "Contact the front desk" %>
-      <% if presenter.chat_available? %>
-        <%= render "public/concierge/stays/shared/action_row",
-              path: concierge_chat_path(@hotel.unique_id, @hotel.public_id),
-              label: "Chat with us" %>
-      <% end %>
-    </div>
+  <%= render GuestUI::Card.new(title: "Hotel Services") do |card| %>
+    <% if presenter.can_send_request? %>
+      <% card.with_row label: "Report a problem",
+                       hint: "Tell the hotel team what is wrong.",
+                       href: concierge_new_stay_request_path(*stay_route_args, kind: "complaint") %>
+    <% end %>
+    <% card.with_row label: "Recommendations and offers",
+                     href: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id) %>
+    <% card.with_row label: "Contact the front desk",
+                     href: concierge_contact_path(@hotel.unique_id, @hotel.public_id) %>
+    <% if presenter.chat_available? %>
+      <% card.with_row label: "Chat with us",
+                       href: concierge_chat_path(@hotel.unique_id, @hotel.public_id) %>
+    <% end %>
   <% end %>
 
   <%# Booking documents and money. Last, because a guest reaches for these once. %>
-  <%= render layout: "public/concierge/stays/shared/panel", locals: { title: "Booking and Billing" } do %>
-    <div>
-      <%= render "public/concierge/stays/shared/action_row",
-            path: stay_document_path(:receipt),
-            label: "Booking receipt",
-            hint: "PDF" %>
-      <% if presenter.invoice_available? %>
-        <%= render "public/concierge/stays/shared/action_row",
-              path: stay_document_path(:invoice),
-              label: "Invoice",
-              hint: "PDF" %>
-      <% end %>
-      <%= render "public/concierge/stays/shared/action_row",
-            path: stay_e_invoice_path,
-            label: "E-invoice",
-            hint: presenter.e_invoice_ready? ? "Ready to download" : nil %>
-      <% if presenter.can_request_refund? %>
-        <%= render "public/concierge/stays/shared/action_row",
-              path: stay_refund_path,
-              label: "Ask for a refund",
-              hint: "The hotel replies to you." %>
-      <% elsif presenter.refund_request %>
-        <%= render "public/concierge/stays/shared/action_row",
-              path: stay_refund_path,
-              label: "Your refund request",
-              hint: presenter.refund_request.status.humanize %>
-      <% end %>
-    </div>
+  <%= render GuestUI::Card.new(title: "Booking and Billing") do |card| %>
+    <% card.with_row label: "Booking receipt", hint: "PDF", href: stay_document_path(:receipt) %>
+    <% if presenter.invoice_available? %>
+      <% card.with_row label: "Invoice", hint: "PDF", href: stay_document_path(:invoice) %>
+    <% end %>
+    <% card.with_row label: "E-invoice",
+                     hint: presenter.e_invoice_ready? ? "Ready to download" : nil,
+                     href: stay_e_invoice_path %>
+    <% if presenter.can_request_refund? %>
+      <% card.with_row label: "Ask for a refund",
+                       hint: "The hotel replies to you.",
+                       href: stay_refund_path %>
+    <% elsif presenter.refund_request %>
+      <% card.with_row label: "Your refund request",
+                       hint: presenter.refund_request.status.humanize,
+                       href: stay_refund_path %>
+    <% end %>
   <% end %>
 <% end %>
-
-<%= render "public/concierge/stays/shared/shell" %>
