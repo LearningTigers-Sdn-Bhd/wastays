@@ -3,6 +3,7 @@ require_relative "../app/constraints/superadmin_constraint"
 Rails.application.routes.draw do
   hotel_code_constraint = /\d+/
   public_uuid_v4_constraint = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/
+  stay_access_id_constraint = /[A-Za-z0-9]{12}/
 
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
@@ -128,6 +129,15 @@ Rails.application.routes.draw do
     post "recommendations/:vendor_id/reviews",    to: "recommendations#create_review", as: :recommendation_vendor_reviews
     get  "recommendations/:vendor_id/:offer_id",  to: "recommendations#offer",  as: :recommendation_offer
     post "recommendations/:vendor_id/:offer_id/claim", to: "recommendations#claim", as: :claim_recommendation_offer
+
+    # Checked-in Concierge. One stable link for one stay. The link identifies
+    # the stay; the stay-session cookie authorizes the browser. The same URL
+    # serves the locked page and the authenticated page.
+    scope "stay/:stay_access_id", module: :stays,
+          constraints: { stay_access_id: stay_access_id_constraint } do
+      get  "/",      to: "overview#show",        as: :stay
+      post "verify", to: "verifications#create", as: :stay_verification
+    end
   end
 
   scope "/concierge/:legacy_hotel_identifier", as: :legacy_concierge do

@@ -1,0 +1,45 @@
+<%# The locked stay page. It names the hotel, which the QR code already makes
+    public, and nothing about the stay. Plain markup for now: the design comes
+    with the Guest Concierge UI work. %>
+<% content_for :title, "Your stay | #{@hotel.name}" %>
+<%= render layout: "public/concierge/shared/page_shell",
+           locals: { content_class: "flex-1 flex items-center justify-center px-4 py-10 sm:px-6",
+                     container_class: "w-full max-w-xl" } do %>
+  <%= render "public/concierge/shared/page_header",
+             back: false,
+             eyebrow: "Guest Verification",
+             title_prefix: "Open your",
+             title_accent: "Stay",
+             subtitle: "Enter the confirmation code from your booking email. You do this one time on each device." %>
+
+  <%= render "public/concierge/shared/error_alert", message: @error %>
+
+  <% if @locked %>
+    <p class="rounded-xl border border-border/60 bg-white p-6 text-sm font-medium text-foreground">
+      This stay page is locked. Please ask the front desk for a new email link.
+    </p>
+  <% else %>
+    <%= form_with url: concierge_stay_verification_path(@hotel.unique_id, @hotel.public_id, params[:stay_access_id]),
+          method: :post, local: true,
+          class: "rounded-2xl border border-border/60 bg-white p-6 shadow-sm" do |form| %>
+      <%= form.label :confirmation_token, "Booking confirmation code",
+            class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground" %>
+      <%= form.text_field :confirmation_token,
+            value: nil,
+            autofocus: true,
+            autocomplete: "off",
+            autocapitalize: "characters",
+            spellcheck: false,
+            class: "mt-3 w-full rounded-xl border border-border bg-background px-4 py-4 text-center font-mono text-xl font-bold uppercase tracking-[0.3em] text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" %>
+
+      <%= form.submit "Open my stay",
+            class: "mt-5 w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+    <% end %>
+  <% end %>
+
+  <p class="mt-5 text-center text-[11px] font-medium leading-relaxed text-muted-foreground">
+    Cannot find your code?
+    <%= link_to "Contact the front desk", concierge_contact_path(@hotel.unique_id, @hotel.public_id),
+          class: "font-bold text-primary underline underline-offset-4" %>.
+  </p>
+<% end %>

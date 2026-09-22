@@ -1,0 +1,28 @@
+<%# Checked-in Concierge. Plain markup for now. The stay tiles and the design
+    come with the Guest Concierge UI work. %>
+<% content_for :title, "Your stay | #{@hotel.name}" %>
+<%= render layout: "public/concierge/shared/page_shell" do %>
+  <%= render "public/concierge/shared/page_header",
+             back: false,
+             eyebrow: "Your Stay",
+             title_prefix: "Welcome to",
+             title_accent: @hotel.name,
+             subtitle: "Everything for this stay is on this page." %>
+
+  <dl class="mt-6 grid gap-4 rounded-2xl border border-border/60 bg-white p-6 shadow-sm sm:grid-cols-3">
+    <div>
+      <dt class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Room</dt>
+      <dd class="mt-1 text-sm font-bold text-foreground"><%= @booking.room_numbers.presence || "To be assigned" %></dd>
+    </div>
+    <div>
+      <dt class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Dates</dt>
+      <dd class="mt-1 text-sm font-bold text-foreground">
+        <%= l(@booking.check_in.to_date, format: :long) %> &ndash; <%= l(@booking.check_out.to_date, format: :long) %>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Status</dt>
+      <dd class="mt-1 text-sm font-bold text-foreground"><%= @booking.status.humanize %></dd>
+    </div>
+  </dl>
+<% end %>
