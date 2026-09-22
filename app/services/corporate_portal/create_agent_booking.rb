@@ -116,10 +116,24 @@ module CorporatePortal
 
     def booking_params(room_type, guests, index)
       lead = guests.first || {}
+      identity = identity_attributes(country: lead[:country], id_number: lead[:government_id])
       {
         guest_name: lead[:name],
         guest_email: lead[:email].presence,
         guest_phone: lead[:phone],
+        # Optional -- an agent often does not know it yet -- but the one lever
+        # available before checkout for pricing tourism tax accurately (see
+        # Bookings::BuildFinancialSnapshot) instead of assuming a foreign guest.
+        guest_country: lead[:country].presence,
+        guest_document_type: identity[:document_type],
+        guest_government_id: identity[:government_id],
+        guest_passport_number: identity[:passport_number],
+        # A non-Malaysian Guest record cannot save without one (Guest's own
+        # reporting-requirement validation). A Malaysian's does not need typing:
+        # setting document_type above is what lets Guest derive it from the IC
+        # itself (see #populate_date_of_birth_from_malaysian_ic); this is only
+        # the fallback for a passport guest, or an IC that failed to parse.
+        guest_date_of_birth: lead[:date_of_birth].presence,
         check_in: @params[:check_in],
         check_out: @params[:check_out],
         adults: [ @params[:adults].to_i, 1 ].max,
@@ -148,16 +162,54 @@ module CorporatePortal
     # would be worse than a name the desk adds at check-in.
     def add_companions(booking, guests)
       guests.drop(1).select { |attrs| attrs[:name].present? }.each do |attrs|
+        # Guest requires a country; the agent's own answer wins when given, and
+        # the property's stands in until the registration card corrects it.
+        country = attrs[:country].presence || @hotel.country
         result = BookingGuests::Add.call(
           booking: booking, actor: @user,
-          # Guest requires a country and an agent has only a name; the property's
-          # own country stands in until the registration card corrects it.
-          attributes: attrs.merge(country: @hotel.country)
+          attributes: attrs.except(:government_id).merge(
+            country: country, **identity_attributes(country: country, id_number: attrs[:government_id])
+          )
         )
         next if result.success?
 
         Rails.logger.warn("Agent booking #{booking.id} could not add #{attrs[:name]}: #{result.errors.to_sentence}")
       end
+    end
+
+    # Routes the one "IC / Passport" field the agent actually sees into
+    # whichever column Guest validates against. A Malaysian's IC drives
+    # document_type and, from there, lets Guest derive date of birth straight
+    # from the number (see Guest#populate_date_of_birth_from_malaysian_ic) --
+    # a passport number carries no such date, so nothing is inferred from it.
+    def identity_attributes(country:, id_number:)
+      id_number = id_number.presence
+      return {} if id_number.blank? || country.blank?
+
+      if country.to_s.casecmp?("Malaysia")
+        malaysian_ic_attributes(id_number)
+      else
+        # The field allows headroom (20 characters) for spaces, hyphens or a
+        # check digit an agent might type or paste in -- none of them are part
+        # of the number itself, so they are stripped here rather than kept as
+        # noise in what gets filed against the guest.
+        { document_type: "passport", passport_number: id_number.gsub(/[\s-]/, "") }
+      end
+    end
+
+    # The form's own script blocks a malformed IC before it can be submitted
+    # (agent_guest_identity_controller.js), but that is a client the request
+    # does not have to go through -- so this is the one place a stray letter
+    # actually stops it. Filed as-is under government_id either way (it is
+    # still a Malaysian identity number field), but document_type is only set
+    # to "malaysian_nric" for something that looks like a real one: setting it
+    # for "9902031z26661zz" would let Guest derive a date of birth off digits
+    # a letter had silently fallen out of (see
+    # Guests::MalaysianIcDateOfBirthParser, which reads the same way).
+    def malaysian_ic_attributes(id_number)
+      return { government_id: id_number } unless id_number.match?(/\A[\d\s-]+\z/)
+
+      { document_type: "malaysian_nric", government_id: id_number }
     end
 
     def group_for(bookings)
@@ -183,8 +235,8 @@ module CorporatePortal
     def rooms
       @rooms ||= ordered(@params[:rooms_detail]).filter_map do |room|
         guests = ordered(room.is_a?(Hash) ? room.symbolize_keys[:guests] : nil)
-                 .map { |attrs| attrs.to_h.symbolize_keys.slice(:name, :email, :phone) }
-                 .reject { |attrs| attrs.values.all?(&:blank?) }
+                 .map { |attrs| attrs.to_h.symbolize_keys.slice(:name, :email, :phone, :country, :government_id, :date_of_birth) }
+                 .reject { |attrs| attrs.except(:country, :government_id, :date_of_birth).values.all?(&:blank?) }
         guests.presence if guests.first&.dig(:name).present?
       end
     end
