@@ -60,6 +60,33 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(response.body).to include("Booking voided")
   end
 
+  # The action this page leads to, so the warning has to sit here too -- not
+  # only on the submission's own read-only page, one click behind this one.
+  it "warns on the record-payment screen when a pending slip's booking has been voided" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                booking: booking, auto_invoice: nil)
+    booking.transition_status_to!("voided", event: "void")
+
+    get new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id)
+
+    expect(response.body).to include(booking.formatted_reservation_number)
+    expect(response.body).to include("Voided")
+    expect(response.body).to include("Recording this payment will")
+  end
+
+  it "does not warn on the record-payment screen when the booking is still live" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                booking: booking, auto_invoice: nil)
+
+    get new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id)
+
+    expect(response.body).not_to include("Recording this payment will")
+  end
+
   it "filters by query, account, and date" do
     payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 200, received_at: Date.current, reference_number: "FILTER-ME")
     create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 300, reference_number: "HIDE-ME")

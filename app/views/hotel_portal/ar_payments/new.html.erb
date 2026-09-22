@@ -21,10 +21,31 @@
         <%= l(@ar_payment_submission.created_at, format: :short) %> ·
         reference <%= @ar_payment_submission.reference_number %>
       </p>
+      <% if @ar_payment_submission.booking.present? %>
+        <p class="mt-1 text-xs text-violet-800/80">
+          Booking
+          <%= link_to @ar_payment_submission.booking.formatted_reservation_number, hotel_booking_path(current_hotel, @ar_payment_submission.booking), class: "underline" %>
+          <% if @ar_payment_submission.booking.closed? %>
+            <span class="ml-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              <%= @ar_payment_submission.booking.status.humanize %>
+            </span>
+          <% end %>
+        </p>
+      <% end %>
       <div class="mt-3">
         <%= render "hotel_portal/ar_payment_submissions/slip", submission: @ar_payment_submission %>
       </div>
     </section>
+
+    <%# The action this whole page leads to, so the warning sits right where
+        it can still change the decision -- not just on the submission's own
+        read-only page, one click behind this one. %>
+    <% if @ar_payment_submission.booking&.closed? %>
+      <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+        The booking this was sent against is now <%= @ar_payment_submission.booking.status %>. Recording this payment will
+        still post it to that booking's folio -- worth confirming with the agent before you do.
+      </div>
+    <% end %>
   <% end %>
 
   <%= form_with url: hotel_ar_payments_path(current_hotel), method: :post, local: true, class: "space-y-6" do %>
