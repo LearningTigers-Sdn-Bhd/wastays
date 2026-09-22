@@ -262,12 +262,115 @@
     @apply block text-[13px] font-bold text-foreground;
   }
 
+  .guest-card__row-text {
+    @apply min-w-0 flex-1;
+  }
+
+  .guest-card__row-icon {
+    @apply size-4 shrink-0 text-primary;
+  }
+
   .guest-card__row-hint {
     @apply mt-0.5 block text-[11px] font-medium text-muted-foreground;
   }
 
   .guest-card__row-chevron {
     @apply shrink-0 text-muted-foreground transition-colors group-hover:text-primary;
+  }
+
+  .guest-action-card {
+    @apply flex min-h-20 items-start gap-3 rounded-xl p-4 text-foreground transition-colors;
+  }
+
+  .guest-service-surface {
+    background: var(--guest-service-surface);
+  }
+
+  .guest-service-surface:is(:hover, :active) {
+    background: color-mix(in oklab, var(--guest-service-surface) 88%, var(--guest-service-ink));
+  }
+
+  .guest-action-card__icon {
+    @apply mt-0.5 size-6 shrink-0;
+  }
+
+  .guest-service-surface__icon {
+    color: var(--guest-service-ink);
+  }
+
+  .guest-action-card__text {
+    @apply min-w-0;
+  }
+
+  .guest-service-surface[data-tone="booking"] {
+    --guest-service-surface: var(--guest-service-booking-surface);
+    --guest-service-ink: var(--guest-service-booking-ink);
+  }
+
+  .guest-service-surface[data-tone="issue"] {
+    --guest-service-surface: var(--guest-service-issue-surface);
+    --guest-service-ink: var(--guest-service-issue-ink);
+  }
+
+  .guest-service-surface[data-tone="discovery"] {
+    --guest-service-surface: var(--guest-service-discovery-surface);
+    --guest-service-ink: var(--guest-service-discovery-ink);
+  }
+
+  .guest-service-surface[data-tone="contact"] {
+    --guest-service-surface: var(--guest-service-contact-surface);
+    --guest-service-ink: var(--guest-service-contact-ink);
+  }
+
+  .guest-service-surface[data-tone="conversation"] {
+    --guest-service-surface: var(--guest-service-conversation-surface);
+    --guest-service-ink: var(--guest-service-conversation-ink);
+  }
+
+  .guest-action-card__label {
+    @apply block text-sm font-semibold leading-tight;
+  }
+
+  .guest-action-card__hint {
+    @apply mt-1 block text-xs font-normal leading-snug;
+    color: var(--muted-foreground-strong);
+  }
+
+  .guest-home-service-card__description {
+    @apply mt-1 block text-xs leading-snug;
+    color: var(--muted-foreground-strong);
+  }
+
+  .guest-more-actions > summary {
+    @apply flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .guest-more-actions__heading {
+    @apply flex items-center gap-2;
+  }
+
+  .guest-more-actions__icon {
+    @apply size-4 shrink-0 text-primary;
+  }
+
+  .guest-more-actions > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .guest-more-actions__chevron {
+    @apply size-4 shrink-0 text-muted-foreground transition-transform;
+  }
+
+  .guest-more-actions[open] .guest-more-actions__chevron {
+    @apply rotate-180;
+  }
+
+  .guest-more-actions__list {
+    @apply mt-3 border-t border-border/60;
+  }
+
+  .guest-more-actions .guest-card__row {
+    @apply gap-3 py-3;
   }
 
   /* ─── Notice ───
@@ -341,6 +444,43 @@
      two thirds of it with a third of white space beside it. */
   .guest-page__grid[data-columns="1"] .guest-page__content {
     @apply md:col-span-3;
+  }
+
+  .guest-stay-overview {
+    @apply grid items-start gap-6;
+  }
+
+  .guest-stay-overview__greeting { grid-area: greeting; }
+  .guest-stay-overview__stay { grid-area: stay; }
+  .guest-stay-overview__services { grid-area: services; }
+  .guest-stay-overview__more { grid-area: more; }
+
+  .guest-stay-overview .guest-card {
+    @apply rounded-xl border-border p-4 shadow-none;
+  }
+
+  .guest-stay-overview .guest-stay-overview__more {
+    @apply px-3 py-2;
+  }
+
+  .guest-stay-overview .guest-card__title {
+    @apply text-sm font-semibold normal-case tracking-normal text-foreground;
+  }
+
+  .guest-stay-overview__services > h2 {
+    @apply md:col-span-2;
+  }
+
+  .guest-stay-overview {
+    grid-template-areas: "greeting" "stay" "services" "more";
+  }
+
+  @media (min-width: 48rem) {
+    .guest-stay-overview {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      grid-template-areas: "greeting greeting" "stay services" "more services";
+      @apply gap-8;
+    }
   }
 
   .guest-page__footer {

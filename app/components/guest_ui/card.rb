@@ -18,10 +18,11 @@ module GuestUI
     # A secondary service: a row, not a tile, so the tiles above it stay the
     # primary actions. A row that changes something is a form, like Button.
     class Row < GuestUI::BaseComponent
-      def initialize(label:, href:, hint: nil, method: nil, confirm: nil, class: nil, **attributes)
+      def initialize(label:, href:, hint: nil, icon: nil, method: nil, confirm: nil, class: nil, **attributes)
         @label = label
         @href = href
         @hint = hint
+        @icon = icon
         @method = method&.to_sym
         @confirm = confirm
         @class = binding.local_variable_get(:class)
@@ -39,16 +40,22 @@ module GuestUI
       def form? = @method.present? && @method != :get
 
       def body
-        safe_join([ text, chevron ])
+        safe_join([ icon_tag, text, chevron ].compact)
       end
 
       def text
-        tag.span do
+        tag.span(class: "guest-card__row-text") do
           safe_join([
             tag.span(@label, class: "guest-card__row-label"),
             (tag.span(@hint, class: "guest-card__row-hint") if @hint.present?)
           ].compact)
         end
+      end
+
+      def icon_tag
+        return if @icon.blank?
+
+        helpers.app_icon(@icon, class: "guest-card__row-icon", aria: { hidden: "true" })
       end
 
       # Decorative. The row is already a link, and a screen reader that read

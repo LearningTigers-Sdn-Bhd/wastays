@@ -50,6 +50,12 @@ RSpec.describe GuestUI::Card, type: :component do
       expect(page).to have_no_css(".guest-card__row-hint")
     end
 
+    it "shows an optional decorative icon for a booking action" do
+      render_inline(described_class.new) { |card| card.with_row(label: "Booking receipt", href: "/receipt", icon: "receipt") }
+
+      expect(page).to have_css(".guest-card__row-icon[aria-hidden='true']")
+    end
+
     # A row that changes something is a form, for the same reason a button is.
     it "is a form when the row changes something" do
       render_inline(described_class.new) do |card|

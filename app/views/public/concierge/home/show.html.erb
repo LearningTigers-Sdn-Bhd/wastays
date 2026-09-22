@@ -31,24 +31,25 @@
 
     <%
       service_tiles = [
-        { path: concierge_book_path(@hotel.unique_id, @hotel.public_id), label: "Book a Room", description: "View available rooms", icon: "calendar-days" },
-        { path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id), label: "Recommendations", description: "Places and guest offers", icon: "sparkles" },
-        { path: concierge_contact_path(@hotel.unique_id, @hotel.public_id), label: "Contact Us", description: "Call or get directions", icon: "phone" }
+        { path: concierge_book_path(@hotel.unique_id, @hotel.public_id), label: "Book a Room", description: "View available rooms", icon: "calendar-days", tone: :booking },
+        { path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id), label: "Recommendations", description: "Places and guest offers", icon: "sparkles", tone: :discovery },
+        { path: concierge_contact_path(@hotel.unique_id, @hotel.public_id), label: "Contact Us", description: "Call or get directions", icon: "phone", tone: :contact }
       ]
 
       if @hotel.concierge_chat_available?
-        service_tiles << { path: concierge_chat_path(@hotel.unique_id, @hotel.public_id), label: "Chat With Us", description: "Ask us anything", icon: "message-circle" }
+        service_tiles << { path: concierge_chat_path(@hotel.unique_id, @hotel.public_id), label: "Chat With Us", description: "Ask us anything", icon: "message-circle", tone: :conversation }
       end
     %>
 
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
       <% service_tiles.each do |tile| %>
         <%= link_to tile[:path],
-              class: "flex min-h-24 touch-manipulation flex-col justify-between rounded-xl border border-border bg-card p-4 text-foreground transition-colors hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" do %>
-          <%= cached_icon tile[:icon], class: "h-5 w-5 text-primary", aria: { hidden: true } %>
+              class: "guest-service-surface flex min-h-24 touch-manipulation flex-col justify-between rounded-xl p-4 text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              data: { tone: tile[:tone] } do %>
+          <%= cached_icon tile[:icon], class: "guest-service-surface__icon h-5 w-5", aria: { hidden: true } %>
           <span>
             <span class="block text-sm font-bold leading-tight"><%= tile[:label] %></span>
-            <span class="mt-1 block text-xs leading-snug text-muted-foreground"><%= tile[:description] %></span>
+            <span class="guest-home-service-card__description"><%= tile[:description] %></span>
           </span>
         <% end %>
       <% end %>

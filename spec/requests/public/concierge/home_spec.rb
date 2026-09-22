@@ -119,6 +119,29 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(document.at_css("a[href='#{concierge_new_request_path(hotel.unique_id, hotel.public_id)}']")).to be_nil
     end
 
+    it "uses the shared Concierge colors for public service cards" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      tones = {
+        concierge_book_path(hotel.unique_id, hotel.public_id) => "booking",
+        concierge_recommendations_path(hotel.unique_id, hotel.public_id) => "discovery",
+        concierge_contact_path(hotel.unique_id, hotel.public_id) => "contact",
+        concierge_chat_path(hotel.unique_id, hotel.public_id) => "conversation"
+      }
+
+      tones.each do |path, tone|
+        card = document.at_css("a[href='#{path}']")
+
+        expect(card["class"]).to include("guest-service-surface")
+        expect(card["data-tone"]).to eq(tone)
+        expect(card.at_css(".guest-service-surface__icon")).to be_present
+      end
+
+      expect(document.at_css("a[href='#{concierge_check_in_path(hotel.unique_id, hotel.public_id)}']")["class"])
+        .not_to include("guest-service-surface")
+    end
+
     it "keeps every action card flat and touch-sized" do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 

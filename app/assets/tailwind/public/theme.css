@@ -40,6 +40,19 @@
   --info: oklch(0.5461 0.2152 262.88);
   --info-foreground: oklch(1 0 89.88);
 
+  /* Concierge action cards. Names describe the guest task, so a hotel's
+     palette can change without changing which action owns a color. */
+  --guest-service-booking-surface: oklch(0.915 0.055 285);
+  --guest-service-booking-ink: oklch(0.405 0.120 286);
+  --guest-service-issue-surface: oklch(0.915 0.065 22);
+  --guest-service-issue-ink: oklch(0.430 0.170 26);
+  --guest-service-discovery-surface: oklch(0.905 0.090 83);
+  --guest-service-discovery-ink: oklch(0.405 0.105 72);
+  --guest-service-contact-surface: oklch(0.910 0.070 239);
+  --guest-service-contact-ink: oklch(0.395 0.110 247);
+  --guest-service-conversation-surface: oklch(0.905 0.070 166);
+  --guest-service-conversation-ink: oklch(0.355 0.095 172);
+
   --border: oklch(0.9288 0.0126 255.51);
   --border-interactive: oklch(0.5544 0.0407 257.42);
   --ring: oklch(0.3707 0.0594 183.34);

@@ -30,6 +30,10 @@ RSpec.describe Public::Concierge::StayPresenter do
     expect(presenter.nights).to eq(3)
   end
 
+  it "uses the hotel's formatted reservation number as the booking reference" do
+    expect(presenter.booking_reference_number).to eq(booking.formatted_reservation_number)
+  end
+
   it "says the room is not assigned yet" do
     expect(presenter.room_label).to eq("To be assigned")
   end

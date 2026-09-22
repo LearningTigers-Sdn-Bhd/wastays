@@ -27,10 +27,33 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Ahmad")
       expect(response.body).to include("1201")
+      expect(response.body).to include("Booking reference number", booking.formatted_reservation_number)
+      expect(response.body).to include("Booking confirmation code")
       expect(response.body).to include(booking.confirmation_token.upcase)
       expect(response.body).to include("Housekeeping")
+      expect(response.body).to include("Ask for room cleaning or supplies")
       expect(response.body).to include("Check Out")
+      expect(response.body).to include("Send a check-out request to the front desk")
       expect(response.body).to include("Booking receipt")
+    end
+
+    it "shows hotel services as separate cards and booking actions in a closed disclosure" do
+      get concierge_stay_path(*args)
+
+      page = Nokogiri::HTML(response.body)
+      services = page.at_css(".guest-stay-overview__services")
+      more_actions = page.at_css("details.guest-more-actions")
+
+      expect(services.css("a.guest-action-card").map { |card| card.text.strip }).to include(
+        "Report a problem Tell the hotel team what is wrong.",
+        "Recommendations and offers Places and guest offers",
+        "Contact the front desk Call or get directions"
+      )
+      expect(more_actions.at_css("summary").text).to include("More Actions")
+      expect(more_actions.at_css("summary .guest-more-actions__icon[aria-hidden='true']")).to be_present
+      expect(more_actions["open"]).to be_nil
+      expect(more_actions.css("a.guest-card__row").map(&:text).join).to include("Booking receipt", "E-invoice")
+      expect(page.css("[role='switch']")).to be_empty
     end
 
     it "hides the invoice while the guest is in house" do
@@ -222,16 +245,18 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(bodies.first).to eq(bodies.last)
     end
 
-    # The context column stacks above the content on a phone, so the order the
-    # page is read in is the order it is written in and the grid never moves
-    # focus away from it.
-    it "puts the stay context before the actions in the DOM" do
+    it "puts the four blocks in mobile reading order" do
       get concierge_stay_path(*args)
 
-      context_at = response.body.index("guest-page__context")
-      content_at = response.body.index("guest-page__content")
+      page = Nokogiri::HTML(response.body)
+      blocks = page.css(".guest-stay-overview > *").map { |block| block["class"] }
 
-      expect(context_at).to be < content_at
+      expect(blocks).to match([
+        include("guest-stay-overview__greeting"),
+        include("guest-stay-overview__stay"),
+        include("guest-stay-overview__services"),
+        include("guest-stay-overview__more")
+      ])
     end
   end
 
@@ -257,7 +282,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(response.body).to include("Booking receipt")
     end
 
-    it "keeps the switch off the page when no room is assigned" do
+    it "keeps do not disturb off the page when no room is assigned" do
       booking.booking_rooms.update_all(room_number: nil)
 
       get concierge_stay_path(*args)
@@ -274,18 +299,11 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(flash[:alert]).to be_nil
     end
 
-    it "draws the switch off before anything is set" do
+    it "does not show the control on the stay overview" do
       get concierge_stay_path(*args)
 
-      expect(response.body).to include(%(role="switch"))
-      expect(response.body).to include(%(aria-checked="false"))
-    end
-
-    it "draws the switch on once the room carries the flag" do
-      patch concierge_stay_do_not_disturb_path(*args)
-      get concierge_stay_path(*args)
-
-      expect(response.body).to include(%(aria-checked="true"))
+      expect(response.body).not_to include("Do not disturb")
+      expect(response.body).not_to include(%(role="switch"))
     end
   end
 

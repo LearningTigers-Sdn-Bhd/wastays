@@ -37,6 +37,10 @@ module Public
         booking.confirmation_token.to_s.upcase
       end
 
+      def booking_reference_number
+        booking.formatted_reservation_number
+      end
+
       def status_label
         booking.status.humanize
       end
