@@ -207,6 +207,65 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
     end
   end
 
+  # The stay page has no phone-only twin, so what a guest is offered cannot
+  # depend on how their user agent string is read.
+  describe "one page for every device" do
+    it "serves the same stay page to phones and desktops" do
+      bodies = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].map do |user_agent|
+        get concierge_stay_path(*args), headers: { "HTTP_USER_AGENT" => user_agent }
+        response.body
+      end
+
+      expect(bodies.first).to eq(bodies.last)
+    end
+
+    # The context column stacks above the content on a phone, so the order the
+    # page is read in is the order it is written in and the grid never moves
+    # focus away from it.
+    it "puts the stay context before the actions in the DOM" do
+      get concierge_stay_path(*args)
+
+      context_at = response.body.index("guest-page__context")
+      content_at = response.body.index("guest-page__content")
+
+      expect(context_at).to be < content_at
+    end
+  end
+
+  describe "the states a stay passes through" do
+    it "still offers the services while the guest is due out" do
+      booking.status_transition_event = "detect_due_out"
+      booking.update!(status: "due_out_detected")
+
+      get concierge_stay_path(*args)
+
+      expect(response.body).to include("Housekeeping")
+      expect(response.body).to include("Check Out")
+    end
+
+    it "drops the in-house actions once the guest has checked out" do
+      booking.status_transition_event = "check_out"
+      booking.update!(status: "completed", checked_out_at: 1.hour.ago)
+
+      get concierge_stay_path(*args)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("Ask for housekeeping")
+      expect(response.body).to include("Booking receipt")
+    end
+
+    it "keeps the switch off the page when no room is assigned" do
+      booking.booking_rooms.update_all(room_number: nil)
+
+      get concierge_stay_path(*args)
+
+      expect(response.body).not_to include(%(role="switch"))
+    end
+  end
+
   describe "do not disturb" do
     it "switches the room flag" do
       patch concierge_stay_do_not_disturb_path(*args)
