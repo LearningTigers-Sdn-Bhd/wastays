@@ -10,7 +10,8 @@
 #
 # A value that divides evenly into days reads back as days, which is what an
 # admin who typed "3 days" expects to see. 36 hours has no whole-day form and
-# reads back as hours.
+# reads back as hours. An unset hold reads back as days, because that is the
+# unit the next person to fill it in almost certainly wants.
 #
 # Amount and unit arrive as two separate params and `assign_attributes` applies
 # them in hash order, so neither writer converts anything on its own: they
@@ -21,7 +22,9 @@ module AgentPaymentHoldUnit
   extend ActiveSupport::Concern
 
   HOURS_PER_DAY = 24
-  UNITS = %w[hours days].freeze
+  # Days first: a hold is set in days far more often than in hours, so it is
+  # both the default unit and the one the menu offers first.
+  UNITS = %w[days hours].freeze
 
   included do
     before_validation :resolve_agent_payment_hold
@@ -44,7 +47,8 @@ module AgentPaymentHoldUnit
     return @agent_payment_hold_unit if @agent_payment_hold_unit.in?(UNITS)
 
     hours = agent_payment_hold_hours
-    return "hours" if hours.blank? || hours < HOURS_PER_DAY || !(hours % HOURS_PER_DAY).zero?
+    return "days" if hours.blank?
+    return "hours" if hours < HOURS_PER_DAY || !(hours % HOURS_PER_DAY).zero?
 
     "days"
   end

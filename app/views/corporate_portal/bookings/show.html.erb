@@ -140,8 +140,10 @@
   <% end %>
 
   <div class="flex flex-wrap gap-3">
-    <%= link_to "Book another stay", new_corporate_booking_path,
-          class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+    <% if may_book_anywhere? %>
+      <%= link_to "Book another stay", new_corporate_booking_path,
+            class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+    <% end %>
     <%= link_to "All bookings", corporate_bookings_path,
           class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
 

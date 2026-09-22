@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_031500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1458,6 +1458,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
 
   create_table "hotel_corporate_accounts", force: :cascade do |t|
     t.string "account_type", default: "company", null: false
+    t.boolean "agent_booking_enabled", default: false, null: false
     t.string "agent_code"
     t.integer "agent_payment_hold_hours"
     t.boolean "auto_allocate_payments", default: false, null: false
@@ -1881,7 +1882,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
   create_table "hotels", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "address"
-    t.integer "agent_payment_hold_hours", default: 48, null: false
+    t.integer "agent_payment_hold_hours", default: 72, null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.boolean "ai_provider_enabled", default: false
     t.text "ai_provider_key"

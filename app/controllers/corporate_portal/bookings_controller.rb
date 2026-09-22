@@ -7,7 +7,11 @@ module CorporatePortal
   # the portal is the agent's own, so the hotel list is theirs, and a hotel they
   # are not linked to is not found rather than forbidden.
   class BookingsController < CorporatePortal::BaseController
-    before_action :load_relationships
+    # `index` and `show` list stays the account already has, so they survive a
+    # hotel revoking the permission. Only taking a new room is refused.
+    before_action :require_booking_permission!, only: %i[new create]
+    before_action :load_relationships, only: %i[index]
+    before_action :load_bookable_relationships, only: %i[new create]
     before_action :load_relationship, only: %i[create]
 
     def index
@@ -92,8 +96,24 @@ module CorporatePortal
       end
     end
 
+    def require_booking_permission!
+      return if may_book_anywhere?
+
+      redirect_to corporate_bookings_path,
+                  alert: "None of your linked hotels have enabled bookings for this account yet."
+    end
+
+    # Every linked hotel, so the list can still be filtered by a hotel that has
+    # since stopped letting this account book.
     def load_relationships
       @relationships = corporate_relationships.active.includes(:hotel).order("hotels.name")
+    end
+
+    # Only the hotels that granted the permission: one the account is merely
+    # billed by is not a hotel it can reserve at, and must not appear in the
+    # picker or resolve from a hand-built URL.
+    def load_bookable_relationships
+      @relationships = bookable_relationships.includes(:hotel).order("hotels.name")
     end
 
     def load_relationship

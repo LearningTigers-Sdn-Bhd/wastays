@@ -38,12 +38,20 @@ class HotelCorporateAccount < ApplicationRecord
 
   scope :active, -> { where(status: "active") }
   scope :suspended, -> { where(status: "suspended") }
+  scope :booking_enabled, -> { where(agent_booking_enabled: true) }
 
   # Travel agents settle by bank transfer only: the hotel needs the remittance
   # slip against the invoice, and card fees on agent volume are not absorbed.
   # Other corporate account types keep the gateway.
   def gateway_payments_allowed?
     !travel_agent?
+  end
+
+  # Whether this account may reserve rooms at the hotel on a client's behalf.
+  # A linked account is not a booking account until the hotel says so, and a
+  # suspended one loses the permission along with everything else.
+  def may_book_for_clients?
+    agent_booking_enabled? && active?
   end
 
   def effective_contact_email

@@ -5,7 +5,12 @@ require "rails_helper"
 RSpec.describe "CorporatePortal::Bookings", type: :request do
   let(:user) { create(:user, :corporate) }
   let(:hotel) { create(:hotel, status: "live") }
-  let(:relationship) { create(:hotel_corporate_account, corporate_account: user.account, hotel: hotel) }
+  # Booking for a client is a permission the hotel grants; without it the portal
+  # refuses, which the gate specs at the bottom cover.
+  let(:relationship) do
+    create(:hotel_corporate_account, corporate_account: user.account, hotel: hotel,
+                                     agent_booking_enabled: true)
+  end
 
   let!(:room_type) do
     Rooms::SaveSeedRoomType.call!(
@@ -61,7 +66,8 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
 
   it "offers a real choice once linked to more than one hotel" do
     second_hotel = create(:hotel, status: "live")
-    create(:hotel_corporate_account, corporate_account: user.account, hotel: second_hotel)
+    create(:hotel_corporate_account, corporate_account: user.account, hotel: second_hotel,
+                                     agent_booking_enabled: true)
 
     get new_corporate_booking_path
 
@@ -562,5 +568,60 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     get new_corporate_booking_path(search_params)
 
     expect(response.body).to include("free for these dates")
+  end
+
+  # The permission gates taking a new room, not seeing the stays already taken:
+  # a hotel withdrawing it must not erase an agent's own history with them.
+  describe "without the booking permission" do
+    let(:relationship) do
+      create(:hotel_corporate_account, corporate_account: user.account, hotel: hotel,
+                                       agent_booking_enabled: false)
+    end
+
+    it "refuses the search form" do
+      get new_corporate_booking_path
+
+      expect(response).to redirect_to(corporate_bookings_path)
+      expect(flash[:alert]).to include("enabled bookings")
+    end
+
+    it "refuses a submitted booking" do
+      expect {
+        post corporate_bookings_path, params: {
+          hotel_relationship_id: relationship.id,
+          booking: { room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
+                     adults: 2, rooms: 1 }.merge(room_detail([ { first_name: "Ada", last_name: "Lovelace" } ]))
+        }
+      }.not_to change(Booking, :count)
+
+      expect(response).to redirect_to(corporate_bookings_path)
+    end
+
+    it "still lists the stays taken while it was granted, without offering another" do
+      get corporate_bookings_path
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).not_to include("Book a stay")
+    end
+  end
+
+  # A hotel that only bills this account is not one it can book at, even when
+  # another hotel has granted the permission.
+  it "keeps a hotel that has not granted the permission out of the picker" do
+    billing_only = create(:hotel_corporate_account, corporate_account: user.account,
+                                                    hotel: create(:hotel, status: "live", name: "Billing Only Inn"),
+                                                    agent_booking_enabled: false)
+
+    get new_corporate_booking_path
+
+    expect(response.body).not_to include("Billing Only Inn")
+
+    post corporate_bookings_path, params: {
+      hotel_relationship_id: billing_only.id,
+      booking: { room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
+                 adults: 2, rooms: 1 }
+    }
+
+    expect(response).to redirect_to(new_corporate_booking_path)
   end
 end

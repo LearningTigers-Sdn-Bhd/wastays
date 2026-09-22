@@ -9,8 +9,9 @@ import { Controller } from "@hotwired/stimulus"
 //
 // The payment hold is the mirror image: only a standard account holds rooms
 // against a payment deadline, because a direct-bill account is invoiced after
-// the stay by arrangement. Blocks carrying the "hold" target show exactly when
-// the "terms" blocks hide.
+// the stay by arrangement. It also needs an account that can take rooms at all,
+// so blocks carrying the "hold" target show when the booking permission is on
+// AND the "terms" blocks are hidden.
 //
 // Several blocks can carry either target, because the fields do not all live in
 // one partial.
@@ -28,9 +29,12 @@ export default class extends Controller {
 
   refresh() {
     const billed = this.relationshipControl?.value === this.billedRelationshipValue
+    // No booking switch on the form means the permission is not in question
+    // here, so the hold answers to the relationship alone.
+    const books = this.bookingControl ? this.bookingControl.checked : true
 
     this.toggle(this.termsTargets, billed)
-    this.toggle(this.holdTargets, !billed)
+    this.toggle(this.holdTargets, !billed && books)
   }
 
   toggle(blocks, visible) {
@@ -51,5 +55,11 @@ export default class extends Controller {
   // back to it.
   get relationshipControl() {
     return this.element.querySelector('select[name$="[relationship_type]"]')
+  }
+
+  // The switch posts an unchecked companion under the same name, so the visible
+  // control is the checkbox rather than whatever the name matches first.
+  get bookingControl() {
+    return this.element.querySelector('input[type="checkbox"][name$="[agent_booking_enabled]"]')
   }
 }

@@ -116,6 +116,25 @@
     background-color: var(--primary-foreground);
   }
 
+  /* A permission switch reads green when on. Only the on state is tinted: the
+     off state stays the neutral track above, so "not granted" carries no colour
+     at all. --success-on-surface rather than --success, because the track is a
+     filled surface the thumb has to stay readable against in both themes. */
+  .panel-switch[data-tone="success"]:not([data-invalid="true"]) .panel-switch__input:checked {
+    border-color: var(--success-on-surface);
+    background-color: var(--success-on-surface);
+  }
+
+  .panel-switch[data-tone="success"][data-variant="card"]:not([data-invalid="true"]):has(.panel-switch__input:checked) {
+    border-color: var(--success-on-surface);
+    background: color-mix(in oklab, var(--success-on-surface) 9%, var(--card));
+  }
+
+  .panel-switch[data-tone="success"] .panel-switch__input:checked:disabled {
+    border-color: color-mix(in oklab, var(--success-on-surface) 82%, var(--border));
+    background-color: color-mix(in oklab, var(--success-on-surface) 82%, var(--muted));
+  }
+
   /* Icon-state switches use the state icon AS the thumb. The generic pseudo
      thumb is removed for this variant, so the glyph cannot sit beside or drift
      away from it. The inactive icon stays out of the visual and accessibility

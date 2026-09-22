@@ -5,9 +5,13 @@
       the button sits snug at its own size, even on a phone. %>
   <%= render PanelsUI::PageHeader.new(title: "Bookings", description: "Stays booked on this account.",
         class: "flex-row items-center justify-between [&>.panel-page-header__actions]:w-auto") do |header| %>
-    <% header.with_actions do %>
-      <%= link_to "Book a stay", new_corporate_booking_path,
-            class: "shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+    <%# Offered only where a hotel has granted this account the permission. The
+        list itself still shows stays taken before it was revoked. %>
+    <% if may_book_anywhere? %>
+      <% header.with_actions do %>
+        <%= link_to "Book a stay", new_corporate_booking_path,
+              class: "shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+      <% end %>
     <% end %>
   <% end %>
 
