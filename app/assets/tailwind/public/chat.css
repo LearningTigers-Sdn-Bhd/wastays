@@ -1,5 +1,5 @@
 @layer components {
-  /* Guest-facing chat (PublicUI::Chat::*). Public pages are outside DESIGN.md,
+  /* Guest-facing chat (GuestUI::Chat::*). Public pages are outside DESIGN.md,
      so this follows the concierge's own language -- uppercase tracking-widest
      labels, soft rounded bubbles -- not the panel/ theme.
 
@@ -300,7 +300,7 @@
 }
 
 @layer components {
-  /* Guest-facing dropdown (PublicUI::Menu). Anchored to the corner it hangs
+  /* Guest-facing dropdown (GuestUI::Menu). Anchored to the corner it hangs
      from rather than positioned by script: on the public pages it is only ever
      used at the end of the chat bar. */
   .public-menu {

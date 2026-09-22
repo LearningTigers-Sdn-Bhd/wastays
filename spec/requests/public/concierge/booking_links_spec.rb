@@ -40,7 +40,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
     reply = @conversation.messages.where(direction: "outbound").last.body
     expect(reply).to include("secure login link", "I am here if you need more help.")
     expect(reply).not_to include(booking.check_in.to_date.to_s, booking.guest_name, booking.guest_email)
-    expect(response.body).to include(PublicUI::Chat::Panel::INPUT_REGION_ID, "Ask the hotel team", "Type your message")
+    expect(response.body).to include(GuestUI::Chat::Panel::INPUT_REGION_ID, "Ask the hotel team", "Type your message")
     expect(response.body).not_to include("Find a room", "Check prices")
   end
 

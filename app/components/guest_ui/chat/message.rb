@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   module Chat
     # One message in the guest-facing thread.
     #
@@ -12,7 +12,7 @@ module PublicUI
     # author, because that is what decides whether it repeats the name above it and
     # whether it is the one that carries the tail. Both default to true: a message
     # rendered on its own -- an append, a preview -- is a run of one.
-    class Message < PublicUI::BaseComponent
+    class Message < GuestUI::BaseComponent
       SIDES = { "guest" => :guest, "bot" => :hotel, "staff" => :staff, "system" => :system }.freeze
 
       def initialize(message:, hotel:, first_in_run: true, last_in_run: true, class: nil, **attributes)

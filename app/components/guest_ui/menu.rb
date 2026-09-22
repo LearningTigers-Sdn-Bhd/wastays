@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   # A short list of actions behind one button.
   #
   # Deliberately not PanelsUI::DropdownMenu. That one carries submenus,
   # selections and a floating-ui positioner for menus that can open anywhere on
   # a dense screen; this one hangs off a fixed corner of the chat bar and holds
-  # two items, so it is positioned in CSS and needs none of it. PublicUI is
+  # two items, so it is positioned in CSS and needs none of it. GuestUI is
   # also walled off from PanelsUI on purpose -- a change to the portal's look
   # must not reach a page a guest sees.
-  class Menu < PublicUI::BaseComponent
+  class Menu < GuestUI::BaseComponent
     # One action. A `method` makes it a form, because anything that changes
     # something should not be reachable by following a link.
-    class Item < PublicUI::BaseComponent
+    class Item < GuestUI::BaseComponent
       def initialize(href:, method: nil, confirm: nil, danger: false, class: nil, **attributes)
         @href = href
         @method = method&.to_sym

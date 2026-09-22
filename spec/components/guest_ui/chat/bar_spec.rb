@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PublicUI::Chat::Bar, type: :component do
+RSpec.describe GuestUI::Chat::Bar, type: :component do
   it "names the hotel the guest is talking to, and who is answering" do
     render_inline(described_class.new(
       title: "Aurora Crown Resort",

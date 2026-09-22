@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   module Chat
     # The chat itself: bar, thread, composer, stacked to fill whatever height it
     # is given.
@@ -11,22 +11,22 @@ module PublicUI
     #
     # Owns the Stimulus controller the thread and the composer are targets of,
     # so a page composes the pieces without knowing they talk to each other.
-    class Panel < PublicUI::BaseComponent
+    class Panel < GuestUI::BaseComponent
       # The id of the region the whole chat lives in. It sits on the wrapper
       # rather than on the panel itself because the stream subscription has to
       # travel with it.
       REGION_ID = "concierge-chat-region"
       INPUT_REGION_ID = "concierge-chat-input"
 
-      renders_one :bar, PublicUI::Chat::Bar
-      renders_one :log, PublicUI::Chat::Log
+      renders_one :bar, GuestUI::Chat::Bar
+      renders_one :log, GuestUI::Chat::Log
       # Sits with the composer rather than at the top of the page: what it has
       # to say is always about the message the guest just tried to send, and
       # that is where they are looking.
       renders_one :alert
       renders_one :secure_input
-      renders_one :quick_replies, PublicUI::Chat::QuickReplies
-      renders_one :composer, PublicUI::Chat::Composer
+      renders_one :quick_replies, GuestUI::Chat::QuickReplies
+      renders_one :composer, GuestUI::Chat::Composer
 
       def initialize(doodle: nil, class: nil, **attributes)
         @doodle = doodle

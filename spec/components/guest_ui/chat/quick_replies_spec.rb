@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe PublicUI::Chat::QuickReplies, type: :component do
+RSpec.describe GuestUI::Chat::QuickReplies, type: :component do
   let(:suggestion) do
     Concierge::ChatInputPresenter::Suggestion.new(
       label: "Find a room",

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   module Chat
-    class SecureInput < PublicUI::BaseComponent
+    class SecureInput < GuestUI::BaseComponent
       def initialize(url:, kind:, error: nil)
         @url = url
         @kind = kind.to_sym

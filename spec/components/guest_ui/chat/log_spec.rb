@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PublicUI::Chat::Log, type: :component do
+RSpec.describe GuestUI::Chat::Log, type: :component do
   let(:hotel) { build_stubbed(:hotel, name: "Aurora Crown Resort") }
 
   it "renders the thread in order, announced to screen readers" do

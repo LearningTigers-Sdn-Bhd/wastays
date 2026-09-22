@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   module Chat
     # The box the guest types into.
     #
@@ -8,7 +8,7 @@ module PublicUI
     # being written, and a button beside it. The label is read out but not
     # drawn -- with the box fixed under the thread there is nothing else it
     # could be for, and a line of chrome above it costs a line of conversation.
-    class Composer < PublicUI::BaseComponent
+    class Composer < GuestUI::BaseComponent
       def initialize(url:, param: :message, label: "Your message",
                      placeholder: "Type your message...", submit_label: "Send",
                      rows: 1, class: nil, **attributes)

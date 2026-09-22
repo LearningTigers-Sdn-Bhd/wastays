@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PublicUI::Menu, type: :component do
+RSpec.describe GuestUI::Menu, type: :component do
   it "keeps its actions closed and announced until the trigger is pressed" do
     render_inline(described_class.new(label: "Conversation options")) do |menu|
       menu.with_item(href: "/concierge/aurora/chat") { "Clear conversation" }

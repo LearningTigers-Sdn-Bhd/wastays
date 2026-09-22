@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PublicUI::Chat::Composer, type: :component do
+RSpec.describe GuestUI::Chat::Composer, type: :component do
   it "posts a message field and a send button to the given url" do
     render_inline(described_class.new(url: "/concierge/aurora/chat"))
 

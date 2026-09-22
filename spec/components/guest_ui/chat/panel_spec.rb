@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PublicUI::Chat::Panel, type: :component do
+RSpec.describe GuestUI::Chat::Panel, type: :component do
   let(:hotel) { build_stubbed(:hotel, name: "Aurora Crown Resort") }
 
   it "composes bar, thread and composer under one chat controller" do

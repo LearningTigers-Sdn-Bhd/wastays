@@ -3,7 +3,7 @@
   <%= log %>
   <div class="public-chat__footer">
     <%= alert if alert? %>
-    <%= tag.div(id: PublicUI::Chat::Panel::INPUT_REGION_ID) do %>
+    <%= tag.div(id: GuestUI::Chat::Panel::INPUT_REGION_ID) do %>
       <% if secure_input? %>
         <%= secure_input %>
       <% else %>

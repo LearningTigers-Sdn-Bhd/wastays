@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PublicUI::Chat::Status, type: :component do
+RSpec.describe GuestUI::Chat::Status, type: :component do
   it "says who is answering, under a stable id a live update can find" do
     render_inline(described_class.new(text: "Our front desk replies here"))
 

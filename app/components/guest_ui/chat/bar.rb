@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   module Chat
     # Who the guest is talking to, and the way back out.
     #
@@ -12,7 +12,7 @@ module PublicUI
     # The `menu` slot is where actions on the whole conversation live -- the
     # thread is a stream of one guest's words, so anything that acts on all of
     # it belongs here rather than beside a message.
-    class Bar < PublicUI::BaseComponent
+    class Bar < GuestUI::BaseComponent
       AVATARS = { bot: "bot", staff: "headset" }.freeze
 
       renders_one :menu

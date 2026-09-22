@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   module Chat
     # The thread, and the only part of the chat that scrolls.
     #
@@ -13,7 +13,7 @@ module PublicUI
     # Consecutive messages from the same author are grouped into a run, so three
     # answers in a row read as one person still talking rather than three
     # strangers who happen to share a name.
-    class Log < PublicUI::BaseComponent
+    class Log < GuestUI::BaseComponent
       include ChatMessageRuns
 
       DEFAULT_ID = "concierge-chat-log"

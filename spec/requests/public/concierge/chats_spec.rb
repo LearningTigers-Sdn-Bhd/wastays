@@ -234,7 +234,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "adds the message to the thread instead of rebuilding the chat" do
       post chat_path, params: { message: "Do you have parking?" }, as: :turbo_stream
 
-      expect(response.body).to include(%(action="append" target="#{PublicUI::Chat::Log::DEFAULT_ID}"))
+      expect(response.body).to include(%(action="append" target="#{GuestUI::Chat::Log::DEFAULT_ID}"))
       expect(response.body).not_to include("public-chat__bar")
     end
 

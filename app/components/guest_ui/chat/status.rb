@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   module Chat
     # The line under the hotel's name saying who is answering -- the assistant,
     # the front desk, or a named person once staff take over.
@@ -9,7 +9,7 @@ module PublicUI
     # live update is aimed at: the moment staff take the thread, this line has
     # to change under a guest who is already reading the page, and nothing else
     # in the bar may move.
-    class Status < PublicUI::BaseComponent
+    class Status < GuestUI::BaseComponent
       DEFAULT_ID = "concierge-chat-status"
       TONES = %i[muted accent].freeze
 

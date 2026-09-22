@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe PublicUI::Chat::SecureInput, type: :component do
+RSpec.describe GuestUI::Chat::SecureInput, type: :component do
   it "renders an uppercase confirmation-code field" do
     render_inline(described_class.new(url: "/booking", kind: :confirmation_code))
 

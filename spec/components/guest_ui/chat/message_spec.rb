@@ -2,7 +2,7 @@
 
 require "rails_helper"
 
-RSpec.describe PublicUI::Chat::Message, type: :component do
+RSpec.describe GuestUI::Chat::Message, type: :component do
   let(:hotel) { build_stubbed(:hotel, name: "Aurora Crown Resort") }
 
   def message_for(sender_role, body: "Hello", **attributes)

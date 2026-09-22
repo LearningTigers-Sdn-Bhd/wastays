@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module PublicUI
+module GuestUI
   module Chat
-    class QuickReplies < PublicUI::BaseComponent
+    class QuickReplies < GuestUI::BaseComponent
       def initialize(suggestions:, message_url:)
         @suggestions = suggestions
         @message_url = message_url
