@@ -123,7 +123,7 @@ module HotelPortal
             .index_by(&:id),
           submission: hotel.ar_payment_submissions
             .where(id: ids.fetch(:submission, []))
-            .includes(hotel_corporate_account: :corporate_account)
+            .includes(:booking, hotel_corporate_account: :corporate_account)
             .index_by(&:id)
         }
       end
@@ -261,6 +261,26 @@ module HotelPortal
 
         def status_label
           submission.pending? ? "Pending Review" : status.humanize
+        end
+
+        # A booking prepayment (see Bookings::PaymentHold) targets the booking
+        # directly rather than an invoice, so this is the one place a reviewer
+        # can otherwise miss that the booking it was sent against has since
+        # been closed -- voided or cancelled -- while the slip itself still
+        # reads as merely pending. Nil for an ordinary invoice settlement,
+        # which has no booking to close.
+        def booking
+          submission.booking
+        end
+
+        def booking_closed?
+          booking.present? && booking.closed?
+        end
+
+        def booking_flag_label
+          return nil unless booking_closed?
+
+          "Booking #{booking.status}"
         end
 
         def status_class

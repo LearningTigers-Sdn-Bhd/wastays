@@ -28,6 +28,27 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include("View transaction slip")
   end
 
+  it "shows the booking's status and warns when a pending slip's booking has been voided" do
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, booking: booking, auto_invoice: nil)
+    booking.transition_status_to!("voided", event: "void")
+
+    get hotel_ar_payment_submission_path(hotel, submission)
+
+    expect(response.body).to include(booking.formatted_reservation_number)
+    expect(response.body).to include("Voided")
+    expect(response.body).to include("Recording this payment will")
+  end
+
+  it "does not warn when the booking behind a pending slip is still live" do
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, booking: booking, auto_invoice: nil)
+
+    get hotel_ar_payment_submission_path(hotel, submission)
+
+    expect(response.body).not_to include("Recording this payment will")
+  end
+
   it "names the account and the payment form apart from the payment record list" do
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-TITLE", amount: 300)
     account_name = relationship.corporate_account.name

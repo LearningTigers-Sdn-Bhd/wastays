@@ -68,12 +68,7 @@ module CorporatePortal
       awaiting_payment? && !under_review? && !in_house? && due_at <= now
     end
 
-    # A voided booking releases inventory the same way a cancelled one does
-    # (Bookings::VoidBooking), and reads the same way here: closed, nothing
-    # further for the agent to do.
-    CLOSED_STATUSES = %w[cancelled voided].freeze
-
-    def closed? = booking.status.in?(CLOSED_STATUSES)
+    def closed? = booking.closed?
 
     # The one word for this booking's money, used by both portals' badges.
     #

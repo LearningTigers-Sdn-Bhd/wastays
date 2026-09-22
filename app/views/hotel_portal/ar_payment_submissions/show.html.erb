@@ -21,6 +21,19 @@
           </dd>
         </div>
       <% end %>
+      <% if @submission.booking.present? %>
+        <div>
+          <dt class="text-slate-500">Booking</dt>
+          <dd class="font-bold text-slate-950">
+            <%= link_to @submission.booking.formatted_reservation_number, hotel_booking_path(current_hotel, @submission.booking), class: "underline" %>
+            <% if @submission.booking.closed? %>
+              <span class="ml-1.5 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                <%= @submission.booking.status.humanize %>
+              </span>
+            <% end %>
+          </dd>
+        </div>
+      <% end %>
       <div><dt class="text-slate-500">Reference</dt><dd class="font-bold text-slate-950"><%= @submission.reference_number %></dd></div>
       <div><dt class="text-slate-500">Amount</dt><dd class="font-bold text-slate-950"><%= @submission.currency %> <%= number_with_precision(@submission.amount, precision: 2, delimiter: ",") %></dd></div>
       <div><dt class="text-slate-500">Date paid</dt><dd class="font-bold text-slate-950"><%= l(@submission.received_at, format: :short) %></dd></div>
@@ -36,6 +49,13 @@
       </div>
     </dl>
   </section>
+
+  <% if @submission.pending? && @submission.booking&.closed? %>
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+      The booking this was sent against is now <%= @submission.booking.status %>. Recording this payment will
+      still post it to that booking's folio -- worth confirming with the agent before approving.
+    </div>
+  <% end %>
 
   <% if @submission.pending? %>
     <%= link_to "Record This Payment",

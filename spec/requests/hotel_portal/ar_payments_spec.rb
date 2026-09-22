@@ -47,6 +47,19 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(response.body).to include(new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id))
   end
 
+  it "flags a pending submission on the list once its booking has been voided" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                   booking: booking, auto_invoice: nil, reference_number: "VOIDED-BOOKING-SLIP")
+    booking.transition_status_to!("voided", event: "void")
+
+    get hotel_ar_payments_path(hotel)
+
+    expect(response.body).to include("VOIDED-BOOKING-SLIP")
+    expect(response.body).to include("Booking voided")
+  end
+
   it "filters by query, account, and date" do
     payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 200, received_at: Date.current, reference_number: "FILTER-ME")
     create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 300, reference_number: "HIDE-ME")

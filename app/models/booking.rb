@@ -310,6 +310,11 @@ class Booking < ApplicationRecord
   end
 
   STATUSES = %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required cancelled completed overbooked no_show voided].freeze
+  # Both release inventory and end the stay the same way (Bookings::TransitionStatus,
+  # Bookings::VoidBooking); shared so nowhere has to remember to check one and not
+  # the other, which is exactly how a voided booking once read as "Paid" in
+  # CorporatePortal::BookingPaymentPresenter.
+  CLOSED_STATUSES = %w[cancelled voided].freeze
   OCCUPIED_STATUSES = %w[checked_in due_out_detected checkout_required].freeze
   # Statuses that occupy a room on the timeline (arrival/occupied/departure). Shared by the
   # Stay View loader and its filter contract so both describe the same set of bookings.
@@ -569,6 +574,10 @@ class Booking < ApplicationRecord
 
   def pre_checkin_completed?
     pre_checkin_display_status == "completed"
+  end
+
+  def closed?
+    status.in?(CLOSED_STATUSES)
   end
 
   def tourism_tax?

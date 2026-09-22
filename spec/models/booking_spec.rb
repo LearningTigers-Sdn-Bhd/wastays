@@ -385,4 +385,29 @@ RSpec.describe Booking, type: :model do
       expect(local(booking, :check_in)).to eq("2026-09-20 09:30")
     end
   end
+
+  describe "#closed?" do
+    it "is closed once cancelled" do
+      booking = create(:booking, status: "confirmed")
+      booking.transition_status_to!("cancelled", event: "cancel")
+
+      expect(booking).to be_closed
+    end
+
+    # Bookings::VoidBooking releases inventory the same way; a caller checking
+    # only "cancelled" is exactly how a voided booking once read as "Paid" in
+    # CorporatePortal::BookingPaymentPresenter.
+    it "is closed once voided" do
+      booking = create(:booking, status: "confirmed")
+      booking.transition_status_to!("voided", event: "void")
+
+      expect(booking).to be_closed
+    end
+
+    it "is not closed while confirmed" do
+      booking = create(:booking, status: "confirmed")
+
+      expect(booking).not_to be_closed
+    end
+  end
 end
