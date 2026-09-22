@@ -13,7 +13,7 @@ module HotelPortal::StayViewHelper
     timeline: {
       title: "Stay View",
       description: "Plan stays across the coming days and spot turnovers before they happen.",
-      caption: "Booking bars run from the middle of check-in day to the middle of checkout day. Hatched bars mark room blocks."
+      caption: nil
     }.freeze,
     rooms: {
       title: "Room View",
