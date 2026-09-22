@@ -125,4 +125,45 @@ RSpec.describe CorporatePortal::AgentStaySearch do
   it "treats a request for no rooms as a request for one" do
     expect(search(rooms: 0).rooms).to eq(1)
   end
+
+  describe "tax visibility" do
+    def wire_room_revenue_tax(*primary_keys)
+      room_revenue = TransactionCodes::Resolver.for(hotel).room_revenue
+      room_revenue.update!(is_taxable: true)
+      TransactionCodes::AssignTaxRules.call(
+        transaction_code: room_revenue, keys: primary_keys.map { |key| "primary:#{key}" }
+      )
+    end
+
+    it "names SST as its own line, already folded into the price" do
+      hotel.update!(sst_enabled: true)
+      wire_room_revenue_tax("sst_tax")
+
+      option = option_for(search(rooms: 2))
+
+      expect(option.tax_lines.map { |line| line["name"] }).to eq([ "SST 8%" ])
+      # per_room_amount already includes it -- the breakdown explains the total,
+      # it does not add to it.
+      expect(option.per_room_amount).to eq(option.tax_lines.sum { |line| line["amount"].to_d } + room_only_amount(option))
+    end
+
+    def room_only_amount(option)
+      option.per_room_amount - option.tax_lines.sum { |line| line["amount"].to_d }
+    end
+
+    it "keeps tourism tax out of the price and states it as a note instead" do
+      hotel.update!(tourism_tax_enabled: true, tourism_tax_amount: 10.0)
+      wire_room_revenue_tax("tourism_tax")
+
+      option = option_for(search)
+
+      expect(option.tax_lines).to be_empty
+      expect(option.tourism_tax_note).to include("10.00")
+      expect(option.tourism_tax_note).to include("outside Malaysia")
+    end
+
+    it "gives no tourism tax note when the hotel has not enabled it" do
+      expect(option_for(search).tourism_tax_note).to be_nil
+    end
+  end
 end

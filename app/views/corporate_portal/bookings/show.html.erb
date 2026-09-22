@@ -43,6 +43,35 @@
         </dd>
       </div>
     </dl>
+
+    <%# The total above is one number; a TA billing a client on top of it needs
+        to know what is tax rather than room revenue. Grouped by name and
+        summed across every room in the stay. %>
+    <% tax_totals = @bookings.flat_map { |booking| Array(booking.tax_lines) }
+                             .reject { |line| Booking.tourism_tax_line?(line) }
+                             .group_by { |line| line["name"] }
+                             .transform_values { |lines| lines.sum { |line| line["amount"].to_d } } %>
+    <% room_subtotal = @bookings.sum { |booking| booking.total_amount.to_d } - tax_totals.values.sum %>
+    <% if tax_totals.present? %>
+      <dl class="mt-4 space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
+        <div class="flex justify-between">
+          <dt>Room charges</dt>
+          <dd class="tabular-nums"><%= @booking.currency %> <%= number_with_precision(room_subtotal, precision: 2) %></dd>
+        </div>
+        <% tax_totals.each do |name, amount| %>
+          <div class="flex justify-between">
+            <dt><%= name %></dt>
+            <dd class="tabular-nums"><%= @booking.currency %> <%= number_with_precision(amount, precision: 2) %></dd>
+          </div>
+        <% end %>
+      </dl>
+    <% end %>
+    <% if @booking.hotel.tourism_tax_enabled? %>
+      <p class="mt-2 text-xs text-muted-foreground">
+        Tourism tax of <%= @booking.currency %> <%= number_with_precision(@booking.hotel.tourism_tax_amount, precision: 2) %>
+        per room, per night applies to guests with passports from outside Malaysia and is settled at checkout.
+      </p>
+    <% end %>
   </section>
 
   <%# Rooms are held against this deadline, so it sits directly under the

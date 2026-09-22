@@ -26,7 +26,7 @@ module CorporatePortal
     OCCUPYING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required].freeze
 
     Option = Struct.new(:room_type, :rate_plan, :available_count, :per_room_amount,
-                        :rooms, :currency, keyword_init: true) do
+                        :rooms, :currency, :tax_lines, :tourism_tax_note, keyword_init: true) do
       # Enough rooms free to satisfy the whole request, not merely one.
       def available? = available_count >= rooms
 
@@ -34,6 +34,13 @@ module CorporatePortal
       # is that figure once per room. On a per-pax property this is why
       # occupancy is asked per room rather than for the party as a whole.
       def total_amount = per_room_amount && per_room_amount * rooms
+
+      # SST and any other hotel-configured tax, already folded into
+      # per_room_amount -- named here so the agent can see what it is made of
+      # rather than one unexplained total. Tourism tax is deliberately excluded:
+      # it depends on the guest's nationality, which is not known at search
+      # time, so it is quoted as a note instead (see tourism_tax_note).
+      def tax_total = Array(tax_lines).sum { |line| line["amount"].to_d } * rooms
     end
 
     Result = Struct.new(:options, :nights, :rooms, :error, keyword_init: true) do
@@ -85,15 +92,32 @@ module CorporatePortal
         rate_plan = rate_plan_for(room_type)
         next if rate_plan.blank?
 
+        snapshot = snapshot_for(room_type, rate_plan)
+        next if snapshot.blank?
+
         Option.new(
           room_type: room_type,
           rate_plan: rate_plan,
           available_count: remaining_capacity(room_type),
-          per_room_amount: total_for(room_type, rate_plan),
+          per_room_amount: snapshot.room_total + Booking.non_tourism_tax_total_for(snapshot.tax_lines),
           rooms: @rooms,
-          currency: @hotel.default_currency.presence || "MYR"
+          currency: @hotel.default_currency.presence || "MYR",
+          tax_lines: snapshot.tax_lines.reject { |line| Booking.tourism_tax_line?(line) },
+          tourism_tax_note: tourism_tax_note
         )
       end
+    end
+
+    # Guest nationality is not asked at search time, so the tourism tax cannot
+    # be quoted as a figure -- only as the same warning the guest-facing quote
+    # page gives, so the agent is not surprised by it at checkout.
+    def tourism_tax_note
+      return nil unless @hotel.tourism_tax_enabled?
+
+      "#{@hotel.default_currency.presence || 'MYR'} " \
+        "#{ActiveSupport::NumberHelper.number_to_rounded(@hotel.tourism_tax_amount, precision: 2)} " \
+        "tourism tax per room, per night applies to guests with passports from outside Malaysia, " \
+        "added at checkout once nationality is known."
     end
 
     # The corporate plan when the property has one, the standard plan otherwise.
@@ -117,13 +141,12 @@ module CorporatePortal
             .count
     end
 
-    def total_for(room_type, rate_plan)
-      snapshot = Bookings::BuildFinancialSnapshot.new(
+    def snapshot_for(room_type, rate_plan)
+      Bookings::BuildFinancialSnapshot.new(
         hotel: @hotel, room_type: room_type, rate_plan: rate_plan,
         check_in: @check_in, check_out: @check_out, guest_country: nil,
         adults: @adults, children: @children
       ).call
-      snapshot.room_total + Booking.non_tourism_tax_total_for(snapshot.tax_lines)
     rescue ArgumentError
       nil
     end
