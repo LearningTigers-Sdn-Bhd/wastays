@@ -27,7 +27,7 @@ module GuestUI
 
         tag.p(content.presence || @text, **attributes.merge(
           id: @id,
-          class: tw_merge("public-chat__status", @class),
+          class: tw_merge("guest-chat__status", @class),
           data: data.merge(tone: @tone)
         ))
       end

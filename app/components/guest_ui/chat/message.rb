@@ -30,7 +30,7 @@ module GuestUI
 
         tag.li(**attributes.merge(
           id: attributes[:id] || ActionView::RecordIdentifier.dom_id(@message),
-          class: tw_merge("public-chat__message", @class),
+          class: tw_merge("guest-chat__message", @class),
           data: data.merge(
             side: side,
             run_start: @first_in_run.to_s,
@@ -51,7 +51,7 @@ module GuestUI
       def author_label
         return if side == :system || !@first_in_run
 
-        tag.span(author, class: "public-chat__author")
+        tag.span(author, class: "guest-chat__author")
       end
 
       def author
@@ -62,7 +62,7 @@ module GuestUI
 
       # Built in Ruby rather than ERB on purpose: the bubble is whitespace-pre-wrap,
       # so template indentation around the body would render as a literal indent.
-      def bubble = tag.div(@message.body, class: "public-chat__bubble")
+      def bubble = tag.div(@message.body, class: "guest-chat__bubble")
     end
   end
 end

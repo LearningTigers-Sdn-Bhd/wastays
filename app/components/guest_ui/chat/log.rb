@@ -36,7 +36,7 @@ module GuestUI
 
         tag.ol(**attributes.merge(
           id: @id,
-          class: tw_merge("public-chat__log", @class),
+          class: tw_merge("guest-chat__log", @class),
           role: "log",
           aria: { label: @label, live: "polite" },
           data: data.merge(
@@ -52,7 +52,7 @@ module GuestUI
       private
 
       def empty_state
-        tag.li(@empty_text, id: "#{@id}-empty", class: "public-chat__empty")
+        tag.li(@empty_text, id: "#{@id}-empty", class: "guest-chat__empty")
       end
 
       def bubbles

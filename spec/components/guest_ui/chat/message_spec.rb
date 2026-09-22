@@ -12,41 +12,41 @@ RSpec.describe GuestUI::Chat::Message, type: :component do
   it "puts the guest's own words on their side, named as theirs" do
     render_inline(described_class.new(message: message_for("guest"), hotel: hotel))
 
-    expect(page).to have_css("li.public-chat__message[data-side='guest'] .public-chat__author", text: "You")
-    expect(page).to have_css(".public-chat__bubble", text: "Hello")
+    expect(page).to have_css("li.guest-chat__message[data-side='guest'] .guest-chat__author", text: "You")
+    expect(page).to have_css(".guest-chat__bubble", text: "Hello")
   end
 
   it "answers in the hotel's name when the bot replied" do
     render_inline(described_class.new(message: message_for("bot"), hotel: hotel))
 
-    expect(page).to have_css("[data-side='hotel'] .public-chat__author", text: "Aurora Crown Resort")
+    expect(page).to have_css("[data-side='hotel'] .guest-chat__author", text: "Aurora Crown Resort")
   end
 
   it "names the person when staff replied" do
     user = build_stubbed(:user, name: "Farah")
     render_inline(described_class.new(message: message_for("staff", sender_user: user), hotel: hotel))
 
-    expect(page).to have_css("[data-side='staff'] .public-chat__author", text: "Farah")
+    expect(page).to have_css("[data-side='staff'] .guest-chat__author", text: "Farah")
   end
 
   it "narrates a system line without attributing it to anyone" do
     render_inline(described_class.new(message: message_for("system", body: "A team member joined"), hotel: hotel))
 
-    expect(page).to have_css("[data-side='system'] .public-chat__bubble", text: "A team member joined")
-    expect(page).to have_no_css(".public-chat__author")
+    expect(page).to have_css("[data-side='system'] .guest-chat__bubble", text: "A team member joined")
+    expect(page).to have_no_css(".guest-chat__author")
   end
 
   it "stands alone by default -- named, and carrying the tail" do
     render_inline(described_class.new(message: message_for("bot"), hotel: hotel))
 
-    expect(page).to have_css("li[data-run-start='true'][data-run-end='true'] .public-chat__author")
+    expect(page).to have_css("li[data-run-start='true'][data-run-end='true'] .guest-chat__author")
   end
 
   it "drops the name when it continues what the same author was saying" do
     render_inline(described_class.new(message: message_for("bot"), hotel: hotel, first_in_run: false))
 
     expect(page).to have_css("li[data-run-start='false']")
-    expect(page).to have_no_css(".public-chat__author")
+    expect(page).to have_no_css(".guest-chat__author")
   end
 
   it "gives up the tail when someone else speaks after it" do
@@ -68,6 +68,6 @@ RSpec.describe GuestUI::Chat::Message, type: :component do
   it "renders the body without leading whitespace" do
     render_inline(described_class.new(message: message_for("bot", body: "Welcome!"), hotel: hotel))
 
-    expect(page.find(".public-chat__bubble").native.to_html).to include(">Welcome!<")
+    expect(page.find(".guest-chat__bubble").native.to_html).to include(">Welcome!<")
   end
 end

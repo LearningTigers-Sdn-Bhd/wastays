@@ -6,9 +6,9 @@ RSpec.describe GuestUI::Chat::Composer, type: :component do
   it "posts a message field and a send button to the given url" do
     render_inline(described_class.new(url: "/concierge/aurora/chat"))
 
-    expect(page).to have_css("form.public-chat__composer[action='/concierge/aurora/chat'][method='post']")
-    expect(page).to have_css("textarea#message.public-chat__input[required][rows='1'][placeholder='Type your message...'][data-concierge-chat-target='input']")
-    expect(page).to have_css("button.public-chat__send[type='submit'][aria-label='Send']")
+    expect(page).to have_css("form.guest-chat__composer[action='/concierge/aurora/chat'][method='post']")
+    expect(page).to have_css("textarea#message.guest-chat__input[required][rows='1'][placeholder='Type your message...'][data-concierge-chat-target='input']")
+    expect(page).to have_css("button.guest-chat__send[type='submit'][aria-label='Send']")
   end
 
   # The box sits under the thread with nothing else it could be for, so the
@@ -17,7 +17,7 @@ RSpec.describe GuestUI::Chat::Composer, type: :component do
     render_inline(described_class.new(url: "/concierge/aurora/chat"))
 
     expect(page).to have_css("label.sr-only[for='message']", text: "Your message")
-    expect(page).to have_no_css(".public-chat__label")
+    expect(page).to have_no_css(".guest-chat__label")
   end
 
   it "grows with what is typed, and sends on Enter" do

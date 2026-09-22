@@ -8,8 +8,8 @@ RSpec.describe GuestUI::Menu, type: :component do
       menu.with_item(href: "/concierge/aurora/chat") { "Clear conversation" }
     end
 
-    expect(page).to have_css("button.public-menu__trigger[aria-haspopup='menu'][aria-expanded='false'][aria-label='Conversation options']")
-    expect(page).to have_css(".public-menu__list[role='menu'][hidden]", visible: :all)
+    expect(page).to have_css("button.guest-menu__trigger[aria-haspopup='menu'][aria-expanded='false'][aria-label='Conversation options']")
+    expect(page).to have_css(".guest-menu__list[role='menu'][hidden]", visible: :all)
     expect(page).to have_css("[role='menuitem']", text: "Clear conversation", visible: :all)
   end
 
@@ -18,9 +18,9 @@ RSpec.describe GuestUI::Menu, type: :component do
       menu.with_item(href: "/x") { "Clear conversation" }
     end
 
-    list_id = page.find(".public-menu__list", visible: :all)["id"]
+    list_id = page.find(".guest-menu__list", visible: :all)["id"]
     expect(list_id).to be_present
-    expect(page).to have_css("button.public-menu__trigger[aria-controls='#{list_id}']")
+    expect(page).to have_css("button.guest-menu__trigger[aria-controls='#{list_id}']")
   end
 
   # The arrow keys move between items, so the menu is one stop on the way to
@@ -39,7 +39,7 @@ RSpec.describe GuestUI::Menu, type: :component do
       render_inline(described_class.new(label: "Conversation options")) do |menu|
         menu.with_item(href: "/x") { "Clear conversation" }
       end
-      page.find(".public-menu__list", visible: :all)["id"]
+      page.find(".guest-menu__list", visible: :all)["id"]
     end
 
     expect(ids.uniq.length).to eq(2)
@@ -70,6 +70,6 @@ RSpec.describe GuestUI::Menu, type: :component do
       menu.with_item(href: "/x") { "Clear conversation" }
     end
 
-    expect(page).to have_css("[role='menuitem'][data-action='public-menu#close']", visible: :all)
+    expect(page).to have_css("[role='menuitem'][data-action='guest-menu#close']", visible: :all)
   end
 end

@@ -43,7 +43,7 @@ module GuestUI
         data = attributes.delete(:data) || {}
 
         attributes.merge(
-          class: tw_merge("public-chat", @class),
+          class: tw_merge("guest-chat", @class),
           style: @doodle,
           data: data.reverse_merge(controller: "concierge-chat", doodle: @doodle.present?.to_s)
         )

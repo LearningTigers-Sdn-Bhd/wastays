@@ -26,7 +26,7 @@ module GuestUI
 
       attr_reader :url, :param, :label, :placeholder, :submit_label, :rows
 
-      def form_class = tw_merge("public-chat__composer", @class)
+      def form_class = tw_merge("guest-chat__composer", @class)
 
       # Enter sends and Shift+Enter breaks the line, which is what every other
       # chat does; the box has to say so, because a field that submits on Enter

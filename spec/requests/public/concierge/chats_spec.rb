@@ -19,7 +19,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       get chat_path
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("public-chat__bar")
+      expect(response.body).to include("guest-chat__bar")
     end
 
     it "creates nothing until the visitor actually says something" do
@@ -173,7 +173,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "hands the chat the doodle as a mask" do
       get chat_path
 
-      expect(response.body).to include("--public-chat-doodle: url(")
+      expect(response.body).to include("--guest-chat-doodle: url(")
       expect(response.body).to include("data-doodle=\"true\"")
     end
 
@@ -187,7 +187,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("data-doodle=\"false\"")
-      expect(response.body).not_to include("--public-chat-doodle:")
+      expect(response.body).not_to include("--guest-chat-doodle:")
     end
   end
 
@@ -198,7 +198,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       get chat_path
 
       expect(response.body).to include(ERB::Util.html_escape(hotel.name))
-      expect(response.body).to include("public-chat__bar-title")
+      expect(response.body).to include("guest-chat__bar-title")
     end
 
     it "says the front desk answers when the hotel has no assistant" do
@@ -235,7 +235,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       post chat_path, params: { message: "Do you have parking?" }, as: :turbo_stream
 
       expect(response.body).to include(%(action="append" target="#{GuestUI::Chat::Log::DEFAULT_ID}"))
-      expect(response.body).not_to include("public-chat__bar")
+      expect(response.body).not_to include("guest-chat__bar")
     end
 
     # The case the subscription element exists for: before the first message
@@ -330,7 +330,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       get chat_path
 
       expect(response.body).to include("Clear conversation")
-      expect(response.body).to include("public-menu__trigger")
+      expect(response.body).to include("guest-menu__trigger")
     end
   end
 

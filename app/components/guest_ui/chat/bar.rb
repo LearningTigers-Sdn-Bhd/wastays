@@ -32,7 +32,7 @@ module GuestUI
 
       attr_reader :title, :back_path, :back_label
 
-      def bar_class = tw_merge("public-chat__bar", @class)
+      def bar_class = tw_merge("guest-chat__bar", @class)
 
       def avatar_icon = AVATARS.fetch(@avatar)
 

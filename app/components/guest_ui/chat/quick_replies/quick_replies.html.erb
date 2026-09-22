@@ -1,4 +1,4 @@
-<div class="public-chat__quick-replies" aria-label="Suggested replies">
+<div class="guest-chat__quick-replies" aria-label="Suggested replies">
   <% suggestions.each do |suggestion| %>
     <% case suggestion.kind %>
     <% when :message %>
@@ -7,10 +7,10 @@
             params: { message: suggestion.value },
             method: :post,
             form: { data: { action: "turbo:submit-end->concierge-chat#clearSuggestions" } },
-            class: "public-chat__quick-reply" %>
+            class: "guest-chat__quick-reply" %>
     <% when :focus %>
       <button type="button"
-              class="public-chat__quick-reply"
+              class="guest-chat__quick-reply"
               data-action="concierge-chat#focusComposer"><%= suggestion.label %></button>
     <% end %>
   <% end %>

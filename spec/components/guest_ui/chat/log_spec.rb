@@ -13,8 +13,8 @@ RSpec.describe GuestUI::Chat::Log, type: :component do
 
     render_inline(described_class.new(messages: messages, hotel: hotel))
 
-    expect(page).to have_css("ol.public-chat__log[role='log'][aria-live='polite'][aria-label='Conversation']")
-    expect(page.all("li .public-chat__bubble").map(&:text)).to eq([ "Do you have parking?", "We do, it is free." ])
+    expect(page).to have_css("ol.guest-chat__log[role='log'][aria-live='polite'][aria-label='Conversation']")
+    expect(page.all("li .guest-chat__bubble").map(&:text)).to eq([ "Do you have parking?", "We do, it is free." ])
   end
 
   # The list is the anchor a live message gets appended to, so it has to exist
@@ -23,13 +23,13 @@ RSpec.describe GuestUI::Chat::Log, type: :component do
     render_inline(described_class.new(messages: [], hotel: hotel))
 
     expect(page).to have_css("ol#concierge-chat-log")
-    expect(page).to have_css("ol > li#concierge-chat-log-empty.public-chat__empty", text: "Ask about rooms")
+    expect(page).to have_css("ol > li#concierge-chat-log-empty.guest-chat__empty", text: "Ask about rooms")
   end
 
   it "drops the prompt once someone has spoken" do
     render_inline(described_class.new(messages: [ build_stubbed(:prospect_message, sender_role: "guest") ], hotel: hotel))
 
-    expect(page).to have_no_css(".public-chat__empty")
+    expect(page).to have_no_css(".guest-chat__empty")
   end
 
   it "groups what one author said in a row into a single run" do
@@ -44,7 +44,7 @@ RSpec.describe GuestUI::Chat::Log, type: :component do
 
     runs = page.all("li").map { |item| [ item["data-run-start"], item["data-run-end"] ] }
     expect(runs).to eq([ %w[true true], %w[true false], %w[false true], %w[true true] ])
-    expect(page.all(".public-chat__author").map(&:text)).to eq([ "You", "Aurora Crown Resort", "You" ])
+    expect(page.all(".guest-chat__author").map(&:text)).to eq([ "You", "Aurora Crown Resort", "You" ])
   end
 
   it "keeps two different people apart even when both are staff" do
@@ -58,7 +58,7 @@ RSpec.describe GuestUI::Chat::Log, type: :component do
     render_inline(described_class.new(messages: messages, hotel: hotel))
 
     expect(page.all("li").map { |item| item["data-run-start"] }).to eq(%w[true true])
-    expect(page.all(".public-chat__author").map(&:text)).to eq([ "Farah", "Amir" ])
+    expect(page.all(".guest-chat__author").map(&:text)).to eq([ "Farah", "Amir" ])
   end
 
   it "leaves a system line standing on its own between two bot replies" do
