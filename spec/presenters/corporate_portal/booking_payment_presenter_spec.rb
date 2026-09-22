@@ -204,6 +204,41 @@ RSpec.describe CorporatePortal::BookingPaymentPresenter do
       expect(presenter.state).to eq(:cancelled)
       expect(presenter.badge_label).to eq("Cancelled")
     end
+
+    # A voided booking releases inventory the same way a cancelled one does
+    # (Bookings::VoidBooking) but was not caught by the same check, so it fell
+    # through to the "paid" fallback -- an agent whose booking was voided
+    # while genuinely unpaid saw a "Paid" badge.
+    it "reads as voided, not paid, whatever the money says" do
+      booking.transition_status_to!("voided", event: "void")
+
+      expect(presenter.state).to eq(:cancelled)
+      expect(presenter.badge_label).to eq("Voided")
+      expect(presenter).to be_inactive
+    end
+
+    # The hotel can void or cancel a booking without first resolving a slip
+    # sitting in its review queue. That must not read as settled -- the money
+    # has not actually been looked at -- so the closed status does not win
+    # over a submission still waiting on the hotel.
+    it "still says a slip is under review even once the booking is voided" do
+      booking.transition_status_to!("voided", event: "void")
+      create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, booking: booking)
+
+      expect(presenter.state).to eq(:under_review)
+      expect(presenter.badge_label).to eq("Slip under review")
+      # Still recedes in a list: the booking itself is over even though its
+      # money is not yet resolved.
+      expect(presenter).to be_inactive
+    end
+
+    it "does the same for a cancelled booking with a slip still under review" do
+      booking.transition_status_to!("cancelled", event: "cancel")
+      create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, booking: booking)
+
+      expect(presenter.state).to eq(:under_review)
+      expect(presenter.badge_label).to eq("Slip under review")
+    end
   end
 
   # Rendered server-side so the list still says how long is left with JavaScript

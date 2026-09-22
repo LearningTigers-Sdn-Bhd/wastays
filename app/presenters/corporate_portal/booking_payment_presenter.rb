@@ -68,9 +68,24 @@ module CorporatePortal
       awaiting_payment? && !under_review? && !in_house? && due_at <= now
     end
 
+    # A voided booking releases inventory the same way a cancelled one does
+    # (Bookings::VoidBooking), and reads the same way here: closed, nothing
+    # further for the agent to do.
+    CLOSED_STATUSES = %w[cancelled voided].freeze
+
+    def closed? = booking.status.in?(CLOSED_STATUSES)
+
     # The one word for this booking's money, used by both portals' badges.
+    #
+    # A closed booking is checked for a pending submission before it is
+    # checked for closure: the hotel can void or cancel a booking without
+    # first resolving a slip that is sitting in its review queue, and that
+    # must not read as "Paid" -- the money has not actually been looked at.
+    # Off that one exception, a closed booking's payment state does not matter
+    # otherwise; closed always wins over paid, overdue, or awaiting payment.
     def state
-      return :cancelled if booking.status == "cancelled"
+      return :under_review if closed? && under_review?
+      return :cancelled if closed?
       return :paid unless awaiting_payment?
       return :under_review if under_review?
       return :in_house if in_house?
@@ -93,7 +108,7 @@ module CorporatePortal
 
     def badge_label
       case state
-      when :cancelled then "Cancelled"
+      when :cancelled then booking.status == "voided" ? "Voided" : "Cancelled"
       when :paid then "Paid"
       when :under_review then "Slip under review"
       when :in_house then "Unpaid · guest in house"
@@ -102,10 +117,11 @@ module CorporatePortal
       end
     end
 
-    # A cancelled stay is closed: the rooms are back on sale and there is nothing
-    # for the agent to do. It stays on the list as history, but recedes so the
-    # bookings that still need paying read first.
-    def inactive? = state == :cancelled
+    # A cancelled or voided stay is closed: the rooms are back on sale and
+    # there is nothing for the agent to do -- even if a stray submission is
+    # still sitting in review (see `state`). It stays on the list as history,
+    # but recedes so the bookings that still need paying read first.
+    def inactive? = closed?
 
     def dimmed_class = ("opacity-55" if inactive?)
 
