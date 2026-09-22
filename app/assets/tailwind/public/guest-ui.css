@@ -1,0 +1,357 @@
+@layer components {
+  /* GuestUI (GuestUI::*). The component language of the concierge, the one
+     place a hotel guest sees. Public pages sit outside DESIGN.md, so this
+     follows the concierge's own voice -- serif headings, uppercase
+     tracking-widest eyebrows, soft 2xl surfaces -- not the panel/ theme.
+
+     Two rules hold across every class in this file.
+
+     1. Colour comes from a token in public/theme.css. A raw palette utility
+        (white, red-500) cannot follow the theme and cannot be re-tinted for one
+        hotel later.
+     2. A control a thumb hits is at least 44px on its short side. This is a
+        phone-first surface: a guest reads it standing in a lobby, one-handed,
+        often on a screen they have never held before. */
+
+  /* ─── Button ───
+     One class, and the variant picks the fill. The size sets the height rather
+     than the padding, so a button beside an input lines up with it whatever
+     word it carries.
+
+     Every variant keeps a 44px floor at md and lg. sm is for a control inside
+     a row that is already a tap target, where a second 44px box would push the
+     row past a thumb's reach. */
+  .guest-button {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl text-center text-xs font-black uppercase tracking-widest transition-all;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:active:scale-100;
+  }
+
+  .guest-button[aria-disabled="true"] {
+    @apply pointer-events-none opacity-50 shadow-none;
+  }
+
+  /* active:scale is the only motion here. A guest taps this once and watches
+     the page change; anything longer reads as the page being slow. */
+  .guest-button[data-variant="primary"] {
+    @apply bg-primary text-primary-foreground shadow-md hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active;
+  }
+
+  .guest-button[data-variant="secondary"] {
+    @apply border border-border bg-card text-foreground shadow-sm hover:border-border-interactive hover:bg-muted active:scale-[0.98];
+  }
+
+  .guest-button[data-variant="ghost"] {
+    @apply text-muted-foreground hover:bg-primary/5 hover:text-primary active:scale-[0.98];
+  }
+
+  /* Tinted rather than filled. A destructive action on a guest page is a
+     refund or a cancellation the guest asked for, not a warning shot, and a
+     solid red block reads as an error that already happened. */
+  .guest-button[data-variant="destructive"] {
+    @apply border border-destructive/20 bg-destructive/5 hover:bg-destructive hover:text-destructive-foreground active:scale-[0.98];
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-button[data-size="sm"] {
+    @apply min-h-9 px-4 text-[11px];
+  }
+
+  .guest-button[data-size="md"] {
+    @apply min-h-11 px-5;
+  }
+
+  .guest-button[data-size="lg"] {
+    @apply min-h-[52px] px-6 py-4 text-sm;
+  }
+
+  .guest-button[data-block="true"] {
+    @apply w-full;
+  }
+
+  .guest-button[data-icon-only="true"] {
+    @apply aspect-square px-0;
+  }
+
+  /* ─── Input and text area ───
+     The floor is 16px text. Below that, mobile Safari zooms the page when the
+     field takes focus, and the guest is left scrolled sideways on a form they
+     have not finished. */
+  .guest-input,
+  .guest-text-area {
+    @apply block w-full rounded-xl border border-border bg-background text-base font-medium text-foreground transition-colors;
+    @apply placeholder:font-normal placeholder:text-muted-foreground;
+    @apply focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+    @apply disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground;
+    @apply read-only:bg-muted read-only:text-muted-foreground;
+  }
+
+  .guest-input[aria-invalid="true"],
+  .guest-text-area[aria-invalid="true"] {
+    @apply border-destructive focus:border-destructive focus:ring-destructive/20;
+  }
+
+  .guest-input[data-size="sm"] {
+    @apply min-h-11 px-3.5 py-2.5 text-sm;
+  }
+
+  .guest-input[data-size="md"] {
+    @apply min-h-11 px-4 py-3;
+  }
+
+  .guest-input[data-size="lg"] {
+    @apply min-h-[52px] px-4 py-4;
+  }
+
+  /* A confirmation code, not a sentence. Wide tracking and a monospace face
+     let a guest compare the field against a code in a mail app, character by
+     character, without counting. */
+  .guest-input[data-variant="code"] {
+    @apply text-center font-mono text-xl font-bold uppercase tracking-[0.3em];
+  }
+
+  .guest-text-area {
+    @apply px-4 py-3 leading-relaxed;
+    field-sizing: content;
+  }
+
+  /* ─── Form field ───
+     Label above, control, then one message under it. The label is the
+     eyebrow tier the rest of the concierge uses, so a field inside a card
+     reads as part of the card rather than as a form dropped into it. */
+  .guest-field {
+    @apply block;
+  }
+
+  .guest-field__label {
+    @apply block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground;
+  }
+
+  .guest-field__required {
+    @apply ml-0.5;
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-field__control {
+    @apply mt-3;
+  }
+
+  .guest-field__hint,
+  .guest-field__error {
+    @apply mt-2 text-[11px] font-medium leading-relaxed;
+  }
+
+  .guest-field__hint {
+    @apply text-muted-foreground;
+  }
+
+  .guest-field__error {
+    color: var(--destructive-on-surface);
+  }
+
+  /* ─── Radio group ───
+     Tiles, not dots. The whole tile is the label, so the tap target is the
+     option rather than a 16px circle beside it.
+
+     The native radio stays in the DOM and keeps the keyboard behaviour: arrow
+     keys move within the group and the group is one tab stop. Rebuilding that
+     in script is how a form stops working for a guest using a switch or a
+     screen reader. */
+  .guest-radio-group {
+    @apply flex flex-wrap gap-3;
+  }
+
+  .guest-radio-group[data-layout="stacked"] {
+    @apply flex-col;
+  }
+
+  .guest-radio-group__option {
+    @apply flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-[13px] font-bold text-foreground transition-colors;
+    @apply hover:border-border-interactive;
+    @apply has-checked:border-primary has-checked:bg-primary/5 has-checked:text-primary;
+    @apply has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2 has-focus-visible:ring-offset-background;
+    @apply has-disabled:cursor-not-allowed has-disabled:opacity-50;
+  }
+
+  .guest-radio-group__input {
+    @apply size-4 shrink-0 accent-primary;
+  }
+
+  /* ─── Switch ───
+     A form button wearing a switch, not a checkbox. The state lives on the
+     server: a guest turns Do Not Disturb on, closes the page, and opens it on
+     another device, and the room has to agree with both. So the control posts
+     and the page comes back with the new state, and there is no local state to
+     disagree with it. */
+  .guest-switch {
+    @apply flex min-h-11 w-full cursor-pointer items-center justify-between gap-4 text-left;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .guest-switch__text {
+    @apply min-w-0;
+  }
+
+  .guest-switch__label {
+    @apply block text-[13px] font-bold text-foreground;
+  }
+
+  .guest-switch__hint {
+    @apply mt-0.5 block text-[11px] font-medium leading-relaxed text-muted-foreground;
+  }
+
+  .guest-switch__track {
+    @apply relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border border-border bg-muted transition-colors;
+  }
+
+  .guest-switch[aria-checked="true"] .guest-switch__track {
+    @apply border-primary bg-primary;
+  }
+
+  /* The thumb carries the state in position, and the track carries it in
+     colour. Two signals, because colour alone fails a guest who cannot tell
+     this teal from this grey. */
+  .guest-switch__thumb {
+    @apply pointer-events-none ml-0.5 size-5 rounded-full bg-card shadow-sm transition-transform motion-reduce:transition-none;
+  }
+
+  .guest-switch[aria-checked="true"] .guest-switch__thumb {
+    @apply translate-x-5;
+  }
+
+  /* ─── Card ───
+     One bounded surface. Every column section on a stay page uses it, so the
+     columns line up at the top and the padding is set in one place.
+
+     The title is an eyebrow rather than a heading face: these name a group of
+     controls (Hotel Services, Booking and Billing), and a serif heading on
+     each one would compete with the page's own. */
+  .guest-card {
+    @apply rounded-2xl border border-border/60 bg-card p-6 shadow-sm;
+  }
+
+  .guest-card[data-padding="tight"] {
+    @apply p-4;
+  }
+
+  .guest-card[data-variant="dashed"] {
+    @apply border-dashed bg-card shadow-none;
+  }
+
+  .guest-card__title {
+    @apply text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground;
+  }
+
+  .guest-card__body {
+    @apply mt-4;
+  }
+
+  /* ─── Card row ───
+     A secondary service: a row, not a tile, so the tiles above it stay the
+     primary actions. The hairline divides the rows and stops before the last
+     one, which would otherwise draw a line above the card's own edge. */
+  /* `group` is a marker rather than a utility, so it is set on the element by
+     the component and cannot be applied here. */
+  .guest-card__row {
+    @apply flex min-h-11 items-center justify-between gap-4 border-b border-border/60 py-4 last:border-b-0;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .guest-card__row-label {
+    @apply block text-[13px] font-bold text-foreground;
+  }
+
+  .guest-card__row-hint {
+    @apply mt-0.5 block text-[11px] font-medium text-muted-foreground;
+  }
+
+  .guest-card__row-chevron {
+    @apply shrink-0 text-muted-foreground transition-colors group-hover:text-primary;
+  }
+
+  /* ─── Notice ───
+     A short status the guest has to read before the content under it. Tinted
+     rather than filled, because it sits inside a page the guest is already
+     reading and a solid block reads as a different page.
+
+     The icon is decorative and the variant is not the message. A guest who
+     cannot separate the tints still gets the whole fact from the words. */
+  .guest-notice {
+    @apply flex items-start gap-3 rounded-xl border p-4 text-[13px] font-medium leading-relaxed;
+  }
+
+  .guest-notice[data-variant="info"] {
+    @apply border-border/60 bg-background text-foreground;
+  }
+
+  .guest-notice[data-variant="success"] {
+    @apply border-success/25 bg-success/10 text-success-foreground;
+  }
+
+  .guest-notice[data-variant="warning"] {
+    @apply border-warning/30 bg-warning/10 text-warning-foreground;
+  }
+
+  .guest-notice[data-variant="danger"] {
+    @apply border-destructive/25 bg-destructive/5;
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-notice__icon {
+    @apply mt-0.5 size-4 shrink-0;
+  }
+
+  .guest-notice__title {
+    @apply block font-bold;
+  }
+
+  /* ─── Page ───
+     The concierge page frame: hero, one centred container, then the footer.
+
+     The split layout puts the stay context at about a third and the actions at
+     about two thirds. It stacks on a phone, and the DOM order already matches
+     that reading order, so the grid never moves focus away from the order the
+     page is read in. */
+  .guest-page {
+    @apply flex min-h-screen flex-col overflow-x-hidden bg-background font-sans;
+  }
+
+  .guest-page__main {
+    @apply mx-auto w-full max-w-5xl px-6 pb-12 pt-6 md:px-10 md:pb-20 md:pt-10;
+  }
+
+  .guest-page[data-variant="centered"] .guest-page__main {
+    @apply max-w-2xl;
+  }
+
+  .guest-page__grid {
+    @apply grid items-start gap-6 md:grid-cols-3 md:gap-8;
+  }
+
+  .guest-page__context {
+    @apply md:col-span-1;
+  }
+
+  .guest-page__content {
+    @apply space-y-6 md:col-span-2;
+  }
+
+  /* No context column: the content takes the whole measure rather than
+     two thirds of it with a third of white space beside it. */
+  .guest-page__grid[data-columns="1"] .guest-page__content {
+    @apply md:col-span-3;
+  }
+
+  .guest-page__footer {
+    @apply mt-auto px-4 pb-10 text-center;
+  }
+
+  .guest-page__footer-rule {
+    @apply mx-auto mb-6 h-px w-12 bg-border;
+  }
+
+  .guest-page__footer-text {
+    @apply text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground opacity-60;
+  }
+}

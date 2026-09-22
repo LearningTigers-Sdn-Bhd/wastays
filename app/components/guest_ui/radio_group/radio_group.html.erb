@@ -1,0 +1,8 @@
+<%= tag.div(**group_attributes) do %>
+  <% choices.each_with_index do |choice, index| %>
+    <%= tag.label(class: "guest-radio-group__option") do %>
+      <%= form.radio_button(attribute, choice[:value], **radio_attributes(index)) %>
+      <span><%= choice[:label] %></span>
+    <% end %>
+  <% end %>
+<% end %>
