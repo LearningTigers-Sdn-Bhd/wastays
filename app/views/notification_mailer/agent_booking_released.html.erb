@@ -1,0 +1,11 @@
+<%# Sent after the fact: the rooms are already back on sale, so nothing here can
+    be acted on to prevent it. It names the deadline rather than the agent --
+    "we did not receive payment" reads as an accusation to an agent whose
+    transfer is sitting unreviewed -- and gives both routes forward: rebook, or
+    talk to the hotel. The eyebrow already says "cancelled", so the body does
+    not repeat it. %>
+<%= render "notification_mailer/agent_payment_notice",
+      accent: "#b42318",
+      eyebrow: "Booking cancelled",
+      headline: "These rooms have been released",
+      body: "The payment deadline for this booking has passed, so the rooms have gone back on sale at #{@payload[:hotel_name]}. Search again in the portal to see whether they are still available. Already sent your transfer? Contact the hotel directly." %>

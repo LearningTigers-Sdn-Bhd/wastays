@@ -124,4 +124,41 @@ RSpec.describe NotificationConfig, type: :model do
     expect(config.errors[:settings]).to include("contains unsupported in-stay rules")
     expect(config.errors[:settings]).to include("contains invalid time format for mid_stay")
   end
+
+  describe "the agent payment reminder" do
+    def config(settings: {}, channels: [ "email" ])
+      described_class.new(hotel: create(:hotel), notification_type: "agent_payment_reminder",
+                          enabled: true, channels: channels, settings: settings)
+    end
+
+    it "accepts a list of whole hours before the deadline" do
+      expect(config(settings: { "offsets_hours" => [ 24, 4 ] })).to be_valid
+    end
+
+    it "rejects an offset that is not a whole number of hours above zero" do
+      subject = config(settings: { "offsets_hours" => [ 24, 0 ] })
+
+      expect(subject).not_to be_valid
+      expect(subject.errors[:settings]).to include("reminder offsets must be whole numbers of hours above zero")
+    end
+
+    # It goes to a business contact, not a guest with a phone number on the
+    # booking, and the WhatsApp payload builders are all guest-shaped.
+    it "rejects WhatsApp, which it has no payload for" do
+      subject = config(channels: [ "whatsapp" ])
+
+      expect(subject).not_to be_valid
+      expect(subject.errors[:channels]).to include("supports email only for agent payment reminders")
+    end
+
+    it "falls back to the default offsets when none are configured" do
+      expect(config.agent_reminder_offsets_hours).to eq(described_class::DEFAULT_AGENT_REMINDER_OFFSETS)
+    end
+
+    # Largest first, because the scheduler reads the list in order and sends the
+    # last one whose window is open.
+    it "reads offsets back largest first, without duplicates" do
+      expect(config(settings: { "offsets_hours" => [ 4, 24, 4 ] }).agent_reminder_offsets_hours).to eq([ 24, 4 ])
+    end
+  end
 end

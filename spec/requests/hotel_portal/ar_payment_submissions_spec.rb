@@ -28,6 +28,27 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include("View transaction slip")
   end
 
+  it "shows the booking's status and warns when a pending slip's booking has been voided" do
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, booking: booking, auto_invoice: nil)
+    booking.transition_status_to!("voided", event: "void")
+
+    get hotel_ar_payment_submission_path(hotel, submission)
+
+    expect(response.body).to include(booking.formatted_reservation_number)
+    expect(response.body).to include("Voided")
+    expect(response.body).to include("Recording this payment will")
+  end
+
+  it "does not warn when the booking behind a pending slip is still live" do
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, booking: booking, auto_invoice: nil)
+
+    get hotel_ar_payment_submission_path(hotel, submission)
+
+    expect(response.body).not_to include("Recording this payment will")
+  end
+
   it "names the account and the payment form apart from the payment record list" do
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-TITLE", amount: 300)
     account_name = relationship.corporate_account.name
@@ -47,7 +68,7 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).to include("SLIP-PREFILL")
     expect(response.body).to include('value="275.0"')
-    expect(response.body).to include("submitted payment slip")
+    expect(response.body).to include("Submitted by the agent")
   end
 
   it "prefills the allocation for the submission's target invoice without needing ar_invoice_id in the URL" do
@@ -58,7 +79,7 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include(invoice.formatted_invoice_number)
-    expect(response.body).to include("targeting invoice #{invoice.formatted_invoice_number}")
+    expect(response.body).to include("against invoice #{invoice.formatted_invoice_number}")
     expect(response.body).to include("name=\"allocations[#{invoice.id}]\"")
     expect(response.body).to include('value="275.0"')
   end
@@ -80,7 +101,7 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("targeting invoices #{invoice1.formatted_invoice_number} and #{invoice2.formatted_invoice_number}")
+    expect(response.body).to include("against invoices #{invoice1.formatted_invoice_number} and #{invoice2.formatted_invoice_number}")
     expect(response.body).to include("name=\"allocations[#{invoice1.id}]\"")
     expect(response.body).to include("name=\"allocations[#{invoice2.id}]\"")
     expect(response.body).to include('value="100.0"')
@@ -116,7 +137,7 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include('type="hidden" name="ar_payment[reference_number]"')
     expect(response.body).to include('type="hidden" name="ar_payment[amount]"')
     expect(response.body).to include('type="hidden" name="ar_payment[payment_method]"')
-    expect(response.body).to include("can't be edited here")
+    expect(response.body).to include("read-only")
   end
 
   it "offers a reject-with-remarks form directly on the review page" do
@@ -178,5 +199,41 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
 
     get hotel_ar_payment_submission_path(hotel, submission)
     expect(flash[:alert]).to include("not authorized")
+  end
+
+  # Staff approve or reject money on the strength of the slip, so it has to be
+  # on the screen where that decision is made, and it has to survive approval.
+  it "shows the agent's slip on the record-payment screen" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-PROOF", amount: 275)
+
+    get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Agent's payment proof")
+    expect(response.body).to include("View transaction slip")
+    expect(response.body).to include(rails_blob_path(submission.slip, disposition: "inline"))
+  end
+
+  it "keeps the slip reachable from the payment once the submission is approved" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-APPROVED", amount: 275)
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 275, currency: "MYR")
+    submission.approve!(ar_payment: payment, reviewed_by: user)
+
+    get hotel_ar_payment_path(hotel, payment)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Payment proof")
+    expect(response.body).to include(rails_blob_path(submission.slip, disposition: "inline"))
+    expect(response.body).to include(hotel_ar_payment_submission_path(hotel, submission))
+  end
+
+  it "says so plainly instead of raising when a submission has no slip" do
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, reference_number: "SLIP-MISSING", amount: 275)
+    submission.slip.purge
+
+    get hotel_ar_payment_submission_path(hotel, submission)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("No slip on file")
   end
 end

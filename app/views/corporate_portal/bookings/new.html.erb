@@ -1,0 +1,271 @@
+<div class="mx-auto w-full max-w-4xl space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Book a stay",
+        description: "Reserve rooms for your guests at a hotel your account is linked to.") %>
+
+  <% if @relationships.empty? %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "No linked hotels") do |alert| %>
+      <% alert.with_description do %>
+        Your account is not linked to any hotel yet.
+      <% end %>
+    <% end %>
+  <% else %>
+    <% rooms_field_label = capture do %>
+      Rooms
+      <%= render PanelsUI::Popover.new(id: "rooms-occupancy-info", placement: :bottom_start) do |popover| %>
+        <% popover.with_trigger(unstyled: true, aria_label: "About rooms",
+             class: "inline-flex size-4 shrink-0 -translate-y-px items-center justify-center align-middle text-muted-foreground hover:text-foreground") do %>
+          <%= cached_icon "info", class: "size-3.5", aria: { hidden: "true" } %>
+        <% end %>
+        <p class="w-64 p-3 text-sm text-muted-foreground">Every room is booked with the same occupancy.</p>
+      <% end %>
+    <% end %>
+
+    <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <%= form_with url: new_corporate_booking_path, method: :get, class: "space-y-4" do |form| %>
+        <div class="grid gap-4 lg:grid-cols-2">
+          <%# One linked hotel is not a choice, so it is shown, not asked --
+              read-only, with the actual id still submitted so the rest of the
+              flow behaves exactly as if it had been picked. Two or more is a
+              real choice, and gets the select. %>
+          <% if @relationships.one? %>
+            <% only_relationship = @relationships.first %>
+            <%= form.hidden_field :hotel_relationship_id, value: only_relationship.id %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :hotel_relationship_id,
+                  id: "hotel-display", label: "Hotel", readonly: true) do |field| %>
+              <% field.with_input(name: "hotel_display", value: only_relationship.hotel.name) %>
+            <% end %>
+          <% else %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :hotel_relationship_id,
+                  label: "Hotel", required: true) do |field| %>
+              <% field.with_select_menu(
+                   @relationships.map { |r| { label: r.hotel.name, value: r.id } },
+                   selected: @relationship&.id) %>
+            <% end %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :rooms, label: rooms_field_label) do |field| %>
+            <% field.with_select_menu(
+                 (1..8).map { |n| { label: pluralize(n, "room"), value: n } },
+                 selected: @rooms) %>
+          <% end %>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <%= render PanelsUI::FormField.new(form:, attribute: :check_in, label: "Arrival", required: true) do |field| %>
+            <% field.with_date_picker(value: @check_in, linked_to: :check_out, min: Date.current) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :check_out, label: "Departure", required: true) do |field| %>
+            <% field.with_date_picker(value: @check_out, min: @check_in || Date.current) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :adults, label: "Adults per room") do |field| %>
+            <% field.with_input(type: :number, value: @adults, min: 1, max: 10) %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form:, attribute: :children, label: "Children per room") do |field| %>
+            <% field.with_input(type: :number, value: @children, min: 0, max: 10) %>
+          <% end %>
+        </div>
+
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
+          Search availability
+        <% end %>
+      <% end %>
+    </section>
+
+    <% if @search.present? %>
+      <% if @search.error.present? %>
+        <%= render PanelsUI::Alert.new(tone: :warning, title: "Check the dates") do |alert| %>
+          <% alert.with_description do %><%= @search.error %><% end %>
+        <% end %>
+      <% else %>
+        <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div class="border-b border-border px-6 py-4">
+            <h2 class="text-sm font-bold text-foreground">
+              <%= pluralize(@rooms, "room") %> · <%= pluralize(@search.nights, "night") %> ·
+              <%= @check_in.strftime("%d %b") %> – <%= @check_out.strftime("%d %b %Y") %>
+            </h2>
+          </div>
+
+          <% if @search.available.empty? %>
+            <p class="px-6 py-10 text-center text-sm text-muted-foreground">
+              Nothing has <%= pluralize(@rooms, "room") %> free for these dates.
+            </p>
+          <% else %>
+            <ul class="divide-y divide-border">
+              <% @search.available.each do |option| %>
+                <% chosen = @selected&.room_type&.id == option.room_type.id %>
+                <li class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6">
+                  <div class="min-w-0">
+                    <p class="font-bold text-foreground"><%= option.room_type.name %></p>
+                    <p class="mt-0.5 text-xs text-muted-foreground">
+                      <%= option.rate_plan.name %> · <%= pluralize(option.available_count, "room") %> free
+                    </p>
+                    <% if option.tax_lines.present? %>
+                      <p class="mt-0.5 text-xs text-muted-foreground">
+                        Includes <%= option.tax_lines.map { |line| "#{line['name']} (#{option.currency} #{number_with_precision(line['amount'].to_d * option.rooms, precision: 2)})" }.to_sentence %>
+                      </p>
+                    <% end %>
+                  </div>
+                  <div class="flex items-center justify-between gap-4 sm:justify-end sm:shrink-0">
+                    <p class="font-bold tabular-nums text-foreground sm:text-right">
+                      <%= option.currency %> <%= number_with_precision(option.total_amount, precision: 2) %>
+                      <span class="block text-xs font-normal text-muted-foreground">
+                        <% if @rooms > 1 %>
+                          <%= option.currency %> <%= number_with_precision(option.per_room_amount, precision: 2) %> per room
+                        <% else %>
+                          total stay
+                        <% end %>
+                      </span>
+                    </p>
+                    <%= render PanelsUI::Button.new(
+                          as: :a, variant: chosen ? :secondary : :primary, size: :sm, class: "shrink-0",
+                          href: new_corporate_booking_path(
+                            hotel_relationship_id: @relationship.id, check_in: @check_in,
+                            check_out: @check_out, adults: @adults, children: @children,
+                            rooms: @rooms, room_type_id: option.room_type.id)) do %>
+                      <%= chosen ? "Selected" : "Select" %>
+                    <% end %>
+                  </div>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+          <% if (note = @search.available.first&.tourism_tax_note).present? %>
+            <p class="border-t border-border px-6 py-3 text-xs text-muted-foreground">
+              <%= note %>
+            </p>
+          <% end %>
+        </section>
+
+        <% if @selected.present? %>
+          <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <h2 class="text-sm font-bold text-foreground">Guest details</h2>
+            <p class="mt-1 text-xs text-muted-foreground">
+              <%= pluralize(@rooms, "×") %> <%= @selected.room_type.name %> ·
+              <%= @selected.currency %> <%= number_with_precision(@selected.total_amount, precision: 2) %> for the stay.
+            </p>
+
+            <%= form_with url: corporate_bookings_path, method: :post, scope: :booking,
+                          class: "mt-5 space-y-5" do |form| %>
+              <%= hidden_field_tag :hotel_relationship_id, @relationship.id %>
+              <%= form.hidden_field :room_type_id, value: @selected.room_type.id %>
+              <%= form.hidden_field :check_in, value: @check_in %>
+              <%= form.hidden_field :check_out, value: @check_out %>
+              <%= form.hidden_field :adults, value: @adults %>
+              <%= form.hidden_field :children, value: @children %>
+              <%= form.hidden_field :rooms, value: @rooms %>
+
+              <%# One block per room, and inside it one per adult sharing that
+                  room. The first of each is the lead the room is held under. %>
+              <% @rooms.times do |room_index| %>
+                <fieldset class="rounded-xl border border-border p-4">
+                  <legend class="px-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Room <%= room_index + 1 %>
+                  </legend>
+                  <div class="space-y-5">
+                    <% @adults.times do |guest_index| %>
+                      <%# A visible break between guests, not just vertical spacing --
+                          on a narrow screen four stacked fields per guest otherwise read
+                          as one long list with no seam between people. %>
+                      <div class="<%= "border-t border-border pt-5" unless guest_index.zero? %>">
+                        <p class="mb-2.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                          <%= guest_index.zero? ? "Lead guest" : "Guest #{guest_index + 1}" %>
+                        </p>
+                        <%# A consistent two-up grid at every width, rather than reflowing to
+                            four columns on a wider screen: on this form five different fields
+                            (name, phone, email, nationality, ID) already read as plenty. %>
+                        <div class="grid grid-cols-2 gap-3" data-controller="agent-guest-identity">
+                          <%= render PanelsUI::FormField.new(form:, attribute: :name,
+                                id: "room-#{room_index}-guest-#{guest_index}-name", label: "Full name",
+                                class: "col-span-2") do |field| %>
+                            <% field.with_input(
+                                 name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][name]",
+                                 value: nil, required: guest_index.zero?, placeholder: "Full name") %>
+                          <% end %>
+                          <%= render PanelsUI::FormField.new(form:, attribute: :phone,
+                                id: "room-#{room_index}-guest-#{guest_index}-phone", label: "Phone") do |field| %>
+                            <% field.with_input(
+                                 type: :tel,
+                                 name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][phone]",
+                                 value: nil, required: guest_index.zero?) %>
+                          <% end %>
+                          <%= render PanelsUI::FormField.new(form:, attribute: :email,
+                                id: "room-#{room_index}-guest-#{guest_index}-email", label: "Email") do |field| %>
+                            <% field.with_input(
+                                 type: :email,
+                                 name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][email]",
+                                 value: nil) %>
+                          <% end %>
+                          <%# Nested so the native <select> gets the correctly bracketed,
+                              indexed name (booking[rooms_detail][i][guests][j][country])
+                              the way with_input's manual `name:` override gets it for a plain
+                              input -- Combobox's own progressive-enhancement layer does not
+                              forward a caller's `name:` down to it. Malaysia is preselected as
+                              the common case for a domestic-facing property; the agent
+                              overrides it rather than picking it every time. %>
+                          <%= form.fields_for(:rooms_detail, index: room_index) do |room_form| %>
+                            <%= room_form.fields_for(:guests, index: guest_index) do |guest_form| %>
+                              <%= render PanelsUI::FormField.new(form: guest_form, attribute: :country,
+                                    id: "room-#{room_index}-guest-#{guest_index}-country", label: "Nationality") do |field| %>
+                                <% field.with_combobox(COUNTRY_OPTIONS, selected: "Malaysia",
+                                     prompt: "Select nationality", allow_empty_option: true) %>
+                              <% end %>
+                            <% end %>
+                          <% end %>
+                          <%# IC for a Malaysian guest, passport number for anyone else -- one
+                              free-text field rather than asking the agent to first say which
+                              kind, with its label following whichever nationality is chosen
+                              (agent-guest-identity, client-side; matches Malaysia being the
+                              default nationality below). The desk still confirms and formally
+                              records it against the guest profile at check-in; this is a
+                              reference an agent finds genuinely useful to hand the hotel ahead
+                              of arrival. %>
+                          <%= render PanelsUI::FormField.new(form:, attribute: :government_id,
+                                id: "room-#{room_index}-guest-#{guest_index}-government-id", label: "IC") do |field| %>
+                            <%# 20, not the ICAO document-number length of 9: real passport fields
+                                need headroom for the spaces, hyphens or a check digit an agent
+                                might type, which the server strips down to the real number
+                                (CorporatePortal::CreateAgentBooking#identity_attributes). A
+                                Malaysian IC's own 12-digit limit is enforced separately, live, by
+                                agent-guest-identity. %>
+                            <% field.with_input(
+                                 name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][government_id]",
+                                 value: nil, placeholder: "IC number", maxlength: 20) %>
+                          <% end %>
+                          <%# Only bites once a nationality is actually given: a non-Malaysian
+                              guest record cannot save without a date of birth (the property's
+                              own reporting requirement), and a nationality with no way to answer
+                              that would fail the booking outright rather than just skip a field. %>
+                          <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth,
+                                id: "room-#{room_index}-guest-#{guest_index}-dob", label: "Date of birth",
+                                class: "col-span-2") do |field| %>
+                            <% field.with_input(
+                                 type: :date, max: Date.yesterday,
+                                 name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][date_of_birth]",
+                                 value: nil) %>
+                          <% end %>
+                        </div>
+                      </div>
+                    <% end %>
+                  </div>
+                </fieldset>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form:, attribute: :special_requests,
+                    label: "Special requests", hint: "Applied to every room in this booking.") do |field| %>
+                <% field.with_input(placeholder: "Late arrival, adjoining rooms…") %>
+              <% end %>
+
+              <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
+                Confirm <%= pluralize(@rooms, "room") %>
+              <% end %>
+            <% end %>
+          </section>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

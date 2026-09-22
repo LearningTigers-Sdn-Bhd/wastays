@@ -47,6 +47,46 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(response.body).to include(new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id))
   end
 
+  it "flags a pending submission on the list once its booking has been voided" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                   booking: booking, auto_invoice: nil, reference_number: "VOIDED-BOOKING-SLIP")
+    booking.transition_status_to!("voided", event: "void")
+
+    get hotel_ar_payments_path(hotel)
+
+    expect(response.body).to include("VOIDED-BOOKING-SLIP")
+    expect(response.body).to include("Booking voided")
+  end
+
+  # The action this page leads to, so the warning has to sit here too -- not
+  # only on the submission's own read-only page, one click behind this one.
+  it "warns on the record-payment screen when a pending slip's booking has been voided" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                booking: booking, auto_invoice: nil)
+    booking.transition_status_to!("voided", event: "void")
+
+    get new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id)
+
+    expect(response.body).to include(booking.formatted_reservation_number)
+    expect(response.body).to include("Voided")
+    expect(response.body).to include("Recording this payment will")
+  end
+
+  it "does not warn on the record-payment screen when the booking is still live" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                booking: booking, auto_invoice: nil)
+
+    get new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id)
+
+    expect(response.body).not_to include("Recording this payment will")
+  end
+
   it "filters by query, account, and date" do
     payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 200, received_at: Date.current, reference_number: "FILTER-ME")
     create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 300, reference_number: "HIDE-ME")
@@ -114,6 +154,37 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
 
     expect(response).to redirect_to(hotel_ar_payment_path(hotel, ArPayment.last))
     expect(ArPayment.last.unallocated_amount).to eq(500.to_d)
+  end
+
+  # Approving a booking's remittance slip through the ordinary "record a
+  # payment" screen has to reach the booking's own folio, not only the AR
+  # ledger -- otherwise the desk still finds the stay unpaid at checkout
+  # despite the hotel having already told the agent it was settled.
+  it "posts a booking prepayment slip's approval to the booking's own folio" do
+    relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship,
+                               status: "confirmed", payment_status: "pending",
+                               payment_due_at: 6.hours.from_now, total_amount: 300.0, currency: hotel.default_currency)
+    folio = create(:booking_folio, booking: booking, hotel: hotel, currency: hotel.default_currency)
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, booking: booking,
+                                                auto_invoice: nil, amount: 300.0, currency: hotel.default_currency)
+
+    post hotel_ar_payments_path(hotel), params: {
+      ar_payment_submission_id: submission.id,
+      ar_payment: {
+        hotel_corporate_account_id: relationship.id,
+        amount: "300.00",
+        currency: hotel.default_currency,
+        reference_number: submission.reference_number,
+        received_at: Date.current.iso8601,
+        payment_method: "bank_transfer"
+      },
+      allocations: {}
+    }
+
+    expect(submission.reload.status).to eq("approved")
+    expect(booking.reload).to have_attributes(payment_status: "captured", payment_due_at: nil)
+    expect(folio.folio_transactions.payment.sum(:amount)).to eq(300.to_d)
   end
 
   it "refreshes eligible invoices for the selected corporate account" do

@@ -2,6 +2,12 @@ import { Controller } from "@hotwired/stimulus"
 
 const DAY_MS = 86_400_000
 
+const ACTIVATION_HINTS = {
+  move: "Moving booking. Drag to a room and date, then release.",
+  resize: "Resizing booking. Drag the edge to a date, then release.",
+  create: "Selecting nights. Drag across the room's free dates, then release."
+}
+
 export default class extends Controller {
   static targets = ["segment", "row", "cell", "handle", "live"]
   static values = {
@@ -44,6 +50,45 @@ export default class extends Controller {
       segment,
       edge,
       mode,
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      startX: event.clientX,
+      startY: event.clientY,
+      startScrollLeft: this.element.scrollLeft,
+      startScrollTop: this.element.scrollTop,
+      lastX: event.clientX,
+      lastY: event.clientY
+    }
+    this.installPointerListeners()
+
+    if (event.pointerType === "touch") {
+      this.longPressTimer = window.setTimeout(() => this.activate(), this.longPressValue)
+    }
+  }
+
+  // Drag across free cells to propose a stay. The anchor cell is where the
+  // pointer went down; the stay runs to whichever cell it is released over, so
+  // dragging backwards is as valid as dragging forwards.
+  startSelection(event) {
+    if (event.button !== 0 || !event.isPrimary) return
+
+    const cell = event.currentTarget
+    if (cell.dataset.selectable !== "true") return
+    // The cell's "+" trigger is stretched over the whole night, so a press that
+    // lands on it is still a press on the night behind it. Every other control —
+    // a link, an open menu's items — keeps its own behaviour.
+    const control = event.target.closest("a, button, [popover]")
+    if (control && control.dataset.timelinePassthrough !== "true") return
+
+    const row = cell.closest("[data-stay-view--interaction-target~='row']")
+    if (!row?.dataset.createUrl) return
+
+    this.cancel()
+    this.pending = {
+      segment: null,
+      row,
+      anchorDate: cell.dataset.date,
+      mode: "create",
       pointerId: event.pointerId,
       pointerType: event.pointerType,
       startX: event.clientX,
@@ -121,21 +166,25 @@ export default class extends Controller {
     window.clearTimeout(this.longPressTimer)
     this.active = this.pending
     this.pending = null
-    const { segment, mode, pointerId, lastX, lastY } = this.active
-    try { segment.setPointerCapture(pointerId) } catch (_) { /* Pointer capture is an enhancement. */ }
+    const { segment, row, mode, pointerId, lastX, lastY } = this.active
+    const capture = segment || row
+    try { capture.setPointerCapture(pointerId) } catch (_) { /* Pointer capture is an enhancement. */ }
 
-    segment.dataset.interacting = "true"
+    if (segment) {
+      segment.dataset.interacting = "true"
+      this.closeSegmentPopover(segment)
+    }
     this.element.dataset.interactionState = mode
-    this.closeSegmentPopover(segment)
     window.dispatchEvent(new CustomEvent("panels-ui:layer-open"))
     this.createGhost(segment)
     this.updateProposal(lastX, lastY)
     this.startAutoScroll()
-    this.announce(mode === "move" ? "Moving booking. Drag to a room and date, then release." : "Resizing booking. Drag the edge to a date, then release.")
+    this.announce(ACTIVATION_HINTS[mode])
   }
 
   updateProposal(clientX, clientY) {
     if (!this.active) return
+    if (this.active.mode === "create") return this.updateSelectionProposal(clientX, clientY)
 
     const dayWidth = this.dayWidth
     if (!dayWidth) return
@@ -176,6 +225,37 @@ export default class extends Controller {
     this.renderProposal(row, geometry, valid)
   }
 
+  // A selection is valid only while every night it covers is still free, so a
+  // drag that runs into an existing stay stops being offered rather than
+  // silently proposing a clash the form would reject.
+  updateSelectionProposal(clientX, clientY) {
+    const { row, anchorDate } = this.active
+    const cell = this.selectableCellAt(clientX, clientY)
+    const cursorDate = cell && cell.closest("[data-stay-view--interaction-target~='row']") === row ? cell.dataset.date : this.active.proposal?.cursorDate || anchorDate
+    const checkIn = cursorDate < anchorDate ? cursorDate : anchorDate
+    const checkOut = shiftDate(cursorDate < anchorDate ? anchorDate : cursorDate, 1)
+
+    const geometry = this.geometryFor(checkIn, checkOut)
+    const valid = Boolean(geometry) && this.nightsAreFree(row, checkIn, checkOut)
+
+    this.active.proposal = { valid, noop: false, checkIn, checkOut, cursorDate, row, mode: "create" }
+    this.labelGhost(`${daysBetween(checkIn, checkOut)} ${daysBetween(checkIn, checkOut) === 1 ? "night" : "nights"}`)
+    this.renderProposal(row, geometry, valid)
+  }
+
+  selectableCellAt(clientX, clientY) {
+    const element = document.elementFromPoint(clientX, clientY)
+    return element?.closest("[data-stay-view--interaction-target~='cell']") || null
+  }
+
+  nightsAreFree(row, checkIn, checkOut) {
+    for (let night = checkIn; night < checkOut; night = shiftDate(night, 1)) {
+      const cell = row.querySelector(`[data-stay-view--interaction-target~='cell'][data-date='${night}']`)
+      if (!cell || cell.dataset.selectable !== "true") return false
+    }
+    return true
+  }
+
   renderProposal(row, geometry, valid) {
     this.rowTargets.forEach((candidate) => delete candidate.dataset.dropTarget)
     if (row) row.dataset.dropTarget = valid ? "active" : "invalid"
@@ -212,10 +292,20 @@ export default class extends Controller {
   createGhost(segment) {
     this.ghost = document.createElement("div")
     this.ghost.className = "panel-timeline__segment panel-timeline__segment-proposal"
-    this.ghost.dataset.tone = segment.dataset.tone
+    this.ghost.dataset.tone = segment?.dataset.tone || "accent"
     this.ghost.dataset.valid = "true"
     const content = document.createElement("span")
     content.className = "panel-timeline__segment-content gap-2"
+
+    if (!segment) {
+      this.ghostLabel = document.createElement("span")
+      this.ghostLabel.className = "min-w-0 flex-1 truncate"
+      this.ghostLabel.textContent = "New booking"
+      content.append(this.ghostLabel)
+      this.ghost.append(content)
+      return
+    }
+
     const sourceParts = [...segment.querySelectorAll(".panel-timeline__segment-content > span")]
       .map((part) => part.textContent.trim())
       .filter(Boolean)
@@ -232,12 +322,18 @@ export default class extends Controller {
     this.ghost.append(content)
   }
 
+  labelGhost(suffix) {
+    if (this.ghostLabel) this.ghostLabel.textContent = `New booking · ${suffix}`
+  }
+
   closeSegmentPopover(segment) {
     const controller = window.Stimulus?.getControllerForElementAndIdentifier(segment, "panels-ui--popover")
     controller?.close()
   }
 
   openProposal(segment, proposal) {
+    if (proposal.mode === "create") return this.openSelection(proposal)
+
     const baseUrl = this.activeBaseUrl(segment, proposal)
     if (!baseUrl) return
 
@@ -257,6 +353,22 @@ export default class extends Controller {
     if (!frame) return
     frame.src = url.toString()
     this.announce("Booking proposal ready for confirmation.")
+  }
+
+  // The room, source and return path are already on the row's URL; the drag
+  // only contributes the dates, which the creation sheet reads as top-level
+  // params exactly as the cell menu passes them.
+  openSelection(proposal) {
+    const frame = document.getElementById(this.sheetFrameIdValue)
+    if (!frame) return
+
+    const url = new URL(proposal.row.dataset.createUrl, window.location.origin)
+    url.searchParams.set("check_in", proposal.checkIn)
+    url.searchParams.set("check_out", proposal.checkOut)
+
+    window.dispatchEvent(new CustomEvent("stay-view:preserve", { detail: { focusId: proposal.row.id } }))
+    frame.src = url.toString()
+    this.announce(`New booking for ${daysBetween(proposal.checkIn, proposal.checkOut)} nights ready for confirmation.`)
   }
 
   activeBaseUrl(segment) {
@@ -282,8 +394,9 @@ export default class extends Controller {
   cleanupInteraction() {
     if (this.active) {
       this.lastMode = this.active.mode
-      try { this.active.segment.releasePointerCapture(this.active.pointerId) } catch (_) { /* No active capture. */ }
-      delete this.active.segment.dataset.interacting
+      const capture = this.active.segment || this.active.row
+      try { capture.releasePointerCapture(this.active.pointerId) } catch (_) { /* No active capture. */ }
+      if (this.active.segment) delete this.active.segment.dataset.interacting
     }
     window.clearTimeout(this.longPressTimer)
     this.pointerLifecycle?.abort()
@@ -291,6 +404,7 @@ export default class extends Controller {
     this.stopAutoScroll()
     this.ghost?.remove()
     this.ghost = null
+    this.ghostLabel = null
     this.rowTargets.forEach((row) => delete row.dataset.dropTarget)
     delete this.element.dataset.interactionState
     this.active = null

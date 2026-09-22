@@ -114,6 +114,53 @@ RSpec.describe "PanelsUI::DatePicker", type: :system do
     expect(min).to eq("2026-07-20")
   end
 
+  it "opens the linked end field's own calendar once a start date is picked with nothing chosen yet" do
+    expect(page).to have_css("#{picker_css('panel-light', 'check_in')}[data-panels-ui--date-picker-target='input']", visible: :all, wait: 10)
+
+    result = page.evaluate_script(<<~JS)
+      (() => {
+        const section = document.querySelector('[aria-labelledby="date-picker-preview-heading"]')
+        const card = [...section.querySelectorAll(':scope > div > [data-theme]')]
+          .find((el) => el.dataset.theme === 'panel-light')
+        const startCalendar = card.querySelector('input[name$="[check_in]"]')
+          .closest('.panel-date-picker').querySelector('calendar-date')
+        const endPicker = card.querySelector('input[name$="[check_out]"]').closest('.panel-date-picker')
+
+        startCalendar.value = '2026-07-20'
+        startCalendar.dispatchEvent(new Event('change', { bubbles: true }))
+
+        return endPicker.querySelector('.popover').matches(':popover-open')
+      })()
+    JS
+
+    expect(result).to be(true)
+  end
+
+  it "does not reopen the end field once it already holds a date that is still valid" do
+    expect(page).to have_css("#{picker_css('panel-light', 'check_in')}[data-panels-ui--date-picker-target='input']", visible: :all, wait: 10)
+
+    result = page.evaluate_script(<<~JS)
+      (() => {
+        const section = document.querySelector('[aria-labelledby="date-picker-preview-heading"]')
+        const card = [...section.querySelectorAll(':scope > div > [data-theme]')]
+          .find((el) => el.dataset.theme === 'panel-light')
+        const startCalendar = card.querySelector('input[name$="[check_in]"]')
+          .closest('.panel-date-picker').querySelector('calendar-date')
+        const endPicker = card.querySelector('input[name$="[check_out]"]').closest('.panel-date-picker')
+        const endCalendar = endPicker.querySelector('calendar-date')
+
+        endCalendar.value = '2026-07-25'
+        endCalendar.dispatchEvent(new Event('change', { bubbles: true }))
+        startCalendar.value = '2026-07-20'
+        startCalendar.dispatchEvent(new Event('change', { bubbles: true }))
+
+        return endPicker.querySelector('.popover').matches(':popover-open')
+      })()
+    JS
+
+    expect(result).to be(false)
+  end
+
   it "clears a linked end field when the start moves beyond it" do
     expect(page).to have_css("#{picker_css('panel-light', 'check_in')}[data-panels-ui--date-picker-target='input']", visible: :all, wait: 10)
 

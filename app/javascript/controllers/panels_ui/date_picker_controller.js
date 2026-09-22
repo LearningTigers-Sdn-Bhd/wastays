@@ -70,11 +70,15 @@ export default class extends Controller {
 
     this.inputTarget.value = value // Cally emits ISO ("YYYY-MM-DD" or "start/end").
     this.renderDisplay(value)
-    if (!this.isRange && this.hasLinkedToValue) this.syncLinkedMin(value)
     this.emitInput()
 
     // Single picks are done in one click; a range is done once both ends are set.
     if (!this.isRange || this.rangeComplete(value)) this.closePopover()
+    // After this picker's own popover has closed: sync the end date's floor and,
+    // for a start pick with nothing chosen at the end yet, open it in the same
+    // motion -- picking a stay's two dates reads as one continuous action rather
+    // than two separate menus the agent has to reopen themselves.
+    if (!this.isRange && this.hasLinkedToValue) this.syncLinkedMin(value)
   }
 
   // Show the formatted value in the trigger, or clear it so the placeholder shows.
@@ -110,7 +114,15 @@ export default class extends Controller {
     const endCalendar = endPicker?.querySelector("[data-panels-ui--date-picker-target='calendar']")
     if (!endCalendar) return
 
+    const endWasEmpty = !endEl.value
+
     endCalendar.min = startDate || ""
+
+    if (startDate && endWasEmpty) {
+      this.openLinkedPopover(endEl)
+      return
+    }
+
     if (!startDate || !endEl.value || endEl.value >= startDate) return
 
     endEl.value = ""
@@ -119,6 +131,20 @@ export default class extends Controller {
     if (display) display.textContent = ""
     endEl.dispatchEvent(new Event("input", { bubbles: true }))
     endEl.dispatchEvent(new Event("change", { bubbles: true }))
+    // The end date it held was just invalidated by the new start date, so it
+    // needs picking again -- same seamless handoff as the empty-end case above.
+    this.openLinkedPopover(endEl)
+  }
+
+  // The end field's popover shares its id convention with this one
+  // (PanelsUI::DatePicker#popover_id), so it can be found and opened directly
+  // rather than reaching into Stimulus's own controller registry from outside.
+  openLinkedPopover(endEl) {
+    const popoverElement = document.getElementById(`${endEl.id}-calendar`)
+    if (!popoverElement) return
+
+    const controller = this.application.getControllerForElementAndIdentifier(popoverElement, "panels-ui--popover")
+    controller?.open()
   }
 
   closePopover() {

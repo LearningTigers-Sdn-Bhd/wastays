@@ -1,13 +1,14 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
+import { serializeForm } from "controllers/panels_ui/support/form_state"
 
 export default class extends Controller {
   static targets = ["form", "selectedRatePlanId"]
   static values = { editUrl: String, roomTypeId: Number }
 
   connect() {
-    this.pristine = new Map(this.formTargets.map((form) => [form, this.serialize(form)]))
+    this.pristine = new Map(this.formTargets.map((form) => [form, serializeForm(form)]))
     this.pending = null
     this.submitting = false
     this.boundDocumentClick = this.documentClick.bind(this)
@@ -105,15 +106,7 @@ export default class extends Controller {
 
   get currentFormDirty() {
     const form = this.currentForm
-    return Boolean(form) && this.serialize(form) !== this.pristine.get(form)
-  }
-
-  serialize(form) {
-    return Array.from(new FormData(form).entries())
-      .map(([key, value]) => [key, value instanceof File ? `${value.name}:${value.size}` : String(value)])
-      .sort(([aKey, aValue], [bKey, bValue]) => `${aKey}:${aValue}`.localeCompare(`${bKey}:${bValue}`))
-      .map(([key, value]) => `${key}=${value}`)
-      .join("&")
+    return Boolean(form) && serializeForm(form) !== this.pristine.get(form)
   }
 
   closeSheet() {

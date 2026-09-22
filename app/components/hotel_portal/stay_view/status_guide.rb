@@ -9,19 +9,17 @@ module HotelPortal
         { state: :completed, label: "Completed", icon: "check-check", presentation: :segment, tone: :completed, emphasis: :solid }.freeze
       ].freeze
 
-      ROOM_STATUS_ENTRIES = [
-        { state: :ready, label: "Ready" },
-        { state: :dirty, label: "Dirty" },
-        { state: :cleaning, label: "Cleaning" },
-        { state: :awaiting_inspection, label: "Awaiting inspection" },
-        { state: :inspection_failed, label: "Inspection failed" },
-        { state: :out_of_service, label: "Out of service" }
-      ].map do |entry|
-        entry.merge(
+      # Derived from RoomStatus::STATUSES so a new status cannot ship without a
+      # line in the guide explaining what its colour and icon mean.
+      ROOM_STATUS_ENTRIES = RoomStatus::STATUSES.map do |status|
+        state = status.to_sym
+        {
+          state: state,
+          label: status.humanize,
           presentation: :badge,
-          icon: RoomSummary::STATUS_ICONS.fetch(entry.fetch(:state)),
-          variant: RoomSummary::STATUS_VARIANTS.fetch(entry.fetch(:state))
-        ).freeze
+          icon: ::Rooms::StatusPresentation.icon(state),
+          variant: ::Rooms::StatusPresentation.badge_variant(state)
+        }.freeze
       end.freeze
 
       ROOM_BLOCK_ENTRIES = [

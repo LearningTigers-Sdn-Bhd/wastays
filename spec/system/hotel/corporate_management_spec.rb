@@ -20,6 +20,34 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     sign_in_through_ui(user)
   end
 
+  # Credit currency, credit limit and payment terms describe how an account is
+  # invoiced. A standard account settles at checkout and is never invoiced, so
+  # the three fields ask a question that does not apply to it.
+  it "shows the billing terms only once the relationship is direct bill" do
+    visit hotel_corporate_accounts_path(hotel)
+    click_link "Invite"
+    expect(page).to have_css("dialog#external-account-sheet[open]")
+
+    within("dialog#external-account-sheet") do
+      # A new invitation starts standard.
+      expect(page).to have_no_field("Credit limit")
+      expect(page).to have_no_field("Payment terms (days)")
+
+      click_in_overlay find("#corporate_invitation_relationship_type-trigger")
+      click_in_overlay find("[role='option']", text: "Direct bill", visible: true)
+
+      expect(page).to have_field("Credit limit")
+      expect(page).to have_field("Payment terms (days)")
+      expect(page).to have_content("Credit currency")
+
+      click_in_overlay find("#corporate_invitation_relationship_type-trigger")
+      click_in_overlay find("[role='option']", text: "Standard", visible: true)
+
+      expect(page).to have_no_field("Credit limit")
+      expect(page).to have_no_field("Payment terms (days)")
+    end
+  end
+
   it "opens, validates, cancels, and completes invitations in the sheet" do
     create(:user, email: "staff@example.com")
     visit hotel_corporate_accounts_path(hotel)
@@ -58,7 +86,10 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
   end
 
   it "edits an account through the sheet and returns to the filtered index" do
-    relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "government", payment_terms_days: 14)
+    # Direct bill, because payment terms only exist on an account that is
+    # invoiced -- the sheet hides them on a standard relationship.
+    relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "government",
+                                                    relationship_type: "direct_bill", payment_terms_days: 14)
 
     visit hotel_corporate_accounts_path(hotel, account_type: "government")
     find("[data-testid='external-account-edit-#{relationship.id}']").click

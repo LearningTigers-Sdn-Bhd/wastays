@@ -17,6 +17,13 @@ module CorporatePortal
       current_user.account.hotel_corporate_accounts
     end
 
+    # Only bookings this account is the billed party on. The dashboard, the
+    # bookings list and the cancellation flow all scope to this, so an agent can
+    # never reach another agency's reservation.
+    def corporate_bookings
+      Booking.where(hotel_corporate_account_id: corporate_relationships.select(:id))
+    end
+
     def corporate_ar_invoices
       ArInvoice.joins(:hotel_corporate_account)
         .where(hotel_corporate_accounts: { corporate_account_id: current_user.account_id })

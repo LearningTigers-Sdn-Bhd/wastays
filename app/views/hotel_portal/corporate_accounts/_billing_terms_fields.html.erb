@@ -1,5 +1,7 @@
 <%# Shared billing-relationship fields. The invite form proposes them; the edit
     form sets them directly. %>
+<%# The caller owns the corporate-billing-terms controller, because the fields
+    it hides are not all in this partial. %>
 <section class="space-y-4">
   <div>
     <h3 class="text-sm font-semibold text-foreground">Billing relationship</h3>
@@ -13,20 +15,41 @@
       selected: relationship_type) %>
   <% end %>
 
-  <div class="grid gap-3 sm:grid-cols-2">
-    <%= render PanelsUI::FormField.new(form: form, attribute: :credit_currency, label: "Credit currency") do |field| %>
-      <% field.with_combobox(
-        CurrencyCatalog.options.map { |label, code| { label: label, value: code } },
-        selected: credit_currency,
-        prompt: "Select a currency") %>
-    <% end %>
+  <%# Only a direct-bill account is invoiced, so only it has a currency, a
+      credit limit and terms to settle on. %>
+  <div data-corporate-billing-terms-target="terms" class="space-y-4">
+    <div class="grid gap-3 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :credit_currency, label: "Credit currency") do |field| %>
+        <% field.with_combobox(
+          CurrencyCatalog.options.map { |label, code| { label: label, value: code } },
+          selected: credit_currency,
+          prompt: "Select a currency") %>
+      <% end %>
 
-    <%= render PanelsUI::FormField.new(form: form, attribute: :credit_limit, label: "Credit limit") do |field| %>
-      <% field.with_input(type: :number, value: credit_limit, min: 0, step: "0.01", placeholder: "No limit") %>
+      <%= render PanelsUI::FormField.new(form: form, attribute: :credit_limit, label: "Credit limit") do |field| %>
+        <% field.with_input(type: :number, value: credit_limit, min: 0, step: "0.01", placeholder: "No limit") %>
+      <% end %>
+    </div>
+
+    <%= render PanelsUI::FormField.new(form: form, attribute: :payment_terms_days, label: "Payment terms (days)") do |field| %>
+      <% field.with_input(type: :number, value: payment_terms_days, min: 0, placeholder: "No terms") %>
     <% end %>
   </div>
 
-  <%= render PanelsUI::FormField.new(form: form, attribute: :payment_terms_days, label: "Payment terms (days)") do |field| %>
-    <% field.with_input(type: :number, value: payment_terms_days, min: 0, placeholder: "No terms") %>
+  <%# The mirror image: only a standard account holds rooms against a payment
+      deadline. Deliberately not the payment terms above -- those say when an
+      invoice falls due, and sharing them would let an invoicing change release
+      inventory.
+
+      Set on the relationship, not proposed on an invitation: until the account
+      exists there is nothing holding rooms, and the hotel default covers it. %>
+  <% if local_assigns.fetch(:agent_payment_hold_hours, :absent) != :absent %>
+  <div data-corporate-billing-terms-target="hold">
+    <%= render "hotel_portal/shared/agent_payment_hold_field",
+          form: form,
+          label: "Payment hold",
+          placeholder: "Hotel default (#{agent_payment_hold_default})",
+          hint: "How long this account's bookings are held before the rooms are released for non-payment. Leave blank to use the hotel default of #{agent_payment_hold_default}. A hold never runs past the arrival date." %>
+  </div>
   <% end %>
 </section>

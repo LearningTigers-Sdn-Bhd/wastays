@@ -60,6 +60,46 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  # The four agent payment mails. Unlike every other mail in this class they go
+  # to a business contact rather than the guest, so the recipient is taken from
+  # the payload -- which recorded it at send time -- rather than looked up on the
+  # booking now.
+  def agent_payment_reminder(delivery)
+    assign_delivery(delivery)
+
+    mail(
+      to: @payload.fetch(:recipient_email),
+      subject: "Payment due for #{@payload[:reservation_number]} at #{@payload[:hotel_name]}"
+    )
+  end
+
+  def agent_payment_approved(delivery)
+    assign_delivery(delivery)
+
+    mail(
+      to: @payload.fetch(:recipient_email),
+      subject: "Payment confirmed for #{@payload[:reservation_number]}"
+    )
+  end
+
+  def agent_payment_rejected(delivery)
+    assign_delivery(delivery)
+
+    mail(
+      to: @payload.fetch(:recipient_email),
+      subject: "Action needed: payment not accepted for #{@payload[:reservation_number]}"
+    )
+  end
+
+  def agent_booking_released(delivery)
+    assign_delivery(delivery)
+
+    mail(
+      to: @payload.fetch(:recipient_email),
+      subject: "Cancelled: #{@payload[:reservation_number]} at #{@payload[:hotel_name]}"
+    )
+  end
+
   def invoice_package(delivery)
     assign_delivery(delivery)
     group = Notifications::InvoiceDelivery.load!(delivery:)

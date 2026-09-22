@@ -11,10 +11,12 @@ module HotelPortal
         admin_hold: :warning
       }.freeze
 
-      def initialize(segment:, id: nil, class: nil, **attributes)
+      def initialize(segment:, href: nil, id: nil, class: nil, link_attributes: {}, **attributes)
         @segment = segment
+        @href = href
         @id = id
         @class = binding.local_variable_get(:class)
+        @link_attributes = link_attributes
         @attributes = attributes
       end
 
@@ -33,12 +35,36 @@ module HotelPortal
           emphasis: :hatched,
           clipped_left: @segment.clipped_left?,
           clipped_right: @segment.clipped_right?,
+          href: @href,
+          link_attributes: @link_attributes,
           class: @class,
           id: @id.presence || @segment.dom_id,
           **@attributes
         ) do
-          tag.span(@segment.label, class: "truncate")
+          bar_content
         end
+      end
+
+      private
+
+      # The kind keeps its place at the head of the bar; the reason follows it
+      # in a lighter weight and gives way first when the bar is too narrow for
+      # both, so a long reason never squeezes out the label.
+      def bar_content
+        safe_join([
+          tag.span(@segment.label, class: "shrink-0 truncate"),
+          reason
+        ].compact)
+      end
+
+      def reason
+        return if @segment.reason.blank?
+
+        tag.span(
+          @segment.reason,
+          class: "min-w-0 truncate font-normal opacity-80",
+          data: { slot: "stay-view-operational-reason" }
+        )
       end
     end
   end

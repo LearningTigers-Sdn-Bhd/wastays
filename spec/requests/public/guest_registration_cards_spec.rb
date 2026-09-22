@@ -17,6 +17,33 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
   end
 
   describe "GET /guest-registration-card/:token" do
+    # The card is a public, token-addressed page with no :hotel_id, so
+    # current_hotel is nil. Staff open it all the time -- they send the link and
+    # then click it -- and the shared layout must not fall over when it does.
+    # A corporate account has no hotel access at all, so current_hotel is nil
+    # even after its fallback -- and the layout's account links are hotel-scoped.
+    # An agent opening a card link took the whole page down with a routing error.
+    it "renders for a signed-in user who has no hotel at all" do
+      sign_in_as(create(:user, :corporate))
+
+      get guest_registration_card_path(card.public_token)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Sign registration card")
+    end
+
+    it "renders for a signed-in staff member, who has no hotel in scope here" do
+      account = create(:account)
+      role = create(:role, account: account)
+      staff = create(:user, account: account)
+      create(:user_hotel_access, user: staff, hotel: hotel, role: role)
+      sign_in_as(staff)
+
+      get guest_registration_card_path(card.public_token)
+
+      expect(response).to have_http_status(:success)
+    end
+
     it "renders the card for signing" do
       booking.update!(guest_home_address: "12 Public Street, Kuching")
 

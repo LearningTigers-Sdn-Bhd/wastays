@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -163,6 +163,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
   create_table "ar_payment_submissions", force: :cascade do |t|
     t.decimal "amount", precision: 10, scale: 2, null: false
     t.bigint "ar_payment_id"
+    t.bigint "booking_id"
     t.datetime "created_at", null: false
     t.string "currency", null: false
     t.bigint "hotel_corporate_account_id", null: false
@@ -178,6 +179,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
     t.bigint "submitted_by_id", null: false
     t.datetime "updated_at", null: false
     t.index ["ar_payment_id"], name: "index_ar_payment_submissions_on_ar_payment_id"
+    t.index ["booking_id"], name: "index_ar_payment_submissions_on_booking_id"
     t.index ["hotel_corporate_account_id"], name: "index_ar_payment_submissions_on_hotel_corporate_account_id"
     t.index ["hotel_id", "created_at", "id"], name: "idx_ar_payment_submissions_hotel_created", order: { created_at: :desc, id: :desc }
     t.index ["hotel_id"], name: "index_ar_payment_submissions_on_hotel_id"
@@ -559,6 +561,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
     t.datetime "checked_out_at"
     t.integer "children", default: 0
     t.string "confirmation_token", null: false
+    t.datetime "corporate_booked_at"
+    t.bigint "corporate_booked_by_id"
     t.datetime "created_at", null: false
     t.boolean "created_by_staff", default: false, null: false
     t.string "currency", default: "MYR", null: false
@@ -593,6 +597,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
     t.decimal "margin_rate", precision: 10, scale: 4
     t.decimal "net_amount", precision: 15, scale: 2
     t.date "no_show_detected_business_date"
+    t.datetime "payment_due_at"
     t.string "payment_status", default: "pending", null: false
     t.datetime "payout_at"
     t.bigint "payout_batch_id"
@@ -623,6 +628,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
     t.index ["check_in"], name: "index_bookings_on_check_in"
     t.index ["check_out"], name: "index_bookings_on_check_out"
     t.index ["confirmation_token"], name: "index_bookings_on_confirmation_token", unique: true
+    t.index ["corporate_booked_by_id"], name: "index_bookings_on_corporate_booked_by_id"
     t.index ["external_reference"], name: "index_bookings_on_external_reference"
     t.index ["fund_collector"], name: "index_bookings_on_fund_collector"
     t.index ["group_booking_id", "group_position"], name: "idx_bookings_group_position", unique: true, where: "(group_booking_id IS NOT NULL)"
@@ -638,6 +644,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
     t.index ["hotel_id", "tourism_tax_voucher_reference"], name: "index_bookings_on_hotel_id_and_tourism_tax_voucher_reference", unique: true, where: "(tourism_tax_voucher_reference IS NOT NULL)"
     t.index ["hotel_id", "tourism_tax_voucher_year", "tourism_tax_voucher_number"], name: "idx_bookings_tourism_voucher_year_number", unique: true, where: "(tourism_tax_voucher_number IS NOT NULL)"
     t.index ["hotel_id"], name: "index_bookings_on_hotel_id"
+    t.index ["payment_due_at", "status"], name: "index_bookings_on_payment_due_at_and_status", where: "(payment_due_at IS NOT NULL)"
     t.index ["payment_status"], name: "index_bookings_on_payment_status"
     t.index ["payout_batch_id"], name: "index_bookings_on_payout_batch_id"
     t.index ["source"], name: "index_bookings_on_source"
@@ -1452,6 +1459,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
   create_table "hotel_corporate_accounts", force: :cascade do |t|
     t.string "account_type", default: "company", null: false
     t.string "agent_code"
+    t.integer "agent_payment_hold_hours"
     t.boolean "auto_allocate_payments", default: false, null: false
     t.string "billing_address_line1"
     t.string "billing_address_line2"
@@ -1482,6 +1490,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
     t.index ["hotel_id", "status"], name: "idx_hotel_corporate_accounts_on_hotel_and_status"
     t.index ["hotel_id"], name: "index_hotel_corporate_accounts_on_hotel_id"
     t.check_constraint "account_type::text = ANY (ARRAY['company'::character varying, 'government'::character varying, 'travel_agent'::character varying, 'airline'::character varying, 'salesperson'::character varying]::text[])", name: "hotel_corporate_accounts_account_type_allowed"
+    t.check_constraint "agent_payment_hold_hours IS NULL OR agent_payment_hold_hours > 0", name: "hotel_corporate_accounts_agent_payment_hold_hours_positive"
     t.check_constraint "credit_limit IS NULL OR credit_limit >= 0::numeric", name: "hotel_corporate_accounts_credit_limit_nonnegative"
     t.check_constraint "payment_terms_days IS NULL OR payment_terms_days >= 0", name: "hotel_corporate_accounts_payment_terms_nonnegative"
     t.check_constraint "relationship_type::text = ANY (ARRAY['standard'::character varying, 'direct_bill'::character varying]::text[])", name: "hotel_corporate_accounts_relationship_type_allowed"
@@ -1872,6 +1881,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
   create_table "hotels", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "address"
+    t.integer "agent_payment_hold_hours", default: 48, null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.boolean "ai_provider_enabled", default: false
     t.text "ai_provider_key"
@@ -1941,6 +1951,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
     t.index ["training_completed_by_id"], name: "index_hotels_on_training_completed_by_id"
     t.index ["unique_id"], name: "index_hotels_on_unique_id", unique: true
+    t.check_constraint "agent_payment_hold_hours > 0", name: "hotels_agent_payment_hold_hours_positive"
   end
 
   create_table "housekeeping_requests", force: :cascade do |t|
@@ -3103,6 +3114,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
   add_foreign_key "ar_payment_submission_allocations", "ar_invoices"
   add_foreign_key "ar_payment_submission_allocations", "ar_payment_submissions"
   add_foreign_key "ar_payment_submissions", "ar_payments"
+  add_foreign_key "ar_payment_submissions", "bookings"
   add_foreign_key "ar_payment_submissions", "hotel_corporate_accounts"
   add_foreign_key "ar_payment_submissions", "hotels"
   add_foreign_key "ar_payment_submissions", "users", column: "reviewed_by_id"
@@ -3159,6 +3171,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_15_100000) do
   add_foreign_key "bookings", "hotel_corporate_accounts"
   add_foreign_key "bookings", "hotels"
   add_foreign_key "bookings", "payout_batches"
+  add_foreign_key "bookings", "users", column: "corporate_booked_by_id"
   add_foreign_key "channel_availability_rules", "hotels"
   add_foreign_key "channel_derived_settings", "hotels"
   add_foreign_key "channel_room_rates", "rate_plans"

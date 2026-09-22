@@ -11,6 +11,43 @@
     <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800"><%= @ar_payment_error %></div>
   <% end %>
 
+  <%# Recording against a submission is a decision about the agent's evidence,
+      so the slip belongs on this screen and not one click away. %>
+  <% if @ar_payment_submission.present? %>
+    <section class="rounded-2xl border border-violet-200 bg-violet-50/40 p-6" aria-labelledby="submission-proof-heading">
+      <h2 id="submission-proof-heading" class="text-sm font-bold text-violet-900">Agent's payment proof</h2>
+      <p class="mt-1 text-xs text-violet-800/80">
+        Submitted by <%= @ar_payment_submission.submitted_by.name %> on
+        <%= l(@ar_payment_submission.created_at, format: :short) %> ·
+        reference <%= @ar_payment_submission.reference_number %>
+      </p>
+      <% if @ar_payment_submission.booking.present? %>
+        <p class="mt-1 text-xs text-violet-800/80">
+          Booking
+          <%= link_to @ar_payment_submission.booking.formatted_reservation_number, hotel_booking_path(current_hotel, @ar_payment_submission.booking), class: "underline" %>
+          <% if @ar_payment_submission.booking.closed? %>
+            <span class="ml-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              <%= @ar_payment_submission.booking.status.humanize %>
+            </span>
+          <% end %>
+        </p>
+      <% end %>
+      <div class="mt-3">
+        <%= render "hotel_portal/ar_payment_submissions/slip", submission: @ar_payment_submission %>
+      </div>
+    </section>
+
+    <%# The action this whole page leads to, so the warning sits right where
+        it can still change the decision -- not just on the submission's own
+        read-only page, one click behind this one. %>
+    <% if @ar_payment_submission.booking&.closed? %>
+      <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+        The booking this was sent against is now <%= @ar_payment_submission.booking.status %>. Recording this payment will
+        still post it to that booking's folio -- worth confirming with the agent before you do.
+      </div>
+    <% end %>
+  <% end %>
+
   <%= form_with url: hotel_ar_payments_path(current_hotel), method: :post, local: true, class: "space-y-6" do %>
     <%= hidden_field_tag "ar_payment[ar_invoice_id]", @source_invoice&.id if @source_invoice.present? %>
     <%= hidden_field_tag "ar_payment_submission_id", @ar_payment_submission&.id if @ar_payment_submission.present? %>
@@ -22,20 +59,28 @@
 
     <div class="flex justify-end gap-2 pt-2.5">
       <%= link_to "Cancel", hotel_ar_payments_path(current_hotel), class: "rounded-xl px-5 py-2.5 text-sm font-bold text-muted-foreground hover:bg-muted" %>
+      <% if @ar_payment_submission.present? && @ar_payment_submission.pending? %>
+        <button type="button" command="show-modal" commandfor="reject-submission-dialog"
+                class="rounded-xl border border-red-300 bg-white px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100">Reject Submission</button>
+      <% end %>
       <%= submit_tag "Record Received Payment", class: "rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary-hover" %>
     </div>
   <% end %>
 
   <% if @ar_payment_submission.present? && @ar_payment_submission.pending? %>
-    <section class="rounded-2xl border border-red-200 bg-red-50/40 p-6">
-      <h2 class="text-sm font-bold text-red-900">Not a valid payment? Reject this submission instead</h2>
-      <p class="mt-1 text-xs text-red-800/80">The agent will see your remarks on their submission.</p>
-      <%= form_with url: reject_hotel_ar_payment_submission_path(current_hotel, @ar_payment_submission), method: :patch, local: true, class: "mt-3 space-y-3" do %>
-        <%= text_area_tag "rejection_reason", nil, rows: 2, required: true, placeholder: "Explain why you're rejecting this submission...", class: "w-full rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-slate-700" %>
-        <div class="flex justify-end">
-          <%= submit_tag "Reject Submission", data: { turbo_confirm: "Reject this payment submission?" }, class: "rounded-xl border border-red-300 bg-white px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100" %>
-        </div>
+    <%= form_with url: reject_hotel_ar_payment_submission_path(current_hotel, @ar_payment_submission), method: :patch, local: true do |f| %>
+      <%= render PanelsUI::Dialog.new(id: "reject-submission-dialog", title: "Reject this submission",
+            description: "The agent will see your comments on their submission.", size: :md) do |dialog| %>
+        <% dialog.with_body do %>
+          <%= render PanelsUI::FormField.new(form: f, attribute: :rejection_reason, label: "Comments", required: true) do |field| %>
+            <% field.with_text_area(rows: 4, placeholder: "Explain why this submission is being rejected.") %>
+          <% end %>
+        <% end %>
+        <% dialog.with_footer do %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Reject Submission<% end %>
+        <% end %>
       <% end %>
-    </section>
+    <% end %>
   <% end %>
 </div>

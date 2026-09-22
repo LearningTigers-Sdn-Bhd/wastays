@@ -230,6 +230,19 @@ module HotelPortal
       clauses.join(" ")
     end
 
+    # A booking made by an agency through the corporate portal. Its `source` is
+    # "internal", the same as a staff-keyed booking, so without this the desk
+    # cannot tell who sold the room.
+    def agent_booking?
+      AgentAttribution.agent_booking?(booking)
+    end
+
+    # Shared with HotelPortal::BookingPresenter, which feeds the same badge on
+    # the reservations list.
+    def agent_attribution
+      @agent_attribution ||= AgentAttribution.for(booking, time_zone: hotel.hotel_time_zone)
+    end
+
     def header_status_badge
       presentable_badge(group_context_enabled? ? group_status_badge : status_badge(booking.status))
     end

@@ -1,0 +1,51 @@
+<% rooms = @cancellation.group %>
+<div class="mx-auto w-full max-w-2xl space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Cancel this booking?",
+        description: "These rooms will be returned to sale, and the reservation kept on file as cancelled.") %>
+
+  <%# A multi-room stay is several bookings under one group, so the agent is
+      shown every room that is about to go, not only the one they clicked. %>
+  <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-6 py-4">
+      <h2 class="text-sm font-bold text-foreground">
+        <%= pluralize(rooms.size, "room") %> at <%= @booking.hotel.name %>
+      </h2>
+      <p class="mt-0.5 text-xs text-muted-foreground">
+        <%= @booking.check_in.to_date.strftime("%d %b %Y") %> – <%= @booking.check_out.to_date.strftime("%d %b %Y") %>
+      </p>
+    </div>
+    <ul class="divide-y divide-border">
+      <% rooms.each do |room| %>
+        <li class="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm">
+          <div>
+            <p class="font-bold text-foreground"><%= room.guest_name %></p>
+            <p class="mt-0.5 text-xs text-muted-foreground"><%= room.formatted_reservation_number %></p>
+          </div>
+          <span class="font-bold tabular-nums text-foreground">
+            <%= room.currency %> <%= number_with_precision(room.total_amount, precision: 2) %>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <%# Offers the alternative first. Most agents reaching this page want to change
+      something, not lose the rooms, and the hotel can do that without a
+      cancellation. %>
+  <%= render PanelsUI::Alert.new(tone: :warning, title: "Before you continue") do |alert| %>
+    <% alert.with_description do %>
+      If you only need to change the dates or the guest names, the hotel can do that for you
+      without cancelling. Cancelling releases these rooms straight away, so booking them again
+      later would be subject to availability.
+    <% end %>
+  <% end %>
+
+  <div class="flex flex-wrap gap-3">
+    <%= button_to "Confirm cancellation", corporate_booking_cancellation_path(@booking),
+          method: :post,
+          class: "rounded-xl bg-destructive px-4 py-2.5 text-sm font-bold text-destructive-foreground hover:bg-destructive/90" %>
+    <%= link_to "Keep the booking", corporate_booking_path(@booking),
+          class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
+  </div>
+</div>

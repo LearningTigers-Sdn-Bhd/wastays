@@ -12,6 +12,9 @@ module CorporatePortal
         .with_open_balance
         .group(:hotel_corporate_account_id)
         .sum(:outstanding_amount)
+      # Rooms are released for non-payment, so what is owed on bookings is shown
+      # apart from the AR balance above rather than folded into it.
+      @payments = CorporatePortal::DashboardPaymentsPresenter.new(relation: corporate_bookings)
     end
   end
 end

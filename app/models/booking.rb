@@ -12,6 +12,10 @@ class Booking < ApplicationRecord
   belongs_to :group_booking, optional: true
   belongs_to :payout_batch, optional: true
   belongs_to :hotel_corporate_account, optional: true
+  # The person at the agency who made the booking, when it came from the
+  # corporate portal. hotel_corporate_account_id says which agency; this says
+  # who, which is what staff ask for when they ring the agency back.
+  belongs_to :corporate_booked_by, class_name: "User", optional: true
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy
@@ -39,6 +43,10 @@ class Booking < ApplicationRecord
   has_many :complaint_requests, dependent: :destroy
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  # A remittance an agent sent to meet this booking's payment deadline. Nullified
+  # rather than destroyed: a submission is a record of money that was claimed,
+  # and it outlives the booking it was sent against.
+  has_many :ar_payment_submissions, dependent: :nullify
   has_many :e_invoice_submissions, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_one :booking_confirmation_token, dependent: :destroy
@@ -267,13 +275,13 @@ class Booking < ApplicationRecord
   end
 
   def check_in=(value)
-    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_in) if hotel && value.present?
-    super(value)
+    @assigned_check_in = value
+    super(scheduled_stay_time(value, :check_in))
   end
 
   def check_out=(value)
-    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_out) if hotel && value.present?
-    super(value)
+    @assigned_check_out = value
+    super(scheduled_stay_time(value, :check_out))
   end
 
   def room_type_summary
@@ -302,6 +310,11 @@ class Booking < ApplicationRecord
   end
 
   STATUSES = %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required cancelled completed overbooked no_show voided].freeze
+  # Both release inventory and end the stay the same way (Bookings::TransitionStatus,
+  # Bookings::VoidBooking); shared so nowhere has to remember to check one and not
+  # the other, which is exactly how a voided booking once read as "Paid" in
+  # CorporatePortal::BookingPaymentPresenter.
+  CLOSED_STATUSES = %w[cancelled voided].freeze
   OCCUPIED_STATUSES = %w[checked_in due_out_detected checkout_required].freeze
   # Statuses that occupy a room on the timeline (arrival/occupied/departure). Shared by the
   # Stay View loader and its filter contract so both describe the same set of bookings.
@@ -370,6 +383,7 @@ class Booking < ApplicationRecord
   validate :group_booking_belongs_to_hotel
 
   before_validation :assign_confirmation_token, on: :create
+  before_validation :apply_hotel_stay_times
   before_create :assign_document_counters
   before_validation :normalize_guest_data
   before_validation :default_fund_collector
@@ -560,6 +574,10 @@ class Booking < ApplicationRecord
 
   def pre_checkin_completed?
     pre_checkin_display_status == "completed"
+  end
+
+  def closed?
+    status.in?(CLOSED_STATUSES)
   end
 
   def tourism_tax?
@@ -809,6 +827,23 @@ class Booking < ApplicationRecord
     self.reservation_number = allocation.number
     self.reservation_year = allocation.year
     self.reservation_reference = allocation.reference
+  end
+
+  def scheduled_stay_time(value, kind)
+    return value if hotel.blank? || value.blank?
+
+    Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: kind)
+  end
+
+  # `hotel.bookings.build(check_in: ...)` assigns the attributes before the
+  # association sets the owner, so the setters above run with no hotel and a
+  # date-only value falls through to a bare midnight instead of the property's
+  # check-in time. Re-apply the policy once the hotel is known.
+  def apply_hotel_stay_times
+    return if hotel.blank?
+
+    self.check_in = @assigned_check_in if @assigned_check_in.present?
+    self.check_out = @assigned_check_out if @assigned_check_out.present?
   end
 
   def assign_existing_document_references
