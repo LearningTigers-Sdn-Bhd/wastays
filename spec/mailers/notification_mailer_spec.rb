@@ -241,7 +241,7 @@ RSpec.describe NotificationMailer, type: :mailer do
       mail = described_class.agent_booking_released(agent_delivery("agent_booking_released"))
 
       expect(mail.subject).to start_with("Cancelled:")
-      expect(mail.body.encoded).to include("returned to sale")
+      expect(mail.body.encoded).to include("gone back on sale")
     end
   end
 end

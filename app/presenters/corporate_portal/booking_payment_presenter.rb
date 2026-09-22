@@ -114,10 +114,12 @@ module CorporatePortal
     end
 
     # Spelled out with the zone, because the agent may not be in the hotel's.
+    # The time reads "11.03am", not "11:03" -- a period and a lowercase
+    # am/pm, the way a person says a time rather than how a clock displays one.
     def due_at_label
       return if due_at.blank?
 
-      due_at.in_time_zone(time_zone).strftime("%d %b %Y, %H:%M %Z")
+      due_at.in_time_zone(time_zone).strftime("%d %b %Y, %-l.%M%P %Z")
     end
 
     # Whole days remaining, wall-clock, once at least a day is left. Below that

@@ -37,8 +37,14 @@ RSpec.describe CorporatePortal::BookingPaymentPresenter do
   # The agent may not be in the hotel's timezone, so "by 2pm Friday" is
   # ambiguous unless the zone is named.
   it "states the deadline in the hotel's timezone, naming it" do
-    expect(presenter.due_at_label).to eq(booking.payment_due_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M %Z"))
+    expect(presenter.due_at_label).to eq(booking.payment_due_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %-l.%M%P %Z"))
     expect(presenter.due_at_label).to match(/\+08\z/)
+  end
+
+  # "11.03am", not "11:03" -- read as a spoken time, not a 24-hour clock.
+  it "spells the time with a period and a lowercase am/pm, not a 24-hour clock" do
+    booking.update!(payment_due_at: ActiveSupport::TimeZone["Asia/Kuala_Lumpur"].parse("2026-09-22 11:03"))
+    expect(presenter.due_at_label).to include("11.03am")
   end
 
   describe "while a slip is with the hotel" do

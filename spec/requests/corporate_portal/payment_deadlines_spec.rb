@@ -43,7 +43,7 @@ RSpec.describe "CorporatePortal payment deadlines", type: :request do
 
     get corporate_booking_path(booking)
 
-    expected = booking.payment_due_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M %Z")
+    expected = booking.payment_due_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %-l.%M%P %Z")
     expect(response.parsed_body.text).to include(expected)
   end
 
