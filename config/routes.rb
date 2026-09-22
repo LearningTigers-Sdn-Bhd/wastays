@@ -105,13 +105,7 @@ Rails.application.routes.draw do
     get  "check-in/now",           to: "check_ins#check_in_now",     as: :check_in_now
     post "check-in/now",           to: "check_ins#submit_check_in",  as: :submit_check_in
     get  "check-in/success",       to: "check_ins#check_in_success", as: :check_in_success
-    get  "check-out",              to: "check_outs#new",       as: :check_out
-    post "check-out",              to: "check_outs#create",    as: :create_check_out
-    get  "check-out/success",      to: "check_outs#success",   as: :check_out_success
     get  "book",                   to: "home#book",            as: :book
-    get  "requests/new",           to: "requests#new",         as: :new_request
-    post "requests",               to: "requests#create",      as: :requests
-    get  "requests/success",       to: "requests#success",     as: :request_success
     get  "contact",                to: "contact#show",         as: :contact
     get    "chat",                 to: "chats#show",           as: :chat
     post   "chat",                 to: "chats#create",         as: :chat_messages
@@ -163,13 +157,13 @@ Rails.application.routes.draw do
     get  "check-in/now",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/now" }
     post "check-in/now",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/now" }
     get  "check-in/success",       to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/success" }
-    get  "check-out",              to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out" }
-    post "check-out",              to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out" }
-    get  "check-out/success",      to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out/success" }
+    # Check-out and requests now live on the stay page only, so their old
+    # public links land on the concierge home.
+    get  "check-out",              to: "public/legacy_hotel_urls#concierge"
+    get  "check-out/success",      to: "public/legacy_hotel_urls#concierge"
     get  "book",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "book" }
-    get  "requests/new",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests/new" }
-    post "requests",               to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests" }
-    get  "requests/success",       to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests/success" }
+    get  "requests/new",           to: "public/legacy_hotel_urls#concierge"
+    get  "requests/success",       to: "public/legacy_hotel_urls#concierge"
     get  "contact",                to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "contact" }
     get  "chat",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
     post "chat",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }

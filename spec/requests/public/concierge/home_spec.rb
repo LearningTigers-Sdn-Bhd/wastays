@@ -114,9 +114,6 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       public_paths.each do |path|
         expect(document.at_css("a[href='#{path}']")).to be_present
       end
-
-      expect(document.at_css("a[href='#{concierge_check_out_path(hotel.unique_id, hotel.public_id)}']")).to be_nil
-      expect(document.at_css("a[href='#{concierge_new_request_path(hotel.unique_id, hotel.public_id)}']")).to be_nil
     end
 
     it "uses the shared Concierge colors for public service cards" do
@@ -140,6 +137,15 @@ RSpec.describe "Public::Concierge::Home", type: :request do
 
       expect(document.at_css("a[href='#{concierge_check_in_path(hotel.unique_id, hotel.public_id)}']")["class"])
         .not_to include("guest-service-surface")
+    end
+
+    it "has no public check-out or request routes" do
+      base = concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      [ [ "check-out", :get ], [ "check-out", :post ], [ "requests/new", :get ], [ "requests", :post ] ].each do |suffix, method|
+        expect { Rails.application.routes.recognize_path(File.join(base, suffix), method: method) }
+          .to raise_error(ActionController::RoutingError)
+      end
     end
 
     it "keeps every action card flat and touch-sized" do
