@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -881,8 +881,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_100000) do
     t.datetime "created_at", null: false
     t.bigint "hotel_id", null: false
     t.datetime "last_attempt_at"
+    t.datetime "link_sent_at"
     t.datetime "locked_until"
     t.datetime "revoked_at"
+    t.integer "send_count", default: 0, null: false
+    t.datetime "send_window_started_at"
     t.string "stay_access_id", null: false
     t.datetime "updated_at", null: false
     t.index ["booking_id"], name: "index_concierge_stay_accesses_on_booking_id"

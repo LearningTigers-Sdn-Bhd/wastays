@@ -135,8 +135,9 @@ Rails.application.routes.draw do
     # serves the locked page and the authenticated page.
     scope "stay/:stay_access_id", module: :stays,
           constraints: { stay_access_id: stay_access_id_constraint } do
-      get  "/",      to: "overview#show",        as: :stay
-      post "verify", to: "verifications#create", as: :stay_verification
+      get  "/",       to: "overview#show",         as: :stay
+      post "verify",  to: "verifications#create",  as: :stay_verification
+      post "recover", to: "verifications#recover", as: :stay_recovery
     end
   end
 

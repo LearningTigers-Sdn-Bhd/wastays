@@ -344,6 +344,17 @@ class Booking < ApplicationRecord
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
   validates :fund_collector, inclusion: { in: FUND_COLLECTORS }
 
+  # Every status change passes through here, so one hook covers check-out, void,
+  # cancel, and undo check-in. Concierge::StayAccess::Eligibility is the only
+  # place that says which statuses hold a stay page, and a completed booking
+  # keeps its link through the grace period.
+  def revoke_stay_access_when_ineligible
+    return unless concierge_stay_accesses.live.exists?
+    return if Concierge::StayAccess::Eligibility.new(booking: self).call.success?
+
+    Concierge::StayAccess::Revoke.new(booking: self).call
+  end
+
   def primary_guest
     if booking_guests.loaded?
       booking_guests.find { |bg| bg.is_primary? }&.guest
@@ -393,6 +404,7 @@ class Booking < ApplicationRecord
   before_validation :assign_existing_document_references
   after_create :register_confirmation_token
   after_update :sync_confirmation_token, if: :saved_change_to_confirmation_token?
+  after_update_commit :revoke_stay_access_when_ineligible, if: :saved_change_to_status?
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :with_confirmation_token, ->(token) {

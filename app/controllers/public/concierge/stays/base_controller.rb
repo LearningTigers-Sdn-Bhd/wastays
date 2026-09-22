@@ -48,6 +48,9 @@ module Public
         # is already public through the QR code. The guest name, the room, the
         # dates, the status, and the money are not.
         def render_stay_locked(status: :ok)
+          # A plain GET reads the lock from the record, so a guest who ran out of
+          # attempts sees the recovery offer and not the code form again.
+          @locked = @stay_access.locked? if @locked.nil?
           render "public/concierge/stays/overview/locked", status: status
         end
 

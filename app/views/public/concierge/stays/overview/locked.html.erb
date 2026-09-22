@@ -14,10 +14,23 @@
 
   <%= render "public/concierge/shared/error_alert", message: @error %>
 
-  <% if @locked %>
+  <% if @notice.present? %>
     <p class="rounded-xl border border-border/60 bg-white p-6 text-sm font-medium text-foreground">
-      This stay page is locked. Please ask the front desk for a new email link.
+      <%= @notice %>
     </p>
+  <% end %>
+
+  <% if @locked %>
+    <%# The way out of a lock. The mail goes to the booking email, which the
+        guest never types here. %>
+    <div class="rounded-2xl border border-border/60 bg-white p-6 shadow-sm">
+      <p class="text-sm font-medium leading-relaxed text-foreground">
+        This stay page is locked. We can send a new link to the email on the booking.
+      </p>
+      <%= button_to "Email me a new link",
+            concierge_stay_recovery_path(@hotel.unique_id, @hotel.public_id, params[:stay_access_id]),
+            class: "mt-5 w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+    </div>
   <% else %>
     <%= form_with url: concierge_stay_verification_path(@hotel.unique_id, @hotel.public_id, params[:stay_access_id]),
           method: :post, local: true,

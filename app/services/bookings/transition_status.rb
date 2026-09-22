@@ -222,10 +222,20 @@ module Bookings
       unless @options[:defer_side_effects]
         Bookings::WebhookTriggerService.new(@booking).trigger(:booking_checked_in)
         Notifications::Dispatcher.new(event: :booking_checked_in, booking: @booking).call
+        send_concierge_stay_link
       end
       success
     rescue ActiveRecord::RecordInvalid => e
       failure(e.record.errors.full_messages.to_sentence)
+    end
+
+    # The stay link opens the Checked-in Concierge page. A mail failure must not
+    # undo a check-in, so this sits with the other side effects and swallows its
+    # own errors.
+    def send_concierge_stay_link
+      ::Concierge::StayAccess::SendLink.new(booking: @booking).call
+    rescue StandardError => e
+      Rails.logger.error("Failed to send the stay link for booking #{@booking.id}: #{e.class}: #{e.message}")
     end
 
     def record_security_deposit_if_requested

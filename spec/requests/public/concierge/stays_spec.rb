@@ -181,6 +181,52 @@ RSpec.describe "Public::Concierge::Stays", type: :request do
     end
   end
 
+  describe "POST the recovery request" do
+    def recover_url(id = stay_access.stay_access_id)
+      concierge_stay_recovery_path(hotel.unique_id, hotel.public_id, id)
+    end
+
+    it "queues the stay-link mail" do
+      expect { post recover_url }.to have_enqueued_mail(GuestMailer, :stay_link)
+    end
+
+    it "gives one answer that does not say whether the mail went out" do
+      post recover_url
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("a new link is on its way")
+    end
+
+    it "gives the same answer after the send cap" do
+      4.times { post recover_url }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("a new link is on its way")
+    end
+
+    it "offers recovery on a locked page" do
+      # The delay between wrong codes grows to 16 seconds, so the clock has to
+      # move or the later posts get the wait message and never count.
+      ConciergeStayAccess::MAX_ATTEMPTS.times do
+        post verify_url, params: { confirmation_token: "WS-WRONG" }
+        travel 20.seconds
+      end
+
+      get stay_url
+
+      expect(response.body).to include("Email me a new link")
+      expect(response.body).not_to include("Booking confirmation code")
+    end
+
+    it "refuses recovery for a revoked link" do
+      Concierge::StayAccess::Revoke.new(booking: booking).call
+
+      post recover_url
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe "more than one device" do
     it "keeps the first browser open after a second one verifies" do
       open_the_stay

@@ -238,6 +238,9 @@ module Bookings
       dispatch_nonfatal(booking, "notification") do
         Notifications::Dispatcher.new(event: :booking_checked_in, booking: booking).call
       end
+      dispatch_nonfatal(booking, "stay link") do
+        ::Concierge::StayAccess::SendLink.new(booking: booking).call
+      end
     end
 
     def dispatch_nonfatal(booking, kind)
