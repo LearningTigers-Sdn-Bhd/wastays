@@ -1229,8 +1229,8 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       cancelled_row = rows.find { |row| row["data-booking-token"] == cancelled.confirmation_token }
       live_row = rows.find { |row| row["data-booking-token"] == live.confirmation_token }
 
-      expect(cancelled_row["class"]).to include("opacity-55")
-      expect(live_row["class"]).not_to include("opacity-55")
+      expect(cancelled_row["class"]).to include("grayscale-[60%]")
+      expect(live_row["class"]).not_to include("grayscale-[60%]")
     end
 
     # The card view is the default on narrow screens, so it has to agree with
@@ -1245,8 +1245,19 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       cancelled_card = cards.find { |card| card["data-booking-token"] == cancelled.confirmation_token }
       live_card = cards.find { |card| card["data-booking-token"] == live.confirmation_token }
 
-      expect(cancelled_card["class"]).to include("opacity-55")
-      expect(live_card["class"]).not_to include("opacity-55")
+      expect(cancelled_card["class"]).to include("grayscale-[60%]")
+      expect(live_card["class"]).not_to include("grayscale-[60%]")
+    end
+
+    it "dims a voided reservation the same way" do
+      voided = booking(status: "voided")
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
+
+      rows = response.parsed_body.css("#front-desk-results table tbody tr[data-booking-token]")
+      voided_row = rows.find { |row| row["data-booking-token"] == voided.confirmation_token }
+
+      expect(voided_row["class"]).to include("grayscale-[60%]")
     end
   end
 end

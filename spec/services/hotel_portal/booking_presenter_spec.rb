@@ -205,7 +205,14 @@ RSpec.describe HotelPortal::BookingPresenter do
       booking.transition_status_to!("cancelled", event: "cancel")
 
       expect(subject).to be_inactive
-      expect(subject.dimmed_class).to eq("opacity-55")
+      expect(subject.dimmed_class).to eq("opacity-70 grayscale-[60%] blur-[0.3px]")
+    end
+
+    it "dims a voided booking the same way" do
+      booking.transition_status_to!("voided", event: "void")
+
+      expect(subject).to be_inactive
+      expect(subject.dimmed_class).to eq("opacity-70 grayscale-[60%] blur-[0.3px]")
     end
 
     it "leaves a live booking at full weight" do

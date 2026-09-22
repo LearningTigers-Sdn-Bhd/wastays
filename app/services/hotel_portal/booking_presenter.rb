@@ -581,7 +581,12 @@ module HotelPortal
     # booking -- a blacklist highlight, for instance -- rather than replacing it,
     # which is why it is only the dimming and not a whole class list. The table
     # and the card style blacklisting differently.
-    def dimmed_class = ("opacity-55" if inactive?)
+    #
+    # Desaturated and very slightly softened, not just faded: opacity alone
+    # still read as "live but pale", which competed for attention rather than
+    # visibly stepping back from it. The blur is deliberately a hair's width --
+    # enough to read as "behind glass", not enough to cost legibility.
+    def dimmed_class = ("opacity-70 grayscale-[60%] blur-[0.3px]" if inactive?)
 
     def status_variant_class
       booking_styles = {
