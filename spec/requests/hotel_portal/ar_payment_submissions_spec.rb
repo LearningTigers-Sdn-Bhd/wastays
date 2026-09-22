@@ -68,7 +68,7 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).to include("SLIP-PREFILL")
     expect(response.body).to include('value="275.0"')
-    expect(response.body).to include("submitted payment slip")
+    expect(response.body).to include("Submitted by the agent")
   end
 
   it "prefills the allocation for the submission's target invoice without needing ar_invoice_id in the URL" do
@@ -79,7 +79,7 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include(invoice.formatted_invoice_number)
-    expect(response.body).to include("targeting invoice #{invoice.formatted_invoice_number}")
+    expect(response.body).to include("against invoice #{invoice.formatted_invoice_number}")
     expect(response.body).to include("name=\"allocations[#{invoice.id}]\"")
     expect(response.body).to include('value="275.0"')
   end
@@ -101,7 +101,7 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     get new_hotel_ar_payment_path(hotel, hotel_corporate_account_id: relationship.id, ar_payment_submission_id: submission.id)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("targeting invoices #{invoice1.formatted_invoice_number} and #{invoice2.formatted_invoice_number}")
+    expect(response.body).to include("against invoices #{invoice1.formatted_invoice_number} and #{invoice2.formatted_invoice_number}")
     expect(response.body).to include("name=\"allocations[#{invoice1.id}]\"")
     expect(response.body).to include("name=\"allocations[#{invoice2.id}]\"")
     expect(response.body).to include('value="100.0"')
@@ -137,7 +137,7 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include('type="hidden" name="ar_payment[reference_number]"')
     expect(response.body).to include('type="hidden" name="ar_payment[amount]"')
     expect(response.body).to include('type="hidden" name="ar_payment[payment_method]"')
-    expect(response.body).to include("can't be edited here")
+    expect(response.body).to include("read-only")
   end
 
   it "offers a reject-with-remarks form directly on the review page" do

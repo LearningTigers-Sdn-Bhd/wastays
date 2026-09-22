@@ -58,22 +58,30 @@
   <% end %>
 
   <% if @submission.pending? %>
-    <%= link_to "Record This Payment",
-      new_hotel_ar_payment_path(current_hotel,
-        hotel_corporate_account_id: @submission.hotel_corporate_account_id,
-        ar_payment_submission_id: @submission.id),
-      class: "block rounded-xl bg-slate-900 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
+    <div class="flex gap-2">
+      <button type="button" command="show-modal" commandfor="reject-submission-dialog"
+              class="rounded-xl border border-red-300 bg-white px-5 py-3 text-sm font-bold text-red-700 hover:bg-red-100">Reject Submission</button>
+      <%= link_to "Record This Payment",
+        new_hotel_ar_payment_path(current_hotel,
+          hotel_corporate_account_id: @submission.hotel_corporate_account_id,
+          ar_payment_submission_id: @submission.id),
+        class: "flex-1 rounded-xl bg-slate-900 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-slate-700" %>
+    </div>
 
-    <section class="rounded-2xl border border-red-200 bg-red-50/40 p-6">
-      <h2 class="text-sm font-bold text-red-900">Reject this submission</h2>
-      <p class="mt-1 text-xs text-red-800/80">The agent will see your remarks on their submission.</p>
-      <%= form_with url: reject_hotel_ar_payment_submission_path(current_hotel, @submission), method: :patch, local: true, class: "mt-3 space-y-3" do %>
-        <%= text_area_tag "rejection_reason", nil, rows: 2, required: true, placeholder: "Explain why you're rejecting this submission...", class: "w-full rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-slate-700" %>
-        <div class="flex justify-end">
-          <%= submit_tag "Reject Submission", data: { turbo_confirm: "Reject this payment submission?" }, class: "rounded-xl border border-red-300 bg-white px-5 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100" %>
-        </div>
+    <%= form_with url: reject_hotel_ar_payment_submission_path(current_hotel, @submission), method: :patch, local: true do |f| %>
+      <%= render PanelsUI::Dialog.new(id: "reject-submission-dialog", title: "Reject this submission",
+            description: "The agent will see your comments on their submission.", size: :md) do |dialog| %>
+        <% dialog.with_body do %>
+          <%= render PanelsUI::FormField.new(form: f, attribute: :rejection_reason, label: "Comments", required: true) do |field| %>
+            <% field.with_text_area(rows: 4, placeholder: "Explain why this submission is being rejected.") %>
+          <% end %>
+        <% end %>
+        <% dialog.with_footer do %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Reject Submission<% end %>
+        <% end %>
       <% end %>
-    </section>
+    <% end %>
   <% elsif @submission.approved? %>
     <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
       Approved — recorded as <%= link_to "payment ##{@submission.ar_payment.reference_number}", hotel_ar_payment_path(current_hotel, @submission.ar_payment), class: "underline" %>.
