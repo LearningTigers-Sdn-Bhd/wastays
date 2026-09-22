@@ -207,6 +207,17 @@ module CorporatePortal
 
     def time_zone = booking.hotel.hotel_time_zone
 
+    # Every slip the agent has sent for this booking, newest first -- shown on
+    # the booking's own page regardless of payment state. The deadline panel
+    # above only renders while awaiting_payment?, so once a slip is approved
+    # (or the booking closes) that panel disappears and, with it, the only
+    # other place the agent could see what they had sent -- their one-time
+    # submission confirmation page, easy to navigate away from and not come
+    # back to.
+    def submissions_with_slips
+      submissions.sort_by(&:created_at).reverse
+    end
+
     private
 
     # A caller that preloaded `booking.ar_payment_submissions` -- a list of

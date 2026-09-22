@@ -78,6 +78,43 @@
       confirmation rather than at the foot of the page. %>
   <%= render "corporate_portal/bookings/payment_deadline", booking: @booking, payment: @payment, compact: false %>
 
+  <%# The deadline panel above only renders while awaiting_payment?, so once a
+      slip is approved (or the booking closes) it disappears -- and with it,
+      the only other place the agent could see what they had sent was their
+      one-time submission confirmation page. This shows every slip sent for
+      this booking regardless of state, reusing the same partial the hotel
+      reviews it through. %>
+  <% if @payment.submissions_with_slips.any? %>
+    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div class="border-b border-border px-6 py-4">
+        <h2 class="text-sm font-bold text-foreground">Payment slips</h2>
+      </div>
+      <ul class="divide-y divide-border">
+        <% @payment.submissions_with_slips.each do |submission| %>
+          <li class="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm">
+            <div>
+              <p class="font-bold text-foreground"><%= submission.reference_number %></p>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                <%= submission.currency %> <%= number_with_precision(submission.amount, precision: 2) %> ·
+                submitted <%= submission.created_at.strftime("%d %b %Y") %>
+              </p>
+              <% if submission.rejected? && submission.rejection_reason.present? %>
+                <p class="mt-1 text-xs font-semibold text-destructive">Rejected: <%= submission.rejection_reason %></p>
+              <% end %>
+            </div>
+            <div class="flex items-center gap-2">
+              <%= render PanelsUI::Badge.new(
+                    label: submission.status.humanize,
+                    variant: { "pending" => :info, "approved" => :success, "rejected" => :destructive }.fetch(submission.status, :neutral),
+                    size: :sm) %>
+              <%= render "hotel_portal/ar_payment_submissions/slip", submission: submission %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
   <% if @bookings.size > 1 %>
     <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div class="border-b border-border px-6 py-4">

@@ -155,4 +155,60 @@ RSpec.describe "CorporatePortal payment deadlines", type: :request do
       expect(response).to redirect_to(corporate_bookings_path)
     end
   end
+
+  # The deadline panel only renders while awaiting_payment?, so once a slip is
+  # approved (or the booking closes) it disappears -- and with it, the only
+  # other place the agent could see what they had sent was their one-time
+  # submission confirmation page.
+  describe "the slip stays visible on the booking regardless of its state" do
+    it "shows a pending slip, with a link to view it" do
+      booking = agent_booking
+      submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                   booking: booking, reference_number: "TRF-VIEW")
+
+      get corporate_booking_path(booking)
+
+      expect(response.body).to include("TRF-VIEW")
+      expect(response.body).to include(rails_blob_path(submission.slip, disposition: "inline"))
+      expect(response.body).to include("Pending")
+    end
+
+    it "still shows an approved slip after the deadline panel has gone" do
+      booking = agent_booking(payment_status: "captured", payment_due_at: nil)
+      submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                   booking: booking, reference_number: "TRF-APPROVED",
+                                                   status: "approved", reviewed_by: create(:user), reviewed_at: Time.current,
+                                                   ar_payment: create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship))
+
+      get corporate_booking_path(booking)
+
+      expect(response.body).not_to include("Pay now")
+      expect(response.body).to include("TRF-APPROVED")
+      expect(response.body).to include("Approved")
+      expect(response.body).to include(rails_blob_path(submission.slip, disposition: "inline"))
+    end
+
+    it "shows a rejected slip's reason alongside it" do
+      booking = agent_booking
+      submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                   booking: booking, reference_number: "TRF-REJECTED",
+                                                   status: "rejected", rejection_reason: "Amount did not match",
+                                                   reviewed_by: create(:user), reviewed_at: Time.current)
+
+      get corporate_booking_path(booking)
+
+      expect(response.body).to include("TRF-REJECTED")
+      expect(response.body).to include("Rejected")
+      expect(response.body).to include("Amount did not match")
+      expect(response.body).to include(rails_blob_path(submission.slip, disposition: "inline"))
+    end
+
+    it "says nothing when nothing has been submitted yet" do
+      booking = agent_booking
+
+      get corporate_booking_path(booking)
+
+      expect(response.body).not_to include("Payment slips")
+    end
+  end
 end
