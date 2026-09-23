@@ -45,7 +45,18 @@ RSpec.describe "Guest refund pages", type: :request do
     submit = document.at_css("form[action='#{guest_booking_refund_requests_path(booking)}'] button[type='submit']")
     expect(submit.text.squish).to eq("Submit Request and Cancel Booking")
     expect(submit["data-turbo-confirm"]).to include("cancels your booking")
-    expect(document.at_css("a.guest-button[href='#{guest_booking_path(booking)}']").text.squish).to eq("Go Back")
+    expect(document.css("a.guest-button").map { |button| button.text.squish }).not_to include("Go Back")
+
+    header = document.at_css(".guest-form-page__header")
+    expect(header.at_css("a[href='#{guest_booking_path(booking)}']").text.squish).to eq("Back to booking")
+    expect(header.at_css("h2").text.squish).to eq("Request a refund")
+    expect(header.text).to include("Cancel this booking and ask for a refund under the property's policy.")
+
+    expect(document.at_css(".guest-form-page__compact a[href='#{guest_booking_path(booking)}']")).to be_present
+    expect(document.at_css(".guest-form-page__summary .guest-stay-summary")).to be_present
+
+    notices = document.css(".guest-form-page__body .guest-notice").to_h { |notice| [ notice["data-variant"], notice.at_css(".guest-notice__title").text ] }
+    expect(notices).to eq("danger" => "This cancels your booking", "info" => "You get 80% back, about MYR 160.00")
   end
 
   describe "a guest in house" do

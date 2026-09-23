@@ -1039,8 +1039,14 @@
     @apply flex items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed;
   }
 
+  /* Info carries its own tint, so a note reads as a note and not as a plain
+     box. The text stays foreground; only the icon takes the tone. */
   .guest-notice[data-variant="info"] {
-    @apply border-border/60 bg-background text-foreground;
+    @apply border-info/20 bg-info/5 text-foreground;
+  }
+
+  .guest-notice[data-variant="info"] .guest-notice__icon {
+    @apply text-info;
   }
 
   .guest-notice[data-variant="success"] {
@@ -1060,8 +1066,21 @@
     @apply mt-0.5 size-4 shrink-0;
   }
 
+  .guest-notice__icon {
+    @apply size-5;
+  }
+
   .guest-notice__title {
     @apply block font-semibold;
+  }
+
+  /* Under a title, the message is its own line in a quieter weight. */
+  .guest-notice__message {
+    @apply block;
+  }
+
+  .guest-notice__title + .guest-notice__message {
+    @apply mt-0.5 opacity-90;
   }
 
   /* ─── Hero ───

@@ -56,7 +56,7 @@ module GuestUI
       tag.div do
         safe_join([
           (tag.span(@title, class: "guest-notice__title") if @title.present?),
-          tag.span(content.presence || @message)
+          tag.span(content.presence || @message, class: "guest-notice__message")
         ].compact)
       end
     end
