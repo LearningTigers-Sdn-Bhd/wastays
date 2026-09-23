@@ -19,8 +19,7 @@
     </div>
     <h2 class="mt-2 font-guest-display text-2xl font-semibold text-foreground"><%= next_stay.hotel.name %></h2>
     <p class="mt-1 text-sm text-muted-foreground">
-      <%= next_stay.check_in.strftime("%d %b") %> – <%= next_stay.check_out.strftime("%d %b %Y") %>
-      · <%= pluralize((next_stay.check_out.to_date - next_stay.check_in.to_date).to_i, "night") %>
+      <%= guest_stay_dates(next_stay) %> · <%= pluralize(next_stay.duration_in_nights, "night") %>
     </p>
     <div class="mt-5 flex flex-wrap gap-3">
       <%= render GuestUI::Button.new(
@@ -49,7 +48,7 @@
     <% recent.each do |booking| %>
       <% card.with_row(
            label: booking.hotel.name,
-           hint: "#{booking.check_in.strftime('%d %b')} – #{booking.check_out.strftime('%d %b %Y')} · #{guest_booking_status(booking).humanize}",
+           hint: "#{guest_stay_dates(booking)} · #{guest_booking_status(booking).humanize}",
            href: guest_booking_path(booking)
          ) %>
     <% end %>

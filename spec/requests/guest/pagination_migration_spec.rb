@@ -16,12 +16,12 @@ RSpec.describe "Guest portal pagination migration", type: :request do
 
     get guest_bookings_path, params: { page: 2, q: "Pagy", status: "confirmed" }
 
-    navigation = pagination_in("guest_bookings_results")
+    navigation = Nokogiri::HTML(response.body).at_css("turbo-frame#guest_bookings_results nav.guest-pagination")
     expect(response).to have_http_status(:ok)
-    expect(navigation.at_css('[aria-current="page"]').text).to eq("2")
-    expect(navigation.at_css('a[aria-label="Previous page"]')["href"]).to include("q=Pagy", "status=confirmed")
+    expect(navigation.at_css('[aria-current="page"]').text).to eq("Page 2 of 2")
+    expect(navigation.at_css('a[rel="prev"]')["href"]).to include("q=Pagy", "status=confirmed")
     expect(response.body).to include(guest_booking_path(bookings.first))
-    expect(response.body).to include("Total", "26")
+    expect(response.body).to include("26 bookings")
 
     [ "invalid", "0", "-2" ].each do |invalid_page|
       get guest_bookings_path, params: { page: invalid_page }

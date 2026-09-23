@@ -74,4 +74,37 @@
   .guest-bottom-nav__link[aria-current="page"] {
     @apply text-primary;
   }
+
+  /* ─── Filter chips ───
+     One row that scrolls sideways on a phone rather than wrapping into a
+     block of buttons above the list. */
+  .guest-chips {
+    @apply -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0;
+    scrollbar-width: none;
+  }
+
+  .guest-chip {
+    @apply inline-flex h-9 shrink-0 items-center rounded-full border border-border bg-card px-4 text-sm font-bold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-chip[aria-current="page"] {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+
+  /* ─── Pagination ─── */
+  .guest-pagination {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .guest-pagination__status {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  .guest-pagination__control {
+    @apply inline-flex h-10 items-center gap-1 rounded-full border border-border bg-card px-4 text-sm font-bold text-foreground transition-colors hover:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-pagination__control[aria-disabled="true"] {
+    @apply pointer-events-none opacity-40;
+  }
 }

@@ -119,6 +119,11 @@ module ApplicationHelper
     booking.status == "no_show_detected" ? "confirmed" : booking.status
   end
 
+  # "12 Oct – 15 Oct 2026", as the guest portal lists a stay.
+  def guest_stay_dates(booking)
+    "#{booking.check_in.strftime('%d %b')} – #{booking.check_out.strftime('%d %b %Y')}"
+  end
+
   def refund_status_class(status)
     case status
     when "pending" then "bg-yellow-100 text-yellow-700"
@@ -127,11 +132,6 @@ module ApplicationHelper
     when "rejected" then "bg-red-100 text-red-700"
     else "bg-gray-100 text-gray-700"
     end
-  end
-
-  def guest_booking_badge_class(booking)
-    status = guest_booking_status(booking)
-    status == "confirmed" ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"
   end
 
   def payment_status_class(status)
