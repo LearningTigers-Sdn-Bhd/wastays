@@ -8,12 +8,30 @@ RSpec.describe "Guest dashboard", type: :request do
     post guest_login_path, params: { phone: guest.phone, otp: otp }
   end
 
+  def stats
+    Nokogiri::HTML(response.body).css(".guest-stat-card").to_h do |card|
+      [ card.at_css(".guest-stat-card__label").text.squish, card.at_css(".guest-stat-card__value").text.squish ]
+    end
+  end
+
+  it "counts every upcoming stay, not only the five it lists" do
+    6.times do |index|
+      stay = create(:booking, check_in: Date.current + (10 + index).days, check_out: Date.current + (11 + index).days)
+      create(:booking_guest, guest:, booking: stay, is_primary: true)
+    end
+
+    get guest_dashboard_path
+
+    expect(stats["Upcoming"]).to eq("6")
+  end
+
   it "greets the guest and says there are no bookings yet" do
     get guest_dashboard_path
 
     expect(response).to have_http_status(:success)
     expect(response.body).to include("Hello, Aisha")
     expect(response.body).to include("No bookings yet.")
+    expect(stats).to eq("Bookings" => "0", "Upcoming" => "0")
     expect(response.body).not_to include("Open concierge")
   end
 
@@ -34,6 +52,7 @@ RSpec.describe "Guest dashboard", type: :request do
     expect(concierge["target"]).to eq("_blank")
     expect(summary.at_css("a[href='#{guest_booking_path(upcoming)}']").text.squish).to eq("View booking")
     expect(document.css("a.guest-booking-card").map { |card| card["href"] }).to eq([ guest_booking_path(past) ])
+    expect(stats).to eq("Bookings" => "2", "Upcoming" => "1")
   end
 
   it "shows only the stay card when the next stay is the only booking" do

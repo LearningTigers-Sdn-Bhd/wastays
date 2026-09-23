@@ -1,13 +1,13 @@
 <% content_for :title, "Home | WAStays" %>
 
-<div class="space-y-1">
-  <h1 class="font-guest-display text-2xl font-semibold text-foreground md:text-3xl">
-    Hello, <%= current_guest.name.split.first %>
-  </h1>
-  <p class="text-sm text-muted-foreground">
-    <%= pluralize(@total_bookings, "booking") %> · <%= pluralize(@upcoming_bookings.size, "upcoming stay") %>
-  </p>
-</div>
+<h1 class="font-guest-display text-2xl font-semibold text-foreground md:text-3xl">
+  Hello, <%= current_guest.name.split.first %>
+</h1>
+
+<section class="guest-stat-grid" aria-label="Your stays at a glance">
+  <%= render GuestUI::StatCard.new(label: "Bookings", value: @total_bookings, icon: "calendar-days") %>
+  <%= render GuestUI::StatCard.new(label: "Upcoming", value: @upcoming_count, icon: "plane") %>
+</section>
 
 <% if (next_stay = @upcoming_bookings.first) %>
   <%= render guest_stay_summary(next_stay, eyebrow: (next_stay.check_in.to_date <= Date.current ? "Current stay" : "Next stay")) do |summary| %>

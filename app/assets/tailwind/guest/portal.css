@@ -192,4 +192,22 @@
   .guest-booking-card__property {
     @apply min-w-0 font-guest-display text-lg font-semibold leading-snug text-foreground;
   }
+
+  /* ─── Stat card ───
+     Two a row, also on a phone. */
+  .guest-stat-grid {
+    @apply grid grid-cols-2 gap-3 md:gap-4;
+  }
+
+  .guest-stat-card {
+    @apply rounded-2xl border border-border/40 bg-card p-4 shadow-xs md:p-5;
+  }
+
+  .guest-stat-card__label {
+    @apply flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .guest-stat-card__value {
+    @apply mt-2 font-guest-display text-3xl font-semibold tabular-nums text-foreground;
+  }
 }
