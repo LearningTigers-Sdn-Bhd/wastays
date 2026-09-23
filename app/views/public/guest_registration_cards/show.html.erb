@@ -93,15 +93,17 @@
         </div>
       <% end %>
 
+      <% if @presenter.terms_and_conditions.present? %>
+        <div class="card p-6 md:p-8">
+          <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Terms &amp; Conditions</h2>
+          <div class="mt-3 whitespace-pre-wrap text-sm text-muted-foreground"><%= @presenter.terms_and_conditions %></div>
+        </div>
+      <% end %>
+
       <div class="card p-6 md:p-8">
         <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Signature</h2>
-        <p class="mt-2 text-sm text-muted-foreground">
-          Please read the terms and conditions carefully. Your signature confirms you have reviewed the check-in, check-out, and hotel policy terms shown on this card.
-          <% if @presenter.terms_and_conditions.present? %>
-            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :xs,
-                  command: "show-modal", commandfor: "grc-terms-dialog",
-                  class: "mt-1 h-auto p-0 underline") do %>View T&amp;C<% end %>
-          <% end %>
+        <p class="mt-2 text-sm text-foreground">
+          Please read the terms and conditions above carefully. Your signature confirms you have reviewed the check-in, check-out, and hotel policy terms shown on this card.
         </p>
 
         <% if @card.signed? && @card.signature_data_url.present? %>
@@ -127,7 +129,7 @@
                 <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
               </div>
               <div class="flex justify-end">
-                <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-primary hover:underline">Clear signature</button>
+                <button type="button" data-signature-target="clearButton" data-action="click->signature#clear" class="hidden text-xs font-bold uppercase tracking-widest text-primary hover:underline">Clear signature</button>
               </div>
               <%= form.hidden_field :signature_data_url, data: { signature_target: "input" }, required: true %>
             </div>
@@ -139,13 +141,5 @@
         <% end %>
       </div>
     </div>
-
-    <% if @presenter.terms_and_conditions.present? %>
-      <%= render PanelsUI::Dialog.new(id: "grc-terms-dialog", title: "Terms & Conditions", size: :lg) do |dialog| %>
-        <% dialog.with_body do %>
-          <div class="whitespace-pre-wrap text-sm text-foreground"><%= @presenter.terms_and_conditions %></div>
-        <% end %>
-      <% end %>
-    <% end %>
   </div>
 </div>

@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import SignaturePad from "signature_pad"
 
 export default class extends Controller {
-  static targets = ["canvas", "input"]
+  static targets = ["canvas", "input", "clearButton"]
 
   connect() {
     this.signaturePad = new SignaturePad(this.canvasTarget, {
@@ -11,6 +11,7 @@ export default class extends Controller {
 
     this.signaturePad.addEventListener("endStroke", () => {
       this.save()
+      this.toggleClearButton()
     })
 
     // Keep the bound reference so disconnect() removes this very listener.
@@ -38,6 +39,13 @@ export default class extends Controller {
   clear() {
     this.signaturePad.clear()
     this.inputTarget.value = ""
+    this.toggleClearButton()
+  }
+
+  toggleClearButton() {
+    if (!this.hasClearButtonTarget) return
+
+    this.clearButtonTarget.classList.toggle("hidden", this.signaturePad.isEmpty())
   }
 
   save() {
