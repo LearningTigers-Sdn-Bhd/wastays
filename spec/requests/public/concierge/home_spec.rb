@@ -119,6 +119,18 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       end
     end
 
+    it "opens Book a Room in a new tab" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      book = document.at_css("a[href='#{concierge_book_path(hotel.unique_id, hotel.public_id)}']")
+      recommendations = document.at_css("a[href='#{concierge_recommendations_path(hotel.unique_id, hotel.public_id)}']")
+
+      expect(book["target"]).to eq("_blank")
+      expect(book["rel"]).to eq("noopener")
+      expect(recommendations["target"]).to be_nil
+    end
+
     it "uses the shared Concierge colors for public service cards" do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 

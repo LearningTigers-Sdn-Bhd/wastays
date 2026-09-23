@@ -32,7 +32,7 @@
 
     <%
       service_tiles = [
-        { path: concierge_book_path(@hotel.unique_id, @hotel.public_id), label: "Book a Room", description: "View available rooms", icon: "calendar-days", tone: :booking },
+        { path: concierge_book_path(@hotel.unique_id, @hotel.public_id), label: "Book a Room", description: "View available rooms", icon: "calendar-days", tone: :booking, link: { target: "_blank", rel: "noopener" } },
         { path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id), label: "Recommendations", description: "Places and guest offers", icon: "sparkles", tone: :discovery },
         { path: concierge_contact_path(@hotel.unique_id, @hotel.public_id), label: "Property Contacts", description: "Phone, WhatsApp, email and map", icon: "phone", tone: :contact }
       ]
@@ -48,7 +48,8 @@
     <div class="guest-tile-grid" data-columns="<%= service_tiles.size %>">
       <% service_tiles.each do |tile| %>
         <%= render GuestUI::ActionCard.new(label: tile[:label], hint: tile[:description],
-                                           icon: tile[:icon], tone: tile[:tone], href: tile[:path]) %>
+                                           icon: tile[:icon], tone: tile[:tone], href: tile[:path],
+                                           **tile.fetch(:link, {})) %>
       <% end %>
     </div>
 
