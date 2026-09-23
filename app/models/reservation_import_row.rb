@@ -25,6 +25,21 @@ class ReservationImportRow < ApplicationRecord
 
   scope :in_sheet_order, -> { order(:sheet_row) }
   scope :importable, -> { where(status: "importable") }
+  # One search box covers reservation no., booker, source, stay dates, pax,
+  # room, category and amount -- the operator does not know in advance which
+  # column their eZee reference number or guest name will land in.
+  scope :search, lambda { |query|
+    next all if query.blank?
+
+    pattern = "%#{sanitize_sql_like(query)}%"
+    where(
+      "reservation_number ILIKE :p OR guest_name ILIKE :p OR source ILIKE :p OR " \
+      "room_number ILIKE :p OR room_type_name ILIKE :p OR " \
+      "CAST(total_amount AS text) ILIKE :p OR CAST(adults + children AS text) ILIKE :p OR " \
+      "to_char(arrival, 'DD Mon YYYY') ILIKE :p OR to_char(departure, 'DD Mon YYYY') ILIKE :p",
+      p: pattern
+    )
+  }
   # `where.not(issues: [])` would compile to NOT IN (), which is true for every
   # row -- jsonb has to be asked about its length instead.
   scope :with_issues, -> { where("jsonb_array_length(issues) > 0") }

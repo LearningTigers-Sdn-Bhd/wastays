@@ -148,7 +148,7 @@ module Ezee
 
       resolve_inventory(row, entry)
 
-      entry.caution(:guest_name, "Blank in the export; the source was printed instead.") if blank_name?(row)
+      entry.caution(:guest_name, "No guest name in the file. This shows the booking source instead.") if blank_name?(row)
       entry.caution(:total_amount, "No amount on this reservation.") if row.total_amount.zero?
 
       entry.status = :blocked if entry.errors.any?

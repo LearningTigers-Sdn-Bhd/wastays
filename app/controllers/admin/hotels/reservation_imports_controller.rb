@@ -37,7 +37,7 @@ module Admin
         load_rows
         render partial: "admin/hotels/reservation_imports/rows_page",
                locals: { hotel: @hotel, import: @import, rows: @rows,
-                         filter: @filter, page: @page, more: @more }
+                         filter: @filter, q: @q, page: @page, more: @more }
       end
 
       def create
@@ -78,6 +78,7 @@ module Admin
       # the summary costs a handful of grouped queries whatever the file size.
       def load_preview
         @counts = @import.rows.group(:status).count
+        @total_rows = @import.rows.count
         @attention_count = @import.rows.needing_attention.count
         @group_count = @import.rows.importable.where.not(group_key: nil).distinct.count(:group_key)
         @total_value = @import.rows.importable.sum(:total_amount)
@@ -112,9 +113,14 @@ module Admin
       end
 
       def load_rows
-        @filter = params[:filter].presence_in(%w[all attention importable imported past]) || default_filter
+        @q = params[:q].presence
+        # A search should look across every status by default -- landing it on
+        # "Needs attention" (today's default when the import has any) would
+        # make a match outside that bucket look like the search found nothing.
+        @filter = params[:filter].presence_in(%w[all attention importable imported past]) ||
+          (@q.present? ? "all" : default_filter)
         @page = [ params[:page].to_i, 1 ].max
-        scope = filtered_rows(@filter).in_sheet_order
+        scope = filtered_rows(@filter).search(@q).in_sheet_order
         @rows = scope.limit(PER_PAGE + 1).offset((@page - 1) * PER_PAGE).to_a
         @more = @rows.size > PER_PAGE
         @rows = @rows.first(PER_PAGE)

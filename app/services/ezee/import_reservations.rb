@@ -172,7 +172,7 @@ module Ezee
 
     def notes_for(row)
       [
-        "Imported from eZee reservation #{row.reservation_number}.",
+        "Imported from eZee reservation #{row.reservation_number} by #{@user.name}.",
         ("Booked #{row.booked_at.to_fs(:short)} by #{row.booked_by}." if row.booked_at),
         "Source: #{row.source}. Rate type: #{row.rate_type}.",
         ("Paid in eZee before migration: #{'%.2f' % row.amount_paid} — not posted here." if row.amount_paid.to_d.positive?)

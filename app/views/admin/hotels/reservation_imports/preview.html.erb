@@ -4,8 +4,9 @@
         title: "Review this import",
         description: "#{@hotel.name} — nothing has been created yet.") %>
 
-  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <% [ [ "Will import", importable, "text-foreground" ],
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+    <% [ [ "Total detected", @total_rows, "text-foreground" ],
+         [ "Will import", importable, "text-foreground" ],
          [ "Needs attention", @attention_count, @attention_count.positive? ? "text-red-700" : "text-muted-foreground" ],
          [ "Already imported", @counts["imported"].to_i, "text-muted-foreground" ],
          [ "Arrival in the past", @counts["past"].to_i, "text-muted-foreground" ] ].each do |label, value, tone| %>
@@ -17,7 +18,11 @@
   </section>
 
   <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-    <dl class="grid grid-cols-2 gap-4 text-sm lg:grid-cols-4">
+    <dl class="grid grid-cols-2 gap-4 text-sm lg:grid-cols-5">
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Imported by</dt>
+        <dd class="mt-1 font-bold text-foreground"><%= @import.user.name %></dd>
+      </div>
       <div>
         <dt class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Business date</dt>
         <dd class="mt-1 font-bold text-foreground"><%= @business_date %></dd>
@@ -100,30 +105,58 @@
              [ "past", "Past", @counts["past"].to_i ] ].each do |key, label, count| %>
           <% next if count.to_i.zero? && key != "all" %>
           <% on = @filter == key %>
-          <%= link_to admin_hotel_reservation_import_path(@hotel, @import, filter: key),
-                class: "rounded-full px-3 py-1.5 text-xs font-bold #{on ? 'bg-primary text-primary-foreground' : 'border border-border text-foreground hover:bg-muted'}" do %>
+          <%= link_to admin_hotel_reservation_import_path(@hotel, @import, filter: key, q: @q),
+                class: "rounded-full px-3 py-1.5 text-xs font-bold #{on ? 'bg-primary text-primary-foreground' : 'border border-border text-foreground hover:bg-muted'}",
+                data: { turbo_frame: "import_reservations_results", turbo_action: "advance" } do %>
             <%= label %> <span class="tabular-nums opacity-70"><%= number_with_delimiter(count) %></span>
           <% end %>
         <% end %>
       </nav>
     </div>
 
-    <div class="overflow-x-auto">
-      <div class="min-w-[57rem]">
-        <div class="grid grid-cols-[6rem_minmax(11rem,1fr)_9.5rem_6rem_7.5rem_7rem_10rem] bg-muted/40 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-          <div class="px-3 py-2.5">Rsrv. no</div>
-          <div class="px-3 py-2.5">Booked by</div>
-          <div class="px-3 py-2.5">Stay</div>
-          <div class="px-3 py-2.5">Room</div>
-          <div class="px-3 py-2.5">Category</div>
-          <div class="px-3 py-2.5 text-right">Amount</div>
-          <div class="px-3 py-2.5">Status</div>
-        </div>
-        <%= render "admin/hotels/reservation_imports/rows_page",
-                   hotel: @hotel, import: @import, rows: @rows,
-                   filter: @filter, page: @page, more: @more %>
+    <%# Deliberately no filter field here -- a search looks across every
+        status. Carrying whatever tab happened to be active in would make a
+        match outside that tab look like the search found nothing. The
+        status tabs below still narrow a search once it is running.
+        auto-submit debounces and resubmits as the operator types, and
+        turbo_frame scopes the response to just the table below, so the
+        page does not jump or need Enter pressed. %>
+    <%= form_with url: admin_hotel_reservation_import_path(@hotel, @import), method: :get,
+          class: "flex flex-wrap items-center gap-3 border-b border-border px-4 py-3",
+          data: { controller: "auto-submit", turbo_frame: "import_reservations_results", turbo_action: "advance" } do %>
+      <div class="relative max-w-xl flex-1">
+        <%= cached_icon "search", class: "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground", aria: { hidden: true } %>
+        <%= text_field_tag :q, @q, placeholder: "Search…",
+              class: "form-input w-full py-2.5 pl-10 text-sm", autocomplete: "off",
+              data: { action: "input->auto-submit#submit" } %>
       </div>
-    </div>
+      <% if @q.present? %>
+        <%= link_to "Clear", admin_hotel_reservation_import_path(@hotel, @import),
+              class: "text-xs font-bold text-muted-foreground hover:text-foreground",
+              data: { turbo_frame: "import_reservations_results" } %>
+      <% end %>
+    <% end %>
+
+    <%= turbo_frame_tag "import_reservations_results" do %>
+      <div class="overflow-x-auto">
+        <div class="min-w-[74rem]">
+          <div class="grid grid-cols-[6rem_minmax(11rem,1fr)_8rem_14rem_4rem_6rem_7.5rem_7rem_10rem] bg-muted/40 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            <div class="px-3 py-2.5">Rsrv. no</div>
+            <div class="px-3 py-2.5">Booked by</div>
+            <div class="px-3 py-2.5">Source</div>
+            <div class="px-3 py-2.5">Stay</div>
+            <div class="px-3 py-2.5">Pax</div>
+            <div class="px-3 py-2.5">Room</div>
+            <div class="px-3 py-2.5">Category</div>
+            <div class="px-3 py-2.5 text-right">Amount</div>
+            <div class="px-3 py-2.5">Status</div>
+          </div>
+          <%= render "admin/hotels/reservation_imports/rows_page",
+                     hotel: @hotel, import: @import, rows: @rows,
+                     filter: @filter, q: @q, page: @page, more: @more %>
+        </div>
+      </div>
+    <% end %>
   </section>
 
   <div class="flex flex-wrap items-center gap-3">

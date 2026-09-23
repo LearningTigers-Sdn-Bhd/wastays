@@ -8,14 +8,22 @@
     when it cannot find one -- so returning the rows bare is not enough. %>
 <%= turbo_frame_tag "import_rows_page_#{page}" do %>
   <% rows.each do |row| %>
-  <div class="grid grid-cols-[6rem_minmax(11rem,1fr)_9.5rem_6rem_7.5rem_7rem_10rem] items-start border-t border-border text-sm
+  <div class="grid grid-cols-[6rem_minmax(11rem,1fr)_8rem_14rem_4rem_6rem_7.5rem_7rem_10rem] items-start border-t border-border text-sm
               <%= "bg-red-50/50" if row.status.in?(%w[blocked failed]) %>">
     <div class="px-3 py-3 font-mono text-xs font-bold text-foreground"><%= row.reservation_number %></div>
     <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :guest_name,
                value: row.guest_name, align: "text-foreground" %>
+    <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :source,
+               value: row.source, align: "text-muted-foreground" %>
     <div class="whitespace-nowrap px-3 py-3 text-muted-foreground">
-      <%= row.arrival&.strftime("%d %b") %> → <%= row.departure&.strftime("%d %b") %>
+      <%= row.arrival&.strftime("%d %b %Y") %> → <%= row.departure&.strftime("%d %b %Y") %>
       <span class="block text-xs"><%= pluralize(row.nights, "night") %></span>
+    </div>
+    <div class="px-3 py-3 text-muted-foreground">
+      <%= row.adults + row.children %>
+      <% if row.children.positive? %>
+        <span class="block text-xs">(<%= pluralize(row.adults, "adult") %>, <%= pluralize(row.children, "child") %>)</span>
+      <% end %>
     </div>
     <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :room_number,
                value: row.room_number, align: "text-muted-foreground" %>
@@ -50,7 +58,7 @@
 
   <% if more %>
     <%= turbo_frame_tag "import_rows_page_#{page + 1}", loading: :lazy,
-          src: rows_admin_hotel_reservation_import_path(hotel, import, filter: filter, page: page + 1) do %>
+          src: rows_admin_hotel_reservation_import_path(hotel, import, filter: filter, q: q, page: page + 1) do %>
       <p class="border-t border-border px-4 py-3 text-xs text-muted-foreground">Loading more…</p>
     <% end %>
   <% end %>
