@@ -134,6 +134,18 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         expect(booking.booking_folio).to be_present
         expect(BookingAuditLog.find_by!(auditable: booking, action_type: "check_in").source).to eq("concierge_page")
       end
+
+      it "welcomes the guest with the room and a way back to the concierge" do
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
+        follow_redirect!
+
+        page = Nokogiri::HTML(response.body)
+
+        expect(response).to have_http_status(:ok)
+        expect(page.at_css(".guest-check-in-success h2").text.squish).to eq("Welcome, Ahmad")
+        expect(page.at_css(".guest-stay-summary__room").text.strip).to eq("101")
+        expect(page.at_css("a.guest-button[href='#{concierge_home_path(hotel.unique_id, hotel.public_id)}']").text).to include("Back to Concierge")
+      end
     end
 
     context "no room available" do

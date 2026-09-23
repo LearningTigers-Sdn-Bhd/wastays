@@ -127,6 +127,16 @@
     field-sizing: content;
   }
 
+  /* ─── Check-in success ───
+     A mark, the welcome, the stay card, and the way back, in one column. */
+  .guest-check-in-success {
+    @apply mx-auto grid w-full max-w-md gap-6;
+  }
+
+  .guest-check-in-success__mark {
+    @apply mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-success/10 text-success-foreground;
+  }
+
   /* ─── Signature pad ───
      The same edge as a field, so the pad reads as the place to write. */
   .guest-signature {
