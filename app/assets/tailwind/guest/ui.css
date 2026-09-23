@@ -310,9 +310,11 @@
   }
 
   /* The icon sits over the text, so the label keeps its width when two cards
-     share a row on a phone. */
+     share a row on a phone. Top-aligned, not spread: a label that wraps to
+     two lines grows the card downward, and the icon and label of every card
+     in a row stay on the same lines. */
   .guest-action-card {
-    @apply flex min-h-28 flex-col justify-between gap-3 rounded-xl p-4 text-foreground transition-colors;
+    @apply flex min-h-28 touch-manipulation flex-col gap-3 rounded-xl p-4 text-foreground transition-colors;
   }
 
   .guest-service-surface {
@@ -366,11 +368,6 @@
 
   .guest-action-card__hint {
     @apply mt-1 block text-xs font-normal leading-snug;
-    color: var(--muted-foreground-strong);
-  }
-
-  .guest-home-service-card__description {
-    @apply mt-1 block text-xs leading-snug;
     color: var(--muted-foreground-strong);
   }
 

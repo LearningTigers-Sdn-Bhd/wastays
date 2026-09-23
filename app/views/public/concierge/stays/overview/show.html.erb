@@ -62,13 +62,13 @@
                                              hint: "Places and guest offers",
                                              icon: "sparkles", tone: :discovery,
                                              href: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id)) %>
-          <%= render GuestUI::ActionCard.new(label: "Front desk",
-                                             hint: "Call or get directions",
+          <%= render GuestUI::ActionCard.new(label: "Property Contacts",
+                                             hint: "Phone, WhatsApp, email and map",
                                              icon: "phone", tone: :contact,
                                              href: concierge_contact_path(@hotel.unique_id, @hotel.public_id)) %>
           <% if presenter.chat_available? %>
-            <%= render GuestUI::ActionCard.new(label: "Chat with us",
-                                               hint: "Ask the hotel team",
+            <%= render GuestUI::ActionCard.new(label: "Interact with Chatbot",
+                                               hint: "Instant answers, any time",
                                                icon: "message-circle", tone: :conversation,
                                                href: concierge_chat_path(@hotel.unique_id, @hotel.public_id)) %>
           <% end %>

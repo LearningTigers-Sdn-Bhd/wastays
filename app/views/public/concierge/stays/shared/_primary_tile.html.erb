@@ -19,12 +19,14 @@
 <% tile = capture do %>
   <%= app_icon icon, class: "size-6 shrink-0 #{icon_color}", aria: { hidden: "true" } %>
   <span class="min-w-0">
-    <span class="block text-sm font-bold leading-tight md:text-base <%= caption %>"><%= label %></span>
+    <span class="block text-sm font-semibold leading-tight <%= caption %>"><%= label %></span>
     <span class="mt-1 block text-xs leading-snug <%= description_color %>"><%= description %></span>
   </span>
 <% end %>
 
-<% classes = "flex min-h-28 flex-col justify-between gap-3 rounded-xl p-4 md:px-5 #{surface}" %>
+<%# The same box as GuestUI::ActionCard, so the two grids on the stay page
+    read as one set. %>
+<% classes = "flex min-h-28 flex-col gap-3 rounded-xl p-4 #{surface}" %>
 <% if pending %>
   <div class="<%= classes %>"><%= tile %></div>
 <% else %>

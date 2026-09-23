@@ -61,7 +61,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(services.css("a.guest-action-card").map { |card| card.text.strip }).to include(
         "Report a problem Tell us what is wrong",
         "Recommendations Places and guest offers",
-        "Front desk Call or get directions"
+        "Property Contacts Phone, WhatsApp, email and map"
       )
       expect(more_actions.at_css("summary").text).to include("More Actions")
       expect(more_actions.at_css("summary .guest-more-actions__icon[aria-hidden='true']")).to be_present

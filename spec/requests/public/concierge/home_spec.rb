@@ -22,8 +22,8 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response.body).to include("Pre-check in")
       expect(response.body).to include("Book a Room")
       expect(response.body).to include("Recommendations")
-      expect(response.body).to include("Contact Us")
-      expect(response.body).to include("Chat With Us")
+      expect(response.body).to include("Property Contacts")
+      expect(response.body).to include("Interact with Chatbot")
     end
 
     it "keeps the page but drops the chat tile when guest chat is off" do
@@ -32,8 +32,8 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Contact Us")
-      expect(response.body).not_to include("Chat With Us")
+      expect(response.body).to include("Property Contacts")
+      expect(response.body).not_to include("Interact with Chatbot")
       expect(response.body).not_to include(concierge_chat_path(hotel.unique_id, hotel.public_id))
     end
 
@@ -81,7 +81,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
         get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => user_agent }
 
         expect(response.body).to include(concierge_chat_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include("Chat With Us")
+        expect(response.body).to include("Interact with Chatbot")
       end
     end
 
@@ -152,18 +152,23 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 
       document = response.parsed_body
-      paths = [
-        concierge_check_in_path(hotel.unique_id, hotel.public_id),
+      check_in = document.at_css("a[href='#{concierge_check_in_path(hotel.unique_id, hotel.public_id)}']")
+      service_paths = [
         concierge_book_path(hotel.unique_id, hotel.public_id),
         concierge_recommendations_path(hotel.unique_id, hotel.public_id),
         concierge_contact_path(hotel.unique_id, hotel.public_id),
         concierge_chat_path(hotel.unique_id, hotel.public_id)
       ]
 
-      paths.each do |path|
-        card = document.at_css("a[href='#{path}']")
+      expect(check_in["class"]).to include("touch-manipulation", "rounded-xl")
 
-        expect(card["class"]).to include("touch-manipulation", "rounded-xl")
+      # The services share GuestUI::ActionCard with the stay page, so both
+      # pages draw one tile.
+      service_paths.each do |path|
+        expect(document.at_css("a.guest-action-card[href='#{path}']")).to be_present
+      end
+
+      [ check_in, *service_paths.map { |path| document.at_css("a[href='#{path}']") } ].each do |card|
         expect(card["class"]).not_to match(/shadow|rounded-\[2rem\]|active:scale/)
         expect(card.element_children.any? { |child| child.name == "svg" }).to be(true)
       end
