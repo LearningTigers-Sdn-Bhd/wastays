@@ -1,79 +1,34 @@
 <%# The property's own photograph, not a logo, is what tells a guest they are
     in the right place -- so this runs at the top of every concierge page, not
-    only the home screen. It replaces the old slim text-only bar: at 160px on a
-    phone and 20dvh on desktop it costs more height than that bar did, but the
-    hotel's identity is now genuinely legible rather than a truncated 9px label.
+    only the home screen.
 
     It carries the page's h1: the templates below it are all sections of one
     property's concierge, so their own headings stay h2. %>
-<%# `home_path` is where the photograph goes. It defaults to the concierge home,
-    which is right for every page a guest reaches by scanning the QR code. A stay
-    page passes its own path: the hero runs the full width at the top of the
-    screen, so on a stay page the default made the largest tap target on the page
-    the way out of the stay the guest had just verified a device to open. %>
+<%# It sticks like a navbar. The hero scrolls up until only its bottom strip is
+    left, and that strip pins. The hero never changes height, so the page under
+    it never jumps. concierge-hero marks the pinned state with data-compact, and
+    the hotel name drops from three lines to one. %>
 <%
-  confirm_home_link = local_assigns[:confirm_home_link]
-  home_path = local_assigns[:home_path].presence || concierge_home_path(@hotel.unique_id, @hotel.public_id)
-  home_label = local_assigns[:home_label].presence || "#{@hotel.name} concierge home"
   hero_photo = if @hotel.featured_photo_attachment.present?
-    image_tag(@hotel.featured_photo_attachment, class: "absolute inset-0 h-full w-full object-cover opacity-80")
+    image_tag(@hotel.featured_photo_attachment, alt: "", class: "absolute inset-0 h-full w-full object-cover opacity-80")
   else
-    image_tag("landing/bg-1.webp", class: "absolute inset-0 h-full w-full object-cover opacity-90")
+    image_tag("landing/bg-1.webp", alt: "", class: "absolute inset-0 h-full w-full object-cover opacity-90")
   end
 %>
-<div class="relative h-[160px] w-full flex-shrink-0 overflow-hidden rounded-b-[2rem] bg-primary shadow-2xl shadow-primary/20 md:h-[20dvh]"
-     <%= "data-controller=concierge-modal".html_safe if confirm_home_link %>>
-  <% if confirm_home_link %>
-    <%# This bar sits right where a thumb rests while scrolling a long list
-        (Recommendations), so the whole photo being one tap straight back to
-        the concierge home invites exactly the accidental tap scrolling
-        produces. Confirm first, rather than the plain link every other page
-        uses -- those are short enough that there is little to scroll past it
-        with, and a confirmation there would just be friction with nothing
-        behind it. %>
-    <button type="button" data-action="concierge-modal#open" aria-haspopup="dialog"
-            aria-label="<%= home_label %>" class="absolute inset-0 z-0">
-      <%= hero_photo %>
-    </button>
+<div class="guest-hero" data-controller="concierge-hero">
+  <div class="guest-hero__sentinel" data-concierge-hero-target="sentinel" aria-hidden="true"></div>
 
-    <dialog data-concierge-modal-target="dialog"
-            data-action="click->concierge-modal#backdropClose close->concierge-modal#onClose"
-            aria-label="Leave Recommendations?"
-            class="fixed inset-x-4 bottom-4 top-auto m-0 hidden w-auto max-w-none translate-y-full flex-col overflow-hidden rounded-2xl border-0 bg-background p-0 shadow-2xl transition-transform duration-300 ease-out open:flex data-open:translate-y-0 backdrop:bg-black/50 motion-reduce:transition-none sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2 sm:rounded-3xl">
-      <div class="p-5">
-        <h2 tabindex="-1" autofocus class="text-base font-black text-foreground focus:outline-none">Leave Recommendations?</h2>
-        <p class="mt-1.5 text-[13px] font-medium leading-relaxed text-muted-foreground">
-          You'll return to the concierge home. Anything you've claimed stays in your wallet.
-        </p>
-        <div class="mt-4 grid grid-cols-2 gap-2">
-          <button type="button" data-action="concierge-modal#close"
-                  class="rounded-xl border border-border/60 bg-white px-4 py-3 text-[12px] font-black uppercase tracking-wider text-foreground transition-colors active:bg-muted">
-            Stay here
-          </button>
-          <%= link_to "Go home", concierge_home_path(@hotel.unique_id, @hotel.public_id),
-                class: "rounded-xl bg-primary px-4 py-3 text-center text-[12px] font-black uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-hover" %>
-        </div>
-      </div>
-    </dialog>
-  <% else %>
-    <%= link_to home_path, class: "absolute inset-0 z-0", "aria-label": home_label do %>
-      <%= hero_photo %>
-    <% end %>
-  <% end %>
+  <%= hero_photo %>
 
   <%# Two layers, not one: the flat wash guarantees the floor contrast and the
       gradient keeps the photograph from looking merely dimmed. %>
   <div class="pointer-events-none absolute inset-0 z-[1] bg-black/50"></div>
   <div class="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
 
-  <div class="pointer-events-none relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-6 pb-4 md:px-10 md:pb-5">
-    <div class="space-y-0.5">
-      <h1 class="font-guest-display text-[29px] font-semibold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.8)] md:text-4xl">
-        <%= @hotel.name %>
-      </h1>
-      <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-accent opacity-90 md:text-[12px]">
-        <%= concierge_location_label(@hotel) %>
-      </p>
+  <div class="guest-hero__content">
+    <div>
+      <h1 class="guest-hero__name font-guest-display"><%= @hotel.name %></h1>
+      <p class="guest-hero__location"><%= concierge_location_label(@hotel) %></p>
     </div>
   </div>
 </div>

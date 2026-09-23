@@ -6,9 +6,7 @@
 
 <%= render GuestUI::Page.new do |page| %>
   <% page.with_hero do %>
-    <%= render "public/concierge/shared/hero",
-               home_path: stay_path,
-               home_label: "Your stay at #{@hotel.name}" %>
+    <%= render "public/concierge/shared/hero" %>
   <% end %>
   <% page.with_context do %>
     <%= render GuestUI::Card.new(title: "About This Access") do %>

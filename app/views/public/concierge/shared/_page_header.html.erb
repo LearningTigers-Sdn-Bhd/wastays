@@ -1,5 +1,4 @@
-<%# A top-level page has nowhere to go back to that the bar above it does not
-    already offer, so it can pass back: false and skip this. %>
+<%# A page that brings its own way back can pass back: false and skip this. %>
 <% if local_assigns.fetch(:back, true) %>
   <%= render "public/concierge/shared/back_button",
              back_path: back_path,

@@ -4,10 +4,9 @@
     and deep top padding both get overridden here. %>
 <%= render layout: "public/concierge/shared/page_shell",
            locals: { content_class: "flex-1 px-4 pt-[26px] pb-16 sm:px-6 md:pt-[38px]",
-                     container_class: "w-full max-w-6xl",
-                     confirm_home_link: true } do %>
-  <%# No back link: this is the top of its own section, and the bar above it
-      already returns to the concierge home. %>
+                     container_class: "w-full max-w-6xl" } do %>
+  <%# No back link: this is the top of its own section. The hero is no longer
+      a link home; the Recommendations redesign adds the way back. %>
   <%# !mt-0 tightens the gap under the heading for this page specifically --
       the shared partial's own mt-3/mt-2 still apply everywhere else, and
       margin-collapse with the heading's mb-2 keeps a real gap here too, just

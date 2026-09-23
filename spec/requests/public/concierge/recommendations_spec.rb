@@ -35,26 +35,10 @@ RSpec.describe "Public::Concierge::Recommendations", type: :request do
       expect(response.body).not_to include("No offers")
     end
 
-    it "confirms before the top-bar photo navigates back to the concierge home" do
-      get path
-
-      expect(response.body).to include("Leave Recommendations?")
-      expect(response.body).to include(concierge_home_path(hotel.unique_id, hotel.public_id))
-      # The photo itself is a button now, not a direct link home -- confirm
-      # first is the whole point.
-      expect(response.body).not_to match(%r{<a[^>]*href="#{Regexp.escape(concierge_home_path(hotel.unique_id, hotel.public_id))}"[^>]*>\s*<img})
-    end
-
-    it "does not gate the top bar on a shorter page like Contact" do
-      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
-
-      expect(response.body).not_to include("Leave Recommendations?")
-    end
-
     it "caps the featured rail at four and offers a View all for the rest" do
       get path # food-drink: 19 offers across 4 vendors, all 4 fit the rail's cap
 
-      expect(response.body.scan(%r{data-concierge-modal-target="dialog"}).size).to eq(2) # voucher sheet + the top-bar "leave recommendations" confirm
+      expect(response.body.scan(%r{data-concierge-modal-target="dialog"}).size).to eq(1) # the voucher sheet
       expect(response.body).to include("View all (19)")
       # 19 offers exist but only 4 are curated into the rail -- the other 15
       # still have to be reachable through the full "View all" list.

@@ -335,32 +335,34 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
     end
   end
 
-  # The hero runs the full width at the top of the screen, so on a stay page
-  # the concierge home was the largest tap target on a page the guest had just
-  # verified a device to open.
-  describe "the hero on a stay page" do
-    it "points at the stay, not the public concierge home" do
+  # The hero is a sticky bar, not a link. It sits where a thumb rests while
+  # scrolling, so a link there invites an accidental tap.
+  describe "the hero" do
+    def hero
+      response.body[%r{<div class="guest-hero".*?</h1>}m]
+    end
+
+    it "sticks without a link on a stay page" do
       get concierge_stay_path(*args)
 
-      hero = response.body[/<a class="absolute inset-0 z-0"[^>]*>/]
-
-      expect(hero).to include(concierge_stay_path(*args))
-      expect(hero).not_to include(%(href="#{concierge_home_path(hotel.unique_id, hotel.public_id)}"))
-      expect(hero).to include("Your stay at")
+      expect(hero).to include('data-controller="concierge-hero"')
+      expect(hero).to include('data-concierge-hero-target="sentinel"')
+      expect(hero).to include(hotel.name)
+      expect(hero).not_to include("<a ")
     end
 
-    it "points at the stay from a form page too" do
+    it "sticks without a link on a form page" do
       get concierge_stay_check_out_path(*args)
 
-      hero = response.body[/<a class="absolute inset-0 z-0"[^>]*>/]
-
-      expect(hero).to include(concierge_stay_path(*args))
+      expect(hero).to include('data-controller="concierge-hero"')
+      expect(hero).not_to include("<a ")
     end
 
-    it "still points at the concierge home away from a stay" do
+    it "sticks without a link on the concierge home" do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 
-      expect(response.body).to include(concierge_home_path(hotel.unique_id, hotel.public_id))
+      expect(hero).to include('data-controller="concierge-hero"')
+      expect(hero).not_to include("<a ")
     end
   end
 end

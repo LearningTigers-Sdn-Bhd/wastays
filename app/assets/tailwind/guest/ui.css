@@ -409,6 +409,87 @@
     @apply block font-bold;
   }
 
+  /* ─── Hero ───
+     The hotel's photo and name at the top of every concierge page. It sticks
+     like a navbar: the hero scrolls up until only its bottom strip is left,
+     and that strip pins. The height never changes, so the page under it never
+     jumps.
+
+     1. The full height fits a hotel name of three lines. svh, not dvh: dvh
+        changes as the phone's URL bar hides, and the pinned offset would
+        shake with it. The 11rem floor keeps a landscape phone, which reaches
+        md, from cutting the name.
+     2. The safe-area inset keeps the pinned strip clear of the notch, because
+        the concierge layout draws under it (viewport-fit=cover).
+     3. data-compact comes from concierge-hero when the strip pins. */
+  .guest-hero {
+    --guest-hero-inset: env(safe-area-inset-top, 0px);
+    --guest-hero-compact: calc(4rem + var(--guest-hero-inset));
+    --guest-hero-height: calc(11rem + var(--guest-hero-inset));
+
+    top: calc(var(--guest-hero-compact) - var(--guest-hero-height));
+    height: var(--guest-hero-height);
+    @apply sticky z-30 w-full flex-shrink-0 overflow-hidden rounded-b-[2rem] bg-primary shadow-2xl shadow-primary/20;
+    @apply transition-[border-radius] duration-200 ease-out motion-reduce:transition-none;
+  }
+
+  @media (min-width: 48rem) {
+    .guest-hero {
+      --guest-hero-height: calc(max(11rem, 20svh) + var(--guest-hero-inset));
+    }
+  }
+
+  .guest-hero[data-compact] {
+    @apply rounded-none;
+  }
+
+  /* The part of the hero that scrolls away, less one pixel. A box that only
+     touches the screen edge still counts as on screen, so without that pixel
+     the strip would never report that it pinned. */
+  .guest-hero__sentinel {
+    height: calc(var(--guest-hero-height) - var(--guest-hero-compact) - 1px);
+    @apply pointer-events-none absolute left-0 top-0 w-px;
+  }
+
+  .guest-hero__content {
+    padding-top: var(--guest-hero-inset);
+    @apply pointer-events-none relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-6 pb-4 md:px-10 md:pb-5;
+  }
+
+  .guest-hero__name {
+    @apply line-clamp-3 break-words text-[29px] font-semibold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.8)] md:text-4xl;
+    @apply transition-[font-size] duration-200 ease-out motion-reduce:transition-none;
+  }
+
+  .guest-hero__location {
+    @apply mt-0.5 max-h-6 overflow-hidden text-[11px] font-bold uppercase tracking-[0.2em] text-accent opacity-90 md:text-[12px];
+    @apply transition-[max-height,opacity,margin] duration-200 ease-out motion-reduce:transition-none;
+  }
+
+  /* One line in the 4rem strip, centred in it: 1.25rem of padding under a
+     line of about 1.5rem. */
+  .guest-hero[data-compact] .guest-hero__content {
+    @apply pb-5;
+  }
+
+  .guest-hero[data-compact] .guest-hero__name {
+    @apply line-clamp-1 text-lg leading-snug;
+  }
+
+  .guest-hero[data-compact] .guest-hero__location {
+    @apply mt-0 max-h-0 opacity-0;
+  }
+
+  /* 1. An anchor jump or a keyboard focus stops below the pinned strip, not
+        under it.
+     2. No overscroll bounce. Without this, iOS drags the pinned strip down
+        at the top of the page and pulls it away at the bottom. Android loses
+        pull-to-refresh on these pages as a result. */
+  html:has(.guest-hero) {
+    scroll-padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+    overscroll-behavior-y: none;
+  }
+
   /* ─── Page ───
      The concierge page frame: hero, one centred container, then the footer.
 
@@ -417,7 +498,9 @@
      that reading order, so the grid never moves focus away from the order the
      page is read in. */
   .guest-page {
-    @apply flex min-h-screen flex-col overflow-x-hidden bg-background font-guest-interface;
+    /* clip, not hidden: overflow hidden makes a scroll box, and the sticky
+       hero would stick to it instead of to the screen. */
+    @apply flex min-h-screen flex-col overflow-x-clip bg-background font-guest-interface;
   }
 
   .guest-page__main {

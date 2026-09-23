@@ -3,9 +3,7 @@
 
 <%= render GuestUI::Page.new do |page| %>
   <% page.with_hero do %>
-    <%= render "public/concierge/shared/hero",
-               home_path: stay_path,
-               home_label: "Your stay at #{@hotel.name}" %>
+    <%= render "public/concierge/shared/hero" %>
   <% end %>
   <div class="guest-stay-overview">
     <section class="guest-stay-overview__greeting space-y-6">

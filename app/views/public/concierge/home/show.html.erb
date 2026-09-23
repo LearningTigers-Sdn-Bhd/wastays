@@ -4,7 +4,8 @@
     concierge page now (public/concierge/shared/hero) -- this was where it
     started, so home is the one page that composes its own shell around it
     instead of going through page_shell. %>
-<div class="flex min-h-screen flex-col overflow-x-hidden bg-background font-guest-interface">
+<%# overflow-x-clip, not hidden: hidden would break the sticky hero. %>
+<div class="flex min-h-screen flex-col overflow-x-clip bg-background font-guest-interface">
 
   <%= render "public/concierge/shared/hero" %>
 
