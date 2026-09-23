@@ -3,11 +3,14 @@
 module GuestUI
   # One photo a guest adds: the front of an IC, a passport page.
   #
-  # A plain file input with no `capture`, pressed by a real button. That is
-  # what makes a phone show its own menu -- Photo Library, Take Photo, Choose
-  # File on an iPhone; Camera, Photos, Files on Android -- so the guest gets
-  # the choice every other site gives them, and the phone's own camera, not
-  # one drawn in the page.
+  # On a touch screen the button opens a sheet: Take a photo, or Choose a
+  # photo or file. A phone's own menu cannot be relied on for that choice --
+  # an iPhone shows one, but Android 14 and later go straight to the photo
+  # picker. Take a photo sets `capture`, so the phone's own camera opens;
+  # Choose clears it. With a mouse the button opens the file dialog.
+  #
+  # The sheet is a native <dialog> run by concierge-modal, the concierge's
+  # bottom-sheet controller, so it has Esc, the backdrop and the scroll lock.
   #
   # The input is hidden from sight but not from the form, so the browser can
   # still point at it when a `required` photo is missing.
@@ -30,6 +33,7 @@ module GuestUI
     end
 
     def input_id = @id || @form.field_id(@attribute)
+    def sheet_title_id = "#{input_id}-sheet-title"
     def label_id = "#{input_id}-label"
     def hint_id = "#{input_id}-hint"
     def error_id = "#{input_id}-error"
@@ -47,7 +51,7 @@ module GuestUI
 
       attributes.merge(
         class: tw_merge("guest-image-upload", @class),
-        data: data.merge(controller: "guest-image-upload", state: (filled? ? "filled" : "empty"),
+        data: data.merge(controller: "guest-image-upload concierge-modal", state: (filled? ? "filled" : "empty"),
                          invalid: error.present?.to_s)
       )
     end

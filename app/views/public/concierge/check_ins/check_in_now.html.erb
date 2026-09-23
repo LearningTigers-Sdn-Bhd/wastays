@@ -177,16 +177,7 @@
           Sign with your finger to confirm your details.
         </p>
 
-        <div data-controller="signature" class="space-y-2">
-          <div class="guest-signature">
-            <canvas data-signature-target="canvas" class="h-40 w-full touch-none" aria-label="Signature pad"></canvas>
-          </div>
-          <div class="flex justify-end">
-            <%= render GuestUI::Button.new(label: "Clear signature", variant: :ghost, size: :sm,
-                                           data: { action: "click->signature#clear" }) %>
-          </div>
-          <%= f.hidden_field :signature, data: { signature_target: "input" }, required: true %>
-        </div>
+        <%= render GuestUI::SignaturePad.new(form: f, attribute: :signature, label: "Your signature", required: true) %>
       </fieldset>
     <% end %>
 

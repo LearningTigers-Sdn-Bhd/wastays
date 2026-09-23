@@ -203,24 +203,7 @@
                 <p class="mt-1 text-xs text-muted-foreground">Please provide your signature below to confirm your check-in details.</p>
               </div>
 
-              <div data-controller="signature" class="relative space-y-2">
-                <div class="rounded-xl border border-border bg-white p-2">
-                  <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
-                </div>
-                <div class="flex justify-end">
-                  <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-primary hover:underline">
-                    Clear Signature
-                  </button>
-                </div>
-                <%= f.text_field :signature, 
-                                  data: { signature_target: "input" }, 
-                                  required: true, 
-                                  oninvalid: "this.setCustomValidity('Please provide your signature')",
-                                  oninput: "this.setCustomValidity('')",
-                                  class: "absolute bottom-0 left-1/2 -z-10 h-px w-px opacity-0 pointer-events-none", 
-                                  tabindex: "-1", 
-                                  aria: { hidden: true } %>
-              </div>
+              <%= render GuestUI::SignaturePad.new(form: f, attribute: :signature, label: "Your signature", required: true) %>
             </section>
 
             <div class="rounded-xl border border-border bg-muted p-4 mt-8">

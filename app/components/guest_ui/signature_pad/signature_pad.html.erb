@@ -1,0 +1,42 @@
+<%= tag.div(**root_attributes) do %>
+  <p id="<%= label_id %>" class="guest-field__label">
+    <%= label %>
+    <% if @required %>
+      <span class="guest-field__required" aria-hidden="true">*</span>
+      <span class="sr-only">(required)</span>
+    <% end %>
+  </p>
+
+  <%# The frame is the group: it takes focus for a keyboard user, so the ring
+      and the label land on the pad, and the footer below reads with it. %>
+  <div class="guest-signature-pad__frame" role="group" tabindex="-1"
+       aria-labelledby="<%= label_id %>" aria-describedby="<%= described_by %>">
+    <canvas class="guest-signature-pad__canvas" data-signature-target="canvas" aria-hidden="true"></canvas>
+
+    <div class="guest-signature-pad__footer">
+      <span id="<%= status_id %>" class="guest-signature-pad__status" aria-live="polite"
+            data-signature-target="status">Sign in the box</span>
+      <button type="button" class="guest-signature-pad__clear" disabled
+              aria-label="Clear signature"
+              data-signature-target="clearButton" data-action="signature#clear">
+        <%= helpers.app_icon "eraser", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <% if error.present? %>
+    <p id="<%= error_id %>" class="guest-field__error">
+      <%= helpers.app_icon "circle-alert", class: "guest-field__error-icon", aria: { hidden: "true" } %>
+      <span><%= error %></span>
+    </p>
+  <% end %>
+
+  <%# A text field hidden from sight, not type=hidden: the browser skips a
+      hidden field when it checks `required`, so a missing signature would
+      pass the form. This one is checked, and the controller words the
+      message. %>
+  <%= @form.text_field @attribute, id: field_id, required: @required, tabindex: "-1", autocomplete: "off",
+                       class: "guest-signature-pad__input", aria: { hidden: "true" },
+                       data: { signature_target: "input" } %>
+<% end %>

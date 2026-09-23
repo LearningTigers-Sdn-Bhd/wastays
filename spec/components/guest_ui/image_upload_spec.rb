@@ -49,6 +49,20 @@ RSpec.describe GuestUI::ImageUpload, type: :component do
     expect(page).to have_css("#booking_id_front-error.guest-field__error", text: "Add the front of your ID.")
   end
 
+  # A phone's own menu is not reliable -- Android 14 and later go straight to
+  # the photo picker -- so the choice is the page's own sheet.
+  it "offers Take a photo and Choose a photo or file in a labelled sheet" do
+    render_upload
+
+    expect(page).to have_css(".guest-image-upload[data-controller='guest-image-upload concierge-modal']")
+    sheet = page.find("dialog.guest-sheet[aria-labelledby='booking_id_front-sheet-title']", visible: :all)
+
+    expect(sheet).to have_css("#booking_id_front-sheet-title", text: "Front ID Card", visible: :all)
+    expect(sheet).to have_css("button[data-action='guest-image-upload#takePhoto']", text: "Take a photo", visible: :all)
+    expect(sheet).to have_css("button[data-action='guest-image-upload#choosePhoto']", text: "Choose a photo or file", visible: :all)
+    expect(sheet).to have_css("button[data-action='concierge-modal#close']", text: "Cancel", visible: :all)
+  end
+
   it "announces a chosen photo in a live region" do
     render_upload
 

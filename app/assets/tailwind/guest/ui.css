@@ -203,11 +203,85 @@
     @apply disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  /* ─── Sheet ───
+     A bottom sheet on a native <dialog>, run by concierge-modal: it slides up
+     when data-open lands and clears the home bar with the safe-area inset. */
+  .guest-sheet {
+    @apply fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none translate-y-full border-0 bg-transparent p-0 transition-transform duration-300 ease-out;
+    @apply backdrop:bg-black/50 motion-reduce:transition-none;
+  }
+
+  .guest-sheet[data-open] {
+    @apply translate-y-0;
+  }
+
+  .guest-sheet__panel {
+    @apply mx-auto grid w-full max-w-lg gap-2 rounded-t-3xl bg-card px-4 pt-5 shadow-2xl;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .guest-sheet__title {
+    @apply mb-2 text-center text-base font-semibold text-foreground focus:outline-none;
+  }
+
+  .guest-sheet__option {
+    @apply flex min-h-16 w-full cursor-pointer items-center gap-4 rounded-2xl bg-muted px-4 py-3 text-left transition-colors;
+    @apply hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .guest-sheet__option-icon {
+    @apply size-6 shrink-0 text-primary;
+  }
+
+  .guest-sheet__option-label {
+    @apply block text-base font-semibold text-foreground;
+  }
+
+  .guest-sheet__option-hint {
+    @apply block text-sm;
+    color: var(--muted-foreground-strong);
+  }
+
   /* ─── Signature pad ───
-     The same edge as a field, so the pad reads as the place to write. */
-  .guest-signature {
-    @apply rounded-xl border bg-card p-2;
+     An input group: the pad and its footer in one frame with the field's
+     edge, split by a hairline. The footer says whether the pad is signed and
+     holds Clear. */
+  .guest-signature-pad {
+    @apply relative grid gap-2;
+  }
+
+  /* Under the pad, so the browser's "required" message points at it. */
+  .guest-signature-pad__input {
+    @apply pointer-events-none absolute bottom-12 left-1/2 size-px overflow-hidden opacity-0;
+  }
+
+  .guest-signature-pad__frame {
+    @apply overflow-hidden rounded-xl border bg-card transition-colors;
     border-color: var(--guest-field-border);
+    @apply focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .guest-signature-pad[data-invalid="true"] .guest-signature-pad__frame {
+    @apply border-destructive;
+  }
+
+  .guest-signature-pad__canvas {
+    @apply block h-44 w-full touch-none bg-card;
+  }
+
+  .guest-signature-pad__footer {
+    @apply flex items-center justify-between gap-3 border-t border-border py-1 pl-4 pr-1;
+  }
+
+  .guest-signature-pad__status {
+    @apply text-sm;
+    color: var(--muted-foreground-strong);
+  }
+
+  .guest-signature-pad__clear {
+    @apply inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-primary transition-colors;
+    @apply hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:bg-transparent;
   }
 
   /* ─── Select ───
