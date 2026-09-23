@@ -1,0 +1,55 @@
+<div class="w-full space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Reservation imports",
+        description: "#{@hotel.name} — every eZee import run for this property, for audit.") do |header| %>
+    <% header.with_actions do %>
+      <%= link_to new_admin_hotel_reservation_import_path(@hotel),
+            class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" do %>
+        Import a file
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <% if @imports.empty? %>
+      <p class="px-4 py-8 text-center text-sm text-muted-foreground">
+        No imports have been run for this property yet.
+      </p>
+    <% else %>
+      <div class="overflow-x-auto">
+        <div class="min-w-[52rem]">
+          <div class="grid grid-cols-[10rem_1fr_9rem_6.5rem_6.5rem_6.5rem_9rem] bg-muted/40 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            <div class="px-3 py-2.5">When</div>
+            <div class="px-3 py-2.5">File</div>
+            <div class="px-3 py-2.5">Imported by</div>
+            <div class="px-3 py-2.5 text-right">Created</div>
+            <div class="px-3 py-2.5 text-right">Skipped</div>
+            <div class="px-3 py-2.5 text-right">Failed</div>
+            <div class="px-3 py-2.5">Status</div>
+          </div>
+          <% @imports.each do |import| %>
+            <%= link_to admin_hotel_reservation_import_path(@hotel, import),
+                  class: "grid grid-cols-[10rem_1fr_9rem_6.5rem_6.5rem_6.5rem_9rem] items-center border-t border-border text-sm hover:bg-muted/40" do %>
+              <div class="px-3 py-3 text-muted-foreground"><%= import.created_at.strftime("%d %b %Y, %H:%M") %></div>
+              <div class="truncate px-3 py-3 font-medium text-foreground">
+                <%= import.file.attached? ? import.file.filename : "—" %>
+              </div>
+              <div class="truncate px-3 py-3 text-muted-foreground"><%= import.user&.name || "—" %></div>
+              <div class="px-3 py-3 text-right font-bold tabular-nums text-emerald-700"><%= number_with_delimiter(import.created_count) %></div>
+              <div class="px-3 py-3 text-right tabular-nums text-muted-foreground"><%= number_with_delimiter(import.skipped_count) %></div>
+              <div class="px-3 py-3 text-right tabular-nums <%= import.failed_count.positive? ? "text-red-700 font-bold" : "text-muted-foreground" %>"><%= number_with_delimiter(import.failed_count) %></div>
+              <div class="px-3 py-3">
+                <% tone = { "draft" => "bg-muted text-foreground", "queued" => "bg-blue-50 text-blue-700",
+                            "running" => "bg-blue-50 text-blue-700", "completed" => "bg-emerald-50 text-emerald-700",
+                            "failed" => "bg-red-50 text-red-700" }[import.status] %>
+                <span class="inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold <%= tone %>">
+                  <%= import.status.humanize %>
+                </span>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </section>
+</div>

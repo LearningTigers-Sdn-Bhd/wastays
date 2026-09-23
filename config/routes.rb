@@ -275,7 +275,7 @@ Rails.application.routes.draw do
       # Migrating a property's unarrived reservations off its old PMS. Run once
       # per hotel by whoever onboards it, which is why it sits here and not in
       # the hotel portal.
-      resources :reservation_imports, module: :hotels, only: [ :new, :create, :show ] do
+      resources :reservation_imports, module: :hotels, only: [ :index, :new, :create, :show ] do
         member do
           get :rows
           post :commit

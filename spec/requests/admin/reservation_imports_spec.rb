@@ -230,4 +230,43 @@ RSpec.describe "Admin reservation imports", type: :request do
     get admin_hotel_reservation_import_path(hotel, import)
     expect(response.body).to include("The import stopped")
   end
+
+  it "lists past imports for the hotel, newest first" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    older = latest_import
+    travel_to(1.hour.from_now) do
+      post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    end
+    newer = latest_import
+    post commit_admin_hotel_reservation_import_path(hotel, newer)
+    perform_enqueued_jobs
+
+    get admin_hotel_reservation_imports_path(hotel)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body.index(admin_hotel_reservation_import_path(hotel, newer)))
+      .to be < response.body.index(admin_hotel_reservation_import_path(hotel, older))
+  end
+
+  it "keeps the full row detail browsable after an import completes, for audit" do
+    post admin_hotel_reservation_imports_path(hotel), params: { file: upload }
+    import = latest_import
+    post commit_admin_hotel_reservation_import_path(hotel, import)
+    perform_enqueued_jobs
+    import.reload
+    expect(import.status).to eq("completed")
+
+    created_row = import.rows.find_by(status: "created")
+    expect(created_row.booking_id).to be_present
+
+    get admin_hotel_reservation_import_path(hotel, import)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).to include("Import completed")
+    expect(response.body).to include(created_row.reservation_number)
+
+    # And it stays searchable, same as a draft.
+    get admin_hotel_reservation_import_path(hotel, import, q: created_row.reservation_number)
+    expect(response.body).to include(created_row.reservation_number)
+  end
 end

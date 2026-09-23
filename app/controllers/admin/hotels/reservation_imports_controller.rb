@@ -18,14 +18,20 @@ module Admin
       before_action :set_hotel
       before_action :set_import, only: %i[show rows commit]
 
+      def index
+        @imports = @hotel.reservation_imports.recent_first.includes(:user)
+      end
+
       def new
       end
 
-      # A draft has not been approved yet, so it shows the review; anything past
-      # that shows progress. Both are GETs on the same record, which is also
-      # what lets Turbo accept the upload -- a form response has to redirect.
+      # A draft has not been approved yet, so it shows the review; a finished
+      # one (completed or failed) shows the same table, now doubling as the
+      # audit record of what that run actually did. Only a run still in
+      # flight (queued/running) needs the live-updating progress screen
+      # instead -- its rows are not settled yet.
       def show
-        return render :progress unless @import.status == "draft"
+        return render :progress if @import.running?
 
         load_preview
         render :preview
@@ -76,12 +82,18 @@ module Admin
 
       # Counts come from the database rather than from a re-resolved file, so
       # the summary costs a handful of grouped queries whatever the file size.
+      #
+      # "importable" covers a draft that has not run yet; "created" covers one
+      # that has -- an importable row becomes created or failed once the job
+      # processes it, so a finished import's stats have to look at both to
+      # still describe what will (or did) get created.
       def load_preview
         @counts = @import.rows.group(:status).count
         @total_rows = @import.rows.count
         @attention_count = @import.rows.needing_attention.count
-        @group_count = @import.rows.importable.where.not(group_key: nil).distinct.count(:group_key)
-        @total_value = @import.rows.importable.sum(:total_amount)
+        outcome_rows = @import.rows.where(status: %w[importable created])
+        @group_count = outcome_rows.where.not(group_key: nil).distinct.count(:group_key)
+        @total_value = outcome_rows.sum(:total_amount)
         @business_date = @hotel.current_business_date || @hotel.business_date_for
         load_agencies
         load_rows
@@ -117,7 +129,7 @@ module Admin
         # A search should look across every status by default -- landing it on
         # "Needs attention" (today's default when the import has any) would
         # make a match outside that bucket look like the search found nothing.
-        @filter = params[:filter].presence_in(%w[all attention importable imported past]) ||
+        @filter = params[:filter].presence_in(%w[all attention importable created imported past]) ||
           (@q.present? ? "all" : default_filter)
         @page = [ params[:page].to_i, 1 ].max
         scope = filtered_rows(@filter).search(@q).in_sheet_order
