@@ -144,10 +144,10 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       get concierge_new_stay_request_path(*args, kind: "housekeeping")
 
       page = Nokogiri::HTML(response.body)
-      field = page.at_css(".guest-stay-form__body textarea#details")
-      button = page.at_css(".guest-stay-form__body button[type='submit']")
+      field = page.at_css(".guest-form-page__body textarea#details")
+      button = page.at_css(".guest-form-page__body button[type='submit']")
 
-      expect(page.at_css(".guest-stay-form__body .guest-card")).to be_nil
+      expect(page.at_css(".guest-form-page__body .guest-card")).to be_nil
       expect(page.at_css("label[for='details']").text).to include("What do you need?", "(required)")
       expect(field["required"]).to be_present
       expect(field["autofocus"]).to be_nil
@@ -341,18 +341,18 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       get concierge_new_stay_request_path(*args, kind: "housekeeping")
 
       page = Nokogiri::HTML(response.body)
-      blocks = page.css(".guest-stay-form > *").map { |block| block["class"] }
-      compact = page.at_css(".guest-stay-form__compact a.guest-stay-compact")
+      blocks = page.css(".guest-form-page > *").map { |block| block["class"] }
+      compact = page.at_css(".guest-form-page__compact a.guest-summary-compact")
 
       expect(blocks).to match([
-        include("guest-stay-form__compact"),
-        include("guest-stay-form__header"),
-        include("guest-stay-form__summary"),
-        include("guest-stay-form__body")
+        include("guest-form-page__compact"),
+        include("guest-form-page__header"),
+        include("guest-form-page__summary"),
+        include("guest-form-page__body")
       ])
       expect(compact["href"]).to eq(concierge_stay_path(*args))
       expect(compact.text.squish).to include("Back to my stay.", "Room 1201")
-      expect(page.at_css(".guest-stay-form__summary .guest-stay-summary")).to be_present
+      expect(page.at_css(".guest-form-page__summary .guest-stay-summary")).to be_present
     end
   end
 

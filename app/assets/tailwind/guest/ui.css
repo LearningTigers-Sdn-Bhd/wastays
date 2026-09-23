@@ -784,34 +784,43 @@
     }
   }
 
-  /* ─── Stay form page ───
-     A phone reads the compact stay card, the heading, then the form. A wider
-     screen puts the heading across the top and the full stay card beside the
-     form. Each card is hidden at the width that shows the other one, and a
-     hidden card has no row, so it leaves no gap. */
-  .guest-stay-form {
+  /* ─── Form page ───
+     A phone reads the compact summary card, the heading, then the form. A
+     wider screen puts the heading across the top and the full summary card
+     beside the form. Each card is hidden at the width that shows the other
+     one, and a hidden card has no row, so it leaves no gap.
+
+     A page with nothing to summarise (data-columns="1") is the heading and
+     the form in one column, at a width a form reads well at. */
+  .guest-form-page {
     @apply grid items-start gap-6;
     grid-template-areas: "compact" "header" "body";
   }
 
-  .guest-stay-form__compact { grid-area: compact; }
-  .guest-stay-form__header { grid-area: header; }
-  .guest-stay-form__summary { grid-area: summary; }
-  .guest-stay-form__body { grid-area: body; }
+  .guest-form-page__compact { grid-area: compact; }
+  .guest-form-page__header { grid-area: header; }
+  .guest-form-page__summary { grid-area: summary; }
+  .guest-form-page__body { grid-area: body; }
 
   @media (min-width: 48rem) {
-    .guest-stay-form {
+    .guest-form-page {
       grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
       grid-template-areas: "header header" "summary body";
       @apply gap-8;
     }
+
+    .guest-form-page[data-columns="1"] {
+      @apply max-w-2xl;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "header" "body";
+    }
   }
 
-  .guest-stay-compact {
+  .guest-summary-compact {
     @apply flex min-h-11 items-center gap-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 
-  .guest-stay-compact__back {
+  .guest-summary-compact__back {
     @apply size-5 shrink-0 text-primary transition-transform group-hover:-translate-x-0.5;
   }
 

@@ -26,10 +26,19 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
   end
 
   describe "GET /concierge/:hotel_slug/check-in" do
-    it "renders the chooser page" do
+    it "renders the code form with its back link on every width" do
       get concierge_check_in_path(hotel.unique_id, hotel.public_id)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("I have a booking")
+
+      page = Nokogiri::HTML(response.body)
+      back = page.at_css(".guest-form-page__header a[href='#{concierge_home_path(hotel.unique_id, hotel.public_id)}']")
+
+      expect(page.at_css(".guest-form-page[data-columns='1']")).to be_present
+      expect(page.at_css(".guest-form-page__compact")).to be_nil
+      expect(back["class"]).to include("inline-flex")
+      expect(back["class"]).not_to include("hidden")
+      expect(page.at_css("label[for='confirmation_token']").text).to include("Confirmation code")
+      expect(page.at_css("input#confirmation_token[required]")).to be_present
     end
 
     # One responsive template now serves both. The concierge is reached by
@@ -82,6 +91,8 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       post concierge_check_in_lookup_path(hotel.unique_id, hotel.public_id),
            params: { confirmation_token: "WS-XXXXXXXX" }
       expect(response).to have_http_status(:unprocessable_content)
+      expect(Nokogiri::HTML(response.body).at_css(".guest-notice[role='alert']")).to be_present
+      expect(response.body).to include("WS-XXXXXXXX")
     end
   end
 

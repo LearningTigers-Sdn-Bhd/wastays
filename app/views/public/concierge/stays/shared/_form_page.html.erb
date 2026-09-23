@@ -1,39 +1,22 @@
 <%# A one-form stay page. The stay stays in view, so the guest never loses
-    track of which stay they are acting on.
+    track of which stay they are acting on. The frame is the shared form
+    layout; the stay cards are its summaries. %>
+<%= render layout: "public/concierge/shared/form_layout",
+           locals: {
+             back_path: stay_path,
+             back_label: "Back to my stay",
+             title: title,
+             subtitle: local_assigns[:subtitle],
+             compact: render("public/concierge/shared/summary_compact",
+                             path: stay_path,
+                             back_label: "Back to my stay",
+                             title: (presenter.room_assigned? ? "Room #{presenter.room_label}" : "Room to be assigned"),
+                             aside: presenter.stay_progress_label,
+                             detail: "#{presenter.check_in_label} – #{presenter.check_out_label}"),
+             summary: render("public/concierge/stays/shared/stay_details", presenter: presenter)
+           } do %>
+  <%= render "public/concierge/stays/shared/flash" %>
+  <%= render GuestUI::Notice.new(message: local_assigns[:error], variant: :danger) %>
 
-    On a phone: the compact stay card, which is also the way back, then the
-    heading, then the form. On a wider screen: the heading with its own back
-    link across the top, then the full stay card beside the form.
-
-    The form sits on the page, not in a card: the heading above it already
-    says what it is, and one field and a button need no second frame. %>
-<%= render GuestUI::Page.new do |page| %>
-  <% page.with_hero do %>
-    <%= render "public/concierge/shared/hero" %>
-  <% end %>
-
-  <div class="guest-stay-form">
-    <div class="guest-stay-form__compact md:hidden">
-      <%= render "public/concierge/stays/shared/stay_summary_compact", presenter: presenter %>
-    </div>
-
-    <div class="guest-stay-form__header">
-      <%= render "public/concierge/stays/shared/page_heading",
-                 back_path: stay_path,
-                 back_display: "hidden md:inline-flex",
-                 title: title,
-                 subtitle: local_assigns[:subtitle] %>
-    </div>
-
-    <div class="guest-stay-form__summary hidden md:block">
-      <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
-    </div>
-
-    <div class="guest-stay-form__body space-y-6">
-      <%= render "public/concierge/stays/shared/flash" %>
-      <%= render GuestUI::Notice.new(message: local_assigns[:error], variant: :danger) %>
-
-      <%= yield %>
-    </div>
-  </div>
+  <%= yield %>
 <% end %>

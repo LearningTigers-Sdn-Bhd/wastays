@@ -1,0 +1,40 @@
+<%# The frame of a one-form concierge page: a stay request, pre-check-in.
+
+    With a summary (a stay, a booking), a phone reads the compact card, which
+    is also the way back, then the heading, then the form; a wider screen puts
+    the heading across the top and the full card beside the form. Without one,
+    the heading keeps its own back link on every width, in the same place the
+    compact card would be, and the form sits under it in one column.
+
+    Locals: back_path, back_label, title, subtitle, and the optional compact
+    and summary cards as rendered HTML. The block is the form. %>
+<% compact = local_assigns[:compact] %>
+<% summary = local_assigns[:summary] %>
+<%= render GuestUI::Page.new do |page| %>
+  <% page.with_hero do %>
+    <%= render "public/concierge/shared/hero" %>
+  <% end %>
+
+  <div class="guest-form-page" data-columns="<%= summary.present? ? 2 : 1 %>">
+    <% if compact.present? %>
+      <div class="guest-form-page__compact md:hidden"><%= compact %></div>
+    <% end %>
+
+    <div class="guest-form-page__header">
+      <%= render "public/concierge/stays/shared/page_heading",
+                 back_path: back_path,
+                 back_label: local_assigns.fetch(:back_label, "Back"),
+                 back_display: (compact.present? ? "hidden md:inline-flex" : "inline-flex"),
+                 title: title,
+                 subtitle: local_assigns[:subtitle] %>
+    </div>
+
+    <% if summary.present? %>
+      <div class="guest-form-page__summary hidden md:block"><%= summary %></div>
+    <% end %>
+
+    <div class="guest-form-page__body space-y-6">
+      <%= yield %>
+    </div>
+  </div>
+<% end %>
