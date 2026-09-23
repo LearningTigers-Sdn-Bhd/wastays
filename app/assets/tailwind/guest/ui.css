@@ -371,8 +371,10 @@
     color: var(--muted-foreground-strong);
   }
 
+  /* select-none: a quick double tap to open and close the disclosure would
+     otherwise select the words of the summary. */
   .guest-more-actions > summary {
-    @apply flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply flex min-h-11 cursor-pointer select-none list-none items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
 
   .guest-more-actions__heading {
@@ -587,6 +589,10 @@
   @media (min-width: 48rem) {
     .guest-stay-overview {
       grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      /* main spans the stay row and the more row. The last row is flexible,
+         so it takes the extra height of main, and the stay row stays as tall
+         as the stay card. More Actions then sits one gap under the card. */
+      grid-template-rows: auto auto 1fr;
       grid-template-areas: "greeting greeting" "stay main" "more main";
       @apply gap-8;
     }
@@ -621,6 +627,19 @@
 
   .guest-stay-compact__back {
     @apply size-5 shrink-0 text-primary transition-transform group-hover:-translate-x-0.5;
+  }
+
+  /* ─── Section title ───
+     A title with a hairline that runs to the end of the row, so the title
+     reads as the start of a group, not as a label on the first tile. The
+     line is a pseudo-element, so a screen reader reads only the words. */
+  .guest-section-title {
+    @apply flex items-center gap-3;
+  }
+
+  .guest-section-title::after {
+    @apply h-px flex-1 bg-border;
+    content: "";
   }
 
   /* ─── Tile grid ───

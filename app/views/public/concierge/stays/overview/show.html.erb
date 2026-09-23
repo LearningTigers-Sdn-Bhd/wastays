@@ -50,7 +50,7 @@
       <% end %>
 
       <section class="guest-stay-overview__services space-y-3" aria-labelledby="hotel-services-title">
-        <h2 id="hotel-services-title" class="guest-card__title">Hotel Services</h2>
+        <h2 id="hotel-services-title" class="guest-card__title guest-section-title">Hotel Services</h2>
         <div class="guest-tile-grid">
           <% if presenter.can_send_request? %>
             <%= render GuestUI::ActionCard.new(label: "Report a problem",
