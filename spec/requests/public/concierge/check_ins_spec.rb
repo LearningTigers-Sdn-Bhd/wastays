@@ -239,6 +239,24 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
     end
 
+    it "leads the registration page with the compact booking card as the way back" do
+      get concierge_check_in_now_path(hotel.unique_id, hotel.public_id)
+
+      page = Nokogiri::HTML(response.body)
+      compact = page.at_css(".guest-form-page__compact a.guest-summary-compact")
+      blocks = page.css(".guest-form-page > *").map { |block| block["class"] }
+
+      expect(blocks).to match([
+        include("guest-form-page__compact"),
+        include("guest-form-page__header"),
+        include("guest-form-page__summary"),
+        include("guest-form-page__body")
+      ])
+      expect(compact["href"]).to eq(concierge_check_in_path(hotel.unique_id, hotel.public_id))
+      expect(compact.text.squish).to include("Back to Check In.", booking.guest_name)
+      expect(page.at_css(".guest-form-page__summary .guest-stay-summary").text).to include("Your Booking", booking.guest_name)
+    end
+
     it "check_in_now renders inline registration form" do
       get concierge_check_in_now_path(hotel.unique_id, hotel.public_id)
       expect(response.body).to include("Guest Registration")

@@ -10,6 +10,20 @@ module Public
         @hotel = hotel
       end
 
+      # ------------------------------------------------------------ the booking
+
+      def guest_name = booking.guest_name
+      def confirmation_code = booking.confirmation_token.to_s.upcase
+      def nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
+      def check_in_label = I18n.l(booking.check_in.to_date, format: StayPresenter::SHORT_DATE)
+      def check_out_label = I18n.l(booking.check_out.to_date, format: StayPresenter::SHORT_DATE)
+
+      def room_type_names
+        booking.booking_rooms.map { |room| room.room_type_snapshot&.dig("name") }.compact
+      end
+
+      def status_label = pre_checkin_completed? ? "Details done" : "Details needed"
+
       def subtitle
         if pre_checkin_completed?
           "Your pre-check-in is complete. Confirm below to check in and get your room assigned."

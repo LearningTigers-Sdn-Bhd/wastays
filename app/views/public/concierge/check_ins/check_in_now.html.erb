@@ -1,52 +1,24 @@
 <% content_for :title, "Check In Now | #{@hotel.name}" %>
-<%= render layout: "public/concierge/shared/page_shell" do %>
-  <% subtitle = @presenter.subtitle %>
-  <%= render "public/concierge/shared/page_header",
-             back_path: concierge_check_in_path(@hotel.unique_id, @hotel.public_id),
+<%# The booking is known here, so the compact booking card is the way back
+    to the code page on a phone, and the full card sits beside the form on a
+    wider screen. %>
+<% check_in_path = concierge_check_in_path(@hotel.unique_id, @hotel.public_id) %>
+<%= render layout: "public/concierge/shared/form_layout",
+           locals: {
+             back_path: check_in_path,
              back_label: "Back to Check In",
-             eyebrow: "Check In",
-             title_prefix: "Ready to",
-             title_accent: "check in?",
-             subtitle: subtitle,
-             divider_suffix: "/60" %>
-
-  <%= render "public/concierge/shared/error_alert", message: @error %>
-
-  <div class="mb-5 rounded-2xl border border-border bg-white p-5 shadow-sm">
-    <div class="mb-4 flex items-center gap-3">
-      <% if @presenter.pre_checkin_completed? %>
-        <div class="flex-none rounded-xl bg-green-50 text-green-600">
-          <%= cached_icon "circle-check", stroke_width: 2, class: "h-10 w-10 p-2.5" %>
-        </div>
-        <div>
-          <p class="text-xs font-bold uppercase tracking-widest text-green-600">Pre-check-in Complete</p>
-          <p class="text-xs text-muted-foreground">Your details have been verified</p>
-        </div>
-      <% else %>
-        <div class="flex-none rounded-xl bg-amber-50 text-amber-600">
-          <%= cached_icon "clipboard", stroke_width: 2, class: "h-10 w-10 p-2.5" %>
-        </div>
-        <div>
-          <p class="text-xs font-bold uppercase tracking-widest text-amber-600">Registration Required</p>
-          <p class="text-xs text-muted-foreground">Please fill in your details to proceed</p>
-        </div>
-      <% end %>
-    </div>
-
-    <div class="space-y-1 border-t border-border pt-4">
-      <p class="font-black text-foreground"><%= @booking.guest_name %></p>
-      <p class="text-xs font-mono text-muted-foreground"><%= @booking.confirmation_token %></p>
-      <p class="text-xs text-muted-foreground">
-        <%= concierge_booking_date_range(@booking) %>
-        · <%= concierge_booking_nights(@booking) %>
-      </p>
-      <% @booking.booking_rooms.each do |booking_room| %>
-        <p class="text-xs text-muted-foreground">1x <%= booking_room.room_type_snapshot["name"] %></p>
-      <% end %>
-    </div>
-  </div>
-
-
+             title: (@presenter.registration_required? ? "Pre-check-in" : "Check in"),
+             subtitle: @presenter.subtitle,
+             compact: render("public/concierge/shared/summary_compact",
+                             path: check_in_path,
+                             back_label: "Back to Check In",
+                             title: @presenter.guest_name,
+                             aside: pluralize(@presenter.nights, "night"),
+                             detail: "#{@presenter.check_in_label} – #{@presenter.check_out_label}"),
+             summary: render("public/concierge/check_ins/booking_summary", presenter: @presenter)
+           } do %>
+  <%= render GuestUI::Notice.new(message: @error, variant: :danger) %>
+  <%= render GuestUI::Notice.new(message: flash[:notice], variant: :success) %>
 
   <%= form_with model: @form, url: concierge_submit_check_in_path(@hotel.unique_id, @hotel.public_id), method: :post, multipart: true, data: @presenter.form_data(self) do |f| %>
     <%= hidden_field_tag :latitude, nil, data: @presenter.geolocation_active? ? { geolocation_check_in_target: "latitude" } : {} %>
