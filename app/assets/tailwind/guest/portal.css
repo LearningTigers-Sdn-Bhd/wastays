@@ -1,0 +1,81 @@
+@layer components {
+  /* The guest portal frame (layouts/guest_portal): the Navbar on top, one
+     centred column, and the BottomNav on a phone. Mobile first: the base
+     rules are the phone, and md adds the desktop. */
+  .guest-portal {
+    @apply flex min-h-screen flex-col overflow-x-clip bg-background font-guest-interface text-foreground antialiased;
+  }
+
+  /* The bottom padding clears the fixed BottomNav and the home indicator
+     under it. From md there is no bottom bar to clear. */
+  .guest-portal__main {
+    @apply mx-auto w-full max-w-5xl flex-1 space-y-6 px-4 pt-5 md:px-10 md:pb-20 md:pt-10;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  @media (width >= 48rem) {
+    .guest-portal__main {
+      padding-bottom: 5rem;
+    }
+  }
+
+  .guest-navbar {
+    @apply sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .guest-navbar__inner {
+    @apply mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 md:h-16 md:gap-8 md:px-10;
+  }
+
+  .guest-navbar__heading {
+    @apply flex min-w-0 flex-1 items-center gap-1 md:hidden;
+  }
+
+  .guest-navbar__back {
+    @apply -ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-navbar__title {
+    @apply truncate font-guest-display text-lg font-semibold;
+  }
+
+  .guest-navbar__brand {
+    @apply flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-navbar__nav {
+    @apply hidden h-full items-stretch gap-6 md:flex;
+  }
+
+  /* The active link carries a bar along the bottom edge of the navbar and
+     the full foreground colour, so the state does not rest on colour alone. */
+  .guest-navbar__link {
+    @apply relative inline-flex items-center text-sm font-bold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-navbar__link[aria-current="page"] {
+    @apply text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary;
+  }
+
+  .guest-navbar__actions {
+    @apply ml-auto flex shrink-0 items-center gap-3;
+  }
+
+  .guest-navbar__name {
+    @apply hidden text-sm font-bold md:inline;
+  }
+
+  .guest-bottom-nav {
+    @apply fixed inset-x-0 bottom-0 z-20 grid auto-cols-fr grid-flow-col border-t border-border bg-card/95 backdrop-blur md:hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .guest-bottom-nav__link {
+    @apply flex h-16 flex-col items-center justify-center gap-1 text-xs font-bold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
+  }
+
+  .guest-bottom-nav__link[aria-current="page"] {
+    @apply text-primary;
+  }
+}

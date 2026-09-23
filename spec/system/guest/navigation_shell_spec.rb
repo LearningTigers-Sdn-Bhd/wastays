@@ -10,31 +10,24 @@ RSpec.describe "Guest navigation shell", type: :system do
     visit guest_verify_path(token: token)
   end
 
-  it "renders shared desktop and mobile navigation with active state" do
+  it "renders the navbar and the bottom nav with the same destinations" do
     visit guest_dashboard_path
 
-    within("#guest-sidebar") do
-      expect(page).to have_link("Dashboard", href: guest_dashboard_path)
-      expect(page).to have_link("My Bookings", href: guest_bookings_path)
+    within("header.guest-navbar") do
+      expect(page).to have_css(".guest-navbar__title", text: "Home")
+      expect(page).to have_css("a.guest-navbar__link[aria-current='page']", text: "Home")
+      expect(page).to have_link("Bookings", href: guest_bookings_path)
       expect(page).to have_link("Refunds", href: guest_refund_requests_path)
-      expect(page).to have_link("Guest Portal", href: guest_dashboard_path)
-      expect(page).to have_no_text("Aisha Rahman")
-      expect(page).to have_css("a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
+      expect(page).to have_text("Aisha Rahman")
+      expect(page).to have_css("#guest-account-list [role='menuitem']", text: "Sign out", visible: :all)
     end
 
-    expect(page).to have_css(
-      "#guest-sidebar[data-turbo-permanent][data-controller~='ui--sidebar'][data-ui--sidebar-key-value='guest']"
-    )
-    expect(page).to have_css("header.panel-navbar[data-sticky='true']")
-    expect(page).to have_css("#guest-profile[data-controller='ui--dropdown-menu']")
-    expect(page).to have_css("button[command='show-modal'][commandfor='guest-sidebar-mobile']")
-
-    within("#guest-sidebar-mobile", visible: :all) do
-      expect(page).to have_link("Dashboard", href: guest_dashboard_path, visible: :all)
-      expect(page).to have_link("My Bookings", href: guest_bookings_path, visible: :all)
-      expect(page).to have_link("Refunds", href: guest_refund_requests_path, visible: :all)
+    within("nav.guest-bottom-nav") do
+      expect(page).to have_css("a[aria-current='page'][href='#{guest_dashboard_path}']", text: "Home")
+      expect(page).to have_link("Bookings", href: guest_bookings_path)
+      expect(page).to have_link("Refunds", href: guest_refund_requests_path)
     end
 
-    expect(page).to have_css("#guest-breadcrumb[data-controller='ui--breadcrumb']", text: "My Account")
+    expect(page).to have_no_css("#guest-sidebar, #guest-breadcrumb, .panel-navbar")
   end
 end

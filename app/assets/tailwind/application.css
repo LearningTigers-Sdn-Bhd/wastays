@@ -2,6 +2,7 @@
 @import "./public/theme.css";
 @import "./guest/chat.css";
 @import "./guest/menu.css";
+@import "./guest/portal.css";
 @import "./guest/ui.css";
 @import "./panel/theme.css";
 @import "./panel/page.css";

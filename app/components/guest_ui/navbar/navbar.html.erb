@@ -1,0 +1,30 @@
+<%= tag.header(**navbar_attributes) do %>
+  <div class="guest-navbar__inner">
+    <% if title.present? %>
+      <div class="guest-navbar__heading">
+        <% if back_path.present? %>
+          <%= link_to back_path, class: "guest-navbar__back", aria: { label: back_label } do %>
+            <%= helpers.app_icon "arrow-left", class: "size-5", aria: { hidden: "true" } %>
+          <% end %>
+        <% end %>
+        <p class="guest-navbar__title"><%= title %></p>
+      </div>
+    <% end %>
+
+    <%= link_to home_path, class: brand_class, aria: { label: "WAStays" } do %>
+      <%= helpers.image_tag "logo/long-logo.png", alt: "", width: 1000, height: 350, class: "h-8 w-auto" %>
+    <% end %>
+
+    <% if items.any? %>
+      <nav class="guest-navbar__nav" aria-label="Guest portal">
+        <% items.each do |item| %>
+          <%= link_to item.label, item.path, class: "guest-navbar__link", aria: { current: ("page" if item.active) } %>
+        <% end %>
+      </nav>
+    <% end %>
+
+    <% if actions? %>
+      <div class="guest-navbar__actions"><%= actions %></div>
+    <% end %>
+  </div>
+<% end %>

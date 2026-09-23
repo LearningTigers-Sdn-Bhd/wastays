@@ -1,7 +1,7 @@
 class Guest::BaseController < ApplicationController
   include Breadcrumbable
 
-  layout "guest"
+  layout "guest_portal"
 
   skip_before_action :redirect_legacy_hotel_portal_path
 

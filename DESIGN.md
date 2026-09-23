@@ -5,8 +5,9 @@ last_updated: 2026-08-17
 
 # WAStays Portal UI Contract
 
-This contract governs Admin, Hotel, Corporate, and Guest portal UI. Public and
-marketing pages are outside its scope. Generated PDFs follow section 12, not the
+This contract governs Admin, Hotel, and Corporate portal UI. The Guest portal,
+the concierge, and public and marketing pages are outside its scope: they use
+GuestUI (`app/components/guest_ui/`). Generated PDFs follow section 12, not the
 screen rules above it.
 
 ## 1. Page ownership
