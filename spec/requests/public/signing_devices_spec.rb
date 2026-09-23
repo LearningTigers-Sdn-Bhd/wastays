@@ -13,6 +13,9 @@ RSpec.describe "Public::SigningDevices", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).not_to include("Login")
+      # The mobile bottom nav (Home/Search/Help/Account) is a separate block
+      # from the header/footer and needs its own guard.
+      expect(response.body).not_to include(%(text-[10px] font-medium">Home))
     end
   end
 
