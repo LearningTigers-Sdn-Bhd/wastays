@@ -26,6 +26,10 @@ module GuestUI
 
     attr_reader :items, :title, :back_path, :back_label
 
+    # From md up the links take the heading's place. With no links -- the
+    # signed-out pages -- the heading stays at every size.
+    def heading_class = items.any? ? "guest-navbar__heading md:hidden" : "guest-navbar__heading"
+
     def navbar_attributes
       @attributes.merge(class: tw_merge("guest-navbar", @class))
     end

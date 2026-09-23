@@ -29,7 +29,7 @@
   }
 
   .guest-navbar__heading {
-    @apply flex min-w-0 flex-1 items-center gap-1 md:hidden;
+    @apply flex min-w-0 flex-1 items-center gap-1;
   }
 
   .guest-navbar__back {

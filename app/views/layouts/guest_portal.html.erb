@@ -35,6 +35,14 @@
             <% end %>
           <% end %>
         <% end %>
+      <% else %>
+        <%# Signed out: a way home on the right, and a way back on the left
+            when the page gives one. %>
+        <%= render GuestUI::Navbar.new(back_path: content_for(:back_path).presence) do |navbar| %>
+          <% navbar.with_actions do %>
+            <%= render GuestUI::Button.new(label: "Home", icon: "house", variant: :ghost, size: :sm, href: root_path) %>
+          <% end %>
+        <% end %>
       <% end %>
 
       <main class="guest-portal__main">

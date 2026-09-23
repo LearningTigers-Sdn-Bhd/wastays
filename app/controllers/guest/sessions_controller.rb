@@ -1,6 +1,9 @@
 class Guest::SessionsController < Guest::BaseController
   skip_before_action :authenticate_guest!, raise: false
   before_action :redirect_if_guest_logged_in!, only: %i[new request_magic_link]
+  helper_method :login_panel
+
+  LOGIN_METHODS = %w[whatsapp email].freeze
 
   def new; end
 
@@ -80,6 +83,16 @@ class Guest::SessionsController < Guest::BaseController
   end
 
   private
+
+  # Which login panel to draw: the choice, one method, or "check your inbox".
+  # An error always comes back on the email panel, because only the email
+  # form posts here.
+  def login_panel
+    return "email" if flash[:alert].present?
+    return "email_sent" if params[:email_sent] == "true"
+
+    LOGIN_METHODS.include?(params[:via]) ? params[:via] : "choice"
+  end
 
   def redirect_if_guest_logged_in!
     redirect_to guest_dashboard_path if guest_logged_in?

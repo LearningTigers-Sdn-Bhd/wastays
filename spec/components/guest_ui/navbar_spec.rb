@@ -31,6 +31,19 @@ RSpec.describe GuestUI::Navbar, type: :component do
     expect(page).to have_css("a.guest-navbar__back[href='/guest/bookings'][aria-label='Back']")
   end
 
+  it "keeps a lone back arrow at every size when there are no links" do
+    render_inline(described_class.new(back_path: "/guest/login"))
+
+    expect(page).to have_css(".guest-navbar__heading a.guest-navbar__back[href='/guest/login']")
+    expect(page).to have_no_css(".guest-navbar__heading.md\\:hidden, .guest-navbar__title")
+  end
+
+  it "hides the heading from md up when the links are there" do
+    render_inline(described_class.new(items:, title: "Home"))
+
+    expect(page).to have_css(".guest-navbar__heading.md\\:hidden")
+  end
+
   it "renders the actions slot" do
     render_inline(described_class.new(items:, title: "Home")) do |navbar|
       navbar.with_actions { "Account" }

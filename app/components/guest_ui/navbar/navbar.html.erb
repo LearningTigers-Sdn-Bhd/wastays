@@ -1,13 +1,15 @@
 <%= tag.header(**navbar_attributes) do %>
   <div class="guest-navbar__inner">
-    <% if title.present? %>
-      <div class="guest-navbar__heading">
+    <% if title.present? || back_path.present? %>
+      <div class="<%= heading_class %>">
         <% if back_path.present? %>
           <%= link_to back_path, class: "guest-navbar__back", aria: { label: back_label } do %>
             <%= helpers.app_icon "arrow-left", class: "size-5", aria: { hidden: "true" } %>
           <% end %>
         <% end %>
-        <p class="guest-navbar__title"><%= title %></p>
+        <% if title.present? %>
+          <p class="guest-navbar__title"><%= title %></p>
+        <% end %>
       </div>
     <% end %>
 

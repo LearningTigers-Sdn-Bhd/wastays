@@ -1,12 +1,10 @@
 <% content_for :title, "Guest Login | WAStays" %>
+<%# One panel for each step, picked by the server: the choice, WhatsApp, email,
+    and "check your inbox". Each step past the choice goes back to it from
+    the Navbar. %>
+<% content_for :back_path, guest_login_path unless login_panel == "choice" %>
 
-<%# Four panels, one shown at a time by the guest-login controller: the
-    choice, WhatsApp, email, and the "check your inbox" after a link is sent.
-    An error comes back on the email panel, because only the email form posts
-    here. %>
-<div class="mx-auto w-full max-w-md space-y-8 md:pt-6"
-     data-controller="guest-login"
-     data-guest-login-is-error-value="<%= flash[:alert].present? %>">
+<div class="mx-auto w-full max-w-md space-y-8 md:pt-6">
   <div class="space-y-2 text-center">
     <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Guest Access</p>
     <h1 class="font-guest-display text-3xl font-semibold text-foreground md:text-4xl">
@@ -15,43 +13,20 @@
     <p class="text-sm text-muted-foreground">Choose how you want to sign in.</p>
   </div>
 
-  <div data-guest-login-target="choice">
-    <%= render GuestUI::Card.new(padding: :tight, class: "py-0") do %>
-      <% [
-           [ "showWhatsapp", "message-circle", "Continue with WhatsApp", "Get a sign-in link on WhatsApp" ],
-           [ "showEmail", "mail", "Continue with Email", "Get a sign-in link in your inbox" ]
-         ].each do |action, icon, label, hint| %>
-        <button type="button" class="guest-card__row group w-full cursor-pointer text-left"
-                data-action="click->guest-login#<%= action %>">
-          <%= app_icon icon, class: "guest-card__row-icon", aria: { hidden: "true" } %>
-          <span class="guest-card__row-text">
-            <span class="guest-card__row-label"><%= label %></span>
-            <span class="guest-card__row-hint"><%= hint %></span>
-          </span>
-          <%= app_icon "chevron-right", class: "guest-card__row-chevron size-4", aria: { hidden: "true" } %>
-        </button>
-      <% end %>
-    <% end %>
-  </div>
-
-  <div data-guest-login-target="whatsapp" class="hidden">
-    <%= render GuestUI::Card.new do %>
-      <%= render "guest/sessions/back" %>
-      <h2 class="guest-card__title">WhatsApp Login</h2>
-      <p class="mt-2 text-sm text-muted-foreground">
+  <% case login_panel %>
+  <% when "whatsapp" %>
+    <%= render GuestUI::Card.new(title: "WhatsApp Login") do %>
+      <p class="text-sm text-muted-foreground">
         Tap the button to message us on WhatsApp. We send you a secure sign-in link at once.
       </p>
       <%= render GuestUI::Button.new(label: "Open WhatsApp", icon: "message-circle", size: :lg, block: true, class: "mt-6",
                                      href: "https://wa.me/601162023996?text=%2Flogin", target: "_blank", rel: "noopener noreferrer") %>
       <p class="mt-4 text-center text-xs text-muted-foreground">After you message us, look in WhatsApp for your sign-in link.</p>
     <% end %>
-  </div>
 
-  <div data-guest-login-target="email" class="hidden">
-    <%= render GuestUI::Card.new do %>
-      <%= render "guest/sessions/back" %>
-      <h2 class="guest-card__title">Email Login</h2>
-      <p class="mt-2 text-sm text-muted-foreground">We send a sign-in link to your inbox.</p>
+  <% when "email" %>
+    <%= render GuestUI::Card.new(title: "Email Login") do %>
+      <p class="text-sm text-muted-foreground">We send a sign-in link to your inbox.</p>
 
       <%= form_with url: guest_request_magic_link_path, method: :post, class: "mt-6 space-y-5" do |form| %>
         <%= render GuestUI::FormField.new(form:, attribute: :email, label: "Email address", required: true) do |field| %>
@@ -63,9 +38,8 @@
 
       <p class="mt-4 text-center text-xs text-muted-foreground">The link expires in 24 hours. If it does not arrive, look in your spam folder.</p>
     <% end %>
-  </div>
 
-  <div data-guest-login-target="emailSuccess" class="hidden">
+  <% when "email_sent" %>
     <%= render GuestUI::Card.new(class: "text-center") do %>
       <%= app_icon "mail-check", class: "mx-auto size-10 text-primary", aria: { hidden: "true" } %>
       <h2 class="mt-4 font-guest-display text-2xl font-semibold text-foreground">Check your inbox</h2>
@@ -73,11 +47,16 @@
         We sent a sign-in link to your email. Open the link to see your bookings.
       </p>
       <p class="mt-1 text-xs text-muted-foreground">The link expires in 24 hours. If it does not arrive, look in your spam folder.</p>
-      <div class="mt-6 flex flex-col gap-3">
-        <%= render GuestUI::Button.new(label: "Try a different method", variant: :secondary, block: true,
-                                       data: { action: "guest-login#back" }) %>
-        <%= render GuestUI::Button.new(label: "Back to WAStays Home", variant: :ghost, block: true, href: root_path) %>
-      </div>
+      <%= render GuestUI::Button.new(label: "Try a different method", variant: :secondary, block: true, class: "mt-6",
+                                     href: guest_login_path) %>
     <% end %>
-  </div>
+
+  <% else %>
+    <%= render GuestUI::Card.new(padding: :tight, class: "py-0") do |card| %>
+      <% card.with_row(label: "Continue with WhatsApp", hint: "Get a sign-in link on WhatsApp",
+                       icon: "message-circle", href: guest_login_path(via: "whatsapp")) %>
+      <% card.with_row(label: "Continue with Email", hint: "Get a sign-in link in your inbox",
+                       icon: "mail", href: guest_login_path(via: "email")) %>
+    <% end %>
+  <% end %>
 </div>
