@@ -381,6 +381,35 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response.body).to include("Terms &amp; Conditions")
       expect(response.body).to include("Valid photo ID is required at check-in.")
     end
+
+    it "offers to send this stay to a paired tablet when the property has the feature" do
+      hotel.update!(grc_tablet_signing_enabled: true)
+      hotel.signing_devices.create!(label: "Lobby tablet")
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).to include("Send to tablet")
+      expect(response.body).to include(hotel_booking_signing_handoff_path(hotel, booking))
+    end
+
+    it "does not offer the tablet when the property has not been granted the feature" do
+      hotel.signing_devices.create!(label: "Lobby tablet")
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).not_to include("Send to tablet")
+    end
+
+    it "does not offer the tablet once this guest has already signed" do
+      hotel.update!(grc_tablet_signing_enabled: true)
+      hotel.signing_devices.create!(label: "Lobby tablet")
+      card = booking.create_guest_registration_card!(hotel: hotel)
+      card.save_signature_for_guest!(signer_name: "Aisha Tan", signature_data_url: "data:image/png;base64,abc123")
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).not_to include("Send to tablet")
+    end
   end
 
   describe "PATCH /hotel/:hotel_id/bookings/:booking_id/guest_registration_card" do

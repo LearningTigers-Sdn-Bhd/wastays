@@ -321,6 +321,37 @@
         <% elsif terms_missing %>
           <p class="mt-4 rounded-md border border-dashed border-border-interactive bg-muted px-4 py-6 text-center text-sm text-muted-foreground">Set the property's Terms &amp; Conditions before this card can be signed.</p>
         <% else %>
+          <% tablet_signing = @presenter.can_manage_bookings?(current_user) && current_hotel.grc_tablet_signing_enabled? %>
+          <% signing_devices = tablet_signing ? current_hotel.signing_devices.recently_seen_first.to_a : [] %>
+          <% if signing_devices.any? %>
+            <%# Sends the whole stay, not just this guest -- same handoff the
+                workspace footer uses, so a tablet picked here walks every
+                guest who still owes a signature, not only this one. %>
+            <%= form_with url: hotel_booking_signing_handoff_path(current_hotel, @booking), method: :post, class: "mt-4 flex flex-wrap items-center gap-2" do %>
+              <% if signing_devices.many? %>
+                <label class="sr-only" for="grc-signing-device-token">Tablet</label>
+                <select id="grc-signing-device-token" name="device_token" class="form-input h-9 w-auto py-0 text-sm">
+                  <% signing_devices.each do |device| %>
+                    <option value="<%= device.public_token %>"><%= signing_device_option_label(device, @booking) %></option>
+                  <% end %>
+                </select>
+              <% else %>
+                <% device = signing_devices.first %>
+                <%= hidden_field_tag :device_token, device.public_token %>
+                <% status = signing_device_status(device, @booking) %>
+                <% unless status == :ready %>
+                  <span class="text-xs font-semibold text-amber-600">
+                    <%= status == :offline ? "Tablet not connected" : "Tablet busy" %>
+                  </span>
+                <% end %>
+              <% end %>
+              <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>
+                <%= cached_icon "tablet-smartphone", class: "size-4", aria: { hidden: true } %>
+                Send to tablet
+              <% end %>
+            <% end %>
+          <% end %>
+
           <%= form_with model: @card, url: hotel_booking_guest_registration_card_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id), method: :patch, id: "grc-signature-form", class: "mt-4 space-y-4", data: { controller: "signature" } do |form| %>
             <%= form.hidden_field :special_requests, value: @booking.special_requests, data: { registration_card_target: "remarkHidden" } %>
             <div>
