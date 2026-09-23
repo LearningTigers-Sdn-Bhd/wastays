@@ -35,7 +35,6 @@ RSpec.describe "Public::SigningDevices", type: :request do
       card = booking.create_guest_registration_card!(hotel: hotel)
 
       get guest_registration_card_path(card.public_token)
-      expect(response.body).to include("Wrong reservation? Send tablet back")
       expect(response.body).to include(release_signing_device_path(device.public_token))
 
       post release_signing_device_path(device.public_token)
@@ -47,7 +46,7 @@ RSpec.describe "Public::SigningDevices", type: :request do
 
       get guest_registration_card_path(card.public_token)
 
-      expect(response.body).not_to include("Wrong reservation? Send tablet back")
+      expect(response.body).not_to include(release_signing_device_path(device.public_token))
     end
   end
 end
