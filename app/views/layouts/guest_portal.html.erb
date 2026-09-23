@@ -23,7 +23,6 @@
     <div class="guest-portal">
       <% if guest_logged_in? %>
         <%= render GuestUI::Navbar.new(
-              home_path: guest_dashboard_path,
               items: guest_nav_items,
               title: guest_page_title,
               back_path: guest_back_path
@@ -36,8 +35,6 @@
             <% end %>
           <% end %>
         <% end %>
-      <% else %>
-        <%= render GuestUI::Navbar.new(home_path: root_path) %>
       <% end %>
 
       <main class="guest-portal__main">

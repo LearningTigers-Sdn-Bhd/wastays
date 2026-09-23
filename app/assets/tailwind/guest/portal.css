@@ -40,10 +40,6 @@
     @apply truncate font-guest-display text-lg font-semibold;
   }
 
-  .guest-navbar__brand {
-    @apply flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
-  }
-
   .guest-navbar__nav {
     @apply hidden h-full items-stretch gap-6 md:flex;
   }

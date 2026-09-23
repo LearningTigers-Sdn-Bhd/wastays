@@ -11,10 +11,6 @@
       </div>
     <% end %>
 
-    <%= link_to home_path, class: brand_class, aria: { label: "WAStays" } do %>
-      <%= helpers.image_tag "logo/long-logo.png", alt: "", width: 1000, height: 350, class: "h-8 w-auto" %>
-    <% end %>
-
     <% if items.any? %>
       <nav class="guest-navbar__nav" aria-label="Guest portal">
         <% items.each do |item| %>

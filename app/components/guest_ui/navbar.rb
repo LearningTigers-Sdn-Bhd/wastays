@@ -5,16 +5,15 @@ module GuestUI
   #
   # On a phone it names the page and gives the way back, because the
   # BottomNav already holds the destinations. From md up there is no bottom
-  # bar, so the destinations move up here beside the logo.
+  # bar, so the destinations move up here.
   #
   # The `actions` slot takes the account menu. It shows at every size: a
   # guest on a phone has to be able to sign out too.
   class Navbar < GuestUI::BaseComponent
     renders_one :actions
 
-    def initialize(home_path:, items: [], title: nil, back_path: nil, back_label: "Back",
+    def initialize(items: [], title: nil, back_path: nil, back_label: "Back",
                    class: nil, **attributes)
-      @home_path = home_path
       @items = items
       @title = title
       @back_path = back_path
@@ -25,11 +24,7 @@ module GuestUI
 
     private
 
-    attr_reader :home_path, :items, :title, :back_path, :back_label
-
-    # With a title, a phone shows the title and the logo waits for md. With
-    # none -- signed out -- the logo is all there is to show.
-    def brand_class = title.present? ? "guest-navbar__brand max-md:hidden" : "guest-navbar__brand"
+    attr_reader :items, :title, :back_path, :back_label
 
     def navbar_attributes
       @attributes.merge(class: tw_merge("guest-navbar", @class))
