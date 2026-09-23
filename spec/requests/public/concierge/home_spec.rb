@@ -24,6 +24,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response.body).to include("Recommendations")
       expect(response.body).to include("Property Contacts")
       expect(response.body).to include("Interact with Chatbot")
+      expect(response.body).to include('class="guest-tile-grid" data-columns="4"')
     end
 
     it "keeps the page but drops the chat tile when guest chat is off" do
@@ -35,6 +36,8 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response.body).to include("Property Contacts")
       expect(response.body).not_to include("Interact with Chatbot")
       expect(response.body).not_to include(concierge_chat_path(hotel.unique_id, hotel.public_id))
+      # Three tiles: one row on a wide screen.
+      expect(response.body).to include('class="guest-tile-grid" data-columns="3"')
     end
 
     it "returns 404 for a suspended hotel" do

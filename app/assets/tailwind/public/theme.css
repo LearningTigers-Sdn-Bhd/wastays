@@ -52,6 +52,10 @@
   --guest-service-contact-ink: oklch(0.395 0.110 247);
   --guest-service-conversation-surface: oklch(0.905 0.070 166);
   --guest-service-conversation-ink: oklch(0.355 0.095 172);
+  /* The Property Guide pages. One calm sage for the group: these tiles are
+     for reading, and the bright colours above stay with the actions. */
+  --guest-service-guide-surface: oklch(0.925 0.045 125);
+  --guest-service-guide-ink: oklch(0.390 0.085 132);
 
   --border: oklch(0.9288 0.0126 255.51);
   --border-interactive: oklch(0.5544 0.0407 257.42);

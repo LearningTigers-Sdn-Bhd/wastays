@@ -1,0 +1,18 @@
+<%# Each amenity the property selected, with the details staff wrote. The
+    facts show at once, so a guest compares them without opening each one. %>
+<div class="guest-card-grid">
+  <% @info.amenities.each do |row| %>
+    <% detail = row.detail %>
+    <%= render GuestUI::AmenityCard.new(
+          name: row.name,
+          icon: GuestUI::AmenityCard.icon_for(slug: row.slug, category: row.category),
+          category: row.category,
+          location: row.location,
+          hours: row.opening_hours,
+          price: row.fee_information,
+          book_ahead: row.reservation_required?,
+          booking: detail&.reservation_instructions,
+          notes: detail&.guest_notes
+        ) %>
+  <% end %>
+</div>

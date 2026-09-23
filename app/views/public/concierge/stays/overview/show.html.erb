@@ -66,6 +66,11 @@
                                              hint: "Phone, WhatsApp, email and map",
                                              icon: "phone", tone: :contact,
                                              href: concierge_stay_contact_path(*stay_route_args)) %>
+          <% if @info.section?(:wifi) %>
+            <%= render GuestUI::ActionCard.new(label: "Wi-Fi", hint: @info.hint(:wifi),
+                                               icon: "wifi", tone: :booking,
+                                               href: concierge_stay_wifi_path(*stay_route_args)) %>
+          <% end %>
           <% if presenter.chat_available? %>
             <%= render GuestUI::ActionCard.new(label: "Interact with Chatbot",
                                                hint: "Instant answers, any time",
@@ -74,6 +79,9 @@
           <% end %>
         </div>
       </section>
+
+      <%= render "public/concierge/info/guide_tiles", info: @info,
+                 path: ->(section) { section == "property" ? concierge_stay_info_path(*stay_route_args) : concierge_stay_info_section_path(*stay_route_args, section) } %>
     </div>
 
     <details class="guest-card guest-more-actions guest-stay-overview__more">

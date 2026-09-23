@@ -709,6 +709,11 @@
     --guest-service-ink: var(--guest-service-conversation-ink);
   }
 
+  .guest-service-surface[data-tone="guide"] {
+    --guest-service-surface: var(--guest-service-guide-surface);
+    --guest-service-ink: var(--guest-service-guide-ink);
+  }
+
   .guest-action-card__label {
     @apply block text-sm font-semibold leading-tight;
   }
@@ -750,6 +755,277 @@
 
   .guest-more-actions .guest-card__row {
     @apply gap-3 py-3;
+  }
+
+  /* ─── Fact list ───
+     A short label over its value, two a row. A value the guest types into
+     another app, such as a Wi-Fi password, is monospace and selects in one
+     tap. */
+  .guest-fact-list {
+    @apply grid grid-cols-2 gap-x-4 gap-y-3;
+  }
+
+  .guest-fact-list__label {
+    @apply text-xs font-medium text-muted-foreground;
+  }
+
+  .guest-fact-list__value {
+    @apply mt-1 text-sm font-medium text-foreground;
+    overflow-wrap: anywhere;
+  }
+
+  .guest-fact-list__value[data-copy] {
+    @apply select-all font-mono;
+  }
+
+  .guest-fact-list[data-columns="1"] {
+    @apply grid-cols-1 gap-y-4;
+  }
+
+  .guest-fact-list__fact--icon {
+    @apply flex items-start gap-3;
+  }
+
+  .guest-fact-list__icon {
+    @apply mt-0.5 size-4 shrink-0 text-muted-foreground;
+  }
+
+  /* ─── Guide icon ───
+     The icon box of a Property Guide card: an amenity, a policy. It takes the
+     Property Guide sage, so the page reads as part of that group. */
+  .guest-guide-icon {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-xl;
+    background: var(--guest-service-guide-surface);
+    color: var(--guest-service-guide-ink);
+  }
+
+  .guest-guide-icon__svg {
+    @apply size-5;
+  }
+
+  /* ─── Amenity card ───
+     One amenity, its facts in view. Book ahead is a badge in words, not a
+     colour alone. */
+  .guest-amenity {
+    @apply flex flex-col gap-4 rounded-2xl border border-border/40 bg-card p-5 shadow-xs;
+  }
+
+  .guest-amenity__header {
+    @apply flex items-start gap-3;
+  }
+
+
+  .guest-amenity__name {
+    @apply text-base font-semibold leading-snug text-foreground;
+  }
+
+  /* The category and the badge share one line under the name, so the name
+     keeps the whole width and a long one does not wrap early. */
+  .guest-amenity__meta {
+    @apply mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground;
+  }
+
+  .guest-amenity__badge {
+    @apply inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning-foreground;
+  }
+
+  .guest-amenity__facts {
+    @apply grid gap-2.5;
+  }
+
+  .guest-amenity__fact {
+    @apply flex items-start gap-2.5 text-sm text-foreground;
+  }
+
+  .guest-amenity__fact dd {
+    @apply min-w-0;
+    overflow-wrap: anywhere;
+  }
+
+  .guest-amenity__fact-icon {
+    @apply mt-0.5 size-4 shrink-0 text-muted-foreground;
+  }
+
+  /* mt-auto: a row stretches its cards to one height, and the notes sit at
+     the foot of each, so the hairlines of a row line up. */
+  .guest-amenity__notes {
+    @apply mt-auto space-y-2 border-t border-border/60 pt-4 text-sm leading-relaxed text-muted-foreground;
+  }
+
+  .guest-amenity__empty {
+    @apply text-sm text-muted-foreground;
+  }
+
+  /* ─── Card grid ───
+     Guide cards two a row once there is room; a phone reads one card at a
+     time. Amenities and the Property Info page share it. The cards of a row stretch to one height, so the rows line up.
+     data-columns="3" fits a row of three on a wide page. */
+  .guest-card-grid {
+    @apply grid gap-4 sm:grid-cols-2;
+  }
+
+  /* Two a row leaves a lone last card on an odd count. It takes the whole
+     row, so the grid has no hole. */
+  .guest-card-grid > :last-child:nth-child(odd) {
+    @apply sm:col-span-2;
+  }
+
+  .guest-card-grid[data-columns="3"] {
+    @apply lg:grid-cols-3;
+  }
+
+  /* Three a row: the odd rule above would stretch the third card of a full
+     row. */
+  .guest-card-grid[data-columns="3"] > :last-child:nth-child(odd) {
+    @apply lg:col-span-1;
+  }
+
+  /* ─── Guide card ───
+     One Property Guide card: icon, title, the fact a guest looks for first,
+     the body, and an action at the foot. A row of them stretches to one
+     height, and mt-auto keeps the actions on one line. */
+  .guest-guide-card {
+    @apply flex flex-col gap-4 rounded-2xl border border-border/40 bg-card p-5 shadow-xs md:p-6;
+  }
+
+  .guest-guide-card__header {
+    @apply flex items-center gap-3;
+  }
+
+  .guest-guide-card__title {
+    @apply text-base font-semibold leading-snug text-foreground;
+  }
+
+  .guest-guide-card__subtitle {
+    @apply mt-0.5 text-sm font-medium text-primary;
+  }
+
+  .guest-guide-card__body {
+    @apply space-y-3 text-sm leading-relaxed text-foreground;
+  }
+
+  .guest-guide-card__action {
+    @apply mt-auto pt-1;
+  }
+
+  /* ─── Wi-Fi card ───
+     The name and the password each on a line with their Copy button. The
+     values are monospace, so a guest tells 0 from O and l from 1. */
+  .guest-wifi__fields {
+    @apply grid rounded-xl border border-border/60;
+  }
+
+  .guest-wifi__field {
+    @apply flex items-center justify-between gap-4 px-4 py-3;
+  }
+
+  .guest-wifi__field + .guest-wifi__field {
+    @apply border-t border-border/60;
+  }
+
+  .guest-wifi__value {
+    @apply mt-1 select-all font-mono text-base font-medium text-foreground;
+    overflow-wrap: anywhere;
+  }
+
+  .guest-wifi__steps {
+    @apply list-decimal space-y-1.5 pl-5 text-muted-foreground marker:text-muted-foreground;
+  }
+
+  .guest-wifi__qr {
+    @apply flex flex-col items-center gap-3 rounded-xl bg-background p-4 text-center text-xs text-muted-foreground;
+  }
+
+  /* ─── Policy card ───
+     One policy, always open. Rules are a list a guest scans; a change and its
+     charge sit on one line, with the note staff wrote under it. */
+  .guest-policy__rules {
+    @apply list-disc space-y-2 pl-5 text-sm leading-relaxed text-foreground marker:text-muted-foreground;
+  }
+
+  .guest-policy__text {
+    @apply text-sm leading-relaxed text-foreground;
+  }
+
+  .guest-policy__terms {
+    @apply grid;
+  }
+
+  .guest-policy__term {
+    @apply border-b border-border/60 py-3 first:pt-0 last:border-b-0 last:pb-0;
+  }
+
+  .guest-policy__term-line {
+    @apply flex items-baseline justify-between gap-4 text-sm font-medium text-foreground;
+  }
+
+  .guest-policy__term-value {
+    @apply text-right;
+  }
+
+  .guest-policy__term-note {
+    @apply mt-1 text-xs leading-relaxed text-muted-foreground;
+  }
+
+  /* ─── Aside layout ───
+     A narrow column that stays in view beside one reading column: the
+     policy glance, the FAQ help card. data-side="end" puts the narrow column
+     on the right; the source order stays main first there, so a phone reads
+     the questions before the help card. */
+  .guest-aside-layout {
+    @apply grid items-start gap-6;
+  }
+
+  @media (min-width: 48rem) {
+    .guest-aside-layout[data-aside="true"] {
+      grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+    }
+
+    .guest-aside-layout[data-aside="true"][data-side="end"] {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
+    }
+
+    /* The hero pins a 4rem strip to the top (plus the notch inset), so the
+       aside stops 1.5rem under that strip, not under the strip itself. The
+       same sum as the scroll padding on html:has(.guest-hero). */
+    .guest-aside-layout[data-aside="true"] > .guest-aside-layout__aside {
+      position: sticky;
+      top: calc(4rem + env(safe-area-inset-top, 0px) + 1.5rem);
+    }
+  }
+
+  /* ─── Disclosure ───
+     One entry the guest opens to read, divided from the next by a hairline.
+     The summary bleeds into the card padding, so the focus ring has room and
+     never touches the title. */
+  .guest-disclosure {
+    @apply border-b border-border/60 last:border-b-0;
+  }
+
+  .guest-disclosure > summary {
+    @apply -mx-2 flex min-h-11 cursor-pointer select-none list-none items-center justify-between gap-4 rounded-lg px-2 py-3;
+    @apply transition-colors hover:bg-muted/60;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .guest-disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .guest-disclosure__title {
+    @apply min-w-0 text-sm font-medium text-foreground;
+  }
+
+  .guest-disclosure__chevron {
+    @apply size-4 shrink-0 text-muted-foreground transition-transform;
+  }
+
+  .guest-disclosure[open] .guest-disclosure__chevron {
+    @apply rotate-180;
+  }
+
+  .guest-disclosure__body {
+    @apply space-y-3 pb-4 pt-1 text-sm leading-relaxed text-muted-foreground;
   }
 
   /* ─── Notice ───
@@ -1011,6 +1287,20 @@
 
   .guest-tile-grid > :last-child:nth-child(odd) {
     @apply col-span-2;
+  }
+
+  /* A wider screen holds a whole row of tiles. The page sets the count, and a
+     lone last tile stays one tile wide there. */
+  .guest-tile-grid[data-columns="3"] {
+    @apply md:grid-cols-3;
+  }
+
+  .guest-tile-grid[data-columns="4"] {
+    @apply md:grid-cols-4;
+  }
+
+  .guest-tile-grid[data-columns] > :last-child:nth-child(odd) {
+    @apply md:col-span-1;
   }
 
   /* ─── Stay summary ───

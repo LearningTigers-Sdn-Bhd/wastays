@@ -107,6 +107,9 @@ Rails.application.routes.draw do
     get  "check-in/success",       to: "check_ins#check_in_success", as: :check_in_success
     get  "book",                   to: "home#book",            as: :book
     get  "contact",                to: "contact#show",         as: :contact
+    get  "info",                   to: "info#show",            as: :info
+    get  "info/:section",          to: "info#show",            as: :info_section,
+         constraints: { section: /amenities|policies|faqs/ }
     get    "chat",                 to: "chats#show",           as: :chat
     post   "chat",                 to: "chats#create",         as: :chat_messages
     post   "chat/booking",         to: "booking_links#create", as: :chat_booking
@@ -145,6 +148,10 @@ Rails.application.routes.draw do
       get    "check-out",       to: "check_outs#new",       as: :stay_check_out
       post   "check-out",       to: "check_outs#create",    as: :stay_check_outs
       get    "contact",         to: "contacts#show",        as: :stay_contact
+      get    "info",            to: "infos#show",           as: :stay_info
+      get    "info/:section",   to: "infos#show",           as: :stay_info_section,
+             constraints: { section: /amenities|policies|faqs/ }
+      get    "wifi",            to: "infos#show",           as: :stay_wifi, defaults: { section: "wifi" }
       get    "requests/new",    to: "requests#new",         as: :new_stay_request
       post   "requests",        to: "requests#create",      as: :stay_requests
     end

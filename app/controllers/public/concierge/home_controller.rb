@@ -4,6 +4,7 @@ module Public
       # One responsive template, so the tiles a guest sees do not depend on how
       # their user agent string is read.
       def show
+        @info = ::Concierge::PropertyInfoPresenter.new(hotel: @hotel)
       end
 
       def book

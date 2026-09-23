@@ -1,0 +1,25 @@
+<%= tag.article(**card_attributes) do %>
+  <header class="guest-guide-card__header">
+    <span class="guest-guide-icon">
+      <%= helpers.app_icon(icon, class: "guest-guide-icon__svg", aria: { hidden: "true" }) %>
+    </span>
+    <div class="min-w-0">
+      <h3 class="guest-guide-card__title"><%= title %></h3>
+      <% if subtitle.present? %>
+        <p class="guest-guide-card__subtitle"><%= subtitle %></p>
+      <% end %>
+    </div>
+  </header>
+
+  <% if content.present? %>
+    <div class="guest-guide-card__body"><%= content %></div>
+  <% end %>
+
+  <% if action.present? %>
+    <div class="guest-guide-card__action">
+      <%= render GuestUI::Button.new(label: action[:label], href: action[:href], icon: action[:icon],
+                                     variant: :secondary, size: :sm,
+                                     target: ("_blank" if action[:new_tab]), rel: ("noopener" if action[:new_tab])) %>
+    </div>
+  <% end %>
+<% end %>

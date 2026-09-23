@@ -22,6 +22,9 @@ class HotelWifiNetwork < ApplicationRecord
 
   scope :active, -> { where(active: true) }
   scope :in_display_order, -> { order(primary_network: :desc, position: :asc, id: :asc) }
+  # The networks an in-house guest may read. A staff_only network never
+  # reaches a guest.
+  scope :for_guest, -> { active.where(access_scope: %w[checked_in_guests confirmed_guests]) }
 
   private
 

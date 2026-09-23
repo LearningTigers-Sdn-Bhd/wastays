@@ -217,6 +217,97 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
     end
   end
 
+  describe "the Wi-Fi page" do
+    before do
+      create(:hotel_wifi_network, hotel: hotel, ssid: "RoomGuest", password: "room-secret", access_scope: "checked_in_guests")
+      create(:hotel_wifi_network, hotel: hotel, ssid: "LobbyGuest", access_scope: "confirmed_guests")
+      create(:hotel_wifi_network, hotel: hotel, ssid: "BackOffice", access_scope: "staff_only")
+      create(:hotel_wifi_network, hotel: hotel, ssid: "OldNetwork", access_scope: "checked_in_guests", active: false)
+    end
+
+    it "is a Property Services tile on the stay page" do
+      get concierge_stay_path(*args)
+
+      expect(response.body).to include(concierge_stay_wifi_path(*args), "Network and password")
+      # Not blue: the Property Contacts tile beside it is blue.
+      tile = Nokogiri::HTML(response.body).at_css("a.guest-action-card[href='#{concierge_stay_wifi_path(*args)}']")
+      expect(tile["data-tone"]).to eq("booking")
+    end
+
+    it "shows an in-house guest the guest networks, and never a staff network" do
+      get concierge_stay_wifi_path(*args)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("RoomGuest", "room-secret", "LobbyGuest")
+      expect(response.body).not_to include("BackOffice", "OldNetwork")
+    end
+
+    it "shows no Wi-Fi after check-out" do
+      booking.status_transition_event = "check_out"
+      booking.update!(status: "completed", checked_out_at: 1.hour.ago)
+
+      get concierge_stay_path(*args)
+      expect(response.body).not_to include(concierge_stay_wifi_path(*args))
+
+      get concierge_stay_wifi_path(*args)
+      expect(response.body).not_to include("LobbyGuest", "RoomGuest")
+    end
+
+    it "asks for the stay code without a stay session" do
+      reset!
+
+      get concierge_stay_wifi_path(*args)
+
+      expect(response.body).not_to include("RoomGuest")
+    end
+  end
+
+  describe "the Property Guide" do
+    before do
+      create(:hotel_knowledge_document, hotel: hotel, category: "faq", title: "Common questions",
+             content: "Q: Is breakfast included?\nA: Yes.",
+             metadata: { "qa_pairs" => [ { "question" => "Is breakfast included?", "answer" => "Yes." } ] })
+    end
+
+    it "shows only the sections the property filled, with the stay card as the way back" do
+      get concierge_stay_path(*args)
+
+      expect(response.body).to include("Property Guide", concierge_stay_info_section_path(*args, "faqs"))
+      expect(response.body).not_to include(concierge_stay_info_section_path(*args, "amenities"))
+      expect(Nokogiri::HTML(response.body).at_css("#property-guide-title + .guest-tile-grid")["data-columns"]).to be_nil
+
+      get concierge_stay_info_section_path(*args, "faqs")
+
+      page = Nokogiri::HTML(response.body)
+      expect(page.at_css(".guest-form-page__compact a.guest-summary-compact")["href"]).to eq(concierge_stay_path(*args))
+      expect(response.body).to include("Is breakfast included?")
+      # The help card keeps the guest inside the stay, under the questions.
+      expect(response.body).to include(concierge_stay_contact_path(*args))
+      expect(page.at_css(".guest-aside-layout")["data-aside"]).to eq("false")
+    end
+  end
+
+  describe "the Policies page" do
+    before do
+      create(:property_policy, hotel: hotel, check_in_time: "15:00", check_out_time: "12:00")
+      create(:hotel_knowledge_document, hotel: hotel, category: "policy", title: "House Rules",
+             content: "Quiet hours are 10 PM to 7 AM.\nNo parties.", metadata: { "policy_key" => "house_rules" })
+    end
+
+    it "puts the glance under the stay card, and turns it to leaving" do
+      get concierge_stay_info_section_path(*args, "policies")
+
+      page = Nokogiri::HTML(response.body)
+      summary = page.at_css(".guest-form-page__summary")
+      expect(summary.text).to include("At a glance", "Check-out by", "12:00 on")
+      expect(summary.text).not_to include("Check-in from")
+      # A phone hides the summary column, so the body keeps its own copy.
+      expect(page.at_css(".guest-form-page__body .guest-card.md\\:hidden").text).to include("At a glance")
+      expect(page.at_css(".guest-aside-layout")["data-aside"]).to eq("false")
+      expect(page.css(".guest-policy__rules li").map(&:text)).to eq([ "Quiet hours are 10 PM to 7 AM.", "No parties." ])
+    end
+  end
+
   describe "check-out requests" do
     it "creates the request" do
       expect {

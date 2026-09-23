@@ -1,6 +1,7 @@
 <%# A one-form stay page. The stay stays in view, so the guest never loses
     track of which stay they are acting on. The frame is the shared form
-    layout; the stay cards are its summaries. %>
+    layout; the stay cards are its summaries. aside is an extra card under
+    the stay card on a wide screen. %>
 <%= render layout: "public/concierge/shared/form_layout",
            locals: {
              back_path: stay_path,
@@ -13,7 +14,8 @@
                              title: (presenter.room_assigned? ? "Room #{presenter.room_label}" : "Room to be assigned"),
                              aside: presenter.stay_progress_label,
                              detail: "#{presenter.check_in_label} – #{presenter.check_out_label}"),
-             summary: render("public/concierge/stays/shared/stay_details", presenter: presenter)
+             summary: safe_join([ render("public/concierge/stays/shared/stay_details", presenter: presenter),
+                                  local_assigns[:aside] ].compact)
            } do %>
   <%= render "public/concierge/stays/shared/flash" %>
   <%= render GuestUI::Notice.new(message: local_assigns[:error], variant: :danger) %>

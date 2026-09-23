@@ -1,0 +1,27 @@
+<%= render GuestUI::GuideCard.new(title: title, icon: icon, **card_attributes) do %>
+  <% if terms.any? %>
+    <dl class="guest-policy__terms">
+      <% terms.each do |term| %>
+        <div class="guest-policy__term">
+          <div class="guest-policy__term-line">
+            <dt><%= term.label %></dt>
+            <dd class="guest-policy__term-value"><%= term.value %></dd>
+          </div>
+          <% if term.note.present? %>
+            <dd class="guest-policy__term-note"><%= term.note %></dd>
+          <% end %>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <% if rules.size > 1 %>
+    <ul class="guest-policy__rules">
+      <% rules.each do |rule| %>
+        <li><%= rule %></li>
+      <% end %>
+    </ul>
+  <% elsif rules.any? %>
+    <p class="guest-policy__text"><%= rules.first %></p>
+  <% end %>
+<% end %>

@@ -3,7 +3,7 @@
 module GuestUI
   # One hotel service with the whole card as its link.
   class ActionCard < GuestUI::BaseComponent
-    TONES = %i[booking issue discovery contact conversation].freeze
+    TONES = %i[booking issue discovery contact conversation guide].freeze
 
     def initialize(label:, href:, icon:, hint: nil, tone:, class: nil, **attributes)
       @label = label

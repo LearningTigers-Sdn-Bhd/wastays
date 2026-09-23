@@ -42,11 +42,19 @@
       end
     %>
 
-    <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+    <%# Three tiles without the chatbot, four with it. A phone shows two a row,
+        and a lone last tile takes the row; a wider screen shows them all in
+        one row. %>
+    <div class="guest-tile-grid" data-columns="<%= service_tiles.size %>">
       <% service_tiles.each do |tile| %>
         <%= render GuestUI::ActionCard.new(label: tile[:label], hint: tile[:description],
                                            icon: tile[:icon], tone: tile[:tone], href: tile[:path]) %>
       <% end %>
+    </div>
+
+    <div class="pt-3 md:pt-4">
+      <%= render "public/concierge/info/guide_tiles", info: @info, columns: 4,
+                 path: ->(section) { section == "property" ? concierge_info_path(@hotel.unique_id, @hotel.public_id) : concierge_info_section_path(@hotel.unique_id, @hotel.public_id, section) } %>
     </div>
   </div>
 
