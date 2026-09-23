@@ -38,11 +38,13 @@ class Public::GuestRegistrationCardsController < ApplicationController
 
   # The PDF is generated the same way the front desk's own print action does —
   # a browser request, not a background job — which sidesteps whatever made
-  # the emailed attachment come out unreadable.
+  # the emailed attachment come out unreadable. Available before signing too,
+  # same as the staff print action, so the official form can be printed blank
+  # for a guest to sign on paper instead of on screen.
   def pdf
-    unless @card.signed?
+    unless @card.ready_for_guest?
       return redirect_to guest_registration_card_path(@card.public_token),
-        alert: "Sign the card first — the PDF is available once it's signed."
+        alert: "This card isn't ready to print yet — the property hasn't set its Terms & Conditions."
     end
 
     presenter = HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking)

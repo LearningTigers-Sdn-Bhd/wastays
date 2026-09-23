@@ -126,12 +126,22 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
   end
 
   describe "GET /guest-registration-card/:token/pdf" do
-    it "refuses before the card is signed" do
+    it "serves the blank official form before it's signed, for printing" do
+      get pdf_guest_registration_card_path(card.public_token)
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
+    end
+
+    it "refuses to print before the property has set its Terms & Conditions" do
+      hotel.update!(guest_registration_card_terms: nil)
+
       get pdf_guest_registration_card_path(card.public_token)
 
       expect(response).to redirect_to(guest_registration_card_path(card.public_token))
       follow_redirect!
-      expect(response.body).to include("Sign the card first")
+      expect(response.body).to include("isn&#39;t ready to print yet")
     end
 
     it "serves the PDF once signed" do
