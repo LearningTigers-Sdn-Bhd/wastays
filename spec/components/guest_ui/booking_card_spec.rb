@@ -20,6 +20,7 @@ RSpec.describe GuestUI::BookingCard, type: :component do
     expect(link).to have_text("12 Oct – 15 Oct 2026")
     expect(link).to have_css(".guest-booking-card__body dd", text: "AUR-RES-2026-00042")
     expect(link).to have_css(".guest-booking-card__body dd", text: "WS-8KD2QX")
+    expect(link).to have_css(".guest-booking-card__body dl.guest-stay-summary__refs.border-t-0")
     amounts = link.all(".guest-booking-card__footer .guest-booking-card__amount").map { |row| row.text.squish }
     expect(amounts).to eq([ "Total spent MYR 780.00", "Outstanding MYR 120.00" ])
     expect(link).to have_css(".guest-booking-card__amount[data-owing='true']")
