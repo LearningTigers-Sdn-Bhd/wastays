@@ -33,6 +33,18 @@ module Public
         (booking.check_out.to_date - booking.check_in.to_date).to_i
       end
 
+      # Where the guest is in the stay, on the hotel's own date. Nothing once
+      # the guest has checked out: the card says that itself.
+      def stay_progress_label
+        return unless in_house?
+
+        today = hotel.current_business_date || hotel.business_date_for
+        return "Check-out today" if today >= booking.check_out.to_date
+
+        night = (today - booking.check_in.to_date).to_i + 1
+        "Night #{night.clamp(1, nights)} of #{nights}"
+      end
+
       def confirmation_code
         booking.confirmation_token.to_s.upcase
       end

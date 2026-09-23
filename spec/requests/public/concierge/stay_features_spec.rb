@@ -31,10 +31,24 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(response.body).to include("Booking confirmation code")
       expect(response.body).to include(booking.confirmation_token.upcase)
       expect(response.body).to include("Housekeeping")
-      expect(response.body).to include("Ask for room cleaning or supplies")
+      expect(response.body).to include("Cleaning or supplies")
       expect(response.body).to include("Check Out")
-      expect(response.body).to include("Send a check-out request to the front desk")
+      expect(response.body).to include("Tell the front desk")
       expect(response.body).to include("Booking receipt")
+    end
+
+    it "puts the stay summary before the stay actions and the hotel services" do
+      get concierge_stay_path(*args)
+
+      page = Nokogiri::HTML(response.body)
+      lines = {
+        summary: ".guest-stay-summary",
+        actions: ".guest-stay-overview__actions",
+        services: ".guest-stay-overview__services",
+        more: "details.guest-more-actions"
+      }.transform_values { |selector| page.at_css(selector).line }
+
+      expect(lines.sort_by(&:last).map(&:first)).to eq(%i[summary actions services more])
     end
 
     it "shows hotel services as separate cards and booking actions in a closed disclosure" do
@@ -45,9 +59,9 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       more_actions = page.at_css("details.guest-more-actions")
 
       expect(services.css("a.guest-action-card").map { |card| card.text.strip }).to include(
-        "Report a problem Tell the hotel team what is wrong.",
-        "Recommendations and offers Places and guest offers",
-        "Contact the front desk Call or get directions"
+        "Report a problem Tell us what is wrong",
+        "Recommendations Places and guest offers",
+        "Front desk Call or get directions"
       )
       expect(more_actions.at_css("summary").text).to include("More Actions")
       expect(more_actions.at_css("summary .guest-more-actions__icon[aria-hidden='true']")).to be_present
@@ -254,7 +268,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(blocks).to match([
         include("guest-stay-overview__greeting"),
         include("guest-stay-overview__stay"),
-        include("guest-stay-overview__services"),
+        include("guest-stay-overview__main"),
         include("guest-stay-overview__more")
       ])
     end

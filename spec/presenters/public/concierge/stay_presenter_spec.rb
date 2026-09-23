@@ -30,6 +30,38 @@ RSpec.describe Public::Concierge::StayPresenter do
     expect(presenter.nights).to eq(3)
   end
 
+  describe "#stay_progress_label" do
+    before { allow_any_instance_of(Hotel).to receive(:current_business_date).and_return(today) }
+
+    context "on the first night" do
+      let(:today) { booking.check_in.to_date }
+
+      it { expect(presenter.stay_progress_label).to eq("Night 1 of 3") }
+    end
+
+    context "on the last night" do
+      let(:today) { booking.check_in.to_date + 2.days }
+
+      it { expect(presenter.stay_progress_label).to eq("Night 3 of 3") }
+    end
+
+    context "on the check-out date" do
+      let(:today) { booking.check_out.to_date }
+
+      it { expect(presenter.stay_progress_label).to eq("Check-out today") }
+    end
+
+    context "after check-out" do
+      let(:today) { booking.check_out.to_date }
+
+      it "says nothing" do
+        move_booking("completed", "check_out", checked_out_at: Time.current)
+
+        expect(described_class.new(stay_access: stay_access.reload).stay_progress_label).to be_nil
+      end
+    end
+  end
+
   it "uses the hotel's formatted reservation number as the booking reference" do
     expect(presenter.booking_reference_number).to eq(booking.formatted_reservation_number)
   end

@@ -13,15 +13,23 @@
                  subtitle: "What do you need?" %>
 
       <%= render "public/concierge/stays/shared/flash" %>
+    </section>
 
+    <div class="guest-stay-overview__stay">
+      <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
+    </div>
+
+    <%# One area on both widths: under the stay on a phone, beside it on a wider
+        screen. %>
+    <div class="guest-stay-overview__main space-y-6">
       <% if presenter.in_house? %>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
+        <section class="guest-stay-overview__actions guest-tile-grid" aria-label="Stay actions">
           <% if presenter.can_send_request? %>
             <%= render "public/concierge/stays/shared/primary_tile",
                        tone: :primary,
                        icon: "brush-cleaning",
                        label: "Housekeeping",
-                       description: "Ask for room cleaning or supplies",
+                       description: "Cleaning or supplies",
                        path: concierge_new_stay_request_path(*stay_route_args, kind: "housekeeping") %>
           <% end %>
 
@@ -29,46 +37,44 @@
             <%= render "public/concierge/stays/shared/primary_tile",
                        icon: "log-out",
                        label: "Check Out",
-                       description: "Send a check-out request to the front desk",
+                       description: "Tell the front desk",
                        path: stay_check_out_path %>
           <% elsif presenter.check_out_pending? %>
             <%= render "public/concierge/stays/shared/primary_tile",
                        pending: true,
                        icon: "circle-check",
                        label: "Check-out asked",
-                       description: "The front desk has your request" %>
+                       description: "The front desk has it" %>
+          <% end %>
+        </section>
+      <% end %>
+
+      <section class="guest-stay-overview__services space-y-3" aria-labelledby="hotel-services-title">
+        <h2 id="hotel-services-title" class="guest-card__title">Hotel Services</h2>
+        <div class="guest-tile-grid">
+          <% if presenter.can_send_request? %>
+            <%= render GuestUI::ActionCard.new(label: "Report a problem",
+                                               hint: "Tell us what is wrong",
+                                               icon: "circle-alert", tone: :issue,
+                                               href: concierge_new_stay_request_path(*stay_route_args, kind: "complaint")) %>
+          <% end %>
+          <%= render GuestUI::ActionCard.new(label: "Recommendations",
+                                             hint: "Places and guest offers",
+                                             icon: "sparkles", tone: :discovery,
+                                             href: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id)) %>
+          <%= render GuestUI::ActionCard.new(label: "Front desk",
+                                             hint: "Call or get directions",
+                                             icon: "phone", tone: :contact,
+                                             href: concierge_contact_path(@hotel.unique_id, @hotel.public_id)) %>
+          <% if presenter.chat_available? %>
+            <%= render GuestUI::ActionCard.new(label: "Chat with us",
+                                               hint: "Ask the hotel team",
+                                               icon: "message-circle", tone: :conversation,
+                                               href: concierge_chat_path(@hotel.unique_id, @hotel.public_id)) %>
           <% end %>
         </div>
-      <% end %>
-    </section>
-
-    <div class="guest-stay-overview__stay">
-      <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
+      </section>
     </div>
-
-    <section class="guest-stay-overview__services grid gap-3 md:grid-cols-2" aria-labelledby="hotel-services-title">
-      <h2 id="hotel-services-title" class="guest-card__title">Hotel Services</h2>
-      <% if presenter.can_send_request? %>
-        <%= render GuestUI::ActionCard.new(label: "Report a problem",
-                                           hint: "Tell the hotel team what is wrong.",
-                                           icon: "circle-alert", tone: :issue,
-                                           href: concierge_new_stay_request_path(*stay_route_args, kind: "complaint")) %>
-      <% end %>
-      <%= render GuestUI::ActionCard.new(label: "Recommendations and offers",
-                                         hint: "Places and guest offers",
-                                         icon: "sparkles", tone: :discovery,
-                                         href: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id)) %>
-      <%= render GuestUI::ActionCard.new(label: "Contact the front desk",
-                                         hint: "Call or get directions",
-                                         icon: "phone", tone: :contact,
-                                         href: concierge_contact_path(@hotel.unique_id, @hotel.public_id)) %>
-      <% if presenter.chat_available? %>
-        <%= render GuestUI::ActionCard.new(label: "Chat with us",
-                                           hint: "Ask the hotel team",
-                                           icon: "message-circle", tone: :conversation,
-                                           href: concierge_chat_path(@hotel.unique_id, @hotel.public_id)) %>
-      <% end %>
-    </section>
 
     <details class="guest-card guest-more-actions guest-stay-overview__more">
       <summary>

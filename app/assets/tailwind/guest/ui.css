@@ -278,8 +278,10 @@
     @apply shrink-0 text-muted-foreground transition-colors group-hover:text-primary;
   }
 
+  /* The icon sits over the text, so the label keeps its width when two cards
+     share a row on a phone. */
   .guest-action-card {
-    @apply flex min-h-20 items-start gap-3 rounded-xl p-4 text-foreground transition-colors;
+    @apply flex min-h-28 flex-col justify-between gap-3 rounded-xl p-4 text-foreground transition-colors;
   }
 
   .guest-service-surface {
@@ -291,7 +293,7 @@
   }
 
   .guest-action-card__icon {
-    @apply mt-0.5 size-6 shrink-0;
+    @apply size-6 shrink-0;
   }
 
   .guest-service-surface__icon {
@@ -535,7 +537,7 @@
 
   .guest-stay-overview__greeting { grid-area: greeting; }
   .guest-stay-overview__stay { grid-area: stay; }
-  .guest-stay-overview__services { grid-area: services; }
+  .guest-stay-overview__main { grid-area: main; }
   .guest-stay-overview__more { grid-area: more; }
 
   .guest-stay-overview .guest-card {
@@ -550,20 +552,52 @@
     @apply text-sm font-semibold normal-case tracking-normal text-foreground;
   }
 
-  .guest-stay-overview__services > h2 {
-    @apply md:col-span-2;
-  }
-
   .guest-stay-overview {
-    grid-template-areas: "greeting" "stay" "services" "more";
+    grid-template-areas: "greeting" "stay" "main" "more";
   }
 
   @media (min-width: 48rem) {
     .guest-stay-overview {
       grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-      grid-template-areas: "greeting greeting" "stay services" "more services";
+      grid-template-areas: "greeting greeting" "stay main" "more main";
       @apply gap-8;
     }
+  }
+
+  /* ─── Tile grid ───
+     Two tiles a row, also on a phone. A tile left alone on the last row takes
+     the whole row, so an odd count never leaves a hole. */
+  .guest-tile-grid {
+    @apply grid grid-cols-2 gap-3 md:gap-4;
+  }
+
+  .guest-tile-grid > :last-child:nth-child(odd) {
+    @apply col-span-2;
+  }
+
+  /* ─── Stay summary ───
+     The one card on the stay page with a tint, because it is the one the
+     guest comes back to. Two classes, so the tint wins over the flat card
+     treatment of the stay overview. */
+  .guest-card.guest-stay-summary {
+    @apply border-primary/20;
+    background: color-mix(in oklab, var(--primary) 5%, var(--card));
+  }
+
+  .guest-stay-summary__status {
+    @apply inline-flex shrink-0 items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground;
+  }
+
+  .guest-stay-summary__status[data-state="in-house"] {
+    @apply bg-success/10 text-success-foreground;
+  }
+
+  .guest-stay-summary__room {
+    @apply break-words text-3xl font-semibold leading-tight text-foreground;
+  }
+
+  .guest-stay-summary__refs {
+    @apply mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-border/60 pt-3 text-xs text-muted-foreground;
   }
 
   /* ─── Footer ───

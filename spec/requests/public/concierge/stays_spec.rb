@@ -108,7 +108,7 @@ RSpec.describe "Public::Concierge::Stays", type: :request do
       open_the_stay
       get stay_url
 
-      expect(response.body).not_to include("Booking confirmation code")
+      expect(response.body).not_to include(%(name="confirmation_token"))
     end
 
     it "shows the locked page again after a wrong code" do
