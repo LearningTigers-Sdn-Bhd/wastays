@@ -39,10 +39,14 @@ module GuestUI
     # Takes a list of values, of [label, value] pairs, or of hashes. A bare
     # value is titleized, which is right for a short word a guest reads
     # (savings, current) and wrong for anything longer -- pass a label then.
+    # A hash may also carry a hint: one line under the label that helps the
+    # guest choose.
     def normalize(choices)
       Array(choices).map do |choice|
         case choice
-        when Hash then { label: choice[:label] || choice["label"], value: choice[:value] || choice["value"] }
+        when Hash
+          { label: choice[:label] || choice["label"], value: choice[:value] || choice["value"],
+            hint: choice[:hint] || choice["hint"] }
         when Array then { label: choice.first, value: choice.last }
         else { label: choice.to_s.titleize, value: choice }
         end
@@ -76,12 +80,19 @@ module GuestUI
       )
     end
 
-    def radio_attributes(index)
+    # The radio names itself with the label alone and reads the hint as its
+    # description. Without that, the label that wraps the whole card would
+    # read the label and the hint as one long name.
+    def radio_attributes(index, hint: false)
       {
         id: option_id(index),
         class: "guest-radio-group__input",
         required: @required,
-        disabled: @disabled
+        disabled: @disabled,
+        aria: {
+          labelledby: "#{option_id(index)}-label",
+          describedby: (hint ? "#{option_id(index)}-hint" : nil)
+        }.compact
       }.compact
     end
   end

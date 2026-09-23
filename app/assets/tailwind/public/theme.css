@@ -59,6 +59,10 @@
      rather than the slate --border-interactive, and still clears 3:1 on
      --background (3.3:1) and --card (3.4:1) for WCAG 1.4.11. */
   --guest-field-border: oklch(0.64 0.02 75);
+  /* A chosen option. Solid and clearly teal, so it reads as a filled card,
+     not as a see-through one next to the cream page. Text on it: 15:1 for
+     the label, 6.5:1 for the hint. */
+  --guest-choice-selected: oklch(0.945 0.03 183);
   --ring: oklch(0.3707 0.0594 183.34);
 
   --shadow-color: 0 0% 0%;

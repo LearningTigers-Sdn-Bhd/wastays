@@ -46,6 +46,14 @@ RSpec.describe GuestUI::RadioGroup, type: :component do
     expect(page).to have_css(".guest-radio-group__option", text: "Joint")
   end
 
+  it "names each radio by its label and reads its hint as the description" do
+    render_group(choices: [ { label: "Savings", value: "savings", hint: "Most personal accounts" }, "current" ])
+
+    expect(page).to have_css("input#refund_account_type[aria-labelledby='refund_account_type-label'][aria-describedby='refund_account_type-hint']")
+    expect(page).to have_css("#refund_account_type-hint.guest-radio-group__hint", text: "Most personal accounts")
+    expect(page).to have_css("input#refund_account_type-1[aria-labelledby='refund_account_type-1-label']:not([aria-describedby])")
+  end
+
   it "is a radiogroup a screen reader can announce as one thing" do
     render_group(labelled_by: "refund_account_type-label", described_by: "refund_account_type-hint")
 

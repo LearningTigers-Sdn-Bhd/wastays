@@ -16,7 +16,10 @@ export default class extends Controller {
     // Pin the listbox to the trigger's width instead of letting it grow to fit
     // the longest label. For narrow columns, where a wide popover would escape
     // the layout; option labels ellipsis instead.
-    fixedWidth: { type: Boolean, default: false }
+    fixedWidth: { type: Boolean, default: false },
+    // A ceiling for the listbox in pixels, on top of the space left on screen.
+    // 0 keeps the old behaviour: as tall as the space allows.
+    maxHeight: { type: Number, default: 0 }
   }
 
   connect() {
@@ -255,7 +258,8 @@ export default class extends Controller {
     })
 
     const selected = this.selectedOption()
-    const label = selected?.querySelector(".panel-select-menu__option-label")?.textContent.trim()
+    // data-select-menu-label lets a component with its own class names (GuestUI::Select) share this controller.
+    const label = selected?.querySelector("[data-select-menu-label], .panel-select-menu__option-label")?.textContent.trim()
     this.labelTarget.textContent = label || this.placeholderValue
     this.labelTarget.dataset.placeholder = (label ? "false" : "true")
   }
@@ -311,6 +315,7 @@ export default class extends Controller {
 
   position() {
     const fixedWidth = this.fixedWidthValue
+    const ceiling = this.maxHeightValue
 
     computePosition(this.triggerTarget, this.listboxTarget, {
       placement: this.placementValue,
@@ -323,7 +328,7 @@ export default class extends Controller {
           padding: 8,
           apply({ availableHeight, rects, elements }) {
             Object.assign(elements.floating.style, {
-              maxHeight: `${Math.max(160, availableHeight)}px`,
+              maxHeight: `${Math.min(Math.max(160, availableHeight), ceiling || Infinity)}px`,
               minWidth: `${rects.reference.width}px`,
               maxWidth: fixedWidth ? `${rects.reference.width}px` : ""
             })

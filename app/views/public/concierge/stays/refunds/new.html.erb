@@ -35,9 +35,9 @@
     <%= form_with model: @refund_request, url: concierge_stay_refunds_path(*stay_route_args),
           scope: :refund_request, method: :post, local: true, class: "space-y-5" do |form| %>
       <%= render GuestUI::FormField.new(form: form, attribute: :refund_amount,
-                                        label: "How much are you asking for?",
+                                        label: "Refund amount (#{@presenter.booking.currency})",
                                         required: true,
-                                        hint: "You paid #{@presenter.booking.currency} #{number_with_precision(@presenter.booking.total_amount, precision: 2)} for this stay.") do |field| %>
+                                        hint: "You paid #{@presenter.booking.currency} #{number_with_precision(@presenter.booking.total_amount, precision: 2, delimiter: ",")} for this stay.") do |field| %>
         <% field.with_input(type: :number,
                             value: params.dig(:refund_request, :refund_amount),
                             step: "0.01", min: "0.01", max: @presenter.booking.total_amount,
@@ -45,19 +45,25 @@
       <% end %>
 
       <%= render GuestUI::FormField.new(form: form, attribute: :reason,
-                                        label: "Why are you asking? (optional)") do |field| %>
+                                        label: "Reason (optional)") do |field| %>
         <% field.with_text_area(rows: 4, placeholder: "For example: we left one night early") %>
       <% end %>
 
-      <%# Where the money goes. Its own group, because a guest who has finished
+      <%# The bank details. Their own group, because a guest who has finished
           saying what happened is now copying digits off a bank card. A
           fieldset, so a screen reader names the group with each field in it. %>
-      <fieldset class="guest-fieldset">
-        <legend class="guest-fieldset__legend">Where the money goes</legend>
+      <fieldset class="guest-fieldset" aria-describedby="refund-bank-details-description">
+        <legend class="guest-fieldset__legend">Bank details</legend>
+        <p id="refund-bank-details-description" class="guest-fieldset__description">
+          The hotel pays your refund into this account. Check the details against your bank card or app.
+        </p>
+
+        <%= render GuestUI::FormField.new(form: form, attribute: :bank_name, label: "Bank name", required: true) do |field| %>
+          <% field.with_select(choices: BankCatalog.options(current: @refund_request&.bank_name), prompt: "Choose your bank") %>
+        <% end %>
 
         <%
           bank_fields = {
-            bank_name: { label: "Bank name", placeholder: "For example: Maybank", autocomplete: "off" },
             account_holder_name: { label: "Account holder name", placeholder: "The name on the account", autocomplete: "name" },
             account_number: { label: "Account number", placeholder: "For example: 1234 5678 9012", autocomplete: "off" }
           }
@@ -70,7 +76,10 @@
 
         <%= render GuestUI::FormField.new(form: form, attribute: :account_type,
                                           label: "Account type", required: true) do |field| %>
-          <% field.with_radio_group(choices: RefundRequest::ACCOUNT_TYPES) %>
+          <% field.with_radio_group(layout: :stacked, choices: [
+               { label: "Savings", value: "savings", hint: "Most personal accounts" },
+               { label: "Current", value: "current", hint: "Business or cheque accounts" }
+             ]) %>
         <% end %>
       </fieldset>
 

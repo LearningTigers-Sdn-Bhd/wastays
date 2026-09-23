@@ -200,8 +200,9 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       get concierge_stay_refund_path(*args)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("How much are you asking for?")
+      expect(response.body).to include("Refund amount (MYR)")
       expect(response.body).to include("500.00")
+      expect(Nokogiri::HTML(response.body).at_css(".guest-select select#refund_request_bank_name option[value='Maybank']")).to be_present
     end
 
     it "creates a pending request and leaves the booking status alone" do
@@ -239,7 +240,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       get concierge_stay_refund_path(*args)
 
       expect(response.body).to include("Pending")
-      expect(response.body).not_to include("How much are you asking for?")
+      expect(response.body).not_to include("Refund amount (MYR)")
     end
   end
 

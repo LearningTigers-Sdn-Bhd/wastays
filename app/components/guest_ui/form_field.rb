@@ -23,7 +23,8 @@ module GuestUI
     renders_one :control, types: {
       input: ->(**attributes) { build(Input, :input, **attributes) },
       text_area: ->(**attributes) { build(TextArea, :text_area, **attributes) },
-      radio_group: ->(**attributes) { build_radio_group(**attributes) }
+      radio_group: ->(**attributes) { build_radio_group(**attributes) },
+      select: ->(**attributes) { build_select(**attributes) }
     }
 
     def initialize(form:, attribute:, label: nil, hint: nil, error: AUTO_ERROR, size: :md,
@@ -47,6 +48,7 @@ module GuestUI
     def with_input(...) = with_control_input(...)
     def with_text_area(...) = with_control_text_area(...)
     def with_radio_group(...) = with_control_radio_group(...)
+    def with_select(...) = with_control_select(...)
 
     def control_id = @id || @form.field_id(@attribute)
     def label_id = "#{control_id}-label"
@@ -107,6 +109,13 @@ module GuestUI
         **control_options(attributes).except(:readonly, :size),
         labelled_by: (label.present? ? label_id : nil)
       )
+    end
+
+    # The trigger is a button, and a button takes its name from its text, which
+    # is only the value. It is given the label's id, the same as a radio group.
+    def build_select(**attributes)
+      @control_kind = :select
+      Select.new(**attributes, **control_options(attributes), labelled_by: (label.present? ? label_id : nil))
     end
 
     def control_options(overrides = {})

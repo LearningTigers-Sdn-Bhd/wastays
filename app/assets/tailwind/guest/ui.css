@@ -127,6 +127,124 @@
     field-sizing: content;
   }
 
+  /* ─── Select ───
+     A trigger that looks like a text input, and a listbox under it. Until the
+     ui--select-menu controller sets data-enhanced, the native select is the
+     control; after, it is hidden from sight but not from the form, so the
+     browser still checks `required` on it. */
+  .guest-select {
+    @apply relative block w-full;
+  }
+
+  .guest-select__native {
+    @apply block min-h-11 w-full rounded-xl border bg-card px-4 py-3 text-base font-medium text-foreground;
+    border-color: var(--guest-field-border);
+  }
+
+  .guest-select[data-enhanced="true"] .guest-select__native {
+    @apply absolute bottom-0 left-4 size-px overflow-hidden p-0 opacity-0;
+  }
+
+  .guest-select__trigger {
+    @apply hidden min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left text-base font-medium text-foreground transition-colors;
+    border-color: var(--guest-field-border);
+    @apply focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply aria-expanded:border-primary aria-expanded:ring-2 aria-expanded:ring-ring aria-expanded:ring-offset-2 aria-expanded:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground;
+  }
+
+  .guest-select[data-enhanced="true"] .guest-select__trigger {
+    @apply flex;
+  }
+
+  .guest-select[data-invalid="true"] :is(.guest-select__trigger, .guest-select__native) {
+    @apply border-destructive;
+  }
+
+  .guest-select__value {
+    @apply min-w-0 flex-1 truncate;
+  }
+
+  .guest-select__value[data-placeholder="true"] {
+    @apply font-normal text-muted-foreground;
+  }
+
+  .guest-select__chevron {
+    @apply size-5 shrink-0 text-muted-foreground transition-transform;
+  }
+
+  .guest-select__trigger[aria-expanded="true"] .guest-select__chevron {
+    @apply rotate-180;
+  }
+
+  /* A popover sits in the top layer, so the page cannot clip it; the
+     controller places it under the trigger and caps its height to the space
+     left on screen. */
+  .guest-select__listbox {
+    @apply m-0 overflow-y-auto overscroll-contain rounded-xl border border-border bg-card p-1 text-foreground shadow-lg;
+    inset: auto;
+  }
+
+  .guest-select__listbox:focus {
+    @apply outline-none;
+  }
+
+  /* A thin, rounded thumb on a clear track, in the field border colour, so
+     the scrollbar reads as part of the card rather than a grey system bar.
+     The standard properties serve Chrome and Firefox; Safari reads the
+     -webkit- rules. The transparent border keeps the thumb off the card's
+     rounded edge. */
+  .guest-select__listbox {
+    scrollbar-width: thin;
+    scrollbar-color: var(--guest-field-border) transparent;
+  }
+
+  .guest-select__listbox::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .guest-select__listbox::-webkit-scrollbar-track {
+    background: transparent;
+    margin-block: 8px;
+  }
+
+  .guest-select__listbox::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background: var(--guest-field-border) padding-box;
+  }
+
+  .guest-select__listbox::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground) padding-box;
+  }
+
+  .guest-select__option {
+    @apply flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-3 text-base;
+    @apply hover:bg-muted focus:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring;
+  }
+
+  .guest-select__option[aria-selected="true"] {
+    @apply font-semibold text-primary;
+  }
+
+  .guest-select__option-label {
+    @apply min-w-0 flex-1 truncate;
+  }
+
+  .guest-select__check {
+    @apply invisible size-4 shrink-0 text-primary;
+  }
+
+  .guest-select__option[aria-selected="true"] .guest-select__check {
+    @apply visible;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .guest-select__chevron {
+      @apply transition-none;
+    }
+  }
+
   /* ─── Form field ───
      Label above, control, then one message under it. The label is body text
      in the foreground colour, not an eyebrow: it is the question the guest
@@ -172,12 +290,27 @@
   /* ─── Fieldset ───
      A group of fields with one name, such as the bank details of a refund.
      The legend is read with each field in it. */
+  /* No top padding on the fieldset: a fieldset draws its legend on its top
+     edge, so the padding would land under the legend, between the title and
+     its description. The space above the group sits on the legend. */
   .guest-fieldset {
-    @apply min-w-0 space-y-5 pt-3;
+    @apply min-w-0;
   }
 
   .guest-fieldset__legend {
-    @apply text-base font-semibold text-foreground;
+    @apply pt-3 text-base font-semibold text-foreground;
+  }
+
+  /* One sentence under the legend that says what the group is for. The
+     fieldset points at it with aria-describedby, so a screen reader reads it
+     once when the guest enters the group. */
+  .guest-fieldset__description {
+    @apply mt-1 text-sm leading-relaxed;
+    color: var(--muted-foreground-strong);
+  }
+
+  .guest-fieldset > .guest-field {
+    @apply mt-5;
   }
 
   /* ─── Radio group ───
@@ -189,23 +322,76 @@
      in script is how a form stops working for a guest using a switch or a
      screen reader. */
   .guest-radio-group {
-    @apply flex flex-wrap gap-3;
+    @apply grid grid-cols-2 gap-3;
   }
 
   .guest-radio-group[data-layout="stacked"] {
-    @apply flex-col;
+    @apply grid-cols-1;
   }
 
+  /* An option card: the same edge, fill, radius and height as a text input,
+     so a choice reads as part of the form rather than as a button. Left
+     aligned, radio first, the way a guest scans a list of choices.
+
+     The checked card doubles its edge with an inset shadow rather than a
+     wider border, so choosing an option never moves the text. */
   .guest-radio-group__option {
-    @apply flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-[13px] font-bold text-foreground transition-colors;
-    @apply hover:border-border-interactive;
-    @apply has-checked:border-primary has-checked:bg-primary/5 has-checked:text-primary;
+    @apply flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-colors;
+    border-color: var(--guest-field-border);
+    @apply hover:bg-muted;
+    @apply has-checked:border-primary;
     @apply has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2 has-focus-visible:ring-offset-background;
     @apply has-disabled:cursor-not-allowed has-disabled:opacity-50;
   }
 
+  /* A solid token, not a tint of primary: a light tint sits so close to the
+     cream page that the chosen card looks see-through. */
+  .guest-radio-group__option:has(:checked) {
+    background-color: var(--guest-choice-selected);
+    box-shadow: inset 0 0 0 1px var(--primary);
+  }
+
+  .guest-radio-group[aria-invalid="true"] .guest-radio-group__option {
+    @apply border-destructive;
+  }
+
+  /* The native radio, drawn again. It stays in the DOM, so the arrow keys and
+     a screen reader still work; only its face changes. A ring when empty, a
+     ring with a dot when checked -- the dot is the card showing through an
+     inset shadow over a primary fill, which forced-colours mode flattens to a
+     solid disc, still unlike the empty ring. */
   .guest-radio-group__input {
-    @apply size-4 shrink-0 accent-primary;
+    @apply m-0 size-5 shrink-0 cursor-pointer appearance-none rounded-full border-2 bg-card transition-colors focus-visible:outline-none;
+    border-color: var(--guest-field-border);
+  }
+
+  .guest-radio-group__input:checked {
+    @apply border-primary bg-primary;
+    box-shadow: inset 0 0 0 3px var(--card);
+  }
+
+  /* Forced colours (Windows high contrast) replace the fill and drop the
+     shadow, which would leave a checked radio looking empty. There, the
+     system draws its own radio. */
+  @media (forced-colors: active) {
+    .guest-radio-group__input {
+      appearance: auto;
+    }
+  }
+
+  .guest-radio-group__text {
+    @apply min-w-0;
+  }
+
+  /* One line each: a choice is a name and one short reason, and a full-width
+     stacked card has room for both. */
+  .guest-radio-group__label {
+    @apply block truncate text-base font-medium leading-tight text-foreground;
+  }
+
+  .guest-radio-group__hint {
+    @apply mt-1 block truncate text-xs leading-snug;
+    color: var(--muted-foreground-strong);
   }
 
   /* ─── Switch ───
