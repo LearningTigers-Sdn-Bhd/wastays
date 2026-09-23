@@ -10,11 +10,11 @@ RSpec.describe "Guest navigation", type: :request do
     sign_in_guest!(guest)
   end
 
-  it "titles booking detail after the confirmation token and goes back to My Bookings" do
+  it "titles booking detail after the reference number and goes back to My Bookings" do
     get guest_booking_path(booking)
 
     expect(response).to have_http_status(:success)
-    expect(navbar_title).to eq("WS-GUEST1")
+    expect(navbar_title).to eq(booking.formatted_reservation_number)
     expect(back_path).to eq(guest_bookings_path)
   end
 
@@ -34,6 +34,14 @@ RSpec.describe "Guest navigation", type: :request do
     expect(response).to have_http_status(:success)
     expect(navbar_title).to eq("Refund Details")
     expect(back_path).to eq(guest_booking_path(booking))
+  end
+
+  it "falls back to the confirmation code for a booking with no reference" do
+    allow_any_instance_of(Booking).to receive(:formatted_reservation_number).and_return(nil)
+
+    get guest_booking_path(booking)
+
+    expect(navbar_title).to eq("WS-GUEST1")
   end
 
   private

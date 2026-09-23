@@ -18,6 +18,13 @@ class Guest::BaseController < ApplicationController
     current_guest.present?
   end
 
+  # A booking goes by its reference number, the one on its documents. A
+  # booking made before references were issued falls back to its code.
+  def append_booking_breadcrumb(booking)
+    label = booking.formatted_reservation_number.presence || booking.confirmation_token.to_s.upcase
+    append_breadcrumb label, guest_booking_path(booking)
+  end
+
   def authenticate_guest!
     unless guest_logged_in?
       redirect_to guest_login_path, alert: "Please log in to continue."

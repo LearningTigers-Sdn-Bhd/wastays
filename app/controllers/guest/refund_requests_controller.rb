@@ -98,12 +98,12 @@ class Guest::RefundRequestsController < Guest::BaseController
   end
 
   def set_form_breadcrumbs
-    append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
+    append_booking_breadcrumb(@booking)
     append_breadcrumb "Request Refund"
   end
 
   def set_show_breadcrumbs
-    append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
+    append_booking_breadcrumb(@booking)
     append_breadcrumb "Refund Details"
   end
 
