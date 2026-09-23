@@ -601,7 +601,7 @@
      columns line up at the top and the padding is set in one place.
 
      The title is a section title in the sans face, not the serif: these name
-     a group of controls (Hotel Services, Booking and Billing), and a serif
+     a group of controls (Property Services, Booking and Billing), and a serif
      heading on each one would compete with the page's own. */
   .guest-card {
     @apply rounded-2xl border border-border/40 bg-card p-6 shadow-xs;

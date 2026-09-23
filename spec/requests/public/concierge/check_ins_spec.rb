@@ -225,7 +225,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       it "fails with :too_far_away when coordinates are outside radius" do
         post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id), params: { latitude: 3.1390, longitude: 101.6869 }
         expect(response).to have_http_status(:unprocessable_content)
-        expect(response.body).to include("too far from the hotel")
+        expect(response.body).to include("too far from the property")
       end
 
       it "succeeds when coordinates are within the radius" do

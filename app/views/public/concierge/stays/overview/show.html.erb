@@ -49,11 +49,11 @@
         </section>
       <% end %>
 
-      <section class="guest-stay-overview__services space-y-3" aria-labelledby="hotel-services-title">
-        <h2 id="hotel-services-title" class="guest-card__title guest-section-title">Hotel Services</h2>
+      <section class="guest-stay-overview__services space-y-3" aria-labelledby="property-services-title">
+        <h2 id="property-services-title" class="guest-card__title guest-section-title">Property Services</h2>
         <div class="guest-tile-grid">
           <% if presenter.can_send_request? %>
-            <%= render GuestUI::ActionCard.new(label: "Report a problem",
+            <%= render GuestUI::ActionCard.new(label: "Report an issue",
                                                hint: "Tell us what is wrong",
                                                icon: "circle-alert", tone: :issue,
                                                href: concierge_new_stay_request_path(*stay_route_args, kind: "complaint")) %>
@@ -97,7 +97,7 @@
                                           href: stay_e_invoice_path, new_tab: true) %>
         <% if presenter.can_request_refund? %>
           <%= render GuestUI::Card::Row.new(label: "Ask for a refund",
-                                            hint: "The hotel replies to you.",
+                                            hint: "The property replies to you.",
                                             icon: "rotate-ccw",
                                             href: stay_refund_path) %>
         <% elsif presenter.refund_request %>

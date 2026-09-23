@@ -6,7 +6,7 @@
              presenter: @presenter,
              error: @error,
              title: "Ask for a refund",
-             subtitle: "This is a request, not a payment. The hotel reads it and replies to you."
+             subtitle: "This is a request, not a payment. The property reads it and replies to you."
            } do %>
   <% if existing && !existing.rejected? %>
     <dl class="space-y-4">
@@ -20,7 +20,7 @@
       </div>
       <% if existing.hotel_note.present? %>
         <div>
-          <dt class="text-[11px] font-medium text-muted-foreground">From the hotel</dt>
+          <dt class="text-[11px] font-medium text-muted-foreground">From the property</dt>
           <dd class="text-[13px] font-medium leading-relaxed text-foreground"><%= existing.hotel_note %></dd>
         </div>
       <% end %>
@@ -28,7 +28,7 @@
   <% else %>
     <% if existing&.rejected? && existing.hotel_note.present? %>
       <%= render GuestUI::Notice.new(variant: :warning, class: "mb-5") do %>
-        The hotel asked for a change: <%= existing.hotel_note %>
+        The property asked for a change: <%= existing.hotel_note %>
       <% end %>
     <% end %>
 
@@ -55,7 +55,7 @@
       <fieldset class="guest-fieldset" aria-describedby="refund-bank-details-description">
         <legend class="guest-fieldset__legend">Bank details</legend>
         <p id="refund-bank-details-description" class="guest-fieldset__description">
-          The hotel pays your refund into this account. Check the details against your bank card or app.
+          The property pays your refund into this account. Check the details against your bank card or app.
         </p>
 
         <%# A bank that is not listed is "Other bank" in the select, and its name

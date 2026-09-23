@@ -17,7 +17,7 @@ module Public
           ).call
 
           if result.success?
-            redirect_to stay_path, notice: "We have your refund request. The hotel will reply to you."
+            redirect_to stay_path, notice: "We have your refund request. The property will reply to you."
           else
             @presenter = stay_presenter
             @refund_request = RefundRequest.new(refund_params.except(:refund_amount))

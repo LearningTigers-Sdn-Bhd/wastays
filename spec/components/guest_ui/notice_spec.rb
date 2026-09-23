@@ -58,10 +58,10 @@ RSpec.describe GuestUI::Notice, type: :component do
   end
 
   it "sets a title above the message when one is given" do
-    render_inline(described_class.new(title: "Refund asked", message: "The hotel replies to you."))
+    render_inline(described_class.new(title: "Refund asked", message: "The property replies to you."))
 
     expect(page).to have_css(".guest-notice__title", text: "Refund asked")
-    expect(page).to have_text("The hotel replies to you.")
+    expect(page).to have_text("The property replies to you.")
   end
 
   it "hides its icon, which says nothing the words do not" do

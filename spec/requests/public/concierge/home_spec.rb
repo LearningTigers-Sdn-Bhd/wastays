@@ -55,7 +55,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 
       expect(response).to redirect_to(hotel_path(hotel.unique_id, hotel.public_id))
-      expect(flash[:alert]).to eq("AI concierge is not available for this hotel.")
+      expect(flash[:alert]).to eq("AI concierge is not available for this property.")
     end
 
     it "returns 404 for an unknown public ID" do

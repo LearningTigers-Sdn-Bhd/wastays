@@ -13,9 +13,9 @@ RSpec.describe GuestUI::Chat::QuickReplies, type: :component do
     suggestions = [
       suggestion,
       Concierge::ChatInputPresenter::Suggestion.new(
-        label: "Ask the hotel team",
+        label: "Ask the property team",
         kind: :message,
-        value: "Please ask the hotel team to help with my booking."
+        value: "Please ask the property team to help with my booking."
       ),
       Concierge::ChatInputPresenter::Suggestion.new(label: "Ask another question", kind: :focus)
     ]
@@ -28,7 +28,7 @@ RSpec.describe GuestUI::Chat::QuickReplies, type: :component do
     expect(page).to have_button("Find a room")
     expect(page).to have_css("form[action='/chat'] input[name='message'][value='I want to find a room.']", visible: :hidden)
     expect(page).to have_css(
-      "form[action='/chat'] input[name='message'][value='Please ask the hotel team to help with my booking.']",
+      "form[action='/chat'] input[name='message'][value='Please ask the property team to help with my booking.']",
       visible: :hidden
     )
     expect(page).to have_button("Ask another question")

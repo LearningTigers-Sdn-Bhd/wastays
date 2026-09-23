@@ -4,9 +4,9 @@ require "rails_helper"
 
 RSpec.describe GuestUI::Card, type: :component do
   it "is a labelled section when it has a title" do
-    render_inline(described_class.new(title: "Hotel Services")) { "Body" }
+    render_inline(described_class.new(title: "Property Services")) { "Body" }
 
-    expect(page).to have_css("section.guest-card h2.guest-card__title", text: "Hotel Services")
+    expect(page).to have_css("section.guest-card h2.guest-card__title", text: "Property Services")
     expect(page).to have_css(".guest-card__body", text: "Body")
   end
 

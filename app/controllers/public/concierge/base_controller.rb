@@ -46,7 +46,7 @@ module Public
         return if @hotel&.concierge_page_available?
 
         if @hotel&.concierge_available?
-          redirect_to hotel_path(@hotel.unique_id, @hotel.public_id), alert: "AI concierge is not available for this hotel."
+          redirect_to hotel_path(@hotel.unique_id, @hotel.public_id), alert: "AI concierge is not available for this property."
           return
         end
 

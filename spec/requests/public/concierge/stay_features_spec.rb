@@ -59,7 +59,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       more_actions = page.at_css("details.guest-more-actions")
 
       expect(services.css("a.guest-action-card").map { |card| card.text.strip }).to include(
-        "Report a problem Tell us what is wrong",
+        "Report an issue Tell us what is wrong",
         "Recommendations Places and guest offers",
         "Property Contacts Phone, WhatsApp, email and map"
       )
@@ -153,6 +153,14 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(field["autofocus"]).to be_nil
       expect(field["placeholder"]).to start_with("For example:")
       expect(button["data-turbo-submits-with"]).to eq("Sending…")
+    end
+
+    it "names the request on the send button" do
+      get concierge_new_stay_request_path(*args, kind: "housekeeping")
+      expect(response.body).to include("Send housekeeping request")
+
+      get concierge_new_stay_request_path(*args, kind: "complaint")
+      expect(response.body).to include("Send issue report")
     end
 
     it "falls back to housekeeping for a kind it does not know" do
@@ -419,7 +427,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       post concierge_stay_requests_path(*args), params: { kind: "housekeeping", details: "Two more towels." }
       follow_redirect!
 
-      expect(response.body).to include("We have your request. The hotel team is on it.")
+      expect(response.body).to include("We have your request. The property team is on it.")
       expect(response.body).to include(%(data-variant="success"))
     end
 

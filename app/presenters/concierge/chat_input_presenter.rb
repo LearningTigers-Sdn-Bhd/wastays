@@ -9,34 +9,34 @@ module Concierge
         [ "Find a room", :message, "I want to find a room." ],
         [ "Check prices", :message, "I want to check prices." ],
         [ "Manage my booking", :message, "I want to manage my booking." ],
-        [ "Ask about the hotel", :message, "Tell me about the hotel." ]
+        [ "Ask about the property", :message, "Tell me about the property." ]
       ],
       "portal_offer" => [
         [ "Send login link", :message, "Send my login link." ],
-        [ "Ask the hotel team", :message, "Please ask the hotel team to help with my booking." ],
+        [ "Ask the property team", :message, "Please ask the property team to help with my booking." ],
         [ "Not now", :message, "Not now." ]
       ],
       "post_link_support" => [
-        [ "Ask the hotel team", :message, "Please ask the hotel team to help with my booking." ],
+        [ "Ask the property team", :message, "Please ask the property team to help with my booking." ],
         [ "Ask another question", :focus, nil ],
         [ "Not now", :message, "Not now." ]
       ],
       "magic_link_failure" => [
-        [ "Ask the hotel team", :message, "Please ask the hotel team to help with my booking." ],
+        [ "Ask the property team", :message, "Please ask the property team to help with my booking." ],
         [ "Ask another question", :focus, nil ],
         [ "Not now", :message, "Not now." ]
       ],
       "staff_wait" => [
         [ "Find the right room", :message, "I want to find a room." ],
         [ "Check current prices", :message, "I want to check prices." ],
-        [ "Explore the hotel", :message, "Tell me about the hotel." ],
+        [ "Explore the property", :message, "Tell me about the property." ],
         [ "Discover nearby places", :message, "What places are nearby?" ],
         [ "I will wait", :message, "I will wait." ]
       ],
       "unsupported_change" => [
-        [ "Ask the hotel team", :message, "Please ask the hotel team to help with my booking." ],
+        [ "Ask the property team", :message, "Please ask the property team to help with my booking." ],
         [ "Ask another question", :focus, nil ],
-        [ "Explore the hotel", :message, "Tell me about the hotel." ],
+        [ "Explore the property", :message, "Tell me about the property." ],
         [ "Not now", :message, "Not now." ]
       ]
     }.freeze

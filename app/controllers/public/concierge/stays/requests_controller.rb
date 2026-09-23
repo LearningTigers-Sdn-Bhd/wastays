@@ -17,7 +17,7 @@ module Public
           ).call
 
           if result.success?
-            redirect_to stay_path, notice: "We have your request. The hotel team is on it."
+            redirect_to stay_path, notice: "We have your request. The property team is on it."
           else
             @presenter = stay_presenter
             @kind = requested_kind

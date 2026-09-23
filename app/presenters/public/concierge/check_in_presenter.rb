@@ -65,7 +65,7 @@ module Public
         when :registration_error
           "Please check the details below and try again."
         when :too_far_away
-          "You are too far from the hotel to self-check-in. Self-check-in is only available when you are physically at the property."
+          "You are too far from the property to self-check-in. Self-check-in is only available when you are physically at the property."
         when :missing_location
           "Location access is required for verification. Please enable GPS and allow location permissions."
         else

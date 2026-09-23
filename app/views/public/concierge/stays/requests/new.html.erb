@@ -1,11 +1,11 @@
 <% housekeeping = @kind == "housekeeping" %>
-<% content_for :title, "#{housekeeping ? 'Housekeeping' : 'Report a problem'} | #{@hotel.name}" %>
+<% content_for :title, "#{housekeeping ? 'Housekeeping' : 'Report an issue'} | #{@hotel.name}" %>
 
 <%= render layout: "public/concierge/stays/shared/form_page",
            locals: {
              presenter: @presenter,
              error: @error,
-             title: housekeeping ? "Ask for housekeeping" : "Report a problem",
+             title: housekeeping ? "Ask for housekeeping" : "Report an issue",
              subtitle: housekeeping ? "Tell us what you need in your room." : "Tell us what is wrong and we will put it right."
            } do %>
   <%= form_with url: concierge_stay_requests_path(*stay_route_args), method: :post, local: true do |form| %>
@@ -18,7 +18,7 @@
                               placeholder: housekeeping ? "For example: two more towels, and clean the room after 2 pm" : "For example: the air conditioning does not cool the room") %>
     <% end %>
 
-    <%= render GuestUI::Button.new(label: "Send to the hotel", size: :lg, block: true,
+    <%= render GuestUI::Button.new(label: (housekeeping ? "Send housekeeping request" : "Send issue report"), size: :lg, block: true,
                                    class: "mt-5", type: "submit",
                                    data: { turbo_submits_with: "Sending…" }) %>
   <% end %>

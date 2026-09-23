@@ -4,9 +4,9 @@ require "rails_helper"
 
 RSpec.describe GuestUI::Button, type: :component do
   it "is a button when nothing says where it goes" do
-    render_inline(described_class.new(label: "Send to the hotel"))
+    render_inline(described_class.new(label: "Send housekeeping request"))
 
-    expect(page).to have_css("button.guest-button[type='button']", text: "Send to the hotel")
+    expect(page).to have_css("button.guest-button[type='button']", text: "Send housekeeping request")
     expect(page).to have_css(".guest-button[data-variant='primary'][data-size='md']")
   end
 
