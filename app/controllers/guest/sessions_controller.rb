@@ -1,5 +1,4 @@
 class Guest::SessionsController < Guest::BaseController
-  layout "application"
   skip_before_action :authenticate_guest!, raise: false
   before_action :redirect_if_guest_logged_in!, only: %i[new request_magic_link]
 
