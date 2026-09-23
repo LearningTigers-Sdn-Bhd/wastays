@@ -71,7 +71,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       document = Nokogiri::HTML(response.body)
-      alert = document.at_css(".panel-alert[data-tone='warning']")
+      alert = document.at_css("[data-tone='warning']")
       expect(alert.text.squish).to include(
         "Outstanding balance: MYR 138.24",
         "If payment has already been received, record it before printing or emailing this card.",
@@ -91,7 +91,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       document = Nokogiri::HTML(response.body)
-      alert = document.at_css(".panel-alert[data-tone='warning']")
+      alert = document.at_css("[data-tone='warning']")
       link = alert.at_xpath(".//a[contains(., 'Add Payment')]")
       expect(alert.text.squish).to include("Outstanding balance: MYR 88.24")
       expect(link["href"]).to eq(hotel_folio_action_post_transaction_path(

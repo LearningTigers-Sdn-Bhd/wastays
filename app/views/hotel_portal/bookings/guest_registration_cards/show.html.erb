@@ -3,7 +3,6 @@
 <div class="mx-auto max-w-5xl px-4 py-6 text-foreground print:p-0" data-controller="registration-card" data-registration-card-url-value="<%= hotel_booking_guest_registration_card_path(current_hotel, @booking, booking_guest_id: @presenter.selected_booking_guest&.id) %>">
   <div class="grc-no-print mb-4">
     <div>
-      <p class="text-xs font-semibold uppercase text-muted-foreground">Front desk document</p>
       <h1 class="text-2xl font-bold">Guest Registration Card</h1>
       <p class="mt-1 text-xs text-muted-foreground"><%= @presenter.hotel_registration_display %></p>
     </div>
@@ -38,35 +37,33 @@
 
   <% if @presenter.outstanding_balance? %>
     <% can_add_payment = @presenter.can_add_payment?(current_user) %>
-    <%= render PanelsUI::Alert.new(
-          tone: :warning,
-          title: "Outstanding balance: #{@presenter.format_money(@presenter.due_amount)}",
-          class: "grc-no-print mb-4") do |alert| %>
-      <% alert.with_description do %>
-        If payment has already been received, record it before printing or emailing this card.
-        <% unless can_add_payment %>
-          Ask an authorized staff member to record the payment.
-        <% end %>
-      <% end %>
-      <% if can_add_payment %>
-        <% alert.with_actions do %>
-          <%= render PanelsUI::Button.new(
-                href: hotel_folio_action_post_transaction_path(
-                  current_hotel,
-                  @booking,
-                  transaction_type: "payment",
-                  active_folio_id: @presenter.payment_folio.id,
-                  amount: @presenter.due_amount.to_d.round(2).to_s("F"),
-                  return_to: request.fullpath
-                ),
-                variant: :warning,
-                size: :sm,
-                data: { turbo_frame: "folio_action_sheet" }) do %>
-            Add Payment
+    <div class="grc-no-print mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" role="status" data-tone="warning">
+      <div>
+        <p class="font-semibold">Outstanding balance: <%= @presenter.format_money(@presenter.due_amount) %></p>
+        <p class="mt-0.5">
+          If payment has already been received, record it before printing or emailing this card.
+          <% unless can_add_payment %>
+            Ask an authorized staff member to record the payment.
           <% end %>
+        </p>
+      </div>
+      <% if can_add_payment %>
+        <%= render PanelsUI::Button.new(
+              href: hotel_folio_action_post_transaction_path(
+                current_hotel,
+                @booking,
+                transaction_type: "payment",
+                active_folio_id: @presenter.payment_folio.id,
+                amount: @presenter.due_amount.to_d.round(2).to_s("F"),
+                return_to: request.fullpath
+              ),
+              variant: :warning,
+              size: :xs,
+              data: { turbo_frame: "folio_action_sheet" }) do %>
+          Add Payment
         <% end %>
       <% end %>
-    <% end %>
+    </div>
   <% end %>
 
   <section class="grc-no-print grid gap-3 lg:grid-cols-[1fr_260px]">
@@ -76,7 +73,7 @@
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p class="text-xs font-semibold uppercase text-muted-foreground">Guest Registration No.</p>
-              <p class="mt-1 text-2xl font-black text-foreground"><%= @booking.guest_registration_card_number_display %></p>
+              <p class="mt-0.5 text-base font-bold text-foreground"><%= @booking.guest_registration_card_number_display %></p>
             </div>
             <% if @card.field_visible?(:booking_number) %>
               <div class="rounded-md border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground">
