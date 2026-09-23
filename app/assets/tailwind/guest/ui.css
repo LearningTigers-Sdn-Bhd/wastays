@@ -127,6 +127,13 @@
     field-sizing: content;
   }
 
+  /* ─── Signature pad ───
+     The same edge as a field, so the pad reads as the place to write. */
+  .guest-signature {
+    @apply rounded-xl border bg-card p-2;
+    border-color: var(--guest-field-border);
+  }
+
   /* ─── Select ───
      A trigger that looks like a text input, and a listbox under it. Until the
      ui--select-menu controller sets data-enhanced, the native select is the

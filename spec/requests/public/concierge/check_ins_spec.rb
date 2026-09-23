@@ -239,6 +239,22 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
     end
 
+    it "draws the registration form without cards and keeps its controllers wired" do
+      get concierge_check_in_now_path(hotel.unique_id, hotel.public_id)
+
+      page = Nokogiri::HTML(response.body)
+      body = page.at_css(".guest-form-page__body")
+
+      expect(body.css(".card, .guest-card")).to be_empty
+      expect(body.css("fieldset.guest-fieldset legend").map { |legend| legend.text.strip })
+        .to eq([ "Guest details", "Home address", "Identity document", "Signature" ])
+      expect(body.at_css(".guest-select select#booking_guest_document_type[data-pre-checkin-document-target='select'][data-guest-identity-target='documentType']")).to be_present
+      expect(body.at_css(".guest-select select#booking_guest_country[data-guest-dob-target='country']")).to be_present
+      expect(body.at_css("fieldset[data-controller='address-state'] [data-address-state-target='country'] select#booking_guest_address_country")).to be_present
+      expect(body.at_css("[data-guest-identity-target='numberLabel'] label [data-guest-identity-label-text]")).to be_present
+      expect(body.css("select").map { |select| select.ancestors(".guest-select").any? }).to all(be(true))
+    end
+
     it "leads the registration page with the compact booking card as the way back" do
       get concierge_check_in_now_path(hotel.unique_id, hotel.public_id)
 
@@ -259,7 +275,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
 
     it "check_in_now renders inline registration form" do
       get concierge_check_in_now_path(hotel.unique_id, hotel.public_id)
-      expect(response.body).to include("Guest Registration")
+      expect(response.body).to include("Guest details")
       expect(response.body).to include("guest_home_address")
       expect(response.body).to include("guest_date_of_birth")
     end

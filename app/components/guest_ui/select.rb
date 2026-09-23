@@ -10,10 +10,13 @@ module GuestUI
   # concierge's own, because GuestUI stays walled off from the portal's styles.
   #
   #   field.with_select(choices: BankCatalog.options, prompt: "Choose your bank")
+  #
+  # native_data goes on the native select, for a page controller that reads
+  # the value or listens for its change (guest-identity, pre-checkin-document).
   class Select < GuestUI::BaseComponent
     def initialize(form:, attribute:, choices:, prompt: "Choose one", selected: nil, id: nil, labelled_by: nil,
                    described_by: nil, invalid: false, required: false, disabled: false, readonly: false,
-                   size: nil, class: nil, **attributes)
+                   native_data: {}, size: nil, class: nil, **attributes)
       raise ArgumentError, "Selects require choices" if choices.blank?
 
       @form = form
@@ -27,6 +30,7 @@ module GuestUI
       @invalid = invalid
       @required = required
       @disabled = disabled || readonly
+      @native_data = native_data
       @class = binding.local_variable_get(:class)
       @attributes = attributes
     end
@@ -68,10 +72,10 @@ module GuestUI
         required: @required,
         disabled: @disabled,
         aria: { describedby: @described_by, invalid: (@invalid ? "true" : nil) }.compact,
-        data: {
+        data: @native_data.merge(
           ui__select_menu_target: "native",
-          action: "change->ui--select-menu#onNativeChange"
-        })
+          action: [ "change->ui--select-menu#onNativeChange", @native_data[:action] ].compact.join(" ")
+        ))
     end
 
     def root_attributes

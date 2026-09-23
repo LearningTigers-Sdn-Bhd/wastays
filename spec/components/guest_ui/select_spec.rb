@@ -23,6 +23,15 @@ RSpec.describe GuestUI::Select, type: :component do
     expect(page).to have_css("select#refund_bank_name option", text: "Choose your bank")
   end
 
+  it "puts the page's own data on the native select, after its own action" do
+    render_select(native_data: { guest_identity_target: "documentType", action: "change->guest-identity#documentChanged" })
+
+    expect(page).to have_css(
+      "select[data-guest-identity-target='documentType']" \
+      "[data-action='change->ui--select-menu#onNativeChange change->guest-identity#documentChanged']"
+    )
+  end
+
   it "caps the listbox height" do
     render_select
 

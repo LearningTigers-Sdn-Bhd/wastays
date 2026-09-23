@@ -60,9 +60,12 @@ export default class extends Controller {
     if (this.hasNumberLabelTarget) {
       const label = this.numberLabelTarget.matches?.("label") ? this.numberLabelTarget : this.numberLabelTarget.querySelector("label")
       if (!label) return
+      // A label that carries a required mark keeps it: only its text span
+      // changes, when it has one.
+      const text = label.querySelector("[data-guest-identity-label-text]") || label
       // Same wording as GuestPresenter#identity_number_label. The server paints
       // it first; this only keeps up once the desk changes the document type.
-      label.textContent = !type ? "Identity document number" :
+      text.textContent = !type ? "Identity document number" :
         (type === "passport" ? "Passport number" :
           (nationalId ? "National identity card number" : "MyKad number"))
     }
