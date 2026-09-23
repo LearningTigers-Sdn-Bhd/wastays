@@ -107,4 +107,62 @@
   .guest-pagination__control[aria-disabled="true"] {
     @apply pointer-events-none opacity-40;
   }
+
+  /* ─── Status badge ───
+     The tint is the token at a tenth, the text the token's dark pair. Info
+     has no dark pair (its foreground is white, for text on solid info), so
+     its text is the token itself, which clears 4.5:1 on its own tint. */
+  .guest-status-badge {
+    @apply inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap;
+  }
+
+  .guest-status-badge[data-tone="success"] {
+    @apply bg-success/10 text-success-foreground;
+  }
+
+  .guest-status-badge[data-tone="info"] {
+    @apply bg-info/10 text-info;
+  }
+
+  .guest-status-badge[data-tone="warning"] {
+    @apply bg-warning/10 text-warning-foreground;
+  }
+
+  .guest-status-badge[data-tone="destructive"] {
+    background: color-mix(in oklab, var(--destructive) 10%, transparent);
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-status-badge[data-tone="muted"] {
+    @apply bg-foreground/5;
+    color: var(--muted-foreground-strong);
+  }
+
+  /* ─── Stay summary (portal) ───
+     The card itself is the concierge's .guest-stay-summary. */
+  .guest-stay-summary__eyebrow {
+    @apply text-xs font-bold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .guest-stay-summary__property {
+    @apply mt-3 font-guest-display text-2xl font-semibold leading-tight text-foreground;
+  }
+
+  .guest-stay-summary__actions {
+    @apply mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap;
+  }
+
+  /* ─── Booking card ───
+     One column on a phone, two from md. */
+  .guest-booking-grid {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+
+  .guest-booking-card {
+    @apply block rounded-2xl border border-border/40 bg-card p-5 shadow-xs transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-booking-card__property {
+    @apply min-w-0 font-guest-display text-lg font-semibold leading-snug text-foreground;
+  }
 }

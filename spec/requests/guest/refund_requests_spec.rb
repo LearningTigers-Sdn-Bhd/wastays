@@ -87,7 +87,7 @@ RSpec.describe "Guest::RefundRequests", type: :request do
         expect(response).to have_http_status(:success)
         expect(response.body).to include("Refund Status")
         expect(response.body).to include("Status")
-        expect(response.body).to include(status.humanize)
+        expect(response.body).to include(Guest::StatusBadges.refund(status).label)
         expect(response.body).to include(expected_message)
 
         refund.destroy!

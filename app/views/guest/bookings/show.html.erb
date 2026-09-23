@@ -1,50 +1,21 @@
 <% content_for :title, "Booking Details | WAStays" %>
 <%
-  hotel = @booking.hotel
-  status = guest_booking_status(@booking)
   refund_request = @booking.refund_request
   ready_e_invoice = @booking.original_ready_guest_e_invoice_submission
   ready_adjustment = @booking.latest_ready_adjustment_guest_e_invoice_submission
   pending_e_invoice = @booking.pending_guest_e_invoice_submission
   failed_e_invoice = @booking.failed_guest_e_invoice_submission
-  guests = pluralize(@booking.adults, "adult")
-  guests += ", #{pluralize(@booking.children, 'child', plural: 'children')}" if @booking.children.to_i.positive?
 %>
 
 <%# The concierge's split: the stay at a third, what the guest does with it
     at two thirds. They stack on a phone, stay first. %>
 <div class="guest-page__grid" data-columns="2">
-  <div class="guest-page__context space-y-4">
-    <%= render GuestUI::Card.new(class: "guest-stay-summary") do %>
-      <div class="flex items-center justify-between gap-3">
-        <h1 class="guest-card__title">Your Stay</h1>
-        <span class="guest-stay-summary__status" data-state="<%= "in-house" if status == "checked_in" %>">
-          <%= status.humanize %>
-        </span>
-      </div>
-
-      <p class="mt-4 font-guest-display text-2xl font-semibold leading-tight text-foreground"><%= hotel.name %></p>
-      <p class="mt-1 text-sm text-muted-foreground"><%= [ hotel.city, hotel.country ].compact_blank.join(", ") %></p>
-
-      <p class="mt-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
-        <span><%= @booking.check_in.strftime("%d %b %Y") %></span>
-        <%= app_icon "arrow-right", class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: "true" } %>
-        <span><%= @booking.check_out.strftime("%d %b %Y") %></span>
-      </p>
-      <p class="mt-1 text-xs font-medium text-muted-foreground"><%= pluralize(@booking.duration_in_nights, "night") %></p>
-
-      <dl class="guest-stay-summary__refs">
-        <div class="flex items-baseline gap-1.5">
-          <dt>Code</dt>
-          <dd class="font-mono text-foreground"><%= @booking.confirmation_token.upcase %></dd>
-        </div>
-      </dl>
+  <div class="guest-page__context">
+    <%= render guest_stay_summary(@booking, eyebrow: "Your Stay", heading_level: 1) do |summary| %>
+      <% summary.with_actions do %>
+        <%= render "guest/bookings/concierge_button", booking: @booking, variant: :secondary %>
+      <% end %>
     <% end %>
-
-    <%= render GuestUI::Button.new(
-          label: "Open concierge", variant: :secondary, block: true,
-          href: concierge_home_path(hotel_code: hotel.unique_id, public_id: hotel.public_id)
-        ) %>
   </div>
 
   <div class="guest-page__content">
@@ -79,7 +50,6 @@
       <%= render GuestUI::FactList.new(facts: [
             [ "Check-in", @booking.check_in.strftime("%d %b %Y") ],
             [ "Check-out", @booking.check_out.strftime("%d %b %Y") ],
-            [ "Guests", guests ],
             [ "Room Category", @booking.room_type_summary ]
           ]) %>
     <% end %>
@@ -162,7 +132,7 @@
     <% elsif refund_request.present? %>
       <%= render GuestUI::Card.new(title: "Refund Request") do %>
         <%= render GuestUI::FactList.new(facts: [
-              [ "Status", refund_request.status.humanize ],
+              [ "Status", Guest::StatusBadges.refund(refund_request.status).label ],
               [ "Refund Amount", number_to_currency(refund_request.refund_amount, unit: "#{@booking.currency} ") ],
               [ "Property Note", refund_request.hotel_note ]
             ]) %>

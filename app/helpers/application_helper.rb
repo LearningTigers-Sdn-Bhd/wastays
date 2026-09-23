@@ -115,15 +115,6 @@ module ApplicationHelper
     end
   end
 
-  def guest_booking_status(booking)
-    booking.status == "no_show_detected" ? "confirmed" : booking.status
-  end
-
-  # "12 Oct – 15 Oct 2026", as the guest portal lists a stay.
-  def guest_stay_dates(booking)
-    "#{booking.check_in.strftime('%d %b')} – #{booking.check_out.strftime('%d %b %Y')}"
-  end
-
   def payment_status_class(status)
     case status
     when "captured" then "bg-green-100 text-green-800"

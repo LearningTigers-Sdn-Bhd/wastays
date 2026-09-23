@@ -7,43 +7,27 @@
     "rejected" => "We are sorry. Your refund request could not be approved this time. Please check the property note for details."
   }
   notice_variants = { "approved" => :info, "completed" => :success, "rejected" => :danger }
-  hotel = @booking.hotel
 %>
 
 <%# The concierge's split: the stay and where the request stands at a third,
     what the guest sent at two thirds. They stack on a phone, stay first. %>
 <div class="guest-page__grid" data-columns="2">
   <div class="guest-page__context space-y-4">
-    <%= render GuestUI::Card.new(class: "guest-stay-summary") do %>
-      <div class="flex items-center justify-between gap-3">
-        <h1 class="guest-card__title">Refund Status</h1>
-        <span class="guest-stay-summary__status"><%= @refund_request.status.humanize %></span>
-      </div>
-
-      <p class="mt-4 font-guest-display text-2xl font-semibold leading-tight text-foreground"><%= hotel.name %></p>
-      <p class="mt-1 text-sm font-semibold text-foreground"><%= guest_stay_dates(@booking) %></p>
-
-      <dl class="guest-stay-summary__refs">
-        <div class="flex items-baseline gap-1.5">
-          <dt>Code</dt>
-          <dd class="font-mono text-foreground"><%= @booking.confirmation_token.upcase %></dd>
-        </div>
-      </dl>
+    <%= render guest_stay_summary(@booking, eyebrow: "Refund Status", heading_level: 1,
+                                  badge: guest_refund_badge(@refund_request)) do |summary| %>
+      <% summary.with_actions do %>
+        <% if @refund_request.rejected? %>
+          <%= render GuestUI::Button.new(label: "Resubmit Refund Request",
+                                         href: new_guest_booking_refund_request_path(@booking, return_to: "refund")) %>
+        <% end %>
+        <%= render GuestUI::Button.new(label: "View Booking", variant: :secondary, href: guest_booking_path(@booking)) %>
+      <% end %>
     <% end %>
 
     <%= render GuestUI::Notice.new(
           message: refund_status_messages[@refund_request.status] || "Your refund request is being processed. We will keep you updated.",
           variant: notice_variants.fetch(@refund_request.status, :info), alert: false
         ) %>
-
-    <div class="flex flex-col gap-3">
-      <% if @refund_request.rejected? %>
-        <%= render GuestUI::Button.new(label: "Resubmit Refund Request", block: true,
-                                       href: new_guest_booking_refund_request_path(@booking, return_to: "refund")) %>
-      <% end %>
-      <%= render GuestUI::Button.new(label: "View Booking", variant: :secondary, block: true,
-                                     href: guest_booking_path(@booking)) %>
-    </div>
   </div>
 
   <div class="guest-page__content">

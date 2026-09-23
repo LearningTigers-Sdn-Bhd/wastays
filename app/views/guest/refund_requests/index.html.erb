@@ -8,8 +8,9 @@
 <%= render "guest/shared/filters",
       path: ->(**params) { guest_refund_requests_path(**params) },
       frame: "guest_refunds_results",
-      placeholder: "Search by property or booking code",
-      label: "Search refunds" %>
+      placeholder: "Search by property, Ref, or Code",
+      label: "Search refunds",
+      labels: Guest::StatusBadges::REFUND.transform_values(&:label) %>
 
 <%# target _top: a request opens as its own page, not inside the frame. %>
 <%= turbo_frame_tag "guest_refunds_results", target: "_top", class: "block space-y-6" do %>
@@ -19,7 +20,7 @@
         <% refund_request = booking.refund_request %>
         <% card.with_row(
              label: booking.hotel.name,
-             hint: "#{refund_request.status.humanize} · #{number_to_currency(refund_request.refund_amount, unit: "#{booking.currency} ")} · #{booking.confirmation_token.upcase} · Requested #{refund_request.created_at.strftime('%d %b %Y')}",
+             hint: "#{Guest::StatusBadges.refund(refund_request.status).label} · #{number_to_currency(refund_request.refund_amount, unit: "#{booking.currency} ")} · #{booking.confirmation_token.upcase} · Requested #{refund_request.created_at.strftime('%d %b %Y')}",
              href: guest_refund_request_path(refund_request)
            ) %>
       <% end %>

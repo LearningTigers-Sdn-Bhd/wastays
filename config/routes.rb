@@ -60,6 +60,7 @@ Rails.application.routes.draw do
         post :request_e_invoice
         get :voucher_pack, path: "voucher-pack"
         get :summary
+        get :concierge
         patch :toggle_dnd
       end
       resources :refund_requests, only: [ :new, :create ]

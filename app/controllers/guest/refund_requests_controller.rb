@@ -24,7 +24,7 @@ class Guest::RefundRequestsController < Guest::BaseController
 
     if @search_query.present?
       scope = scope.joins(:hotel).where(
-        "hotels.name ILIKE :query OR bookings.confirmation_token ILIKE :query",
+        "hotels.name ILIKE :query OR bookings.confirmation_token ILIKE :query OR bookings.reservation_reference ILIKE :query",
         query: "%#{@search_query}%"
       )
     end

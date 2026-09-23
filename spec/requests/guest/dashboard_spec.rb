@@ -27,13 +27,13 @@ RSpec.describe "Guest dashboard", type: :request do
 
     document = Nokogiri::HTML(response.body)
     summary = document.at_css(".guest-stay-summary")
-    hotel = upcoming.hotel
 
-    expect(summary.text).to include("Next stay", hotel.name, "2 nights")
-    expect(summary.at_css("a[href='#{concierge_home_path(hotel_code: hotel.unique_id, public_id: hotel.public_id)}']").text.squish)
-      .to eq("Open concierge")
+    expect(summary.text).to include("Next stay", upcoming.hotel.name, "2 nights")
+    concierge = summary.at_css("a[href='#{concierge_guest_booking_path(upcoming)}']")
+    expect(concierge.text.squish).to eq("Open concierge (opens in a new tab)")
+    expect(concierge["target"]).to eq("_blank")
     expect(summary.at_css("a[href='#{guest_booking_path(upcoming)}']").text.squish).to eq("View booking")
-    expect(document.css("a.guest-card__row").map { |row| row["href"] }).to eq([ guest_booking_path(past) ])
+    expect(document.css("a.guest-booking-card").map { |card| card["href"] }).to eq([ guest_booking_path(past) ])
   end
 
   it "shows only the stay card when the next stay is the only booking" do

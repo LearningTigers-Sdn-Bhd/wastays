@@ -8,21 +8,18 @@
 <%= render "guest/shared/filters",
       path: ->(**params) { guest_bookings_path(**params) },
       frame: "guest_bookings_results",
-      placeholder: "Search by property or booking code",
-      label: "Search bookings" %>
+      placeholder: "Search by property, Ref, or Code",
+      label: "Search bookings",
+      labels: Guest::StatusBadges::BOOKING.transform_values(&:label) %>
 
 <%# target _top: a booking opens as its own page, not inside the frame. %>
 <%= turbo_frame_tag "guest_bookings_results", target: "_top", class: "block space-y-6" do %>
   <% if @bookings.any? %>
-    <%= render GuestUI::Card.new(padding: :tight, class: "py-0") do |card| %>
+    <div class="guest-booking-grid">
       <% @bookings.each do |booking| %>
-        <% card.with_row(
-             label: booking.hotel.name,
-             hint: "#{guest_stay_dates(booking)} · #{guest_booking_status(booking).humanize} · #{booking.confirmation_token.upcase}",
-             href: guest_booking_path(booking)
-           ) %>
+        <%= render guest_booking_card(booking) %>
       <% end %>
-    <% end %>
+    </div>
   <% else %>
     <%= render GuestUI::Card.new(variant: :dashed) do %>
       <p class="text-sm text-muted-foreground">No bookings found.</p>

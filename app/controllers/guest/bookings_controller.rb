@@ -1,4 +1,6 @@
 class Guest::BookingsController < Guest::BaseController
+  include ConciergeStaySession
+
   before_action :authenticate_guest!
   BOOKING_STATUSES = %w[pending confirmed checked_in completed cancelled].freeze
 
@@ -12,13 +14,13 @@ class Guest::BookingsController < Guest::BaseController
 
     if @search_query.present?
       scope = scope.joins(:hotel).where(
-        "hotels.name ILIKE :query OR bookings.confirmation_token ILIKE :query",
+        "hotels.name ILIKE :query OR bookings.confirmation_token ILIKE :query OR bookings.reservation_reference ILIKE :query",
         query: "%#{@search_query}%"
       )
     end
 
     if @status_filter.present? && @status_options.include?(@status_filter)
-      scope = @status_filter == "confirmed" ? scope.where(status: %w[confirmed no_show_detected]) : scope.where(status: @status_filter)
+      scope = scope.where(status: Guest::StatusBadges::BOOKING_GROUPS.fetch(@status_filter))
     end
 
     @all_bookings = scope.order(check_in: :desc, id: :desc)
@@ -60,6 +62,23 @@ class Guest::BookingsController < Guest::BaseController
 
   def summary
     send_guest_document(:summary)
+  end
+
+  # Opens in a new tab. A stay with a stay page goes straight into it, signed
+  # in; any other stay goes to the property's public concierge.
+  def concierge
+    booking = current_guest.bookings.includes(:hotel).find(params[:id])
+    hotel = booking.hotel
+    result = Guest::OpenConcierge.new(booking:).call
+
+    unless result.success?
+      return redirect_to concierge_home_path(hotel_code: hotel.unique_id, public_id: hotel.public_id)
+    end
+
+    start_concierge_stay_session(result.stay_access, expires_at: result.expires_at)
+    redirect_to concierge_stay_path(hotel.unique_id, hotel.public_id, result.stay_access.stay_access_id)
+  rescue ActiveRecord::RecordNotFound
+    redirect_to guest_bookings_path, alert: "Booking not found."
   end
 
   def toggle_dnd

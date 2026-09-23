@@ -4,7 +4,8 @@
     while the guest types. A chip is a plain link: it changes the whole view,
     so the page reloads with it marked.
 
-    Locals: path (a lambda taking q: and status:), frame, placeholder, label.
+    Locals: path (a lambda taking q: and status:), frame, placeholder, label,
+    and labels (status => the word the guest sees).
     Reads @search_query, @status_filter and @status_options. %>
 <div class="space-y-3">
   <%= form_with url: path.call, method: :get,
@@ -19,7 +20,7 @@
     <%= link_to "All", path.call(q: @search_query.presence),
           class: "guest-chip", aria: { current: ("page" if @status_filter.blank?) } %>
     <% @status_options.each do |status| %>
-      <%= link_to status.humanize, path.call(q: @search_query.presence, status:),
+      <%= link_to labels.fetch(status) { status.humanize }, path.call(q: @search_query.presence, status:),
             class: "guest-chip", aria: { current: ("page" if @status_filter == status) } %>
     <% end %>
   </nav>
