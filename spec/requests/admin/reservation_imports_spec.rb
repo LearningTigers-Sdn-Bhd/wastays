@@ -263,6 +263,14 @@ RSpec.describe "Admin reservation imports", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Import completed")
+
+    # The default landing tab is "Needs attention" whenever the import has
+    # any -- this fixture always does, from categories the hotel has not set
+    # up -- so a created row needs its own tab, not the default, to be
+    # visible. "All" would also work but risks paging the row onto a lazy
+    # second page since find_by has no ORDER BY; "created" alone comfortably
+    # fits on page one.
+    get admin_hotel_reservation_import_path(hotel, import, filter: "created")
     expect(response.body).to include(created_row.reservation_number)
 
     # And it stays searchable, same as a draft.
