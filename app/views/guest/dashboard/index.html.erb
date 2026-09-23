@@ -24,28 +24,34 @@
     </p>
     <div class="mt-5 flex flex-wrap gap-3">
       <%= render GuestUI::Button.new(
+            label: "Open concierge",
             href: concierge_home_path(hotel_code: next_stay.hotel.unique_id, public_id: next_stay.hotel.public_id)
-          ) { "Open concierge" } %>
-      <%= render GuestUI::Button.new(href: guest_booking_path(next_stay), variant: :secondary) { "View booking" } %>
+          ) %>
+      <%= render GuestUI::Button.new(label: "View booking", href: guest_booking_path(next_stay), variant: :secondary) %>
     </div>
   <% end %>
 <% end %>
 
-<%= render GuestUI::Card.new do |card| %>
-  <div class="flex items-center justify-between gap-3">
-    <h2 class="guest-card__title">Recent Bookings</h2>
-    <%= link_to "See all", guest_bookings_path, class: "text-sm font-bold text-primary hover:underline" %>
-  </div>
+<%# The next stay already has its own card above. %>
+<% recent = (@upcoming_bookings.drop(1) + @past_bookings).first(5) %>
 
-  <% recent = (@upcoming_bookings + @past_bookings).first(5) %>
-  <% recent.each do |booking| %>
-    <% card.with_row(
-         label: booking.hotel.name,
-         hint: "#{booking.check_in.strftime('%d %b')} – #{booking.check_out.strftime('%d %b %Y')} · #{guest_booking_status(booking).humanize}",
-         href: guest_booking_path(booking)
-       ) %>
+<% if @total_bookings.zero? %>
+  <%= render GuestUI::Card.new(variant: :dashed) do %>
+    <p class="text-sm text-muted-foreground">No bookings yet.</p>
   <% end %>
-  <% if recent.empty? %>
-    <p class="mt-4 text-sm text-muted-foreground">No bookings yet.</p>
+<% elsif recent.any? %>
+  <%= render GuestUI::Card.new do |card| %>
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="guest-card__title">Recent Bookings</h2>
+      <%= link_to "See all", guest_bookings_path, class: "text-sm font-bold text-primary hover:underline" %>
+    </div>
+
+    <% recent.each do |booking| %>
+      <% card.with_row(
+           label: booking.hotel.name,
+           hint: "#{booking.check_in.strftime('%d %b')} – #{booking.check_out.strftime('%d %b %Y')} · #{guest_booking_status(booking).humanize}",
+           href: guest_booking_path(booking)
+         ) %>
+    <% end %>
   <% end %>
 <% end %>
