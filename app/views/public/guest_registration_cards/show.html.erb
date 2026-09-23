@@ -76,7 +76,7 @@
         <div class="mb-6">
           <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Payment</h2>
         </div>
-        <dl class="grid gap-4 md:grid-cols-2 text-sm">
+        <dl class="grid grid-cols-2 gap-4 text-sm">
           <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Room price</dt><dd class="font-semibold text-foreground"><%= @presenter.room_price_display %></dd></div>
           <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Amount paid</dt><dd class="font-semibold text-foreground"><%= @presenter.format_money(@presenter.amount_paid) %></dd></div>
           <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Total charges</dt><dd class="font-semibold text-foreground"><%= @presenter.format_money(@presenter.total_charges) %></dd></div>
