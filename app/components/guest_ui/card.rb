@@ -17,14 +17,20 @@ module GuestUI
 
     # A secondary service: a row, not a tile, so the tiles above it stay the
     # primary actions. A row that changes something is a form, like Button.
+    #
+    # new_tab opens the link in a new tab, for a document the guest reads and
+    # then closes. The row says so twice: an outward arrow for the eye, and
+    # words for a screen reader (WCAG G201).
     class Row < GuestUI::BaseComponent
-      def initialize(label:, href:, hint: nil, icon: nil, method: nil, confirm: nil, class: nil, **attributes)
+      def initialize(label:, href:, hint: nil, icon: nil, method: nil, confirm: nil, new_tab: false,
+                     class: nil, **attributes)
         @label = label
         @href = href
         @hint = hint
         @icon = icon
         @method = method&.to_sym
         @confirm = confirm
+        @new_tab = new_tab && !form?
         @class = binding.local_variable_get(:class)
         @attributes = attributes
       end
@@ -46,7 +52,9 @@ module GuestUI
       def text
         tag.span(class: "guest-card__row-text") do
           safe_join([
-            tag.span(@label, class: "guest-card__row-label"),
+            tag.span(class: "guest-card__row-label") do
+              safe_join([ @label, (tag.span(" (opens in a new tab)", class: "sr-only") if @new_tab) ].compact)
+            end,
             (tag.span(@hint, class: "guest-card__row-hint") if @hint.present?)
           ].compact)
         end
@@ -61,7 +69,7 @@ module GuestUI
       # Decorative. The row is already a link, and a screen reader that read
       # this as well would end every service with "right-pointing angle".
       def chevron
-        helpers.app_icon("chevron-right", class: "guest-card__row-chevron size-4", aria: { hidden: "true" })
+        helpers.app_icon((@new_tab ? "arrow-up-right" : "chevron-right"), class: "guest-card__row-chevron size-4", aria: { hidden: "true" })
       end
 
       def row_attributes
@@ -70,8 +78,10 @@ module GuestUI
 
         attributes.merge(
           class: tw_merge("guest-card__row group", @class),
+          target: ("_blank" if @new_tab),
+          rel: ("noopener" if @new_tab),
           data: data.merge(turbo_confirm: @confirm).compact
-        )
+        ).compact
       end
 
       def form_attributes

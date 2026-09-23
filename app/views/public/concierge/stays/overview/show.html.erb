@@ -85,16 +85,16 @@
         <%= app_icon "chevron-down", class: "guest-more-actions__chevron", aria: { hidden: "true" } %>
       </summary>
       <div class="guest-more-actions__list">
-        <%= render GuestUI::Card::Row.new(label: "Booking receipt", hint: "Download a PDF copy",
-                                          icon: "receipt", href: stay_document_path(:receipt)) %>
+        <%= render GuestUI::Card::Row.new(label: "Booking receipt", hint: "Open a PDF copy",
+                                          icon: "receipt", href: stay_document_path(:receipt), new_tab: true) %>
         <% if presenter.invoice_available? %>
-          <%= render GuestUI::Card::Row.new(label: "Invoice", hint: "Download the final PDF",
-                                            icon: "file-text", href: stay_document_path(:invoice)) %>
+          <%= render GuestUI::Card::Row.new(label: "Invoice", hint: "Open the final PDF",
+                                            icon: "file-text", href: stay_document_path(:invoice), new_tab: true) %>
         <% end %>
         <%= render GuestUI::Card::Row.new(label: "E-invoice",
                                           hint: presenter.e_invoice_ready? ? "Ready to download" : "View or request an e-invoice",
                                           icon: "file-text",
-                                          href: stay_e_invoice_path) %>
+                                          href: stay_e_invoice_path, new_tab: true) %>
         <% if presenter.can_request_refund? %>
           <%= render GuestUI::Card::Row.new(label: "Ask for a refund",
                                             hint: "The hotel replies to you.",

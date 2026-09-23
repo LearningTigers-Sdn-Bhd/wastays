@@ -3,6 +3,10 @@ module Public
     module Stays
       # The folio, the invoice, and the other booking PDFs. A guest keeps these
       # through the grace period, which is why the stay page owns them.
+      #
+      # Inline, not attachment: every link here opens a new tab, and the PDF
+      # shows in it. An attachment would leave the guest a blank tab while the
+      # file downloads. The browser's PDF viewer still offers the download.
       class DocumentsController < BaseController
         def show
           submission = e_invoice_submission if params[:kind] == "e_invoice"
@@ -17,7 +21,7 @@ module Public
           send_data result.bytes,
             filename: result.filename,
             type: "application/pdf",
-            disposition: "attachment"
+            disposition: "inline"
         end
 
         private

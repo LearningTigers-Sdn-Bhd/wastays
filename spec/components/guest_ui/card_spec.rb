@@ -56,6 +56,20 @@ RSpec.describe GuestUI::Card, type: :component do
       expect(page).to have_css(".guest-card__row-icon[aria-hidden='true']")
     end
 
+    it "opens in a new tab when asked, and tells the eye and the screen reader" do
+      render_inline(described_class.new) { |card| card.with_row(label: "Booking receipt", href: "/receipt", new_tab: true) }
+
+      expect(page).to have_css("a.guest-card__row[target='_blank'][rel='noopener']")
+      expect(page).to have_css(".guest-card__row-label .sr-only", text: "(opens in a new tab)")
+    end
+
+    it "stays in the same tab by default" do
+      render_inline(described_class.new) { |card| card.with_row(label: "E-invoice", href: "/x") }
+
+      expect(page).to have_no_css("a[target]")
+      expect(page).to have_no_css(".sr-only")
+    end
+
     # A row that changes something is a form, for the same reason a button is.
     it "is a form when the row changes something" do
       render_inline(described_class.new) do |card|

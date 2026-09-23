@@ -24,8 +24,10 @@
   </dl>
 
   <% if @status[:download_url].present? %>
-    <%= render GuestUI::Button.new(label: "Download the e-invoice", href: @status[:download_url],
-                                   icon: "download", size: :lg, block: true, class: "mt-5") %>
+    <%= render GuestUI::Button.new(label: "Open the e-invoice", href: @status[:download_url],
+                                   target: "_blank", rel: "noopener",
+                                   aria_label: "Open the e-invoice (opens in a new tab)",
+                                   icon: "arrow-up-right", size: :lg, block: true, class: "mt-5") %>
   <% elsif @presenter.can_request_e_invoice? %>
     <%= render GuestUI::Button.new(label: "Request my e-invoice",
                                    href: concierge_stay_e_invoice_request_path(*stay_route_args),

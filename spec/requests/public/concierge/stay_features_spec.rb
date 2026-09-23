@@ -92,7 +92,21 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.content_type).to eq("application/pdf")
-      expect(response.headers["Content-Disposition"]).to include("attachment")
+      expect(response.headers["Content-Disposition"]).to include("inline")
+    end
+
+    it "opens the receipt and the e-invoice in a new tab, and says so" do
+      get concierge_stay_path(*args)
+
+      page = Nokogiri::HTML(response.body)
+
+      [ concierge_stay_document_path(*args, :receipt), concierge_stay_e_invoice_path(*args) ].each do |href|
+        row = page.at_css("a.guest-card__row[href='#{href}']")
+
+        expect(row["target"]).to eq("_blank")
+        expect(row["rel"]).to eq("noopener")
+        expect(row.at_css(".sr-only").text).to include("opens in a new tab")
+      end
     end
 
     it "sends an unavailable document back to the stay page" do
@@ -242,7 +256,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
 
       get concierge_stay_e_invoice_path(*args)
 
-      expect(response.body).to include("Download the e-invoice")
+      expect(response.body).to include("Open the e-invoice")
     end
 
     it "answers the status as JSON" do
