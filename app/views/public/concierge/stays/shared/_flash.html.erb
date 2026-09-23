@@ -1,6 +1,6 @@
 <%# What the last action did.
-    Seven stay actions redirect with a notice or an alert -- a housekeeping
-    request, a check-out request, a refund, a do-not-disturb switch -- and the
+    The stay actions redirect with a notice or an alert -- a housekeeping
+    request, a check-out request, a refund -- and the
     concierge layout never drew either. A guest sent a request to the hotel and
     landed back on a page that looked exactly as it had a moment before. %>
 <%= render GuestUI::Notice.new(message: flash[:notice], variant: :success) %>

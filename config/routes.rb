@@ -146,7 +146,6 @@ Rails.application.routes.draw do
       post   "check-out",       to: "check_outs#create",    as: :stay_check_outs
       get    "requests/new",    to: "requests#new",         as: :new_stay_request
       post   "requests",        to: "requests#create",      as: :stay_requests
-      patch  "do-not-disturb",  to: "do_not_disturbs#update", as: :stay_do_not_disturb
     end
   end
 

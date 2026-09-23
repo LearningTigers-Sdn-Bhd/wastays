@@ -44,55 +44,6 @@ RSpec.describe Public::Concierge::StayPresenter do
     expect(described_class.new(stay_access: stay_access).room_label).to eq("1201")
   end
 
-  describe "do not disturb" do
-    let(:booking_room) { create(:booking_room, booking: booking, room_type: room_type, room_number: "1201") }
-
-    def room_status(dnd:, on: hotel.current_business_date)
-      booking_room
-      create(:room_status, hotel: hotel, room_type: room_type, room_number: "1201",
-        dnd: dnd, dnd_date: (dnd ? on : nil))
-    end
-
-    it "is off when no room is assigned" do
-      expect(presenter.do_not_disturb_active?).to be false
-    end
-
-    it "is off when the room has no status row yet" do
-      booking_room
-
-      expect(described_class.new(stay_access: stay_access).do_not_disturb_active?).to be false
-    end
-
-    it "is on when the room is flagged for today" do
-      room_status(dnd: true)
-
-      expect(described_class.new(stay_access: stay_access).do_not_disturb_active?).to be true
-    end
-
-    # The flag lasts one business date. A guest who turned it on yesterday is
-    # not still on it, and the switch must not say they are.
-    it "is off when the flag is from an earlier business date" do
-      room_status(dnd: true, on: hotel.current_business_date - 1.day)
-
-      expect(described_class.new(stay_access: stay_access).do_not_disturb_active?).to be false
-    end
-
-    it "ignores a flag on another room of the same hotel" do
-      booking_room
-      create(:room_status, hotel: hotel, room_type: room_type, room_number: "1500",
-        dnd: true, dnd_date: hotel.current_business_date)
-
-      expect(described_class.new(stay_access: stay_access).do_not_disturb_active?).to be false
-    end
-
-    it "does not create the row it reads" do
-      booking_room
-
-      expect { described_class.new(stay_access: stay_access).do_not_disturb_active? }
-        .not_to change(RoomStatus, :count)
-    end
-  end
-
   describe "what the page offers" do
     it "offers check-out while the guest is in house" do
       expect(presenter.can_request_check_out?).to be true
@@ -104,14 +55,6 @@ RSpec.describe Public::Concierge::StayPresenter do
 
       expect(presenter.can_request_check_out?).to be false
       expect(presenter.check_out_pending?).to be true
-    end
-
-    it "offers do not disturb only with a room and a check-in" do
-      expect(presenter.can_toggle_do_not_disturb?).to be false
-
-      create(:booking_room, booking: booking, room_type: room_type, room_number: "1201")
-
-      expect(described_class.new(stay_access: stay_access).can_toggle_do_not_disturb?).to be true
     end
 
     it "hides the invoice while the guest is in house" do

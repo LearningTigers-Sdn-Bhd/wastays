@@ -281,33 +281,9 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(response.body).not_to include("Ask for housekeeping")
       expect(response.body).to include("Booking receipt")
     end
-
-    it "keeps do not disturb off the page when no room is assigned" do
-      booking.booking_rooms.update_all(room_number: nil)
-
-      get concierge_stay_path(*args)
-
-      expect(response.body).not_to include(%(role="switch"))
-    end
   end
 
-  describe "do not disturb" do
-    it "switches the room flag" do
-      patch concierge_stay_do_not_disturb_path(*args)
-
-      expect(response).to redirect_to(concierge_stay_path(*args))
-      expect(flash[:alert]).to be_nil
-    end
-
-    it "does not show the control on the stay overview" do
-      get concierge_stay_path(*args)
-
-      expect(response.body).not_to include("Do not disturb")
-      expect(response.body).not_to include(%(role="switch"))
-    end
-  end
-
-  # Seven stay actions redirect with a notice or an alert, and nothing on the
+  # The stay actions redirect with a notice or an alert, and nothing on the
   # page drew either. A guest sent a request to the hotel and landed back on a
   # page that looked exactly as it had a moment before.
   describe "what the page says after an action" do
