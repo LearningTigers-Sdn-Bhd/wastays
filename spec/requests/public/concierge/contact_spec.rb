@@ -26,6 +26,12 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
       expect(response.body).not_to include("Front desk is")
     end
+
+    it "ends with the concierge footer" do
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
+
+      expect(response.body).to include('<footer class="guest-footer">', "Concierge by WAStays")
+    end
   end
 
   describe "the front desk badge" do

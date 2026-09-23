@@ -19,7 +19,7 @@ module GuestUI
   # without one.
   class Page < GuestUI::BaseComponent
     VARIANTS = %i[split centered].freeze
-    FOOTER_TEXT = "Powered by WAStays"
+    FOOTER_TEXT = "Concierge by WAStays"
 
     renders_one :hero
     renders_one :context

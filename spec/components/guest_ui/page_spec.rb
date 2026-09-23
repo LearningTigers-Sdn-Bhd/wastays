@@ -65,9 +65,9 @@ RSpec.describe GuestUI::Page, type: :component do
 
   it "signs the page off, unless the caller would rather it did not" do
     render_inline(described_class.new) { "Actions" }
-    expect(page).to have_css(".guest-page__footer", text: "Powered by WAStays")
+    expect(page).to have_css("footer.guest-footer", text: "Concierge by WAStays")
 
     render_inline(described_class.new(footer: false)) { "Actions" }
-    expect(page).to have_no_css(".guest-page__footer")
+    expect(page).to have_no_css("footer.guest-footer")
   end
 end

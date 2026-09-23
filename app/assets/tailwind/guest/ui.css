@@ -566,15 +566,16 @@
     }
   }
 
-  .guest-page__footer {
-    @apply mt-auto px-4 pb-10 text-center;
+  /* ─── Footer ───
+     A full-width band in the primary colour, to match the hero. The page
+     roots are flex columns, so mt-auto holds it at the bottom of a short
+     page. */
+  .guest-footer {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    @apply mt-auto w-full bg-primary px-6 pt-6 text-center;
   }
 
-  .guest-page__footer-rule {
-    @apply mx-auto mb-6 h-px w-12 bg-border;
-  }
-
-  .guest-page__footer-text {
-    @apply text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground opacity-60;
+  .guest-footer__text {
+    @apply text-[11px] font-bold uppercase tracking-[0.25em] text-primary-foreground/80;
   }
 }

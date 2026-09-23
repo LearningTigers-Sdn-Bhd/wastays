@@ -11,10 +11,5 @@
     </div>
   </main>
 
-  <% if footer? %>
-    <div class="guest-page__footer">
-      <div class="guest-page__footer-rule"></div>
-      <p class="guest-page__footer-text"><%= GuestUI::Page::FOOTER_TEXT %></p>
-    </div>
-  <% end %>
+  <%= render "public/concierge/shared/footer" if footer? %>
 <% end %>

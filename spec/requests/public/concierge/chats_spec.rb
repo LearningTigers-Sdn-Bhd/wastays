@@ -22,6 +22,12 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       expect(response.body).to include("guest-chat__bar")
     end
 
+    it "fills the screen without the footer" do
+      get chat_path
+
+      expect(response.body).not_to include("guest-footer")
+    end
+
     it "creates nothing until the visitor actually says something" do
       expect { get chat_path }.not_to change(Prospect, :count)
     end

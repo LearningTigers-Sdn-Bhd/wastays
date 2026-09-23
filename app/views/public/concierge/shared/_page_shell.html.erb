@@ -12,4 +12,9 @@
       <%= yield %>
     </div>
   </main>
+
+  <%# The chat fills the viewport, so it drops the footer with the hero. %>
+  <% if local_assigns.fetch(:footer, local_assigns.fetch(:top_bar, true)) %>
+    <%= render "public/concierge/shared/footer" %>
+  <% end %>
 </div>
