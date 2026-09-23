@@ -109,12 +109,21 @@
       <% end %>
     <% end %>
 
-    <% if @booking.eligible_for_refund?(@refund_policy) %>
+    <%# A new request only; a rejected one is resubmitted from its own card. %>
+    <% if @refund_mode == :pre_stay && refund_request.nil? %>
       <%= render GuestUI::Card.new(title: "Need a Refund?") do %>
         <p class="text-sm text-muted-foreground">
           You can ask for a refund below. Sending the request cancels this booking at once.
         </p>
         <%= render GuestUI::Button.new(label: "Request Refund", variant: :destructive, class: "mt-4",
+                                       href: new_guest_booking_refund_request_path(@booking, return_to: "details")) %>
+      <% end %>
+    <% elsif @refund_mode == :post_stay && refund_request.nil? %>
+      <%= render GuestUI::Card.new(title: "Need a Refund?") do %>
+        <p class="text-sm text-muted-foreground">
+          Tell the property what went wrong and how much you are asking for. This does not cancel your stay.
+        </p>
+        <%= render GuestUI::Button.new(label: "Ask for a refund", variant: :secondary, class: "mt-4",
                                        href: new_guest_booking_refund_request_path(@booking, return_to: "details")) %>
       <% end %>
     <% elsif @booking.status == "confirmed" && refund_request.nil? %>

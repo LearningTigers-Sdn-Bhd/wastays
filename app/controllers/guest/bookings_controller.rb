@@ -31,6 +31,7 @@ class Guest::BookingsController < Guest::BaseController
     @refund_policy = RefundPolicy.first
     @booking = current_guest.bookings.find(params[:id])
     append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
+    @refund_mode = Refunds::ModeFor.new(booking: @booking, policy: @refund_policy).call
 
     assigned_rooms = @booking.booking_rooms.where.not(room_number: [ nil, "" ])
     @room_statuses = if assigned_rooms.any?

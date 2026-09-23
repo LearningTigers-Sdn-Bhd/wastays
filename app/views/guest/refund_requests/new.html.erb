@@ -1,5 +1,6 @@
 <% content_for :title, "Request Refund | WAStays" %>
 <%
+  post_stay = @refund_mode == :post_stay
   resubmission = @booking.refund_request&.rejected?
   go_back_path = if @return_to == "list"
     guest_bookings_path
@@ -16,7 +17,12 @@
     <p class="font-mono text-sm text-muted-foreground"><%= @booking.confirmation_token.upcase %></p>
   </div>
 
-  <% if resubmission %>
+  <% if post_stay %>
+    <%= render GuestUI::Notice.new(
+          title: "This does not cancel your stay.",
+          message: "Tell the property what went wrong and how much you are asking for. The property reads your request and replies to you."
+        ) %>
+  <% elsif resubmission %>
     <%= render GuestUI::Notice.new(
           title: "You are resubmitting your refund request for review.",
           message: "Your booking is already cancelled. Please confirm your latest details before resubmitting.",
@@ -30,6 +36,12 @@
         ) %>
   <% end %>
 
+  <% if resubmission && @booking.refund_request.hotel_note.present? %>
+    <%= render GuestUI::Notice.new(variant: :warning) do %>
+      The property asked for a change: <%= @booking.refund_request.hotel_note %>
+    <% end %>
+  <% end %>
+
   <%= render GuestUI::Card.new(title: "Booking Summary") do %>
     <%= render GuestUI::FactList.new(facts: [
           [ "Property", @booking.hotel.name ],
@@ -38,7 +50,7 @@
           [ "Check-out", @booking.check_out.strftime("%d %b %Y") ]
         ]) %>
 
-    <% if @refund_policy.present? %>
+    <% if !post_stay && @refund_policy.present? %>
       <div class="mt-4 border-t border-border/60 pt-4">
         <p class="text-sm font-semibold text-foreground">
           You are eligible for <%= number_to_percentage(@refund_percentage, precision: 0) %> refund
@@ -51,53 +63,25 @@
     <% end %>
   <% end %>
 
-  <%= form_with model: @refund_request, url: guest_booking_refund_requests_path(@booking), method: :post,
-        local: true, class: "space-y-6" do |form| %>
+  <%= form_with model: @refund_request, url: guest_booking_refund_requests_path(@booking), scope: :refund_request,
+        method: :post, local: true, class: "space-y-5" do |form| %>
     <%= hidden_field_tag :return_to, @return_to %>
 
-    <%= render GuestUI::Card.new(title: "Reason for Refund") do %>
-      <%= render GuestUI::FormField.new(form:, attribute: :reason,
-                                        label: "Why are you asking for a refund?") do |field| %>
-        <% field.with_text_area(rows: 4, placeholder: "For example: change of travel plans") %>
-      <% end %>
-    <% end %>
-
-    <%= render GuestUI::Card.new do %>
-      <%# A fieldset, so a screen reader names the group with each field in it. %>
-      <fieldset class="guest-fieldset" aria-describedby="refund-bank-details-description">
-        <legend class="guest-fieldset__legend">Bank Account Details</legend>
-        <p id="refund-bank-details-description" class="guest-fieldset__description">
-          The refund goes into this account. Check the details against your bank card or app.
-        </p>
-
-        <%
-          bank_fields = {
-            bank_name: { label: "Bank name", placeholder: "For example: Maybank", autocomplete: "off" },
-            account_holder_name: { label: "Account holder name", placeholder: "The name on the account", autocomplete: "name" },
-            account_number: { label: "Account number", placeholder: "For example: 1234 5678 9012", autocomplete: "off" }
-          }
-        %>
-        <% bank_fields.each do |attribute, options| %>
-          <%= render GuestUI::FormField.new(form:, attribute:, label: options[:label], required: true) do |field| %>
-            <% field.with_input(autocomplete: options[:autocomplete], placeholder: options[:placeholder]) %>
-          <% end %>
-        <% end %>
-
-        <%= render GuestUI::FormField.new(form:, attribute: :account_type, label: "Account type", required: true) do |field| %>
-          <% field.with_radio_group(layout: :stacked,
-                                    choices: @presenter.account_type_options.map { |label, value| { label:, value: } }) %>
-        <% end %>
-      </fieldset>
-    <% end %>
+    <%= render "shared/refunds/fields", form:, booking: @booking, mode: @refund_mode %>
 
     <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
       <%= render GuestUI::Button.new(label: "Go Back", variant: :secondary, href: go_back_path) %>
-      <%= render GuestUI::Button.new(
-            label: (resubmission ? "Resubmit Refund Request" : "Submit Request and Cancel Booking"),
-            variant: (resubmission ? :primary : :destructive), type: "submit",
-            confirm: (resubmission ? "Resubmit this refund request for review?" : "This cancels your booking at once and cannot be undone. Continue?"),
-            data: { turbo_submits_with: "Sending…" }
-          ) %>
+      <% if post_stay %>
+        <%= render GuestUI::Button.new(label: "Send my request", type: "submit",
+                                       data: { turbo_submits_with: "Sending…" }) %>
+      <% else %>
+        <%= render GuestUI::Button.new(
+              label: (resubmission ? "Resubmit Refund Request" : "Submit Request and Cancel Booking"),
+              variant: (resubmission ? :primary : :destructive), type: "submit",
+              confirm: (resubmission ? "Resubmit this refund request for review?" : "This cancels your booking at once and cannot be undone. Continue?"),
+              data: { turbo_submits_with: "Sending…" }
+            ) %>
+      <% end %>
     </div>
   <% end %>
 </div>
