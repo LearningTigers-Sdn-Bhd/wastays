@@ -205,6 +205,40 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(Nokogiri::HTML(response.body).at_css(".guest-select select#refund_request_bank_name option[value='Maybank']")).to be_present
     end
 
+    it "hides the other bank field until the guest picks Other bank" do
+      get concierge_stay_refund_path(*args)
+
+      page = Nokogiri::HTML(response.body)
+      field = page.at_css("[data-other-choice-target='field']")
+
+      expect(page.at_css("select#refund_request_bank_name option[value='#{BankCatalog::OTHER}']").text).to eq("Other bank")
+      expect(field["hidden"]).to be_present
+      expect(field.at_css("input#refund_request_other_bank_name")["disabled"]).to be_present
+    end
+
+    it "stores the typed name for a bank that is not listed" do
+      post concierge_stay_refunds_path(*args), params: {
+        refund_request: {
+          refund_amount: "100", bank_name: BankCatalog::OTHER, other_bank_name: " DBS Bank ",
+          account_holder_name: "Ahmad Zulkifli", account_number: "123456789", account_type: "savings"
+        }
+      }
+
+      expect(booking.reload.refund_request.bank_name).to eq("DBS Bank")
+    end
+
+    it "brings the typed bank name back under Other bank when the form fails" do
+      post concierge_stay_refunds_path(*args), params: {
+        refund_request: { refund_amount: "", bank_name: BankCatalog::OTHER, other_bank_name: "DBS Bank" }
+      }
+
+      page = Nokogiri::HTML(response.body)
+
+      expect(page.at_css("select#refund_request_bank_name option[selected]")["value"]).to eq(BankCatalog::OTHER)
+      expect(page.at_css("[data-other-choice-target='field']")["hidden"]).to be_nil
+      expect(page.at_css("input#refund_request_other_bank_name")["value"]).to eq("DBS Bank")
+    end
+
     it "creates a pending request and leaves the booking status alone" do
       post concierge_stay_refunds_path(*args), params: {
         refund_request: {

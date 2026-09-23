@@ -58,9 +58,28 @@
           The hotel pays your refund into this account. Check the details against your bank card or app.
         </p>
 
-        <%= render GuestUI::FormField.new(form: form, attribute: :bank_name, label: "Bank name", required: true) do |field| %>
-          <% field.with_select(choices: BankCatalog.options(current: @refund_request&.bank_name), prompt: "Choose your bank") %>
-        <% end %>
+        <%# A bank that is not listed is "Other bank" in the select, and its name
+            goes in the field under it. The controller stores that name. %>
+        <%
+          bank_name = @refund_request&.bank_name.to_s.strip
+          other_bank = bank_name.present? && !BankCatalog.listed?(bank_name)
+        %>
+        <div class="grid gap-5" data-controller="other-choice"
+             data-other-choice-other-value="<%= BankCatalog::OTHER %>"
+             data-action="change->other-choice#toggle">
+          <%= render GuestUI::FormField.new(form: form, attribute: :bank_name, label: "Bank name", required: true) do |field| %>
+            <% field.with_select(choices: BankCatalog::MALAYSIAN_BANKS + [ [ "Other bank", BankCatalog::OTHER ] ],
+                                 prompt: "Choose your bank",
+                                 selected: (other_bank ? BankCatalog::OTHER : bank_name)) %>
+          <% end %>
+
+          <%= render GuestUI::FormField.new(form: form, attribute: :other_bank_name, label: "Name of your bank",
+                                            required: true, disabled: !other_bank, hidden: !other_bank,
+                                            data: { other_choice_target: "field" }) do |field| %>
+            <% field.with_input(value: (bank_name if other_bank), placeholder: "For example: DBS Bank",
+                                autocomplete: "off", data: { other_choice_target: "input" }) %>
+          <% end %>
+        </div>
 
         <%
           bank_fields = {

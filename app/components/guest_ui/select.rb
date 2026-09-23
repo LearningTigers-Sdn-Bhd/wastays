@@ -11,7 +11,7 @@ module GuestUI
   #
   #   field.with_select(choices: BankCatalog.options, prompt: "Choose your bank")
   class Select < GuestUI::BaseComponent
-    def initialize(form:, attribute:, choices:, prompt: "Choose one", id: nil, labelled_by: nil,
+    def initialize(form:, attribute:, choices:, prompt: "Choose one", selected: nil, id: nil, labelled_by: nil,
                    described_by: nil, invalid: false, required: false, disabled: false, readonly: false,
                    size: nil, class: nil, **attributes)
       raise ArgumentError, "Selects require choices" if choices.blank?
@@ -20,6 +20,7 @@ module GuestUI
       @attribute = attribute
       @choices = normalize(choices)
       @prompt = prompt
+      @selected = selected
       @id = id
       @labelled_by = labelled_by
       @described_by = described_by
@@ -51,13 +52,17 @@ module GuestUI
       end
     end
 
+    # `selected` wins over the object's value, for a choice that is not the
+    # stored value itself -- "Other" for a bank the guest typed in.
     def current_value
+      return @selected.to_s unless @selected.nil?
+
       object = @form.object
       object.respond_to?(@attribute) ? object.public_send(@attribute).to_s : ""
     end
 
     def native_tag
-      @form.select(@attribute, @choices.map { |choice| [ choice[:label], choice[:value] ] }, { prompt: @prompt },
+      @form.select(@attribute, @choices.map { |choice| [ choice[:label], choice[:value] ] }, { prompt: @prompt, selected: current_value.presence },
         id: native_id,
         class: "guest-select__native",
         required: @required,
