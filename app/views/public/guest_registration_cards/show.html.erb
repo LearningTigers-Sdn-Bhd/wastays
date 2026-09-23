@@ -124,12 +124,12 @@
             </div>
 
             <div class="relative space-y-2">
-              <label class="block text-xs font-bold uppercase tracking-widest text-muted-foreground">Signature</label>
+              <div class="flex items-center justify-between">
+                <label class="block text-xs font-bold uppercase tracking-widest text-muted-foreground">Signature</label>
+                <button type="button" data-signature-target="clearButton" data-action="click->signature#clear" class="hidden text-xs font-bold uppercase tracking-widest text-primary hover:underline">Clear signature</button>
+              </div>
               <div class="rounded-xl border border-border bg-white p-2">
                 <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
-              </div>
-              <div class="flex justify-end">
-                <button type="button" data-signature-target="clearButton" data-action="click->signature#clear" class="hidden text-xs font-bold uppercase tracking-widest text-primary hover:underline">Clear signature</button>
               </div>
               <%= form.hidden_field :signature_data_url, data: { signature_target: "input" }, required: true %>
             </div>
