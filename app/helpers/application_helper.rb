@@ -124,16 +124,6 @@ module ApplicationHelper
     "#{booking.check_in.strftime('%d %b')} – #{booking.check_out.strftime('%d %b %Y')}"
   end
 
-  def refund_status_class(status)
-    case status
-    when "pending" then "bg-yellow-100 text-yellow-700"
-    when "approved" then "bg-blue-100 text-blue-700"
-    when "completed" then "bg-green-100 text-green-700"
-    when "rejected" then "bg-red-100 text-red-700"
-    else "bg-gray-100 text-gray-700"
-    end
-  end
-
   def payment_status_class(status)
     case status
     when "captured" then "bg-green-100 text-green-800"

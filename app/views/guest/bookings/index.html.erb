@@ -5,28 +5,11 @@
   <p class="text-sm text-muted-foreground"><%= pluralize(@all_bookings.count, "booking") %></p>
 </div>
 
-<div class="space-y-3">
-  <%# The search fills only the results frame, so the field keeps its focus
-      while the guest types. A chip is a plain link: it changes the whole
-      view, so the page reloads with it marked. %>
-  <%= form_with url: guest_bookings_path, method: :get,
-        data: { controller: "auto-submit", turbo_frame: "guest_bookings_results", turbo_action: "advance" } do |form| %>
-    <%= hidden_field_tag :status, @status_filter, id: nil if @status_filter.present? %>
-    <%= render GuestUI::Input.new(form:, attribute: :q, type: :search, value: @search_query,
-                                  placeholder: "Search by property or booking code", autocomplete: "off",
-                                  aria: { label: "Search bookings" },
-                                  data: { action: "input->auto-submit#submit" }) %>
-  <% end %>
-
-  <nav class="guest-chips" aria-label="Filter by status">
-    <%= link_to "All", guest_bookings_path(q: @search_query.presence),
-          class: "guest-chip", aria: { current: ("page" if @status_filter.blank?) } %>
-    <% @status_options.each do |status| %>
-      <%= link_to status.humanize, guest_bookings_path(q: @search_query.presence, status:),
-            class: "guest-chip", aria: { current: ("page" if @status_filter == status) } %>
-    <% end %>
-  </nav>
-</div>
+<%= render "guest/shared/filters",
+      path: ->(**params) { guest_bookings_path(**params) },
+      frame: "guest_bookings_results",
+      placeholder: "Search by property or booking code",
+      label: "Search bookings" %>
 
 <%# target _top: a booking opens as its own page, not inside the frame. %>
 <%= turbo_frame_tag "guest_bookings_results", target: "_top", class: "block space-y-6" do %>

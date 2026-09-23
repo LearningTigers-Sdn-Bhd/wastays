@@ -67,9 +67,8 @@ RSpec.describe "Guest::RefundRequests", type: :request do
       expect(response.body).to include("Refund Details")
       expect(response.body).to include(booking.confirmation_token)
       document = Nokogiri::HTML(response.body)
-      expect(document.at_css("header.panel-page-header h1").text).to eq("Refund Details")
-      expect(document.at_css("header.panel-page-header .panel-page-header__caption").text)
-        .to include(booking.confirmation_token)
+      expect(document.at_css("header.guest-navbar .guest-navbar__title").text).to eq("Refund Details")
+      expect(document.at_css(".guest-stay-summary__refs").text).to include(booking.confirmation_token.upcase)
     end
 
     it "shows a warm message based on refund status" do
@@ -77,7 +76,7 @@ RSpec.describe "Guest::RefundRequests", type: :request do
         "pending" => "Thanks for your patience. We have received your refund request and our team is reviewing it now.",
         "approved" => "Good news. Your refund request has been approved and we are preparing the payout.",
         "completed" => "Your refund is complete. The amount has been processed to your bank account.",
-        "rejected" => "We are sorry. Your refund request could not be approved this time. Please check the hotel note for details."
+        "rejected" => "We are sorry. Your refund request could not be approved this time. Please check the property note for details."
       }
 
       expected_message_by_status.each do |status, expected_message|

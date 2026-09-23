@@ -1,148 +1,78 @@
 <% content_for :title, "Refund Details | WAStays" %>
-
 <%
   refund_status_messages = {
     "pending" => "Thanks for your patience. We have received your refund request and our team is reviewing it now.",
     "approved" => "Good news. Your refund request has been approved and we are preparing the payout.",
     "completed" => "Your refund is complete. The amount has been processed to your bank account.",
-    "rejected" => "We are sorry. Your refund request could not be approved this time. Please check the hotel note for details."
+    "rejected" => "We are sorry. Your refund request could not be approved this time. Please check the property note for details."
   }
-
-  refund_status_border_classes = {
-    "pending" => "border-l-yellow-500",
-    "approved" => "border-l-blue-500",
-    "completed" => "border-l-green-600",
-    "rejected" => "border-l-red-500"
-  }
+  notice_variants = { "approved" => :info, "completed" => :success, "rejected" => :danger }
+  hotel = @booking.hotel
 %>
 
-<div class="space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Refund Details") do |header| %>
-    <% header.with_caption do %>
-      <span class="font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></span>
+<%# The concierge's split: the stay and where the request stands at a third,
+    what the guest sent at two thirds. They stack on a phone, stay first. %>
+<div class="guest-page__grid" data-columns="2">
+  <div class="guest-page__context space-y-4">
+    <%= render GuestUI::Card.new(class: "guest-stay-summary") do %>
+      <div class="flex items-center justify-between gap-3">
+        <h1 class="guest-card__title">Refund Status</h1>
+        <span class="guest-stay-summary__status"><%= @refund_request.status.humanize %></span>
+      </div>
+
+      <p class="mt-4 font-guest-display text-2xl font-semibold leading-tight text-foreground"><%= hotel.name %></p>
+      <p class="mt-1 text-sm font-semibold text-foreground"><%= guest_stay_dates(@booking) %></p>
+
+      <dl class="guest-stay-summary__refs">
+        <div class="flex items-baseline gap-1.5">
+          <dt>Code</dt>
+          <dd class="font-mono text-foreground"><%= @booking.confirmation_token.upcase %></dd>
+        </div>
+      </dl>
     <% end %>
-  <% end %>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 space-y-6">
-      <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 class="font-semibold text-foreground">Refund Request Summary</h2>
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-            <%= case @refund_request.status
-                when "pending" then "bg-yellow-100 text-yellow-700"
-                when "approved" then "bg-blue-100 text-blue-700"
-                when "completed" then "bg-green-100 text-green-700"
-                when "rejected" then "bg-red-100 text-red-700"
-                else "bg-muted text-muted-foreground"
-                end %>">
-            <%= @refund_request.status.humanize %>
-          </span>
-        </div>
+    <%= render GuestUI::Notice.new(
+          message: refund_status_messages[@refund_request.status] || "Your refund request is being processed. We will keep you updated.",
+          variant: notice_variants.fetch(@refund_request.status, :info), alert: false
+        ) %>
 
-        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5 text-sm">
-          <div>
-            <p class="text-muted-foreground">Hotel</p>
-            <p class="font-medium text-foreground"><%= @booking.hotel.name %></p>
-          </div>
-          <div>
-            <p class="text-muted-foreground">Requested On</p>
-            <p class="font-medium text-foreground"><%= @refund_request.created_at.strftime("%d %b %Y, %I:%M %p") %></p>
-          </div>
-          <div>
-            <p class="text-muted-foreground">Check-in</p>
-            <p class="font-medium text-foreground"><%= @booking.check_in.strftime("%d %b %Y") %></p>
-          </div>
-          <div>
-            <p class="text-muted-foreground">Check-out</p>
-            <p class="font-medium text-foreground"><%= @booking.check_out.strftime("%d %b %Y") %></p>
-          </div>
-          <div>
-            <p class="text-muted-foreground">Refund Amount</p>
-            <p class="font-medium text-foreground"><%= number_to_currency(@refund_request.refund_amount, unit: @booking.currency + " ") %></p>
-          </div>
-          <div>
-            <p class="text-muted-foreground">Original Booking Amount</p>
-            <p class="font-medium text-foreground"><%= number_to_currency(@booking.total_amount, unit: @booking.currency + " ") %></p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-border">
-          <h2 class="font-semibold text-foreground">Submitted Details</h2>
-        </div>
-        <div class="p-6 space-y-4 text-sm">
-          <div>
-            <p class="text-muted-foreground mb-1">Reason for Refund</p>
-            <p class="text-foreground"><%= @refund_request.reason.presence || "No reason provided." %></p>
-          </div>
-
-          <div class="pt-4 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p class="text-muted-foreground">Bank Name</p>
-              <p class="font-medium text-foreground"><%= @refund_request.bank_name %></p>
-            </div>
-            <div>
-              <p class="text-muted-foreground">Account Holder Name</p>
-              <p class="font-medium text-foreground"><%= @refund_request.account_holder_name %></p>
-            </div>
-            <div>
-              <p class="text-muted-foreground">Account Number</p>
-              <p class="font-medium text-foreground"><%= @refund_request.account_number %></p>
-            </div>
-            <div>
-              <p class="text-muted-foreground">Account Type</p>
-              <p class="font-medium text-foreground"><%= @refund_request.account_type.to_s.humanize %></p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="space-y-6">
-      <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-border">
-          <h2 class="font-semibold text-foreground">Actions</h2>
-        </div>
-        <div class="p-6 space-y-3">
-          <% if @refund_request.rejected? %>
-            <%= link_to new_guest_booking_refund_request_path(@booking, return_to: "refund"),
-                class: "inline-flex w-full items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-red-200 text-red-600 hover:bg-red-50" do %>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4"><path d="M12 18H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5"/><path d="m16 19 3 3 3-3"/><path d="M18 12h.01"/><path d="M19 16v6"/><path d="M6 12h.01"/><circle cx="12" cy="12" r="2"/></svg>
-              Resubmit Refund Request
-            <% end %>
-          <% end %>
-          <%= link_to "Back to My Refunds", guest_refund_requests_path, class: "inline-flex w-full items-center justify-center px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted" %>
-          <%= link_to "View Booking", guest_booking_path(@booking), class: "inline-flex w-full items-center justify-center px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted" %>
-        </div>
-      </div>
-
-      <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-border">
-          <h2 class="font-semibold text-foreground">Refund Status</h2>
-        </div>
-        <div class="p-6 space-y-3">
-          <div class="flex w-full items-center justify-between border border-border border-l-4 <%= refund_status_border_classes[@refund_request.status] || 'border-l-slate-400' %> bg-muted px-4 py-2 text-sm font-semibold text-foreground">
-            <span>Status</span>
-            <span><%= @refund_request.status.humanize %></span>
-          </div>
-          <p class="text-sm text-foreground">
-            <%= refund_status_messages[@refund_request.status] || "Your refund request is being processed. We will keep you updated." %>
-          </p>
-        </div>
-      </div>
-
-      <% if @refund_request.hotel_note.present? %>
-        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-border">
-            <h2 class="font-semibold text-foreground">Hotel Note</h2>
-          </div>
-          <div class="p-6">
-            <p class="text-sm text-foreground"><%= @refund_request.hotel_note %></p>
-          </div>
-        </div>
+    <div class="flex flex-col gap-3">
+      <% if @refund_request.rejected? %>
+        <%= render GuestUI::Button.new(label: "Resubmit Refund Request", block: true,
+                                       href: new_guest_booking_refund_request_path(@booking, return_to: "refund")) %>
       <% end %>
+      <%= render GuestUI::Button.new(label: "View Booking", variant: :secondary, block: true,
+                                     href: guest_booking_path(@booking)) %>
     </div>
+  </div>
+
+  <div class="guest-page__content">
+    <% if @refund_request.hotel_note.present? %>
+      <%= render GuestUI::Card.new(title: "Property Note") do %>
+        <p class="text-sm text-foreground"><%= @refund_request.hotel_note %></p>
+      <% end %>
+    <% end %>
+
+    <%= render GuestUI::Card.new(title: "Refund Request Summary") do %>
+      <%= render GuestUI::FactList.new(facts: [
+            [ "Requested On", @refund_request.created_at.strftime("%d %b %Y, %I:%M %p") ],
+            [ "Refund Amount", number_to_currency(@refund_request.refund_amount, unit: "#{@booking.currency} ") ],
+            [ "Check-in", @booking.check_in.strftime("%d %b %Y") ],
+            [ "Check-out", @booking.check_out.strftime("%d %b %Y") ],
+            [ "Original Booking Amount", number_to_currency(@booking.total_amount, unit: "#{@booking.currency} ") ]
+          ]) %>
+    <% end %>
+
+    <%= render GuestUI::Card.new(title: "Submitted Details") do %>
+      <%= render GuestUI::FactList.new(columns: 1, facts: [
+            [ "Reason for Refund", @refund_request.reason.presence || "No reason provided." ]
+          ]) %>
+      <%= render GuestUI::FactList.new(class: "mt-4 border-t border-border/60 pt-4", facts: [
+            [ "Bank Name", @refund_request.bank_name ],
+            [ "Account Holder Name", @refund_request.account_holder_name ],
+            [ "Account Number", @refund_request.account_number ],
+            [ "Account Type", @refund_request.account_type.to_s.humanize ]
+          ]) %>
+    <% end %>
   </div>
 </div>
