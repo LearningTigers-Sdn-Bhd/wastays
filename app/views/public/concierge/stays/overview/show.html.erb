@@ -65,7 +65,7 @@
           <%= render GuestUI::ActionCard.new(label: "Property Contacts",
                                              hint: "Phone, WhatsApp, email and map",
                                              icon: "phone", tone: :contact,
-                                             href: concierge_contact_path(@hotel.unique_id, @hotel.public_id)) %>
+                                             href: concierge_stay_contact_path(*stay_route_args)) %>
           <% if presenter.chat_available? %>
             <%= render GuestUI::ActionCard.new(label: "Interact with Chatbot",
                                                hint: "Instant answers, any time",

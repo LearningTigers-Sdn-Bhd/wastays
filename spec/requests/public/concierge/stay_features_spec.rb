@@ -177,6 +177,38 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
     end
   end
 
+  describe "the contact page" do
+    before { hotel.update!(contact_phone: "+60 3 1234 5678") }
+
+    it "is linked from the stay page" do
+      get concierge_stay_path(*args)
+
+      expect(response.body).to include(concierge_stay_contact_path(*args))
+      expect(response.body).not_to include(%(href="#{concierge_contact_path(hotel.unique_id, hotel.public_id)}"))
+    end
+
+    it "shows the contacts with the compact stay card as the way back" do
+      get concierge_stay_contact_path(*args)
+
+      page = Nokogiri::HTML(response.body)
+      compact = page.at_css(".guest-form-page__compact a.guest-summary-compact")
+
+      expect(response).to have_http_status(:ok)
+      expect(compact["href"]).to eq(concierge_stay_path(*args))
+      expect(compact.text).to include("Back to my stay", "Room 1201")
+      expect(page.at_css("h2").text).to include("Get in touch")
+      expect(page.at_css("a.guest-card__row[href='tel:+60312345678']").text).to include("Call us")
+    end
+
+    it "asks for the stay code without a stay session" do
+      reset!
+
+      get concierge_stay_contact_path(*args)
+
+      expect(response.body).not_to include("Call us")
+    end
+  end
+
   describe "check-out requests" do
     it "creates the request" do
       expect {

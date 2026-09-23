@@ -1,8 +1,10 @@
 @layer components {
   /* GuestUI (GuestUI::*). The component language of the concierge, the one
      place a hotel guest sees. Public pages sit outside DESIGN.md, so this
-     follows the concierge's own voice -- Playfair Display headings, uppercase
-     tracking-widest eyebrows, soft 2xl surfaces -- not the panel/ theme.
+     follows the concierge's own voice -- Playfair Display page headings, soft
+     2xl surfaces -- not the panel/ theme. Text below the page heading keeps
+     the DESIGN.md type roles: sentence-size titles, text-sm labels, text-xs
+     hints, no uppercase eyebrows.
 
      Two rules hold across every class in this file.
 
@@ -568,11 +570,11 @@
   }
 
   .guest-switch__label {
-    @apply block text-[13px] font-bold text-foreground;
+    @apply block text-sm font-medium text-foreground;
   }
 
   .guest-switch__hint {
-    @apply mt-0.5 block text-[11px] font-medium leading-relaxed text-muted-foreground;
+    @apply mt-0.5 block text-xs leading-relaxed text-muted-foreground;
   }
 
   .guest-switch__track {
@@ -598,11 +600,11 @@
      One bounded surface. Every column section on a stay page uses it, so the
      columns line up at the top and the padding is set in one place.
 
-     The title is an eyebrow rather than a heading face: these name a group of
-     controls (Hotel Services, Booking and Billing), and a serif heading on
-     each one would compete with the page's own. */
+     The title is a section title in the sans face, not the serif: these name
+     a group of controls (Hotel Services, Booking and Billing), and a serif
+     heading on each one would compete with the page's own. */
   .guest-card {
-    @apply rounded-2xl border border-border/60 bg-card p-6 shadow-sm;
+    @apply rounded-2xl border border-border/40 bg-card p-6 shadow-xs;
   }
 
   .guest-card[data-padding="tight"] {
@@ -614,7 +616,7 @@
   }
 
   .guest-card__title {
-    @apply text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground;
+    @apply text-base font-semibold text-foreground;
   }
 
   .guest-card__body {
@@ -633,7 +635,7 @@
   }
 
   .guest-card__row-label {
-    @apply block text-[13px] font-bold text-foreground;
+    @apply block text-sm font-medium text-foreground;
   }
 
   .guest-card__row-text {
@@ -644,8 +646,10 @@
     @apply size-4 shrink-0 text-primary;
   }
 
+  /* A hint can be an email address with no place to break. */
   .guest-card__row-hint {
-    @apply mt-0.5 block text-[11px] font-medium text-muted-foreground;
+    @apply mt-0.5 block text-xs text-muted-foreground;
+    overflow-wrap: anywhere;
   }
 
   .guest-card__row-chevron {
@@ -756,7 +760,7 @@
      The icon is decorative and the variant is not the message. A guest who
      cannot separate the tints still gets the whole fact from the words. */
   .guest-notice {
-    @apply flex items-start gap-3 rounded-xl border p-4 text-[13px] font-medium leading-relaxed;
+    @apply flex items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed;
   }
 
   .guest-notice[data-variant="info"] {
@@ -781,7 +785,7 @@
   }
 
   .guest-notice__title {
-    @apply block font-bold;
+    @apply block font-semibold;
   }
 
   /* ─── Hero ───
@@ -970,6 +974,10 @@
       @apply max-w-2xl;
       grid-template-columns: minmax(0, 1fr);
       grid-template-areas: "header" "body";
+    }
+
+    .guest-form-page[data-width="wide"] {
+      @apply max-w-none;
     }
   }
 

@@ -144,6 +144,7 @@ Rails.application.routes.draw do
       post   "refund",          to: "refunds#create",       as: :stay_refunds
       get    "check-out",       to: "check_outs#new",       as: :stay_check_out
       post   "check-out",       to: "check_outs#create",    as: :stay_check_outs
+      get    "contact",         to: "contacts#show",        as: :stay_contact
       get    "requests/new",    to: "requests#new",         as: :new_stay_request
       post   "requests",        to: "requests#create",      as: :stay_requests
     end

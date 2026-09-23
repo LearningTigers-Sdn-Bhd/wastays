@@ -21,6 +21,18 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
       expect(response.body).to include("google.com/maps")
     end
 
+    it "keeps the back link in the heading, as on the check-in code page" do
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
+
+      page = Nokogiri::HTML(response.body)
+      back = page.at_css(".guest-form-page__header a")
+
+      expect(back["href"]).to eq(concierge_home_path(hotel.unique_id, hotel.public_id))
+      expect(back.text).to include("Back to Concierge")
+      expect(page.at_css(".guest-summary-compact")).to be_nil
+      expect(page.at_css("h2").text).to include("Get in touch")
+    end
+
     it "shows no front desk badge for a hotel that never filled the page" do
       get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
 

@@ -7,7 +7,8 @@
     compact card would be, and the form sits under it in one column.
 
     Locals: back_path, back_label, title, subtitle, and the optional compact
-    and summary cards as rendered HTML. The block is the form. %>
+    and summary cards as rendered HTML. wide drops the one-column form width,
+    for a page that is not a form. The block is the form. %>
 <% compact = local_assigns[:compact] %>
 <% summary = local_assigns[:summary] %>
 <%= render GuestUI::Page.new do |page| %>
@@ -15,7 +16,8 @@
     <%= render "public/concierge/shared/hero" %>
   <% end %>
 
-  <div class="guest-form-page" data-columns="<%= summary.present? ? 2 : 1 %>">
+  <div class="guest-form-page" data-columns="<%= summary.present? ? 2 : 1 %>"
+       data-width="<%= local_assigns[:wide] ? "wide" : "form" %>">
     <% if compact.present? %>
       <div class="guest-form-page__compact md:hidden"><%= compact %></div>
     <% end %>

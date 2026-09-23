@@ -70,6 +70,22 @@ RSpec.describe GuestUI::Card, type: :component do
       expect(page).to have_no_css(".sr-only")
     end
 
+    it "points outward for a call or an email, without the new tab words" do
+      render_inline(described_class.new) do |card|
+        card.with_row(label: "Call us", href: "tel:+60312345678")
+        card.with_row(label: "Email", href: "mailto:desk@example.com")
+        card.with_row(label: "Directions", href: "https://maps.example.com", new_tab: true)
+        card.with_row(label: "E-invoice", href: "/x")
+      end
+
+      call, email, directions, invoice = page.all(".guest-card__row-chevron").map { |icon| icon.native.inner_html }
+
+      expect([ call, email ]).to all(eq(directions))
+      expect(invoice).not_to eq(directions)
+      expect(page).to have_css("a[target]", count: 1)
+      expect(page).to have_css(".sr-only", count: 1)
+    end
+
     # A row that changes something is a form, for the same reason a button is.
     it "is a form when the row changes something" do
       render_inline(described_class.new) do |card|

@@ -9,8 +9,9 @@ module GuestUI
   # no sidebar and no page chrome around them, a hairline is the only thing
   # that says where one ends.
   #
-  # The title is an eyebrow rather than a heading face. These name a group of
-  # controls, and a display heading on each would compete with the page's own.
+  # The title is a section title in the sans face, not the display face. These
+  # name a group of controls, and a display heading on each would compete with
+  # the page's own.
   class Card < GuestUI::BaseComponent
     PADDINGS = %i[default tight].freeze
     VARIANTS = %i[default dashed].freeze
@@ -68,9 +69,15 @@ module GuestUI
 
       # Decorative. The row is already a link, and a screen reader that read
       # this as well would end every service with "right-pointing angle".
+      #
+      # The outward arrow marks a row that leaves the page: a new tab, or a
+      # tel: or mailto: link that hands off to the dialer or the mail app. Only
+      # a new tab gets the words, because the dialer is not a tab.
       def chevron
-        helpers.app_icon((@new_tab ? "arrow-up-right" : "chevron-right"), class: "guest-card__row-chevron size-4", aria: { hidden: "true" })
+        helpers.app_icon((leaves_page? ? "arrow-up-right" : "chevron-right"), class: "guest-card__row-chevron size-4", aria: { hidden: "true" })
       end
+
+      def leaves_page? = @new_tab || @href.to_s.start_with?("tel:", "mailto:")
 
       def row_attributes
         attributes = @attributes.deep_dup

@@ -6,7 +6,7 @@
 <div>
   <% if local_assigns[:back_path].present? %>
     <%= link_to local_assigns[:back_path],
-          class: "#{local_assigns.fetch(:back_display, "inline-flex")} min-h-11 items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary" do %>
+          class: "#{local_assigns.fetch(:back_display, "inline-flex")} min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary" do %>
       <%= app_icon "chevron-left", class: "size-3.5", aria: { hidden: "true" } %>
       <%= local_assigns.fetch(:back_label, "Back to my stay") %>
     <% end %>
