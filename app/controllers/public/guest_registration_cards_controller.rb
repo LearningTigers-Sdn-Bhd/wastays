@@ -8,6 +8,8 @@ class Public::GuestRegistrationCardsController < ApplicationController
   before_action :set_hotel
   before_action :set_presenter, only: %i[show update]
 
+  helper_method :signing_device
+
   def show
   end
 

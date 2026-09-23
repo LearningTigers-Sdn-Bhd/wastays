@@ -49,6 +49,14 @@ class Public::SigningDevicesController < ApplicationController
     redirect_to guest_registration_card_path(card.public_token)
   end
 
+  # The tablet backing out of a stay it was handed by mistake. Nothing already
+  # signed is touched -- this only clears what the tablet is holding, the same
+  # release the desk gets when it re-sends the correct booking.
+  def release
+    @device.release!
+    redirect_to signing_device_path(@device.public_token), notice: "Sent back. Nothing on this stay was changed."
+  end
+
   private
 
   # Scoped to properties that still have the feature, rather than found and then

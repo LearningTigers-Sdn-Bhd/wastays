@@ -1,4 +1,7 @@
 <% content_for :title, "Ready to sign" %>
+<%# This screen only ever runs on a paired tablet -- no marketing nav or login
+    link belongs on it. %>
+<% content_for :hide_chrome, true %>
 
 <%# The screen a tablet shows for most of its life. It holds the stream open and
     waits; the desk writes into the command region below to move it on.

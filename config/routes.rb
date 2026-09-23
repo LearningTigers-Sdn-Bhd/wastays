@@ -186,6 +186,9 @@ Rails.application.routes.draw do
       # picker can tell a listening tablet from one that merely loaded the page
       # once and went to sleep.
       post :heartbeat, on: :member
+      # Lets the tablet itself back out of a stay the desk sent it by mistake,
+      # without waiting for every guest to sign or for the desk to notice.
+      post :release, on: :member
     end
     # Pairing a tablet, unauthenticated: the code IS the credential, and it is
     # single use and measured in minutes. Kept short because it is read off one
