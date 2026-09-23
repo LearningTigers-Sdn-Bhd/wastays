@@ -156,16 +156,17 @@
                 data-pre-checkin-document-target="uploadSection">
         <legend class="guest-fieldset__legend">Identity document</legend>
         <p id="check-in-document-description" class="guest-fieldset__description">
-          Scan or upload your IC or passport.
+          Take a photo of your IC or passport, or choose one you have. Make sure all four corners show.
         </p>
 
         <div class="grid gap-5 md:grid-cols-2">
           <div data-pre-checkin-document-target="frontContainer" class="<%= @presenter.front_container_class %>">
-            <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: @presenter.front_scanner_label,
-                                            height_class: @presenter.front_scanner_height_class %>
+            <%= render GuestUI::ImageUpload.new(form: f, attribute: :id_front, label: @presenter.front_scanner_label,
+                                                preview_url: attachment_preview_url(f, :id_front)) %>
           </div>
           <div data-pre-checkin-document-target="backContainer" class="<%= @presenter.back_container_class %>">
-            <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID Card" %>
+            <%= render GuestUI::ImageUpload.new(form: f, attribute: :id_back, label: "Back ID Card",
+                                                preview_url: attachment_preview_url(f, :id_back)) %>
           </div>
         </div>
       </fieldset>
@@ -198,5 +199,4 @@
                                    data: (@presenter.geolocation_active? ? { geolocation_check_in_target: "submitButton" } : { turbo_submits_with: "Sending…" })) %>
   <% end %>
 
-  <%= render "shared/scanner_modal" %>
 <% end %>

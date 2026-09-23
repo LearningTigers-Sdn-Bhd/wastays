@@ -137,6 +137,72 @@
     @apply mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-success/10 text-success-foreground;
   }
 
+  /* ─── Image upload ───
+     Empty, the box is one dashed button in the field's own edge colour.
+     Filled, it is the photo with a bar under it: what happened, and Replace.
+     data-state picks which one shows; the controller flips it. */
+  .guest-image-upload {
+    @apply relative grid gap-2;
+  }
+
+  .guest-image-upload__input {
+    @apply pointer-events-none absolute bottom-0 left-4 size-px overflow-hidden opacity-0;
+  }
+
+  .guest-image-upload__empty {
+    @apply flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed bg-card px-4 py-6 text-center transition-colors;
+    border-color: var(--guest-field-border);
+    @apply hover:bg-muted focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .guest-image-upload[data-invalid="true"] .guest-image-upload__empty {
+    @apply border-destructive;
+  }
+
+  .guest-image-upload__icon {
+    @apply mb-2 size-8 text-primary;
+  }
+
+  .guest-image-upload__action {
+    @apply text-base font-semibold text-foreground;
+  }
+
+  .guest-image-upload__hint {
+    @apply text-sm;
+    color: var(--muted-foreground-strong);
+  }
+
+  .guest-image-upload__filled {
+    @apply overflow-hidden rounded-xl border bg-card;
+    border-color: var(--guest-field-border);
+  }
+
+  .guest-image-upload[data-state="empty"] .guest-image-upload__filled,
+  .guest-image-upload[data-state="filled"] .guest-image-upload__empty {
+    @apply hidden;
+  }
+
+  /* contain, not cover: the guest checks that the whole card is in the
+     photo, corners and all. */
+  .guest-image-upload__preview {
+    @apply block max-h-64 w-full bg-muted object-contain;
+  }
+
+  .guest-image-upload__bar {
+    @apply flex items-center justify-between gap-3 border-t border-border px-3 py-1;
+  }
+
+  .guest-image-upload__done {
+    @apply flex items-center gap-1.5 text-sm font-medium text-success-foreground;
+  }
+
+  .guest-image-upload__replace {
+    @apply min-h-11 cursor-pointer rounded-lg px-3 text-sm font-semibold text-primary transition-colors;
+    @apply hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
   /* ─── Signature pad ───
      The same edge as a field, so the pad reads as the place to write. */
   .guest-signature {

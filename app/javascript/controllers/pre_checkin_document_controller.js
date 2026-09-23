@@ -143,7 +143,8 @@ export default class extends Controller {
   }
 
   updateLabel(container, text) {
-    const label = container.querySelector("label")
+    // GuestUI::ImageUpload marks its label; the older markup used a <label>.
+    const label = container.querySelector("[data-upload-label]") || container.querySelector("label")
     if (label) {
       label.textContent = text
     }

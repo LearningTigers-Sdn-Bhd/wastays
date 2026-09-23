@@ -265,6 +265,9 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(body.at_css("fieldset[data-controller='address-state'] [data-address-state-target='country'] select#booking_guest_address_country")).to be_present
       expect(body.at_css("[data-guest-identity-target='numberLabel'] label [data-guest-identity-label-text]")).to be_present
       expect(body.css("select").map { |select| select.ancestors(".guest-select").any? }).to all(be(true))
+      expect(body.css(".guest-image-upload input[type='file']").map { |input| input["name"] }).to eq(%w[booking[id_front] booking[id_back]])
+      expect(body.css("input[capture]")).to be_empty
+      expect(page.at_css("[data-controller~='scanner'], [data-scanner-target]")).to be_nil
     end
 
     it "leads the registration page with the compact booking card as the way back" do

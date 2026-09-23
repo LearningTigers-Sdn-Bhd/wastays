@@ -78,7 +78,7 @@ module Public
       end
 
       def form_data(view_context, is_mobile: false)
-        controllers = [ "scanner", "pre-checkin-document", "guest-identity" ]
+        controllers = [ "pre-checkin-document", "guest-identity" ]
         controllers << "guest-dob" if registration_required?
         controllers << "geolocation-check-in" if geolocation_active?
 
@@ -126,10 +126,6 @@ module Public
 
       def front_scanner_label
         guest_document_type == "passport" ? "Passport Photo Page" : "Front ID Card"
-      end
-
-      def front_scanner_height_class
-        guest_document_type == "passport" ? "h-44 md:h-64 md:max-w-[700px]" : "h-44"
       end
     end
   end

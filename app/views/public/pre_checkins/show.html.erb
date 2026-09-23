@@ -51,7 +51,7 @@
         </div>
       </div>
 
-      <div class="card p-6 md:p-8" data-controller="scanner guest-dob guest-identity">
+      <div class="card p-6 md:p-8" data-controller="guest-dob guest-identity">
         <% if @presenter.completed? %>
           <div class="rounded-2xl border border-green-200 bg-green-50 p-6">
             <h2 class="text-xl font-black text-foreground">Pre check-in completed</h2>
@@ -114,10 +114,12 @@
 
               <div class="grid gap-6 md:grid-cols-2 mt-4 transition-all duration-300 transform <%= @presenter.upload_section_class %>" data-pre-checkin-document-target="uploadSection">
                 <div data-pre-checkin-document-target="frontContainer" class="transition-all duration-300 transform <%= @presenter.front_container_class %>">
-                  <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: @presenter.front_scanner_label, height_class: @presenter.front_scanner_height_class %>
+                  <%= render GuestUI::ImageUpload.new(form: f, attribute: :id_front, label: @presenter.front_scanner_label,
+                                                      preview_url: attachment_preview_url(f, :id_front)) %>
                 </div>
                 <div data-pre-checkin-document-target="backContainer" class="transition-all duration-300 transform <%= @presenter.back_container_class %>">
-                  <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID Card" %>
+                  <%= render GuestUI::ImageUpload.new(form: f, attribute: :id_back, label: "Back ID Card",
+                                                      preview_url: attachment_preview_url(f, :id_back)) %>
                 </div>
               </div>
             </section>
@@ -235,7 +237,6 @@
           <% end %>
         <% end %>
 
-        <%= render "shared/scanner_modal" %>
       </div>
     </div>
   </div>

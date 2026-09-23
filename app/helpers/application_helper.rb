@@ -273,21 +273,11 @@ module ApplicationHelper
     "#"
   end
 
-  def id_scanner_attached?(form, field)
-    form.object.send(field).attached?
-  end
-
-  def id_scanner_preview_url(form, field)
-    url_for(form.object.send(field))
-  end
-
-  def id_scanner_placeholder_icon(side)
-    icon_name = side == :front ? "user" : "credit-card"
-    cached_icon(icon_name, stroke_width: 1.5, class: "w-12 h-12")
-  end
-
-  def id_scanner_side_label(side)
-    side == :front ? "Front Side" : "Back Side"
+  # The URL of a photo already on the record, for GuestUI::ImageUpload to show
+  # in place of the empty box. Nil when there is none.
+  def attachment_preview_url(form, field)
+    attachment = form.object.public_send(field)
+    url_for(attachment) if attachment.respond_to?(:attached?) && attachment.attached?
   end
 
   def display_amount(amount, quote_currency:, display_currency:, hotel:)

@@ -269,12 +269,6 @@
     display: none !important;
   }
 
-  @media (max-width: 767px) {
-    html.scanner-active #abw-btn-cont {
-      display: none !important;
-    }
-  }
-
   /* Dynamically adjust WhatsApp widget bottom offset to prevent overlap with sticky actions */
   #abw-btn-cont .abw-btn {
     transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
