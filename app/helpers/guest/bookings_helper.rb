@@ -35,7 +35,14 @@ module Guest::BookingsHelper
     )
   end
 
+  # The money on a card: what the guest has paid, and what is left. A
+  # cancelled stay shows no outstanding amount -- whatever is left there is a
+  # refund question, and the Refunds page answers it.
   def guest_booking_card(booking)
+    balance = Bookings::GuestBalance.new(booking:).call
+    due = [ balance.due, 0 ].max
+    closed = Guest::StatusBadges.booking_group(booking.status) == "cancelled"
+
     GuestUI::BookingCard.new(
       href: guest_booking_path(booking),
       property: booking.hotel.name,
@@ -43,7 +50,14 @@ module Guest::BookingsHelper
       dates: guest_stay_dates(booking),
       detail: guest_stay_detail(booking),
       reference: booking.formatted_reservation_number,
-      code: booking.confirmation_token.to_s.upcase
+      code: booking.confirmation_token.to_s.upcase,
+      paid: guest_money(balance.paid, booking),
+      outstanding: (guest_money(due, booking) unless closed),
+      owing: due.positive?
     )
+  end
+
+  def guest_money(amount, booking)
+    number_to_currency(amount, unit: "#{booking.currency} ")
   end
 end

@@ -158,8 +158,35 @@
     @apply grid gap-4 md:grid-cols-2;
   }
 
+  /* No padding on the card itself: the body and the footer pad themselves, so
+     the footer's divider and tint reach both edges. overflow-hidden keeps
+     the tint inside the rounded corners. */
   .guest-booking-card {
-    @apply block rounded-2xl border border-border/40 bg-card p-5 shadow-xs transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+    @apply flex flex-col overflow-hidden rounded-2xl border border-border/40 bg-card shadow-xs transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-booking-card__body {
+    @apply block flex-1 p-5;
+  }
+
+  .guest-booking-card__footer {
+    @apply space-y-1.5 border-t border-border/60 bg-foreground/[0.02] px-5 py-3.5;
+  }
+
+  .guest-booking-card__amount {
+    @apply flex items-baseline justify-between gap-3 text-sm;
+  }
+
+  .guest-booking-card__amount dt {
+    @apply text-muted-foreground;
+  }
+
+  .guest-booking-card__amount dd {
+    @apply font-semibold tabular-nums text-foreground;
+  }
+
+  .guest-booking-card__amount[data-owing="true"] dd {
+    color: var(--destructive-on-surface);
   }
 
   .guest-booking-card__property {

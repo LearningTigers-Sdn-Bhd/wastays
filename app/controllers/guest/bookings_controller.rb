@@ -10,7 +10,7 @@ class Guest::BookingsController < Guest::BaseController
     @status_filter = params[:status].to_s.strip
     @status_options = BOOKING_STATUSES
 
-    scope = current_guest.bookings.includes(:hotel, :refund_request)
+    scope = current_guest.bookings.includes(:hotel, :refund_request, :booking_folios)
 
     if @search_query.present?
       scope = scope.joins(:hotel).where(

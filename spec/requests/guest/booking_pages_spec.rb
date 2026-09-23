@@ -20,7 +20,9 @@ RSpec.describe "Guest booking pages", type: :request do
       cards = document.css("turbo-frame#guest_bookings_results a.guest-booking-card")
       expect(cards.map { |card| card["href"] }).to eq([ guest_booking_path(booking) ])
       expect(cards.first.at_css(".guest-status-badge[data-tone='info']").text.squish).to eq("Confirmed")
-      expect(cards.first.text).to include(booking.formatted_reservation_number, booking.confirmation_token.upcase)
+      expect(cards.first.at_css(".guest-booking-card__body").text).to include(booking.formatted_reservation_number, booking.confirmation_token.upcase)
+      footer = cards.first.at_css(".guest-booking-card__footer").text.squish
+      expect(footer).to include("Total spent MYR 0.00", "Outstanding MYR 200.00")
       active = document.at_css("nav.guest-chips a[aria-current='page']")
       expect(active.text).to eq("Confirmed")
       cancelled = document.css("nav.guest-chips a").find { |chip| chip.text == "Cancelled" }

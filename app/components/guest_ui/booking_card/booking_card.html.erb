@@ -1,11 +1,26 @@
 <%= link_to href, class: card_class do %>
-  <span class="flex items-start justify-between gap-3">
-    <span class="guest-booking-card__property"><%= property %></span>
-    <%= render badge %>
+  <span class="guest-booking-card__body">
+    <span class="flex items-start justify-between gap-3">
+      <span class="guest-booking-card__property"><%= property %></span>
+      <%= render badge %>
+    </span>
+    <span class="mt-3 block text-sm font-semibold text-foreground"><%= dates %></span>
+    <% if detail.present? %>
+      <span class="mt-1 block text-xs font-medium text-muted-foreground"><%= detail %></span>
+    <% end %>
+    <%= render GuestUI::BookingRefs.new(reference:, code:) %>
   </span>
-  <span class="mt-3 block text-sm font-semibold text-foreground"><%= dates %></span>
-  <% if detail.present? %>
-    <span class="mt-1 block text-xs font-medium text-muted-foreground"><%= detail %></span>
-  <% end %>
-  <%= render GuestUI::BookingRefs.new(reference:, code:) %>
+
+  <dl class="guest-booking-card__footer">
+    <div class="guest-booking-card__amount">
+      <dt>Total spent</dt>
+      <dd><%= paid %></dd>
+    </div>
+    <% if outstanding.present? %>
+      <div class="guest-booking-card__amount" data-owing="<%= owing? %>">
+        <dt>Outstanding</dt>
+        <dd><%= outstanding %></dd>
+      </div>
+    <% end %>
+  </dl>
 <% end %>
