@@ -8,6 +8,8 @@ module Public
     # design session that follows can rebuild the markup without touching a
     # rule.
     class StayPresenter
+      SHORT_DATE = "%a, %-d %b"
+
       def initialize(stay_access:, expires_at: nil, view: nil)
         @stay_access = stay_access
         @expires_at = expires_at
@@ -25,13 +27,18 @@ module Public
         first.presence || "Guest"
       end
 
+      def room_assigned? = booking.room_numbers.present?
+
       def room_label
-        booking.room_numbers.presence || "To be assigned"
+        room_assigned? ? booking.room_numbers : "To be assigned"
       end
 
       def nights
         (booking.check_out.to_date - booking.check_in.to_date).to_i
       end
+
+      def check_in_label = I18n.l(booking.check_in.to_date, format: SHORT_DATE)
+      def check_out_label = I18n.l(booking.check_out.to_date, format: SHORT_DATE)
 
       # Where the guest is in the stay, on the hotel's own date. Nothing once
       # the guest has checked out: the card says that itself.

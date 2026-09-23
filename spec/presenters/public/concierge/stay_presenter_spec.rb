@@ -30,6 +30,13 @@ RSpec.describe Public::Concierge::StayPresenter do
     expect(presenter.nights).to eq(3)
   end
 
+  it "labels the dates in a short form" do
+    booking.update_columns(check_in: Date.new(2026, 9, 22), check_out: Date.new(2026, 9, 25))
+
+    expect(presenter.check_in_label).to eq("Tue, 22 Sep")
+    expect(presenter.check_out_label).to eq("Fri, 25 Sep")
+  end
+
   describe "#stay_progress_label" do
     before { allow_any_instance_of(Hotel).to receive(:current_business_date).and_return(today) }
 

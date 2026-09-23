@@ -14,6 +14,9 @@
         often on a screen they have never held before. */
 
   /* ─── Button ───
+     Sentence case, the same as the label and the field above it: a guest
+     reads the button as the end of the form's sentence, not as a sign.
+
      One class, and the variant picks the fill. The size sets the height rather
      than the padding, so a button beside an input lines up with it whatever
      word it carries.
@@ -22,7 +25,7 @@
      a row that is already a tap target, where a second 44px box would push the
      row past a thumb's reach. */
   .guest-button {
-    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl text-center text-xs font-black uppercase tracking-widest transition-all;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl text-center text-sm font-semibold transition-all;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     @apply disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:active:scale-100;
   }
@@ -54,7 +57,7 @@
   }
 
   .guest-button[data-size="sm"] {
-    @apply min-h-9 px-4 text-[11px];
+    @apply min-h-9 px-4;
   }
 
   .guest-button[data-size="md"] {
@@ -62,7 +65,7 @@
   }
 
   .guest-button[data-size="lg"] {
-    @apply min-h-[52px] px-6 py-4 text-sm;
+    @apply min-h-[52px] px-6 py-4 text-base;
   }
 
   .guest-button[data-block="true"] {
@@ -76,19 +79,24 @@
   /* ─── Input and text area ───
      The floor is 16px text. Below that, mobile Safari zooms the page when the
      field takes focus, and the guest is left scrolled sideways on a form they
-     have not finished. */
+     have not finished.
+
+     WCAG 1.4.11: the edge of a field is what tells a guest where to tap, so
+     it takes --guest-field-border, which clears 3:1 where --border does not.
+     WCAG 2.4.7: focus is a solid ring with an offset, not a 20% tint. */
   .guest-input,
   .guest-text-area {
-    @apply block w-full rounded-xl border border-border bg-background text-base font-medium text-foreground transition-colors;
+    @apply block w-full rounded-xl border bg-card text-base font-medium text-foreground transition-colors;
+    border-color: var(--guest-field-border);
     @apply placeholder:font-normal placeholder:text-muted-foreground;
-    @apply focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+    @apply focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
     @apply disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground;
     @apply read-only:bg-muted read-only:text-muted-foreground;
   }
 
   .guest-input[aria-invalid="true"],
   .guest-text-area[aria-invalid="true"] {
-    @apply border-destructive focus:border-destructive focus:ring-destructive/20;
+    @apply border-destructive focus:border-destructive focus:ring-destructive;
   }
 
   .guest-input[data-size="sm"] {
@@ -110,21 +118,26 @@
     @apply text-center font-mono text-xl font-bold uppercase tracking-[0.3em];
   }
 
+  /* field-sizing ignores rows, so the floor is a min-height: about four
+     lines, enough that the box reads as a place to write a sentence. No
+     resize handle: the box already grows as the guest writes, and the handle
+     is a desktop control a thumb cannot use. */
   .guest-text-area {
-    @apply px-4 py-3 leading-relaxed;
+    @apply min-h-32 resize-none px-4 py-3 leading-relaxed;
     field-sizing: content;
   }
 
   /* ─── Form field ───
-     Label above, control, then one message under it. The label is the
-     eyebrow tier the rest of the concierge uses, so a field inside a card
-     reads as part of the card rather than as a form dropped into it. */
+     Label above, control, then one message under it. The label is body text
+     in the foreground colour, not an eyebrow: it is the question the guest
+     answers, and 10px uppercase grey is the hardest text on the page to
+     read. */
   .guest-field {
     @apply block;
   }
 
   .guest-field__label {
-    @apply block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground;
+    @apply block text-sm font-semibold text-foreground;
   }
 
   .guest-field__required {
@@ -133,20 +146,38 @@
   }
 
   .guest-field__control {
-    @apply mt-3;
+    @apply mt-2;
   }
 
   .guest-field__hint,
   .guest-field__error {
-    @apply mt-2 text-[11px] font-medium leading-relaxed;
+    @apply mt-2 text-sm leading-relaxed;
   }
 
   .guest-field__hint {
-    @apply text-muted-foreground;
+    color: var(--muted-foreground-strong);
   }
 
+  /* An icon as well as the colour, so the error does not rest on red alone
+     (WCAG 1.4.1). */
   .guest-field__error {
+    @apply flex items-start gap-1.5 font-medium;
     color: var(--destructive-on-surface);
+  }
+
+  .guest-field__error-icon {
+    @apply mt-0.5 size-4 shrink-0;
+  }
+
+  /* ─── Fieldset ───
+     A group of fields with one name, such as the bank details of a refund.
+     The legend is read with each field in it. */
+  .guest-fieldset {
+    @apply min-w-0 space-y-5 pt-3;
+  }
+
+  .guest-fieldset__legend {
+    @apply text-base font-semibold text-foreground;
   }
 
   /* ─── Radio group ───
@@ -562,6 +593,37 @@
       grid-template-areas: "greeting greeting" "stay main" "more main";
       @apply gap-8;
     }
+  }
+
+  /* ─── Stay form page ───
+     A phone reads the compact stay card, the heading, then the form. A wider
+     screen puts the heading across the top and the full stay card beside the
+     form. Each card is hidden at the width that shows the other one, and a
+     hidden card has no row, so it leaves no gap. */
+  .guest-stay-form {
+    @apply grid items-start gap-6;
+    grid-template-areas: "compact" "header" "body";
+  }
+
+  .guest-stay-form__compact { grid-area: compact; }
+  .guest-stay-form__header { grid-area: header; }
+  .guest-stay-form__summary { grid-area: summary; }
+  .guest-stay-form__body { grid-area: body; }
+
+  @media (min-width: 48rem) {
+    .guest-stay-form {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      grid-template-areas: "header header" "summary body";
+      @apply gap-8;
+    }
+  }
+
+  .guest-stay-compact {
+    @apply flex min-h-11 items-center gap-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .guest-stay-compact__back {
+    @apply size-5 shrink-0 text-primary transition-transform group-hover:-translate-x-0.5;
   }
 
   /* ─── Tile grid ───

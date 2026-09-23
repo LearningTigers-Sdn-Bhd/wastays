@@ -12,11 +12,14 @@
     <%= hidden_field_tag :kind, @kind %>
 
     <%= render GuestUI::FormField.new(form: form, attribute: :details,
-                                      label: housekeeping ? "What do you need?" : "What is wrong?") do |field| %>
-      <% field.with_text_area(rows: 5, value: params[:details], autofocus: true) %>
+                                      label: housekeeping ? "What do you need?" : "What is wrong?",
+                                      required: true) do |field| %>
+      <% field.with_text_area(rows: 5, value: params[:details],
+                              placeholder: housekeeping ? "For example: two more towels, and clean the room after 2 pm" : "For example: the air conditioning does not cool the room") %>
     <% end %>
 
     <%= render GuestUI::Button.new(label: "Send to the hotel", size: :lg, block: true,
-                                   class: "mt-5", type: "submit") %>
+                                   class: "mt-5", type: "submit",
+                                   data: { turbo_submits_with: "Sending…" }) %>
   <% end %>
 <% end %>

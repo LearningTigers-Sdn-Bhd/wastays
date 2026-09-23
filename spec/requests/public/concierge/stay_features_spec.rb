@@ -126,6 +126,21 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(response.body).to include("Ask for housekeeping")
     end
 
+    it "draws the request form on the page, not in a card, with a labelled required field" do
+      get concierge_new_stay_request_path(*args, kind: "housekeeping")
+
+      page = Nokogiri::HTML(response.body)
+      field = page.at_css(".guest-stay-form__body textarea#details")
+      button = page.at_css(".guest-stay-form__body button[type='submit']")
+
+      expect(page.at_css(".guest-stay-form__body .guest-card")).to be_nil
+      expect(page.at_css("label[for='details']").text).to include("What do you need?", "(required)")
+      expect(field["required"]).to be_present
+      expect(field["autofocus"]).to be_nil
+      expect(field["placeholder"]).to start_with("For example:")
+      expect(button["data-turbo-submits-with"]).to eq("Sending…")
+    end
+
     it "falls back to housekeeping for a kind it does not know" do
       get concierge_new_stay_request_path(*args, kind: "massage")
 
@@ -271,6 +286,24 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
         include("guest-stay-overview__main"),
         include("guest-stay-overview__more")
       ])
+    end
+
+    it "leads a form page with the compact stay card as the way back" do
+      get concierge_new_stay_request_path(*args, kind: "housekeeping")
+
+      page = Nokogiri::HTML(response.body)
+      blocks = page.css(".guest-stay-form > *").map { |block| block["class"] }
+      compact = page.at_css(".guest-stay-form__compact a.guest-stay-compact")
+
+      expect(blocks).to match([
+        include("guest-stay-form__compact"),
+        include("guest-stay-form__header"),
+        include("guest-stay-form__summary"),
+        include("guest-stay-form__body")
+      ])
+      expect(compact["href"]).to eq(concierge_stay_path(*args))
+      expect(compact.text.squish).to include("Back to my stay.", "Room 1201")
+      expect(page.at_css(".guest-stay-form__summary .guest-stay-summary")).to be_present
     end
   end
 

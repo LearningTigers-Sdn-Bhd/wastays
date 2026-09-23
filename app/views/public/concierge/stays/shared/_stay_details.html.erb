@@ -4,7 +4,6 @@
     Built like a room key: the guest checks it many times a day for "which
     room, how long", so the room number leads and the references, which a guest
     reads only at the front desk, sit last in small type. %>
-<% date_format = "%a, %-d %b" %>
 <%= render GuestUI::Card.new(class: "guest-stay-summary") do %>
   <div class="flex items-center justify-between gap-3">
     <h2 class="guest-card__title">Your Stay</h2>
@@ -22,9 +21,9 @@
     <div>
       <dt class="sr-only">Dates</dt>
       <dd class="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
-        <span><%= l(presenter.booking.check_in.to_date, format: date_format) %></span>
+        <span><%= presenter.check_in_label %></span>
         <%= app_icon "arrow-right", class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: "true" } %>
-        <span><%= l(presenter.booking.check_out.to_date, format: date_format) %></span>
+        <span><%= presenter.check_out_label %></span>
       </dd>
       <dd class="mt-1 text-xs font-medium text-muted-foreground">
         <%= presenter.stay_progress_label || pluralize(presenter.nights, "night") %>

@@ -55,6 +55,10 @@
 
   --border: oklch(0.9288 0.0126 255.51);
   --border-interactive: oklch(0.5544 0.0407 257.42);
+  /* The edge of a guest form field. A warm grey that sits with the page
+     rather than the slate --border-interactive, and still clears 3:1 on
+     --background (3.3:1) and --card (3.4:1) for WCAG 1.4.11. */
+  --guest-field-border: oklch(0.64 0.02 75);
   --ring: oklch(0.3707 0.0594 183.34);
 
   --shadow-color: 0 0% 0%;

@@ -1,22 +1,39 @@
-<%# A one-form stay page. The left column keeps the stay context, so the guest
-    never loses track of which stay they are acting on. %>
+<%# A one-form stay page. The stay stays in view, so the guest never loses
+    track of which stay they are acting on.
+
+    On a phone: the compact stay card, which is also the way back, then the
+    heading, then the form. On a wider screen: the heading with its own back
+    link across the top, then the full stay card beside the form.
+
+    The form sits on the page, not in a card: the heading above it already
+    says what it is, and one field and a button need no second frame. %>
 <%= render GuestUI::Page.new do |page| %>
   <% page.with_hero do %>
     <%= render "public/concierge/shared/hero" %>
   <% end %>
-  <% page.with_context do %>
-    <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
-  <% end %>
 
-  <%= render "public/concierge/stays/shared/page_heading",
-             back_path: stay_path,
-             title: title,
-             subtitle: local_assigns[:subtitle] %>
+  <div class="guest-stay-form">
+    <div class="guest-stay-form__compact md:hidden">
+      <%= render "public/concierge/stays/shared/stay_summary_compact", presenter: presenter %>
+    </div>
 
-  <%= render "public/concierge/stays/shared/flash" %>
-  <%= render GuestUI::Notice.new(message: local_assigns[:error], variant: :danger) %>
+    <div class="guest-stay-form__header">
+      <%= render "public/concierge/stays/shared/page_heading",
+                 back_path: stay_path,
+                 back_display: "hidden md:inline-flex",
+                 title: title,
+                 subtitle: local_assigns[:subtitle] %>
+    </div>
 
-  <%= render GuestUI::Card.new do %>
-    <%= yield %>
-  <% end %>
+    <div class="guest-stay-form__summary hidden md:block">
+      <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
+    </div>
+
+    <div class="guest-stay-form__body space-y-6">
+      <%= render "public/concierge/stays/shared/flash" %>
+      <%= render GuestUI::Notice.new(message: local_assigns[:error], variant: :danger) %>
+
+      <%= yield %>
+    </div>
+  </div>
 <% end %>

@@ -12,7 +12,10 @@
   <div class="guest-field__control"><%= control %></div>
 
   <% if invalid? %>
-    <p id="<%= error_id %>" class="guest-field__error"><%= error_message %></p>
+    <p id="<%= error_id %>" class="guest-field__error">
+      <%= helpers.app_icon "circle-alert", class: "guest-field__error-icon", aria: { hidden: "true" } %>
+      <span><%= error_message %></span>
+    </p>
   <% elsif hint? %>
     <p id="<%= hint_id %>" class="guest-field__hint"><%= hint %></p>
   <% end %>

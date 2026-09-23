@@ -1,0 +1,23 @@
+<%# The stay summary cut to one tap target for a phone. It sits above the
+    form, so the guest still sees which stay they act on, and the whole card
+    is the way back: a guest reaches for the top of the screen to go back. %>
+<%= link_to stay_path,
+      class: "guest-card guest-stay-summary guest-stay-compact group",
+      data: { padding: "tight" } do %>
+  <%= app_icon "chevron-left", class: "guest-stay-compact__back", aria: { hidden: "true" } %>
+  <span class="sr-only">Back to my stay.</span>
+
+  <span class="min-w-0 flex-1">
+    <span class="flex items-baseline justify-between gap-3">
+      <span class="truncate text-base font-semibold text-foreground">
+        <%= presenter.room_assigned? ? "Room #{presenter.room_label}" : "Room to be assigned" %>
+      </span>
+      <% if (progress = presenter.stay_progress_label) %>
+        <span class="shrink-0 text-xs font-medium text-muted-foreground"><%= progress %></span>
+      <% end %>
+    </span>
+    <span class="mt-0.5 block truncate text-xs text-muted-foreground">
+      <%= presenter.check_in_label %> &ndash; <%= presenter.check_out_label %>
+    </span>
+  </span>
+<% end %>
