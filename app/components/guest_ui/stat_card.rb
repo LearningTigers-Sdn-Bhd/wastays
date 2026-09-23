@@ -1,25 +1,28 @@
 # frozen_string_literal: true
 
 module GuestUI
-  # One number with its name: how many bookings, how many stays to come.
+  # One number with its name: how many bookings, stays to come, refunds asked.
   #
-  # The label leads in small type and the number follows large, so a row of
-  # them reads as a set of facts, not as a set of buttons.
+  # The icon sits in a tinted chip over the number, and the label follows in
+  # small type. Stacked, not side by side, so the cards stay narrow. The tone
+  # only tells the cards apart; the label is the name.
   class StatCard < GuestUI::BaseComponent
-    def initialize(label:, value:, icon: nil, class: nil)
+    TONES = %i[info success warning destructive muted].freeze
+
+    def initialize(label:, value:, icon:, tone: :muted, class: nil)
       @label = label
       @value = value
       @icon = icon
+      @tone = TONES.include?(tone) ? tone : :muted
       @class = binding.local_variable_get(:class)
     end
 
     def call
-      tag.div(class: tw_merge("guest-stat-card", @class)) do
+      tag.div(class: tw_merge("guest-stat-card", @class), data: { tone: @tone }) do
         safe_join([
-          tag.p(class: "guest-stat-card__label") do
-            safe_join([ (helpers.app_icon(@icon, class: "size-4 shrink-0", aria: { hidden: "true" }) if @icon), @label ].compact)
-          end,
-          tag.p(@value, class: "guest-stat-card__value")
+          tag.span(helpers.app_icon(@icon, class: "size-4", aria: { hidden: "true" }), class: "guest-stat-card__icon"),
+          tag.p(@value, class: "guest-stat-card__value"),
+          tag.p(@label, class: "guest-stat-card__label")
         ])
       end
     end

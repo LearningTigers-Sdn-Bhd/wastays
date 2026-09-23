@@ -194,20 +194,35 @@
   }
 
   /* ─── Stat card ───
-     Two a row, also on a phone. */
+     Two a row on a phone, four from md. Each tone tints the card faintly and its
+     icon chip more strongly, from the same tokens as the status badge. */
   .guest-stat-grid {
-    @apply grid grid-cols-2 gap-3 md:gap-4;
+    @apply grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4;
   }
 
   .guest-stat-card {
-    @apply rounded-2xl border border-border/40 bg-card p-4 shadow-xs md:p-5;
+    --stat-tone: var(--muted-foreground);
+    @apply rounded-2xl border p-4 shadow-xs md:p-5;
+    border-color: color-mix(in oklab, var(--stat-tone) 20%, transparent);
+    background: color-mix(in oklab, var(--stat-tone) 6%, var(--card));
   }
 
-  .guest-stat-card__label {
-    @apply flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground;
+  .guest-stat-card[data-tone="info"] { --stat-tone: var(--info); }
+  .guest-stat-card[data-tone="success"] { --stat-tone: var(--success); }
+  .guest-stat-card[data-tone="warning"] { --stat-tone: var(--warning); }
+  .guest-stat-card[data-tone="destructive"] { --stat-tone: var(--destructive); }
+
+  .guest-stat-card__icon {
+    @apply inline-flex size-8 items-center justify-center rounded-full;
+    background: color-mix(in oklab, var(--stat-tone) 15%, transparent);
+    color: color-mix(in oklab, var(--stat-tone) 80%, var(--foreground));
   }
 
   .guest-stat-card__value {
-    @apply mt-2 font-guest-display text-3xl font-semibold tabular-nums text-foreground;
+    @apply mt-3 font-guest-display text-3xl font-semibold leading-none tabular-nums text-foreground;
+  }
+
+  .guest-stat-card__label {
+    @apply mt-1.5 truncate text-xs font-bold text-muted-foreground;
   }
 }

@@ -1,15 +1,20 @@
 <% content_for :title, "Home | WAStays" %>
 
-<h1 class="font-guest-display text-2xl font-semibold text-foreground md:text-3xl">
-  Hello, <%= current_guest.name.split.first %>
-</h1>
+<div class="space-y-1">
+  <h1 class="font-guest-display text-2xl font-semibold text-foreground md:text-3xl">
+    Hello, <span class="text-primary"><%= current_guest.name %></span>
+  </h1>
+  <p class="text-sm text-muted-foreground">Your stays, documents, and refunds, all in one place.</p>
+</div>
 
 <section class="guest-stat-grid" aria-label="Your stays at a glance">
-  <%= render GuestUI::StatCard.new(label: "Bookings", value: @total_bookings, icon: "calendar-days") %>
-  <%= render GuestUI::StatCard.new(label: "Upcoming", value: @upcoming_count, icon: "plane") %>
+  <%= render GuestUI::StatCard.new(label: "Total bookings", value: @stats[:total], icon: "calendar-days", tone: :info) %>
+  <%= render GuestUI::StatCard.new(label: "Upcoming", value: @stats[:upcoming], icon: "calendar-clock", tone: :warning) %>
+  <%= render GuestUI::StatCard.new(label: "In house", value: @stats[:in_house], icon: "door-open", tone: :success) %>
+  <%= render GuestUI::StatCard.new(label: "Refunds requested", value: @stats[:refunds], icon: "receipt", tone: :destructive) %>
 </section>
 
-<% if (next_stay = @upcoming_bookings.first) %>
+<% if (next_stay = @next_stay) %>
   <%= render guest_stay_summary(next_stay, eyebrow: (next_stay.check_in.to_date <= Date.current ? "Current stay" : "Next stay")) do |summary| %>
     <% summary.with_actions do %>
       <%= render "guest/bookings/concierge_button", booking: next_stay %>
@@ -18,21 +23,18 @@
   <% end %>
 <% end %>
 
-<%# The next stay already has its own card above. %>
-<% recent = (@upcoming_bookings.drop(1) + @past_bookings).first(5) %>
-
-<% if @total_bookings.zero? %>
+<% if @stats[:total].zero? %>
   <%= render GuestUI::Card.new(variant: :dashed) do %>
     <p class="text-sm text-muted-foreground">No bookings yet.</p>
   <% end %>
-<% elsif recent.any? %>
+<% elsif @recent_bookings.any? %>
   <section class="space-y-3" aria-labelledby="recent-bookings-title">
     <div class="flex items-center justify-between gap-3">
       <h2 id="recent-bookings-title" class="guest-card__title">Recent Bookings</h2>
       <%= link_to "See all", guest_bookings_path, class: "text-sm font-bold text-primary hover:underline" %>
     </div>
     <div class="guest-booking-grid">
-      <% recent.each do |booking| %>
+      <% @recent_bookings.each do |booking| %>
         <%= render guest_booking_card(booking) %>
       <% end %>
     </div>
