@@ -23,6 +23,14 @@ RSpec.describe "Guest refund pages", type: :request do
     expect(document.at_css("nav.guest-chips a[aria-current='page']").text).to eq("Pending")
   end
 
+  it "points a guest with no refunds to their bookings" do
+    get guest_refund_requests_path
+
+    empty = document.at_css(".guest-empty-state")
+    expect(empty.at_css(".guest-empty-state__title").text).to eq("No refund requests")
+    expect(empty.at_css("a[href='#{guest_bookings_path}']").text.squish).to eq("View bookings")
+  end
+
   it "builds the request form in GuestUI with a confirm on the submit" do
     get new_guest_booking_refund_request_path(booking, return_to: "details")
 

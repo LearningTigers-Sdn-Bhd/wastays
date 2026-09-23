@@ -30,10 +30,12 @@ RSpec.describe "Guest booking pages", type: :request do
       expect(document.at_css("form input[type='hidden'][name='status']")["value"]).to eq("confirmed")
     end
 
-    it "says so when nothing matches" do
+    it "offers to clear the filters when nothing matches" do
       get guest_bookings_path, params: { status: "cancelled" }
 
-      expect(response.body).to include("No bookings found.")
+      empty = document.at_css("turbo-frame#guest_bookings_results .guest-empty-state")
+      expect(empty.at_css(".guest-empty-state__title").text).to eq("No bookings match")
+      expect(empty.at_css("a[href='#{guest_bookings_path}']").text.squish).to eq("Clear filters")
     end
   end
 

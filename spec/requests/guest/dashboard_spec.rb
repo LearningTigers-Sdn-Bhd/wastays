@@ -56,7 +56,9 @@ RSpec.describe "Guest dashboard", type: :request do
     expect(heading.text.squish).to eq("Hello, Aisha Rahman")
     expect(heading.at_css("span.text-primary").text).to eq("Aisha Rahman")
     expect(response.body).to include("Your stays, documents, and refunds, all in one place.")
-    expect(response.body).to include("No bookings yet.")
+    empty = Nokogiri::HTML(response.body).at_css(".guest-empty-state")
+    expect(empty.at_css(".guest-empty-state__title").text).to eq("No bookings yet")
+    expect(empty.at_css("a[href='#{root_path}']").text.squish).to eq("Find a stay")
     expect(stats).to eq("Total bookings" => "0", "Upcoming" => "0", "In house" => "0", "Refunds requested" => "0")
     expect(response.body).not_to include("Open concierge")
   end
@@ -88,6 +90,6 @@ RSpec.describe "Guest dashboard", type: :request do
     get guest_dashboard_path
 
     expect(response.body).to include("Next stay")
-    expect(response.body).not_to include("Recent Bookings", "No bookings yet.")
+    expect(response.body).not_to include("Recent Bookings", "No bookings yet")
   end
 end

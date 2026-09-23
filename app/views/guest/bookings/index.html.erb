@@ -21,8 +21,15 @@
       <% end %>
     </div>
   <% else %>
-    <%= render GuestUI::Card.new(variant: :dashed) do %>
-      <p class="text-sm text-muted-foreground">No bookings found.</p>
+    <% if @search_query.present? || @status_filter.present? %>
+      <%= render GuestUI::EmptyState.new(icon: "search-x", title: "No bookings match",
+                                         description: "Try another search, or pick a different status.") do |empty| %>
+        <% empty.with_action do %>
+          <%= render GuestUI::Button.new(label: "Clear filters", variant: :secondary, href: guest_bookings_path) %>
+        <% end %>
+      <% end %>
+    <% else %>
+      <%= render "guest/shared/no_bookings" %>
     <% end %>
   <% end %>
 

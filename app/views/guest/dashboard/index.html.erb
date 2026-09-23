@@ -24,9 +24,7 @@
 <% end %>
 
 <% if @stats[:total].zero? %>
-  <%= render GuestUI::Card.new(variant: :dashed) do %>
-    <p class="text-sm text-muted-foreground">No bookings yet.</p>
-  <% end %>
+  <%= render "guest/shared/no_bookings" %>
 <% elsif @recent_bookings.any? %>
   <section class="space-y-3" aria-labelledby="recent-bookings-title">
     <div class="flex items-center justify-between gap-3">
