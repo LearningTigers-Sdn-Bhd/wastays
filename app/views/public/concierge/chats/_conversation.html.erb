@@ -22,8 +22,8 @@
   <%= render GuestUI::Chat::Panel.new(doodle: concierge_chat_doodle_style) do |panel| %>
     <% panel.with_bar(title: hotel.name,
                       status: concierge_chat_status(conversation, hotel),
-                      back_path: concierge_home_path(hotel.unique_id, hotel.public_id),
-                      back_label: "Back to concierge",
+                      back_path: chat_back_path,
+                      back_label: chat_back_label,
                       avatar: conversation&.human? ? :staff : :bot) do |bar| %>
       <% bar.with_menu do %>
         <%= render GuestUI::Menu.new(label: "Conversation options") do |menu| %>

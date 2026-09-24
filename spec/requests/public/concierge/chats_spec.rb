@@ -197,6 +197,48 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     end
   end
 
+  # The back button returns to the page that opened the chat, even after the
+  # guest has sent a message and the page has reloaded.
+  describe "the way back" do
+    let(:home) { "/concierge/#{hotel.unique_id}/#{hotel.public_id}" }
+
+    def back_link = Nokogiri::HTML(response.body).at_css("a.guest-chat__bar-back")
+
+    it "goes to the concierge home when no page is given" do
+      get chat_path
+
+      expect(back_link["href"]).to eq(home)
+    end
+
+    it "goes back to the public page that opened the chat" do
+      get chat_path, params: { return_to: "#{home}/info/faqs" }
+
+      expect(back_link["href"]).to eq("#{home}/info/faqs")
+      expect(back_link["aria-label"]).to eq("Back")
+    end
+
+    it "goes back to the stay page that opened the chat" do
+      get chat_path, params: { return_to: "#{home}/stay/abc123" }
+
+      expect(back_link["href"]).to eq("#{home}/stay/abc123")
+      expect(back_link["aria-label"]).to eq("Back to your stay")
+    end
+
+    it "keeps the page after a message is sent" do
+      get chat_path, params: { return_to: "#{home}/stay/abc123" }
+      post chat_path, params: { message: "Do you have parking?" }
+      follow_redirect!
+
+      expect(back_link["href"]).to eq("#{home}/stay/abc123")
+    end
+
+    it "refuses a page outside this hotel's concierge" do
+      get chat_path, params: { return_to: "https://evil.example/phish" }
+
+      expect(back_link["href"]).to eq(home)
+    end
+  end
+
   # The chat has no page heading at all -- the bar is the only thing naming the
   # hotel, and the names above the bubbles only appear at the start of a run.
   describe "knowing who you are talking to" do

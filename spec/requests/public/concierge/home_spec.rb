@@ -111,7 +111,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
         concierge_book_path(hotel.unique_id, hotel.public_id),
         concierge_recommendations_path(hotel.unique_id, hotel.public_id),
         concierge_contact_path(hotel.unique_id, hotel.public_id),
-        concierge_chat_path(hotel.unique_id, hotel.public_id)
+        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id))
       ]
 
       public_paths.each do |path|
@@ -139,7 +139,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
         concierge_book_path(hotel.unique_id, hotel.public_id) => "booking",
         concierge_recommendations_path(hotel.unique_id, hotel.public_id) => "discovery",
         concierge_contact_path(hotel.unique_id, hotel.public_id) => "contact",
-        concierge_chat_path(hotel.unique_id, hotel.public_id) => "conversation"
+        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id)) => "conversation"
       }
 
       tones.each do |path, tone|
@@ -172,7 +172,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
         concierge_book_path(hotel.unique_id, hotel.public_id),
         concierge_recommendations_path(hotel.unique_id, hotel.public_id),
         concierge_contact_path(hotel.unique_id, hotel.public_id),
-        concierge_chat_path(hotel.unique_id, hotel.public_id)
+        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id))
       ]
 
       expect(check_in["class"]).to include("touch-manipulation", "rounded-xl")

@@ -38,7 +38,7 @@
       ]
 
       if @hotel.concierge_chat_available?
-        service_tiles << { path: concierge_chat_path(@hotel.unique_id, @hotel.public_id), label: "Interact with Chatbot", description: "Instant answers, any time", icon: "message-circle", tone: :conversation }
+        service_tiles << { path: concierge_chat_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath), label: "Interact with Chatbot", description: "Instant answers, any time", icon: "message-circle", tone: :conversation }
       end
     %>
 

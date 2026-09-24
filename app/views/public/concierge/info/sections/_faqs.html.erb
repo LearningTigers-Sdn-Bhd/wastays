@@ -41,7 +41,7 @@
   <%= render GuestUI::Card.new(title: "Still have a question?", class: "guest-aside-layout__aside") do |card| %>
     <% if @hotel.concierge_chat_available? %>
       <% card.with_row(label: "Chat with us", hint: "Instant answers, any time", icon: "message-circle",
-                       href: concierge_chat_path(@hotel.unique_id, @hotel.public_id)) %>
+                       href: concierge_chat_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath)) %>
     <% end %>
     <% card.with_row(label: "Contact the property", hint: "Phone, WhatsApp or email", icon: "phone", href: contact_path) %>
   <% end %>

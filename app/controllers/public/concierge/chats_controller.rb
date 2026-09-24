@@ -11,6 +11,11 @@ module Public
       # The one screen the guest-chat switch closes. The rest of the concierge
       # page is gated a level up, in BaseController.
       before_action :ensure_guest_chat_available
+      before_action :remember_return_to, only: :show
+
+      helper_method :chat_back_path, :chat_back_label
+
+      RETURN_TO_SESSION_KEY = :concierge_chat_return_to
 
       def show
         load_thread
@@ -65,6 +70,35 @@ module Public
       end
 
       private
+
+      # The page that opened the chat, so the back button returns there. Kept
+      # in the session because every send, clear and hand-off redirects back
+      # to the chat, and none of those forms carry it.
+      def remember_return_to
+        return if params[:return_to].blank?
+
+        session[RETURN_TO_SESSION_KEY] = safe_return_to(params[:return_to].to_s)
+      end
+
+      # Only a page of this hotel's concierge, so the chat cannot be turned
+      # into an open redirect.
+      def safe_return_to(candidate)
+        home = concierge_home_path(@hotel.unique_id, @hotel.public_id)
+        path = candidate.split("?").first.to_s
+        return candidate if path == home || path.start_with?("#{home}/")
+
+        nil
+      end
+
+      def chat_back_path
+        safe_return_to(session[RETURN_TO_SESSION_KEY].to_s) ||
+          concierge_home_path(@hotel.unique_id, @hotel.public_id)
+      end
+
+      def chat_back_label
+        stay_prefix = "#{concierge_home_path(@hotel.unique_id, @hotel.public_id)}/stay/"
+        chat_back_path.start_with?(stay_prefix) ? "Back to your stay" : "Back"
+      end
 
       def ensure_guest_chat_available
         return if @hotel&.concierge_chat_available?

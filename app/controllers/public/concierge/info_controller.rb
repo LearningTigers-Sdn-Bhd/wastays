@@ -6,7 +6,7 @@ module Public
     class InfoController < BaseController
       include ConciergeContactDetails
       def show
-        @section = params.fetch(:section, "property")
+        @section = ::Concierge::PropertyInfoPresenter::GUIDE_SECTIONS.find { |key| key == params[:section] } || "property"
         @info = ::Concierge::PropertyInfoPresenter.new(hotel: @hotel)
         @maps_link = maps_link
       end

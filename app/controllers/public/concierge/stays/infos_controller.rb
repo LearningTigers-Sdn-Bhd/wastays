@@ -7,7 +7,7 @@ module Public
         include ConciergeContactDetails
         def show
           @presenter = stay_presenter
-          @section = params.fetch(:section, "property")
+          @section = ::Concierge::PropertyInfoPresenter::PAGES.keys.find { |key| key == params[:section] } || "property"
           @info = ::Concierge::PropertyInfoPresenter.new(hotel: @hotel, booking: stay_booking)
           @maps_link = maps_link
         end

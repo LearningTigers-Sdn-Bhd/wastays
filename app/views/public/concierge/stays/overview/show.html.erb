@@ -75,7 +75,7 @@
             <%= render GuestUI::ActionCard.new(label: "Interact with Chatbot",
                                                hint: "Instant answers, any time",
                                                icon: "message-circle", tone: :conversation,
-                                               href: concierge_chat_path(@hotel.unique_id, @hotel.public_id)) %>
+                                               href: concierge_chat_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath)) %>
           <% end %>
         </div>
       </section>
