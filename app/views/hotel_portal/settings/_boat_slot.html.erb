@@ -19,7 +19,13 @@
                   data: { boat_slot_target: "form" }.merge(new_record ? {} : { slot_id: slot.id }) do |f| %>
       <%= f.hidden_field :kind, value: kind %>
       <div class="w-32" data-boat-slots-target="<%= "time" if new_record %>">
-        <%= render PanelsUI::FormField.new(form: f, attribute: :time, label: "Time", label_hidden: true) do |field| %>
+        <%# Every row shares the same form scope (:hotel_boat_schedule), so the
+            default id from the attribute name alone would collide across every
+            slot on the page -- an id-based lookup (a label's `for`, a popover's
+            outlet selector) would then always resolve to the first row's time
+            picker instead of its own. An explicit id, unique per row, keeps
+            each row's picker (and its Discard/reset) wired to itself. %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :time, label: "Time", label_hidden: true, id: "#{form_id}-time") do |field| %>
           <% field.with_time_picker(value: slot.time_of_day.to_s, minute_step: 5, disabled: slot.archived?) %>
         <% end %>
       </div>

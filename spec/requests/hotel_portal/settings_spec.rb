@@ -539,6 +539,25 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(bar.at_css("[data-action='boat-slots-bulk#discardAll']").text).to include("Discard all")
     end
 
+    # Every row shares the same form scope (:hotel_boat_schedule), so the
+    # generated id would default to the same string for every row's time
+    # picker -- a label's `for` or a popover's outlet class selector would
+    # then always resolve to the first row on the page, not its own, and
+    # Discard/reset on any other row would silently act on (or fail to act
+    # on) the wrong picker.
+    it "gives each row's time picker a distinct id, not the shared form scope's default" do
+      hotel.update!(allow_boat_information: true)
+      first = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      second = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "11:00")
+
+      get hotel_boat_settings_path(hotel)
+
+      document = Nokogiri::HTML(response.body)
+      ids = [ first, second ].map { |slot| document.at_css("form#boat-slot-#{slot.id} input[name='hotel_boat_schedule[time]']")["id"] }
+      expect(ids).to all(be_present)
+      expect(ids.uniq.size).to eq(2)
+    end
+
     it "saves meal service times on the Boat Settings tab" do
       hotel.update!(allow_boat_information: true)
 
