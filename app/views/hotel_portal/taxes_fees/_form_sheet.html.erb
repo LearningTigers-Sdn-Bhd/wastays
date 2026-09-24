@@ -3,7 +3,7 @@
 <% fee_value = hotel_tax.persisted? && hotel_tax.charge_type == "others" ? "others" : "charge" %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: hotel_tax.persisted? ? "manage-hotel-tax-sheet" : "add-hotel-tax-sheet",
           side: :right,
@@ -84,7 +84,7 @@
       <% end %>
 
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm, data: { turbo_submits_with: "Saving…" }) do %>

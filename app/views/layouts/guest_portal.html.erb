@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8">
+    <%# viewport-fit=cover makes env(safe-area-inset-*) resolve, so the Navbar
+        and the BottomNav can clear the notch and the home indicator. %>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title><%= content_for(:title) || "My Bookings | WAStays" %></title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full">
+    <div class="guest-portal">
+      <% if guest_logged_in? %>
+        <%= render GuestUI::Navbar.new(
+              items: guest_nav_items,
+              title: guest_page_title,
+              back_path: guest_back_path
+            ) do |navbar| %>
+          <% navbar.with_actions do %>
+            <span class="guest-navbar__name"><%= current_guest.name %></span>
+            <%= render GuestUI::Menu.new(id: "guest-account", label: "Open account menu", icon: "circle-user-round") do |menu| %>
+              <% menu.with_item(href: help_center_path) { "Help" } %>
+              <% menu.with_item(href: guest_logout_path, method: :delete) { "Sign out" } %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <%# Signed out: a way home on the right, and a way back on the left
+            when the page gives one. %>
+        <%= render GuestUI::Navbar.new(back_path: content_for(:back_path).presence) do |navbar| %>
+          <% navbar.with_actions do %>
+            <%= render GuestUI::Button.new(label: "Home", icon: "house", variant: :ghost, size: :sm, href: root_path) %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <main class="guest-portal__main">
+        <%= render GuestUI::Notice.new(message: flash[:notice], variant: :success) %>
+        <%= render GuestUI::Notice.new(message: flash[:alert], variant: :danger) %>
+        <%= yield %>
+      </main>
+
+      <%= render GuestUI::BottomNav.new(items: guest_nav_items) if guest_logged_in? %>
+    </div>
+  </body>
+</html>

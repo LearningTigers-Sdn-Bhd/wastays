@@ -18,6 +18,64 @@ RSpec.describe "Admin::Integrations", type: :request do
         get admin_integrations_path
         expect(response).to have_http_status(:ok)
       end
+
+      it "renders one tab per integration" do
+        get admin_integrations_path
+
+        Admin::IntegrationsController::TABS.each do |tab|
+          expect(response.body).to include(tab[:label])
+        end
+      end
+
+      it "gives every panel a visible heading" do
+        get admin_integrations_path
+
+        [ "Channel manager", "Storage", "AI providers", "AroundThat" ].each do |title|
+          expect(response.body).to include(%(<h2 class="text-base font-semibold tracking-tight text-foreground">#{title}</h2>))
+        end
+      end
+
+      it "opens the first tab by default" do
+        get admin_integrations_path
+
+        expect(response.body).to include('data-ui--tabs-active-value="channel_manager"')
+      end
+
+      it "opens the tab named in the query string" do
+        get admin_integrations_path(tab: "around_that")
+
+        expect(response.body).to include('data-ui--tabs-active-value="around_that"')
+      end
+
+      it "ignores an unknown tab" do
+        get admin_integrations_path(tab: "nope")
+
+        expect(response.body).to include('data-ui--tabs-active-value="channel_manager"')
+      end
+
+      it "shows a stored key in a maskable field" do
+        AppConfig.set("aroundthat_api_key", "at-stored-key")
+
+        get admin_integrations_path
+
+        expect(response.body).to include('type="password"')
+        expect(response.body).to include("at-stored-key")
+      end
+
+      it "wires the reveal toggle to the password-toggle controller" do
+        get admin_integrations_path
+
+        expect(response.body).to include('data-controller="password-toggle"')
+        expect(response.body).to include("password-toggle#toggle")
+      end
+
+      it "wires both connection tests to the connection-test controller" do
+        get admin_integrations_path
+
+        expect(response.body).to include("connection-test#run")
+        expect(response.body).to include(test_r2_connection_admin_integrations_path)
+        expect(response.body).to include(test_around_that_connection_admin_integrations_path)
+      end
     end
 
     context "as regular user" do
@@ -27,6 +85,113 @@ RSpec.describe "Admin::Integrations", type: :request do
         get admin_integrations_path
         expect(response).not_to have_http_status(:ok)
       end
+    end
+  end
+
+  describe "POST /admin/integrations/test_around_that_connection" do
+    let(:base_url) { "https://api.aroundthat.test/v1" }
+    let(:probe_url) { "#{base_url}/places" }
+
+    before do
+      AppConfig.set("aroundthat_api_key", "at-key")
+      AppConfig.set("aroundthat_base_url", base_url)
+      AppConfig.set("aroundthat_environment", "staging")
+    end
+
+    it "keeps a regular user out" do
+      sign_in_as(regular_user)
+
+      post test_around_that_connection_admin_integrations_path
+
+      expect(response).not_to have_http_status(:ok)
+    end
+
+    it "returns the success message when AroundThat answers" do
+      sign_in_as(superadmin)
+      stub_request(:get, probe_url).to_return(status: 200, body: "{}")
+
+      post test_around_that_connection_admin_integrations_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["success"]).to be(true)
+      expect(response.parsed_body["message"]).to include("api.aroundthat.test")
+    end
+
+    it "tests the settings the form posted, not the saved ones" do
+      sign_in_as(superadmin)
+      typed_url = "https://typed.aroundthat.test/v1"
+      request = stub_request(:get, "#{typed_url}/places")
+        .with(headers: { "Authorization" => "Bearer typed-key" })
+        .to_return(status: 200, body: "{}")
+
+      post test_around_that_connection_admin_integrations_path, params: {
+        aroundthat_api_key: "typed-key",
+        aroundthat_base_url: typed_url,
+        aroundthat_environment: "production"
+      }
+
+      expect(request).to have_been_requested
+      expect(response.parsed_body["message"]).to include("typed.aroundthat.test", "production")
+    end
+
+    it "reports an empty form field instead of falling back to the saved value" do
+      sign_in_as(superadmin)
+
+      post test_around_that_connection_admin_integrations_path, params: { aroundthat_base_url: "" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["message"]).to eq("Base URL is missing.")
+    end
+
+    it "returns the failure message when AroundThat rejects the key" do
+      sign_in_as(superadmin)
+      stub_request(:get, probe_url).to_return(status: 401)
+
+      post test_around_that_connection_admin_integrations_path
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["success"]).to be(false)
+      expect(response.parsed_body["message"]).to include("rejected the API key")
+    end
+  end
+
+  describe "POST /admin/integrations/test_r2_connection" do
+    let(:s3_client) { Aws::S3::Client.new(stub_responses: true) }
+
+    before { allow(Aws::S3::Client).to receive(:new).and_return(s3_client) }
+
+    it "tests the settings the form posted, not the saved ones" do
+      sign_in_as(superadmin)
+      AppConfig.set("r2_bucket", "saved-bucket")
+
+      post test_r2_connection_admin_integrations_path, params: {
+        r2_access_key_id: "typed-access",
+        r2_secret_access_key: "typed-secret",
+        r2_bucket: "typed-bucket",
+        r2_endpoint: "https://typed.r2.cloudflarestorage.com",
+        r2_region: "auto"
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body["message"]).to eq("Connected to the R2 bucket typed-bucket.")
+    end
+
+    it "reports an empty form field instead of falling back to the saved value" do
+      sign_in_as(superadmin)
+      AppConfig.set("r2_bucket", "saved-bucket")
+
+      post test_r2_connection_admin_integrations_path, params: { r2_bucket: "" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["message"]).to eq("Bucket name is missing.")
+    end
+
+    it "keeps a regular user out" do
+      sign_in_as(regular_user)
+
+      post test_r2_connection_admin_integrations_path
+
+      expect(response).not_to have_http_status(:ok)
     end
   end
 
@@ -71,11 +236,43 @@ RSpec.describe "Admin::Integrations", type: :request do
       expect(AppConfig.get("anthropic_api_key")).to eq("anthropic-key")
     end
 
+    it "saves AroundThat settings to AppConfig" do
+      patch admin_integrations_path, params: {
+        aroundthat_api_key: "at-key",
+        aroundthat_base_url: "https://api.aroundthat.example/v1",
+        aroundthat_environment: "production"
+      }
+
+      expect(AppConfig.get("aroundthat_api_key")).to eq("at-key")
+      expect(AppConfig.get("aroundthat_base_url")).to eq("https://api.aroundthat.example/v1")
+      expect(AppConfig.get("aroundthat_environment")).to eq("production")
+    end
+
+    it "clears an AroundThat value when the field is submitted empty" do
+      AppConfig.set("aroundthat_api_key", "at-key")
+
+      patch admin_integrations_path, params: { aroundthat_api_key: "" }
+
+      expect(AppConfig.get("aroundthat_api_key")).to eq("")
+    end
+
     it "redirects back to integrations page with success flash" do
       patch admin_integrations_path, params: { channex_api_key: "ch-123" }
-      expect(response).to redirect_to(admin_integrations_path)
+      expect(response).to redirect_to(admin_integrations_path(tab: "channel_manager"))
       follow_redirect!
       expect(response.body).to include("saved")
+    end
+
+    it "returns to the tab the form was posted from" do
+      patch admin_integrations_path, params: { tab: "around_that", aroundthat_api_key: "at-key" }
+
+      expect(response).to redirect_to(admin_integrations_path(tab: "around_that"))
+    end
+
+    it "falls back to the first tab when the posted tab is unknown" do
+      patch admin_integrations_path, params: { tab: "nope", channex_api_key: "ch-123" }
+
+      expect(response).to redirect_to(admin_integrations_path(tab: "channel_manager"))
     end
   end
 end

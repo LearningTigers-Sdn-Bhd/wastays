@@ -2,7 +2,7 @@
 <% form_id = "policy-note-#{@policy.id}-form" %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "policy-note-sheet",
           side: :right,
@@ -38,7 +38,7 @@
 
       <% sheet.with_footer do %>
         <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
+              data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,

@@ -23,20 +23,20 @@ RSpec.describe PanelsUI::FormField, type: :component do
 
     expect(page).to have_css("label.panel-form-field__label[for='profile_email']", text: "Check-in")
     root = page.find(".panel-date-picker")
-    expect(root["data-controller"]).to include("panels-ui--date-picker")
-    expect(page).to have_css("calendar-date[data-panels-ui--date-picker-target='calendar']")
+    expect(root["data-controller"]).to include("ui--date-picker")
+    expect(page).to have_css("calendar-date[data-ui--date-picker-target='calendar']")
     expect(page).to have_css("input#profile_email[type='hidden']", visible: :all)
     expect(page).to have_css("button.panel-date-picker__display[aria-describedby='profile_email-hint']")
   end
 
   it "composes time and datetime picker controls wired to the field id" do
     render_field(label: "Check-in time") { |field| field.with_time_picker }
-    expect(page).to have_css(".panel-time-picker[data-controller~='panels-ui--time-picker']")
+    expect(page).to have_css(".panel-time-picker[data-controller~='ui--time-picker']")
     expect(page).to have_css("input#profile_email[type='hidden']", visible: :all)
     expect(page).to have_css("button.panel-time-picker__display")
 
     render_field(label: "Arrival") { |field| field.with_date_time_picker }
-    expect(page).to have_css(".panel-date-time-picker[data-controller~='panels-ui--date-time-picker']")
+    expect(page).to have_css(".panel-date-time-picker[data-controller~='ui--date-time-picker']")
     expect(page).to have_css("input#profile_email[type='hidden']", visible: :all)
     expect(page).to have_css("button.panel-date-time-picker__display")
   end

@@ -1,44 +1,56 @@
 <% content_for :title, "Checked In! | #{@hotel.name}" %>
-<%= render layout: "public/concierge/shared/page_shell",
-           locals: { content_class: "flex-1 flex items-center justify-center px-6 py-16 sm:px-10", container_class: "w-full max-w-md text-center" } do %>
-  <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
-    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-  </div>
+<% presenter = Public::Concierge::CheckInPresenter.new(booking: @booking, hotel: @hotel) %>
 
-  <div class="mb-4 flex items-center justify-center gap-x-3">
-    <span class="h-px w-6 bg-primary/30"></span>
-    <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Checked In</span>
-    <span class="h-px w-6 bg-primary/30"></span>
-  </div>
+<%# The end of the flow: what happened, where the key is, and the stay card
+    the guest will see again on the stay page. %>
+<%= render GuestUI::Page.new(variant: :centered) do |page| %>
+  <% page.with_hero do %>
+    <%= render "public/concierge/shared/hero" %>
+  <% end %>
 
-  <%= render "public/concierge/shared/page_title",
-             title_prefix: "Welcome,",
-             title_accent: "#{@booking.guest_name.split.first}!",
-             subtitle: "You're checked in. Please collect your room key from the front desk." %>
-
-  <div class="mb-6 rounded-2xl bg-[#0a2e29] p-6 text-left shadow-lg">
-    <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-accent/60">Your Stay</p>
-    <p class="text-lg font-black text-white"><%= @booking.guest_name %></p>
-    <p class="mt-1 text-xs font-mono text-white/40"><%= @booking.confirmation_token %></p>
-
-    <div class="mt-4 grid grid-cols-3 gap-3 border-t border-white/10 pt-4">
-      <div>
-        <p class="text-[10px] uppercase tracking-widest text-white/40">Check-in</p>
-        <p class="text-sm font-bold text-white"><%= @booking.check_in.strftime("%d %b %Y") %></p>
-      </div>
-      <div>
-        <p class="text-[10px] uppercase tracking-widest text-white/40">Check-out</p>
-        <p class="text-sm font-bold text-white"><%= @booking.check_out.strftime("%d %b %Y") %></p>
-      </div>
-      <div>
-        <p class="text-[10px] uppercase tracking-widest text-white/40">Room</p>
-        <p class="text-sm font-bold text-white"><%= @room_number || "See front desk" %></p>
-      </div>
+  <div class="guest-check-in-success">
+    <div class="text-center">
+      <span class="guest-check-in-success__mark">
+        <%= app_icon "check", class: "size-7", aria: { hidden: "true" } %>
+      </span>
+      <%= render "public/concierge/stays/shared/page_heading",
+                 title: "Welcome,",
+                 title_accent: presenter.guest_name.to_s.split.first,
+                 subtitle: "You are checked in. Collect your room key at the front desk." %>
     </div>
-  </div>
 
-  <%= render "public/concierge/shared/back_button",
-             back_path: concierge_home_path(@hotel.unique_id, @hotel.public_id),
-             back_label: "Back to Concierge",
-             wrapper_class: "flex" %>
+    <%= render GuestUI::Card.new(class: "guest-stay-summary") do %>
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="guest-card__title">Your Stay</h2>
+        <span class="guest-stay-summary__status" data-state="in-house">Checked in</span>
+      </div>
+
+      <dl class="mt-4 space-y-4">
+        <div>
+          <dt class="text-xs font-medium text-muted-foreground">Room</dt>
+          <dd class="guest-stay-summary__room font-guest-display"><%= @room_number.presence || "See the front desk" %></dd>
+        </div>
+
+        <div>
+          <dt class="sr-only">Dates</dt>
+          <dd class="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+            <span><%= presenter.check_in_label %></span>
+            <%= app_icon "arrow-right", class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: "true" } %>
+            <span><%= presenter.check_out_label %></span>
+          </dd>
+          <dd class="mt-1 text-xs font-medium text-muted-foreground"><%= pluralize(presenter.nights, "night") %></dd>
+        </div>
+      </dl>
+
+      <dl class="guest-stay-summary__refs">
+        <div class="flex items-baseline gap-1.5">
+          <dt><span aria-hidden="true">Code</span><span class="sr-only">Booking confirmation code</span></dt>
+          <dd class="font-mono text-foreground"><%= presenter.confirmation_code %></dd>
+        </div>
+      </dl>
+    <% end %>
+
+    <%= render GuestUI::Button.new(label: "Back to Concierge", variant: :secondary, size: :lg, block: true,
+                                   href: concierge_home_path(@hotel.unique_id, @hotel.public_id)) %>
+  </div>
 <% end %>

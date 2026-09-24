@@ -1,0 +1,9 @@
+<%# Opens the stay in the concierge, in a new tab. The words say so for a
+    screen reader, as GuestUI::Card::Row does (WCAG G201). Locals: booking,
+    variant. %>
+<%= render GuestUI::Button.new(
+      variant: local_assigns.fetch(:variant, :primary), icon: "arrow-up-right",
+      href: concierge_guest_booking_path(booking), target: "_blank", rel: "noopener"
+    ) do %>
+  Open concierge<span class="sr-only"> (opens in a new tab)</span>
+<% end %>

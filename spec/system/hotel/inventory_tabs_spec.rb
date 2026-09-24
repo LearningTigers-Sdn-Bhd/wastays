@@ -65,7 +65,7 @@ RSpec.describe "Hotel inventory tabs", type: :system, js: true do
     expect(page).to have_css("#inventory-subtabs-tab-pricing[aria-selected='true']", visible: :all)
     expect(page).to have_css("[data-tabs-breadcrumb-label]", text: "Rates & Availability")
     expect(page).to have_css("[data-subtabs-breadcrumb-label]", text: "Pricing Rules", visible: :all)
-    expect(page).to have_css("[data-panels-ui--breadcrumb-target='subtabSegment'].hidden", visible: :all)
+    expect(page).to have_css("[data-ui--breadcrumb-target='subtabSegment'].hidden", visible: :all)
   end
 
   it "preserves tab and filter state across calendar Turbo navigation" do

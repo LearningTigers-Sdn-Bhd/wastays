@@ -322,8 +322,8 @@ class Conversation < ApplicationRecord
   def broadcast_status_to_guest
     broadcast_replace_to(
       [ self, :guest ],
-      target: PublicUI::Chat::Status::DEFAULT_ID,
-      renderable: PublicUI::Chat::Status.new(**guest_status)
+      target: GuestUI::Chat::Status::DEFAULT_ID,
+      renderable: GuestUI::Chat::Status.new(**guest_status)
     )
   end
 end

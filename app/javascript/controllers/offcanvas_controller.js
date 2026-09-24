@@ -53,8 +53,8 @@ export default class extends Controller {
       return
     }
 
-    this.trigger = trigger.closest("[data-controller~='panels-ui--dropdown-menu']")
-      ?.querySelector("[data-panels-ui--dropdown-menu-target='trigger']") || trigger
+    this.trigger = trigger.closest("[data-controller~='ui--dropdown-menu']")
+      ?.querySelector("[data-ui--dropdown-menu-target='trigger']") || trigger
     this.pendingVariant = trigger.dataset.offcanvasVariant || this.variantValue
     this.returnFocusElement = this.trigger
     this.returnFocusId = this.trigger.id || document.activeElement?.id

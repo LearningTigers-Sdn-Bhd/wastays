@@ -82,7 +82,7 @@ RSpec.describe "HotelPortal::SigningDevices", type: :request do
       reset!
       get pair_token_path(pairing.token)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(hotel.name)
+      expect(response.body).to include(CGI.escapeHTML(hotel.name))
 
       expect { post claim_pair_token_path(pairing.token), params: { label: "Lobby tablet" } }
         .to change { hotel.signing_devices.count }.by(1)

@@ -14,7 +14,7 @@
 <% max_adults = [ @room_type&.max_adults.to_i, 1 ].max %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "inventory-selection-sheet",
           side: :right,
@@ -241,7 +241,7 @@
               type: :button,
               variant: :secondary,
               size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
+              data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <% unless @stale_selection %>

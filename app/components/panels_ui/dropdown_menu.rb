@@ -59,7 +59,7 @@ module PanelsUI
           class: tw_merge("dropdown-menu__item", @class),
           data: data.merge(
             variant: @variant,
-            panels_ui__dropdown_menu_target: "item",
+            ui__dropdown_menu_target: "item",
             dropdown_menu_kind: "command"
           ),
           aria: aria.merge(disabled: (@disabled ? "true" : nil))
@@ -87,7 +87,7 @@ module PanelsUI
           class: tw_merge("dropdown-menu__item dropdown-menu__selection", @class),
           data: {
             variant: @variant,
-            panels_ui__dropdown_menu_target: "item",
+            ui__dropdown_menu_target: "item",
             dropdown_menu_kind: @type
           },
           aria: { checked: @checked.to_s, disabled: (@disabled ? "true" : nil) }.compact
@@ -109,7 +109,7 @@ module PanelsUI
           hidden: true,
           tabindex: "-1",
           aria: { hidden: "true" },
-          data: { panels_ui__dropdown_menu_target: "selectionInput" }
+          data: { ui__dropdown_menu_target: "selectionInput" }
         )
       end
     end
@@ -203,7 +203,7 @@ module PanelsUI
 
       def call
         tag.div(safe_join([ trigger, panel ]), class: "dropdown-menu__submenu", data: {
-          action: "pointerleave->panels-ui--dropdown-menu#scheduleSubmenuClose"
+          action: "pointerleave->ui--dropdown-menu#scheduleSubmenuClose"
         })
       end
 
@@ -221,9 +221,9 @@ module PanelsUI
           class: "dropdown-menu__item",
           data: {
             variant: @variant,
-            panels_ui__dropdown_menu_target: "item submenuTrigger",
+            ui__dropdown_menu_target: "item submenuTrigger",
             dropdown_menu_kind: "submenu",
-            action: "pointerenter->panels-ui--dropdown-menu#openSubmenuFromPointer"
+            action: "pointerenter->ui--dropdown-menu#openSubmenuFromPointer"
           },
           aria: {
             haspopup: "menu",
@@ -243,8 +243,8 @@ module PanelsUI
           popover: "manual",
           class: tw_merge("dropdown-menu dropdown-menu--submenu", @class),
           data: {
-            panels_ui__dropdown_menu_target: "submenuPanel",
-            action: "pointerenter->panels-ui--dropdown-menu#cancelSubmenuClose"
+            ui__dropdown_menu_target: "submenuPanel",
+            action: "pointerenter->ui--dropdown-menu#cancelSubmenuClose"
           },
           aria: { label: @label }
         )
@@ -276,8 +276,8 @@ module PanelsUI
             data: data.merge(
               variant: @variant,
               size: @size,
-              panels_ui__dropdown_menu_target: "trigger",
-              action: "click->panels-ui--dropdown-menu#toggle keydown->panels-ui--dropdown-menu#onTriggerKeydown"
+              ui__dropdown_menu_target: "trigger",
+              action: "click->ui--dropdown-menu#toggle keydown->ui--dropdown-menu#onTriggerKeydown"
             ),
             aria: aria.merge(
               label: @aria_label,

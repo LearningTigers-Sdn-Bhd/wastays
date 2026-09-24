@@ -66,7 +66,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_no_link('Night Audit History', href: hotel_reports_night_audits_path(hotel), visible: :all)
     expect(page).to have_css('#toast-viewport[data-controller="toast"]')
     expect(page).to have_css("header.panel-navbar[data-sticky='true']")
-    expect(page).to have_css(".panel-navbar__center [data-controller='panels-ui--command-palette']")
+    expect(page).to have_css(".panel-navbar__center [data-controller='ui--command-palette']")
     within(".panel-navbar__brand") do
       identity = find_link(hotel.name, href: hotel_dashboard_path(hotel))
       expect(identity).to have_css(".panel-navbar__identity-meta", text: hotel.unique_id)
@@ -77,7 +77,7 @@ RSpec.describe 'Hotel layout shell', type: :system do
     expect(page).to have_css("#announcements-panel", text: "There are no announcements right now.", visible: :all)
     expect(page).to have_css(".panel-navbar__actions button[aria-label='Notifications'][aria-expanded='false']")
     expect(page).to have_css("#notifications-panel", text: "You have no notifications right now.", visible: :all)
-    expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("#hotel-profile[data-controller='ui--dropdown-menu']")
     expect(page).to have_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']")
     expect(page).to have_no_css("nav[aria-label='Mobile navigation']", visible: :all)
     expect(page).to have_css("#hotel-sidebar a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")
@@ -100,9 +100,9 @@ RSpec.describe 'Hotel layout shell', type: :system do
 
     expect(page).to have_css("header.panel-navbar")
     expect(page).to have_no_css(".panel-navbar__center", visible: :all)
-    expect(page).to have_css("#onboarding-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("#onboarding-profile[data-controller='ui--dropdown-menu']")
     expect(page).to have_no_css("#hotel-sidebar", visible: :all)
     expect(page).to have_no_css("button[command='show-modal'][commandfor='hotel-sidebar-mobile']", visible: :all)
-    expect(page).to have_no_css("[data-controller='panels-ui--sidebar-toggle']", visible: :all)
+    expect(page).to have_no_css("[data-controller='ui--sidebar-toggle']", visible: :all)
   end
 end

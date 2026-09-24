@@ -17,8 +17,8 @@ RSpec.describe "Concierge chat keyboard", type: :system do
   def open_chat = visit(concierge_chat_path(hotel.unique_id, hotel.public_id))
 
   def send_message(text)
-    find(".public-chat__input").set(text)
-    find(".public-chat__input").send_keys(:enter)
+    find(".guest-chat__input").set(text)
+    find(".guest-chat__input").send_keys(:enter)
   end
 
   it "sends the message the guest typed" do
@@ -26,7 +26,7 @@ RSpec.describe "Concierge chat keyboard", type: :system do
 
     send_message("Do you have parking?")
 
-    expect(page).to have_css(".public-chat__bubble", text: "Do you have parking?")
+    expect(page).to have_css(".guest-chat__bubble", text: "Do you have parking?")
     expect(Conversation.last.messages.last.body).to eq("Do you have parking?")
   end
 
@@ -35,8 +35,8 @@ RSpec.describe "Concierge chat keyboard", type: :system do
 
     send_message("Do you have parking?")
 
-    expect(page).to have_css(".public-chat__bubble", text: "Do you have parking?")
-    expect(find(".public-chat__input").value).to eq("")
+    expect(page).to have_css(".guest-chat__bubble", text: "Do you have parking?")
+    expect(find(".guest-chat__input").value).to eq("")
   end
 
   # The regression that earned this file. Enter used to submit whichever form
@@ -47,11 +47,11 @@ RSpec.describe "Concierge chat keyboard", type: :system do
   it "does not touch the conversation menu's actions" do
     open_chat
     send_message("First question")
-    expect(page).to have_css(".public-chat__bubble", text: "First question")
+    expect(page).to have_css(".guest-chat__bubble", text: "First question")
 
     send_message("Second question")
 
-    expect(page).to have_css(".public-chat__bubble", text: "Second question")
+    expect(page).to have_css(".guest-chat__bubble", text: "Second question")
     expect(Conversation.count).to eq(1)
     expect(Conversation.last).to be_open
     expect(Conversation.last.messages.where(sender_role: "guest").count).to eq(2)
@@ -60,10 +60,10 @@ RSpec.describe "Concierge chat keyboard", type: :system do
   it "still breaks the line on Shift+Enter" do
     open_chat
 
-    find(".public-chat__input").set("First line")
-    find(".public-chat__input").send_keys(%i[shift enter])
+    find(".guest-chat__input").set("First line")
+    find(".guest-chat__input").send_keys(%i[shift enter])
 
-    expect(page).to have_css(".public-chat__input")
+    expect(page).to have_css(".guest-chat__input")
     expect(ProspectMessage.count).to eq(0)
   end
 
@@ -71,14 +71,14 @@ RSpec.describe "Concierge chat keyboard", type: :system do
   it "clears the conversation when the menu item is chosen" do
     open_chat
     send_message("Do you have parking?")
-    expect(page).to have_css(".public-chat__bubble", text: "Do you have parking?")
+    expect(page).to have_css(".guest-chat__bubble", text: "Do you have parking?")
 
     accept_confirm do
-      find(".public-menu__trigger").click
+      find(".guest-menu__trigger").click
       click_button("Clear conversation")
     end
 
-    expect(page).to have_no_css(".public-chat__bubble", text: "Do you have parking?")
+    expect(page).to have_no_css(".guest-chat__bubble", text: "Do you have parking?")
     expect(Conversation.last).not_to be_open
   end
 end

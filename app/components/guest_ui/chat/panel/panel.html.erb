@@ -1,0 +1,15 @@
+<%= tag.div(**root_attributes) do %>
+  <%= bar if bar? %>
+  <%= log %>
+  <div class="guest-chat__footer">
+    <%= alert if alert? %>
+    <%= tag.div(id: GuestUI::Chat::Panel::INPUT_REGION_ID) do %>
+      <% if secure_input? %>
+        <%= secure_input %>
+      <% else %>
+        <%= quick_replies if quick_replies? %>
+        <%= composer %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

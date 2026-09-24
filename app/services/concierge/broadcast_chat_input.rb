@@ -6,7 +6,7 @@ module Concierge
       presenter = ChatInputPresenter.new(conversation: conversation)
       Turbo::StreamsChannel.broadcast_replace_to(
         [ conversation, :guest ],
-        target: PublicUI::Chat::Panel::INPUT_REGION_ID,
+        target: GuestUI::Chat::Panel::INPUT_REGION_ID,
         partial: "public/concierge/chats/input",
         locals: { hotel: conversation.hotel, input: presenter }
       )

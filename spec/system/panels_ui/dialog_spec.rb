@@ -15,7 +15,7 @@ RSpec.describe "PanelsUI::Dialog", type: :system do
     # Focus is inside the dialog, on meaningful static content at the top.
     focused_in_dialog = page.evaluate_script("document.getElementById('sd-dialog').contains(document.activeElement)")
     expect(focused_in_dialog).to be(true)
-    on_title = page.evaluate_script("document.activeElement.matches('[data-panels-ui--dialog-target=initialFocus]')")
+    on_title = page.evaluate_script("document.activeElement.matches('[data-ui--dialog-target=initialFocus]')")
     expect(on_title).to be(true)
     expect(page.evaluate_script("document.activeElement.getAttribute('aria-label')")).not_to eq("Close")
   end

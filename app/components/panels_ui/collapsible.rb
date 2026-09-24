@@ -69,8 +69,8 @@ module PanelsUI
           controller: controller_names(data),
           state: state,
           disabled: ("" if disabled?),
-          panels_ui__collapsible_open_value: open?,
-          panels_ui__collapsible_disabled_value: disabled?
+          ui__collapsible_open_value: open?,
+          ui__collapsible_disabled_value: disabled?
         ).compact
       )
     end
@@ -89,8 +89,8 @@ module PanelsUI
         data: data.merge(
           state: state,
           disabled: ("" if disabled?),
-          panels_ui__collapsible_target: "trigger",
-          action: "click->panels-ui--collapsible#toggle"
+          ui__collapsible_target: "trigger",
+          action: "click->ui--collapsible#toggle"
         ).compact
       )
     end
@@ -110,7 +110,7 @@ module PanelsUI
         data: data.merge(
           state: state,
           disabled: ("" if disabled?),
-          panels_ui__collapsible_target: "content"
+          ui__collapsible_target: "content"
         ).compact
       ).compact
     end
@@ -119,7 +119,7 @@ module PanelsUI
 
     def controller_names(data)
       caller_controller = data.delete(:controller) || data.delete("controller")
-      [ caller_controller, "panels-ui--collapsible" ].compact.join(" ")
+      [ caller_controller, "ui--collapsible" ].compact.join(" ")
     end
   end
 end

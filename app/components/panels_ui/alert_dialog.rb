@@ -81,7 +81,7 @@ module PanelsUI
         caller_action = data.delete(:action) || data.delete("action")
         data.merge(
           slot: @slot,
-          action: [ caller_action, "panels-ui--dialog#close" ].compact.join(" ")
+          action: [ caller_action, "ui--dialog#close" ].compact.join(" ")
         )
       end
     end
@@ -143,12 +143,12 @@ module PanelsUI
           slot: "alert-dialog-content",
           size: @size,
           tone: @tone,
-          controller: [ "panels-ui--dialog", caller_controller ].compact.join(" "),
-          panels_ui__dialog_dismissible_value: false,
+          controller: [ "ui--dialog", caller_controller ].compact.join(" "),
+          ui__dialog_dismissible_value: false,
           action: [
-            "close->panels-ui--dialog#onClose",
-            "cancel->panels-ui--dialog#onCancel",
-            "click->panels-ui--dialog#backdropClose",
+            "close->ui--dialog#onClose",
+            "cancel->ui--dialog#onCancel",
+            "click->ui--dialog#backdropClose",
             caller_action
           ].compact.join(" ")
         ),

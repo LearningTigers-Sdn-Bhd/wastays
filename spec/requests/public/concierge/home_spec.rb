@@ -16,13 +16,15 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response).to have_http_status(:ok)
     end
 
-    it "renders all five tiles" do
+    it "renders the public concierge actions" do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
-      expect(response.body).to include("Check In")
-      expect(response.body).to include("Check Out")
+
+      expect(response.body).to include("Pre-check in")
       expect(response.body).to include("Book a Room")
-      expect(response.body).to include("Request")
-      expect(response.body).to include("Contact Us")
+      expect(response.body).to include("Recommendations")
+      expect(response.body).to include("Property Contacts")
+      expect(response.body).to include("Interact with Chatbot")
+      expect(response.body).to include('class="guest-tile-grid" data-columns="4"')
     end
 
     it "keeps the page but drops the chat tile when guest chat is off" do
@@ -31,9 +33,11 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Contact Us")
-      expect(response.body).not_to include("Chat With Us")
+      expect(response.body).to include("Property Contacts")
+      expect(response.body).not_to include("Interact with Chatbot")
       expect(response.body).not_to include(concierge_chat_path(hotel.unique_id, hotel.public_id))
+      # Three tiles: one row on a wide screen.
+      expect(response.body).to include('class="guest-tile-grid" data-columns="3"')
     end
 
     it "returns 404 for a suspended hotel" do
@@ -54,7 +58,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 
       expect(response).to redirect_to(hotel_path(hotel.unique_id, hotel.public_id))
-      expect(flash[:alert]).to eq("AI concierge is not available for this hotel.")
+      expect(flash[:alert]).to eq("AI concierge is not available for this property.")
     end
 
     it "returns 404 for an unknown public ID" do
@@ -80,45 +84,128 @@ RSpec.describe "Public::Concierge::Home", type: :request do
         get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => user_agent }
 
         expect(response.body).to include(concierge_chat_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include("Chat With Us")
+        expect(response.body).to include("Interact with Chatbot")
       end
     end
 
-    context "when request is from a mobile browser" do
-      let(:mobile_ua) { "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" }
-
-      it "renders the mobile template" do
-        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => mobile_ua }
-        expect(response).to have_http_status(:ok)
-        expect(response.body).to include("data-mobile-view")
+    # One responsive template now serves both, so the tiles a guest is offered
+    # no longer depend on how their user agent string is read.
+    it "serves the same page to phones and desktops" do
+      bodies = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].map do |user_agent|
+        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => user_agent }
+        response.body
       end
 
-      it "renders all five action tiles" do
-        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => mobile_ua }
-        expect(response.body).to include("Check In")
-        expect(response.body).to include("Check Out")
-        expect(response.body).to include("Booking")
-        expect(response.body).to include("Request")
-        expect(response.body).to include("Contact Us")
-      end
+      expect(bodies.first).to eq(bodies.last)
+    end
 
-      it "links to correct concierge paths" do
-        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => mobile_ua }
-        expect(response.body).to include(concierge_check_in_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include(concierge_check_out_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include(concierge_new_request_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include(concierge_contact_path(hotel.unique_id, hotel.public_id))
+    it "links every tile to its concierge path" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      public_paths = [
+        concierge_check_in_path(hotel.unique_id, hotel.public_id),
+        concierge_book_path(hotel.unique_id, hotel.public_id),
+        concierge_recommendations_path(hotel.unique_id, hotel.public_id),
+        concierge_contact_path(hotel.unique_id, hotel.public_id),
+        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id))
+      ]
+
+      public_paths.each do |path|
+        expect(document.at_css("a[href='#{path}']")).to be_present
       end
     end
 
-    context "when request is from a desktop browser" do
-      let(:desktop_ua) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" }
+    it "opens Book a Room in a new tab" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
 
-      it "renders the desktop template" do
-        get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => desktop_ua }
-        expect(response).to have_http_status(:ok)
-        expect(response.body).not_to include("data-mobile-view")
+      document = response.parsed_body
+      book = document.at_css("a[href='#{concierge_book_path(hotel.unique_id, hotel.public_id)}']")
+      recommendations = document.at_css("a[href='#{concierge_recommendations_path(hotel.unique_id, hotel.public_id)}']")
+
+      expect(book["target"]).to eq("_blank")
+      expect(book["rel"]).to eq("noopener")
+      expect(recommendations["target"]).to be_nil
+    end
+
+    it "uses the shared Concierge colors for public service cards" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      tones = {
+        concierge_book_path(hotel.unique_id, hotel.public_id) => "booking",
+        concierge_recommendations_path(hotel.unique_id, hotel.public_id) => "discovery",
+        concierge_contact_path(hotel.unique_id, hotel.public_id) => "contact",
+        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id)) => "conversation"
+      }
+
+      tones.each do |path, tone|
+        card = document.at_css("a[href='#{path}']")
+
+        expect(card["class"]).to include("guest-service-surface")
+        expect(card["data-tone"]).to eq(tone)
+        expect(card.at_css(".guest-service-surface__icon")).to be_present
       end
+
+      expect(document.at_css("a[href='#{concierge_check_in_path(hotel.unique_id, hotel.public_id)}']")["class"])
+        .not_to include("guest-service-surface")
+    end
+
+    it "has no public check-out or request routes" do
+      base = concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      [ [ "check-out", :get ], [ "check-out", :post ], [ "requests/new", :get ], [ "requests", :post ] ].each do |suffix, method|
+        expect { Rails.application.routes.recognize_path(File.join(base, suffix), method: method) }
+          .to raise_error(ActionController::RoutingError)
+      end
+    end
+
+    it "keeps every action card flat and touch-sized" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      check_in = document.at_css("a[href='#{concierge_check_in_path(hotel.unique_id, hotel.public_id)}']")
+      service_paths = [
+        concierge_book_path(hotel.unique_id, hotel.public_id),
+        concierge_recommendations_path(hotel.unique_id, hotel.public_id),
+        concierge_contact_path(hotel.unique_id, hotel.public_id),
+        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id))
+      ]
+
+      expect(check_in["class"]).to include("touch-manipulation", "rounded-xl")
+
+      # The services share GuestUI::ActionCard with the stay page, so both
+      # pages draw one tile.
+      service_paths.each do |path|
+        expect(document.at_css("a.guest-action-card[href='#{path}']")).to be_present
+      end
+
+      [ check_in, *service_paths.map { |path| document.at_css("a[href='#{path}']") } ].each do |card|
+        expect(card["class"]).not_to match(/shadow|rounded-\[2rem\]|active:scale/)
+        expect(card.element_children.any? { |child| child.name == "svg" }).to be(true)
+      end
+    end
+
+    it "leads with the hotel's own photograph rather than a stock background" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      expect(response.body).to include("landing/bg-1")
+    end
+
+    it "uses the concierge typography roles" do
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      font_stylesheet = document.css("link[rel='stylesheet']").find do |link|
+        link["href"]&.include?("fonts.googleapis.com")
+      end
+
+      expect(document.at_css("body")["class"]).to include("font-guest-interface")
+      expect(document.at_css("h1")["class"]).to include("font-guest-display")
+      expect(font_stylesheet["href"]).to include("family=Lato", "family=Playfair+Display")
     end
   end
 

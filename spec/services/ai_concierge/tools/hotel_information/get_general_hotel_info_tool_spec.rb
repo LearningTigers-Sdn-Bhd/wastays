@@ -30,6 +30,15 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetGeneralHotelInfoTool do
     expect(result["summary_text"]).to include("10 Beach Road, Langkawi, Malaysia")
   end
 
+  it "gives the description from Property Settings, the same text the concierge page shows" do
+    hotel = create(:hotel, name: "Wastays Signature", description: "A beach resort on Pantai Cenang.")
+
+    result = described_class.new(hotel: hotel).call
+
+    expect(result["description"]).to eq("A beach resort on Pantai Cenang.")
+    expect(result["summary_text"]).to end_with("A beach resort on Pantai Cenang.")
+  end
+
   it "uses selected amenity details in a specific answer" do
     hotel = create(:hotel)
     amenity = Amenity.hotel.find_by!(slug: "swimming_pool")

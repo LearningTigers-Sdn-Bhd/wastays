@@ -24,7 +24,7 @@ RSpec.describe 'Admin layout shell', type: :system do
     expect(page).to have_link('My account', href: edit_admin_profile_path)
     expect(page).to have_css("#admin-sidebar .panel-sidebar__header a[href='#{admin_dashboard_path}']", text: 'Admin Portal')
     expect(page).to have_css("header.panel-navbar[data-sticky='true']")
-    expect(page).to have_css("#admin-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("#admin-profile[data-controller='ui--dropdown-menu']")
     expect(page).to have_css("button[command='show-modal'][commandfor='admin-sidebar-mobile']")
     expect(page).to have_no_css("nav[aria-label='Mobile navigation']", visible: :all)
     expect(page).to have_css("#admin-sidebar a.panel-sidebar__link[data-sidebar-route][aria-current='page']", text: "Dashboard")

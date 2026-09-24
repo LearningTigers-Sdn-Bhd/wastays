@@ -35,12 +35,23 @@ RSpec.describe "Legacy public hotel URLs", type: :request do
   end
 
   it "uses a method-preserving redirect for a Concierge POST URL" do
-    post "/concierge/#{hotel.unique_id}/requests", params: { kind: "housekeeping" }
+    post "/concierge/#{hotel.unique_id}/check-in/lookup", params: { confirmation_code: "ABC123" }
 
     expect(response).to have_http_status(:temporary_redirect)
     expect(response.location).to eq(
-      "http://www.example.com#{concierge_requests_path(hotel.unique_id, hotel.public_id)}"
+      "http://www.example.com#{concierge_check_in_lookup_path(hotel.unique_id, hotel.public_id)}"
     )
+  end
+
+  it "sends the retired check-out and request URLs to the Concierge home" do
+    %w[check-out check-out/success requests/new requests/success].each do |suffix|
+      get "/concierge/#{hotel.slug}/#{suffix}"
+
+      expect(response).to have_http_status(:temporary_redirect)
+      expect(response.location).to eq(
+        "http://www.example.com#{concierge_home_path(hotel.unique_id, hotel.public_id)}"
+      )
+    end
   end
 
   it "uses a method-preserving redirect for a Concierge DELETE URL" do

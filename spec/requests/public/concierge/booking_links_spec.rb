@@ -40,7 +40,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
     reply = @conversation.messages.where(direction: "outbound").last.body
     expect(reply).to include("secure login link", "I am here if you need more help.")
     expect(reply).not_to include(booking.check_in.to_date.to_s, booking.guest_name, booking.guest_email)
-    expect(response.body).to include(PublicUI::Chat::Panel::INPUT_REGION_ID, "Ask the hotel team", "Type your message")
+    expect(response.body).to include(GuestUI::Chat::Panel::INPUT_REGION_ID, "Ask the property team", "Type your message")
     expect(response.body).not_to include("Find a room", "Check prices")
   end
 
@@ -49,7 +49,7 @@ RSpec.describe "Public Concierge booking links", type: :request do
       .offer_existing_booking_portal(conversation_id: @conversation.id)
     linked = AiConcierge::State::ConversationTaskManager.new(slots_payload: linked).record_magic_link_sent
     @state.update!(slots_payload: linked)
-    guest_message = "Please ask the hotel team to help with my booking."
+    guest_message = "Please ask the property team to help with my booking."
 
     perform_enqueued_jobs do
       post concierge_chat_messages_path(hotel.unique_id, hotel.public_id),

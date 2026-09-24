@@ -60,7 +60,7 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
 
         expect(response).to have_http_status(:success)
         document = Nokogiri::HTML(response.body)
-        expect(document.at_css("turbo-frame#folio_action_sheet dialog#folio-post-transaction-sheet[data-controller='panels-ui--sheet']")).to be_present
+        expect(document.at_css("turbo-frame#folio_action_sheet dialog#folio-post-transaction-sheet[data-controller='ui--sheet']")).to be_present
         expect(response.body).to include("Post payment")
         expect(response.body).to include("Target folio")
         expect(response.body).to include(folio.display_name)

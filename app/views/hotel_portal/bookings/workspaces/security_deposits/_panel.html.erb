@@ -103,7 +103,7 @@
         <%= render PanelsUI::FormField.new(form:, attribute: :payment_method, label: "Payment method", required: true) do |field| %><% field.with_select_menu(::Checkouts::PaymentMethods.release_options.map { |label, value| { label: label, value: value } }, selected: "cash") %><% end %>
         <%= render PanelsUI::FormField.new(form:, attribute: :external_reference, label: "Reference", hint: "Optional receipt or transaction reference.") do |field| %><% field.with_input(autocomplete: "off") %><% end %>
       </div>
-      <div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Recording…" }) do %>Record deposit<% end %></div>
+      <div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Recording…" }) do %>Record deposit<% end %></div>
     <% end %>
   <% end %>
 <% end %>
@@ -140,7 +140,7 @@
       <%= form_with url: reverse_deposit_application_hotel_booking_workspace_path(current_hotel, presenter.selected_child_booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
         <%= form.hidden_field :deposit_movement_id, value: movement.id %><%= form.hidden_field :operation_key, value: SecureRandom.uuid %>
         <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5"><%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", hint: "The original folio transaction remains in the audit trail.", required: true) do |field| %><% field.with_text_area(rows: 4) %><% end %></div>
-        <div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive) do %>Reverse application<% end %></div>
+        <div class="flex justify-end gap-2 border-t border-border p-4"><%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %><%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive) do %>Reverse application<% end %></div>
       <% end %>
     <% end %>
   <% end %>

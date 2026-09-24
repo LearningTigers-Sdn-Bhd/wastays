@@ -133,7 +133,7 @@ RSpec.describe "Booking workspace mobile entity selection", frozen_time: :busine
 
     expect(page.evaluate_script(<<~JS)).to be(true)
       (() => {
-        const body = document.querySelector('#booking-entity-selector-sheet [data-panels-ui--sheet-target="panel"] > .custom-scrollbar')
+        const body = document.querySelector('#booking-entity-selector-sheet [data-ui--sheet-target="panel"] > .custom-scrollbar')
         return body.scrollHeight > body.clientHeight
       })()
     JS

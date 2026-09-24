@@ -63,6 +63,6 @@ export default class extends Controller {
   }
 
   get inputs() {
-    return Array.from(this.element.querySelectorAll('[data-panels-ui--toggle-group-target="input"]'))
+    return Array.from(this.element.querySelectorAll('[data-ui--toggle-group-target="input"]'))
   }
 }

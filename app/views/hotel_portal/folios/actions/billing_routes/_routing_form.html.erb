@@ -25,7 +25,7 @@
   <div class="sticky bottom-0 z-30 flex shrink-0 items-center justify-between border-t border-border bg-card px-6 py-4 pointer-events-auto">
     <p class="text-xs text-muted-foreground">Changes are reviewed and applied together. Need another destination? <%= link_to "Add folio", hotel_folio_action_new_window_path(current_hotel, @routing_booking, return_to: @return_to), data: { turbo_frame: "folio_action_sheet_secondary" }, class: "font-semibold text-primary hover:underline" %>.</p>
     <div class="relative z-40 flex gap-3 pointer-events-auto">
-      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
       <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Reviewing…" }) do %>Apply changes<% end %>
     </div>
   </div>

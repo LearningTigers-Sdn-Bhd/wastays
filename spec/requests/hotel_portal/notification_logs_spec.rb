@@ -62,7 +62,7 @@ RSpec.describe "HotelPortal::NotificationLogs", type: :request do
       )
       expect(page).to have_button("Resend", exact: true)
       expect(page).to have_css("button[command='show-modal'][commandfor^='resend-modal-']", text: "Resend")
-      expect(page).to have_css("dialog[id^='resend-modal-'][data-controller='panels-ui--dialog']")
+      expect(page).to have_css("dialog[id^='resend-modal-'][data-controller='ui--dialog']")
       expect(page).to have_css("form[action='#{resend_hotel_notification_log_path(hotel, NotificationDelivery.last)}'][method='post']")
       expect(page).to have_css("textarea[name='resend_reason'][required]")
       expect(page).to have_button("Confirm resend")

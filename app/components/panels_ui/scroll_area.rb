@@ -10,7 +10,7 @@ module PanelsUI
   #   <% end %>
   #
   # The server renders the four structural parts (root / viewport / scrollbar / thumb)
-  # and the accessible relationships; the scoped panels-ui--scroll-area controller owns
+  # and the accessible relationships; the scoped ui--scroll-area controller owns
   # measurement, thumb sizing, dragging, click-to-jump, and auto-hide.
   class ScrollArea < PanelsUI::BaseComponent
     ORIENTATIONS = %i[vertical horizontal both].freeze
@@ -45,10 +45,10 @@ module PanelsUI
           controller: controller_names(data),
           orientation: @orientation,
           scroll_fade: @scroll_fade,
-          panels_ui__scroll_area_target: "root",
-          panels_ui__scroll_area_hide_delay_value: @hide_delay,
-          action: "mouseenter->panels-ui--scroll-area#onRootMouseEnter " \
-                  "mouseleave->panels-ui--scroll-area#onRootMouseLeave"
+          ui__scroll_area_target: "root",
+          ui__scroll_area_hide_delay_value: @hide_delay,
+          action: "mouseenter->ui--scroll-area#onRootMouseEnter " \
+                  "mouseleave->ui--scroll-area#onRootMouseLeave"
         ).compact
       )
     end
@@ -58,8 +58,8 @@ module PanelsUI
         class: tw_merge("panel-scroll-area__viewport", @height, @max_height, @viewport_class),
         tabindex: @tabindex,
         data: {
-          panels_ui__scroll_area_target: "viewport",
-          action: "scroll->panels-ui--scroll-area#onViewportScroll"
+          ui__scroll_area_target: "viewport",
+          action: "scroll->ui--scroll-area#onViewportScroll"
         }
       }
     end
@@ -70,8 +70,8 @@ module PanelsUI
         aria: { hidden: "true" },
         data: {
           orientation: axis,
-          panels_ui__scroll_area_target: "scrollbar",
-          action: "click->panels-ui--scroll-area#onScrollbarClick"
+          ui__scroll_area_target: "scrollbar",
+          action: "click->ui--scroll-area#onScrollbarClick"
         }
       }
     end
@@ -82,8 +82,8 @@ module PanelsUI
         aria: { hidden: "true" },
         data: {
           orientation: axis,
-          panels_ui__scroll_area_target: "thumb",
-          action: "mousedown->panels-ui--scroll-area#onThumbMouseDown"
+          ui__scroll_area_target: "thumb",
+          action: "mousedown->ui--scroll-area#onThumbMouseDown"
         }
       }
     end
@@ -92,7 +92,7 @@ module PanelsUI
 
     def controller_names(data)
       caller_controller = data.delete(:controller) || data.delete("controller")
-      [ caller_controller, "panels-ui--scroll-area" ].compact.join(" ")
+      [ caller_controller, "ui--scroll-area" ].compact.join(" ")
     end
   end
 end

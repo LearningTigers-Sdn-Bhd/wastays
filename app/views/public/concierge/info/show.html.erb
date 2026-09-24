@@ -1,0 +1,15 @@
+<% page = @info.page(@section) %>
+<% content_for :title, "#{page[:title]} | #{@hotel.name}" %>
+
+<%# The same frame as the public contact page: no stay is known, so the
+    heading keeps its back link, and the page takes the full width. %>
+<%= render layout: "public/concierge/shared/form_layout",
+           locals: {
+             back_path: concierge_home_path(@hotel.unique_id, @hotel.public_id),
+             back_label: "Back to Concierge",
+             title: page[:title],
+             wide: true,
+             subtitle: page[:subtitle]
+           } do %>
+  <%= render "public/concierge/info/details", wide: true %>
+<% end %>

@@ -21,7 +21,13 @@ class BankCatalog
     "UOB"
   ].freeze
 
+  # The value a guest picks when their bank is not listed. They then type the
+  # name, which is what gets stored.
+  OTHER = "Other"
+
   class << self
+    def listed?(name) = MALAYSIAN_BANKS.include?(name.to_s.strip)
+
     def options(current: nil)
       names = MALAYSIAN_BANKS.dup
       names << current.to_s.strip if current.present? && names.exclude?(current.to_s.strip)

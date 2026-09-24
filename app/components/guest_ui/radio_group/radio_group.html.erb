@@ -1,0 +1,13 @@
+<%= tag.div(**group_attributes) do %>
+  <% choices.each_with_index do |choice, index| %>
+    <%= tag.label(class: "guest-radio-group__option") do %>
+      <%= form.radio_button(attribute, choice[:value], **radio_attributes(index, hint: choice[:hint].present?)) %>
+      <span class="guest-radio-group__text">
+        <span id="<%= option_id(index) %>-label" class="guest-radio-group__label"><%= choice[:label] %></span>
+        <% if choice[:hint].present? %>
+          <span id="<%= option_id(index) %>-hint" class="guest-radio-group__hint"><%= choice[:hint] %></span>
+        <% end %>
+      </span>
+    <% end %>
+  <% end %>
+<% end %>

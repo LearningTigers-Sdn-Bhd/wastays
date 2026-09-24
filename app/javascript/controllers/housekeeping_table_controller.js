@@ -346,7 +346,7 @@ export default class extends Controller {
   }
 
   scheduleReopen(dropdownRoot) {
-    const trigger = dropdownRoot?.querySelector("[data-panels-ui--dropdown-menu-target~='trigger']")
+    const trigger = dropdownRoot?.querySelector("[data-ui--dropdown-menu-target~='trigger']")
     const frame = document.getElementById(RESULTS_FRAME_ID)
     if (!trigger || !frame) return
 

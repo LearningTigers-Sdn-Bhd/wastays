@@ -1,0 +1,74 @@
+<%= tag.div(**root_attributes) do %>
+  <p id="<%= label_id %>" class="guest-field__label" data-upload-label><%= label %></p>
+
+  <%# Empty: the whole box is one button. Its name is the field label and the
+      words in the box; the hint says what the phone will offer. %>
+  <button type="button" class="guest-image-upload__empty"
+          aria-labelledby="<%= label_id %> <%= input_id %>-add"
+          aria-describedby="<%= described_by %>"
+          <%= "disabled" if @disabled %>
+          data-action="guest-image-upload#choose">
+    <%= helpers.app_icon icon, class: "guest-image-upload__icon", aria: { hidden: "true" } %>
+    <span id="<%= input_id %>-add" class="guest-image-upload__action">Add a photo</span>
+    <span id="<%= hint_id %>" class="guest-image-upload__hint"><%= hint %></span>
+  </button>
+
+  <%# Filled: the photo, what it is, and one way to change it. %>
+  <div class="guest-image-upload__filled">
+    <img src="<%= @preview_url %>" alt="Photo added: <%= label %>" class="guest-image-upload__preview"
+         data-guest-image-upload-target="preview">
+    <div class="guest-image-upload__bar">
+      <span class="guest-image-upload__done">
+        <%= helpers.app_icon "circle-check", class: "size-4 shrink-0", aria: { hidden: "true" } %>
+        Photo added
+      </span>
+      <button type="button" class="guest-image-upload__replace"
+              aria-labelledby="<%= input_id %>-replace <%= label_id %>"
+              <%= "disabled" if @disabled %>
+              data-action="guest-image-upload#choose">
+        <span id="<%= input_id %>-replace">Replace</span>
+      </button>
+    </div>
+  </div>
+
+  <% if error.present? %>
+    <p id="<%= error_id %>" class="guest-field__error">
+      <%= helpers.app_icon "circle-alert", class: "guest-field__error-icon", aria: { hidden: "true" } %>
+      <span><%= error %></span>
+    </p>
+  <% end %>
+
+  <%# Says what happened for a screen reader, which does not see the photo
+      appear. %>
+  <p class="sr-only" aria-live="polite" data-guest-image-upload-target="status"></p>
+
+  <%# The touch-screen choice. Closed until the button opens it. %>
+  <dialog class="guest-sheet" aria-labelledby="<%= sheet_title_id %>"
+          data-concierge-modal-target="dialog"
+          data-action="click->concierge-modal#backdropClose close->concierge-modal#onClose">
+    <div class="guest-sheet__panel">
+      <h2 id="<%= sheet_title_id %>" class="guest-sheet__title" tabindex="-1" autofocus><%= label %></h2>
+
+      <button type="button" class="guest-sheet__option" data-action="guest-image-upload#takePhoto">
+        <%= helpers.app_icon "camera", class: "guest-sheet__option-icon", aria: { hidden: "true" } %>
+        <span>
+          <span class="guest-sheet__option-label">Take a photo</span>
+          <span class="guest-sheet__option-hint">Use your camera now</span>
+        </span>
+      </button>
+
+      <button type="button" class="guest-sheet__option" data-action="guest-image-upload#choosePhoto">
+        <%= helpers.app_icon "image", class: "guest-sheet__option-icon", aria: { hidden: "true" } %>
+        <span>
+          <span class="guest-sheet__option-label">Choose a photo or file</span>
+          <span class="guest-sheet__option-hint">From your gallery or files</span>
+        </span>
+      </button>
+
+      <%= render GuestUI::Button.new(label: "Cancel", variant: :ghost, size: :lg, block: true,
+                                     data: { action: "concierge-modal#close" }) %>
+    </div>
+  </dialog>
+
+  <%= file_input %>
+<% end %>

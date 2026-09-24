@@ -76,7 +76,7 @@ RSpec.describe "Request detail sheet", type: :request do
       show(kind: "housekeeping", request_id: request.id)
 
       expect(response.body).to include("requests_action_sheet")
-      expect(response.body).to include("panels-ui--sheet-frame")
+      expect(response.body).to include("ui--sheet-frame")
       expect(response.body).to include("<dialog")
     end
   end

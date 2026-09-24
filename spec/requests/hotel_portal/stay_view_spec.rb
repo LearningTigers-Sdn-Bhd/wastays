@@ -935,7 +935,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
       get hotel_stay_view_room_status_path(hotel, room_type, "101"), params: { return_to: hotel_stay_view_path(hotel) }, headers: { "Turbo-Frame" => "booking_action_sheet" }
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      expect(document.at_css("turbo-frame#booking_action_sheet dialog#stay-view-room-status-sheet[data-controller='panels-ui--sheet']")).to be_present
+      expect(document.at_css("turbo-frame#booking_action_sheet dialog#stay-view-room-status-sheet[data-controller='ui--sheet']")).to be_present
       expect(response.body).to include("Change room status", "Physical status")
 
       get new_hotel_stay_view_room_block_path(hotel), params: {
@@ -944,7 +944,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
         return_to: hotel_stay_view_path(hotel)
       }, headers: { "Turbo-Frame" => "booking_action_sheet" }
       expect(response).to have_http_status(:success)
-      expect(Nokogiri::HTML(response.body).at_css("turbo-frame#booking_action_sheet dialog#stay-view-room-block-sheet[data-controller='panels-ui--sheet']")).to be_present
+      expect(Nokogiri::HTML(response.body).at_css("turbo-frame#booking_action_sheet dialog#stay-view-room-block-sheet[data-controller='ui--sheet']")).to be_present
       expect(response.body).to include("Block room", "Block type", "Room 101")
     end
 
@@ -1226,7 +1226,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
         headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
-      expect(Nokogiri::HTML(response.body).at_css("dialog#stay-view-housekeeping-assignment-sheet[data-controller='panels-ui--sheet']")).to be_present
+      expect(Nokogiri::HTML(response.body).at_css("dialog#stay-view-housekeeping-assignment-sheet[data-controller='ui--sheet']")).to be_present
       expect(response.body).to include("Assign room tasks", "all active housekeeping requests", "Sam Lee")
 
       get edit_hotel_stay_view_housekeeping_request_status_path(hotel, housekeeping_request),
@@ -1234,7 +1234,7 @@ RSpec.describe "HotelPortal Stay View", type: :request, frozen_time: Time.zone.l
         headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
-      expect(Nokogiri::HTML(response.body).at_css("dialog#stay-view-housekeeping-status-sheet[data-controller='panels-ui--sheet']")).to be_present
+      expect(Nokogiri::HTML(response.body).at_css("dialog#stay-view-housekeeping-status-sheet[data-controller='ui--sheet']")).to be_present
       expect(response.body).to include("Update task status", "Fresh towels", "In progress", "Completed")
     end
 

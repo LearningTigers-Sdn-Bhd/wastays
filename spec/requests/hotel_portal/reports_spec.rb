@@ -1237,13 +1237,13 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get daily_occupancy_hotel_reports_path(hotel), params: { date_range: "2026-05-06/2026-05-07" }
 
       page = Capybara.string(response.body)
-      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      picker = page.find('[data-ui--date-picker-mode-value="range"]')
       expect(response).to have_http_status(:success)
-      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
-      expect(picker["data-panels-ui--date-picker-responsive-months-value"]).to eq("true")
+      expect(picker["data-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-ui--date-picker-responsive-months-value"]).to eq("true")
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Apply")
-      expect(page).to have_css('[data-controller~="panels-ui--dropdown-menu"]')
+      expect(page).to have_css('[data-controller~="ui--dropdown-menu"]')
       expect(page).to have_no_css("details")
     end
 
@@ -1481,7 +1481,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       page = Capybara.string(response.body)
       expect(page).to have_css('input[name="as_of_date"][value="2026-05-20"]', visible: :all)
       expect(page).to have_no_css('input[name="date_range"]', visible: :all)
-      picker = page.find('[data-panels-ui--date-picker-mode-value="single"]')
+      picker = page.find('[data-ui--date-picker-mode-value="single"]')
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Apply")
       expect(page).to have_field("Time period", visible: :all)
@@ -2536,10 +2536,10 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       expect(response).to have_http_status(:success)
       page = Capybara.string(response.body)
-      expect(page).to have_css('[data-panels-ui--tabs-active-value="paid"]')
+      expect(page).to have_css('[data-ui--tabs-active-value="paid"]')
       expect(page).to have_css('[data-testid="payouts-upcoming-panel"]', visible: :all)
       expect(page).to have_css('[data-testid="payouts-paid-panel"]')
-      expect(page).to have_css('[data-panels-ui--breadcrumb-target="tabLabel"]', text: "Paid History")
+      expect(page).to have_css('[data-ui--breadcrumb-target="tabLabel"]', text: "Paid History")
     end
 
     it "falls back to upcoming for an unknown tab" do
@@ -2547,9 +2547,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       expect(response).to have_http_status(:success)
       page = Capybara.string(response.body)
-      expect(page).to have_css('[data-panels-ui--tabs-active-value="upcoming"]')
+      expect(page).to have_css('[data-ui--tabs-active-value="upcoming"]')
       expect(page).to have_css(
-        '[data-panels-ui--breadcrumb-target="tabLabel"]',
+        '[data-ui--breadcrumb-target="tabLabel"]',
         text: "Upcoming & Processing"
       )
     end
@@ -2569,9 +2569,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       page = Capybara.string(response.body)
-      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      picker = page.find('[data-ui--date-picker-mode-value="range"]')
       expect(response).to have_http_status(:success)
-      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-ui--date-picker-months-value"]).to eq("2")
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_css('input[name="paid_date_range"][value="2026-05-01/2026-05-31"]', visible: :all)
       expect(page).to have_no_button("Filter")
@@ -2748,7 +2748,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get journal_batches_hotel_reports_path(hotel), params: { date_range: "2026-05-01/2026-05-31" }
 
       page = Capybara.string(response.body)
-      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      picker = page.find('[data-ui--date-picker-mode-value="range"]')
       expect(response).to have_http_status(:success)
       expect(page).to have_css("[data-slot='report-page'][data-report='journal-batches']")
       expect(page).to have_css("h1", exact_text: "Journal batches")
@@ -2758,7 +2758,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 3)
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card__detail", count: 3)
-      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-ui--date-picker-months-value"]).to eq("2")
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Filter")
       expect(page).to have_text("07 May 2026")
@@ -2771,7 +2771,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_link("Export CSV", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :csv))
       expect(page).to have_link("Export Excel", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :xlsx))
       expect(page).to have_link("Export PDF", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :pdf))
-      expect(page).to have_css('[data-controller~="panels-ui--dropdown-menu"]')
+      expect(page).to have_css('[data-controller~="ui--dropdown-menu"]')
     end
 
     it "exports XLSX and PDF" do

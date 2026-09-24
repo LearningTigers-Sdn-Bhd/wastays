@@ -10,27 +10,38 @@ RSpec.describe "Guest navigation", type: :request do
     sign_in_guest!(guest)
   end
 
-  it "renders booking detail breadcrumbs with the confirmation token" do
+  it "titles booking detail after the reference number and goes back to My Bookings" do
     get guest_booking_path(booking)
 
     expect(response).to have_http_status(:success)
-    expect(breadcrumb_labels).to eq([ "My Account", "My Bookings", "WS-GUEST1" ])
+    expect(navbar_title).to eq(booking.formatted_reservation_number)
+    expect(back_path).to eq(guest_bookings_path)
   end
 
-  it "renders request-refund breadcrumbs under Refunds" do
+  it "goes back from request refund to the booking" do
     get new_guest_booking_refund_request_path(booking)
 
     expect(response).to have_http_status(:success)
-    expect(breadcrumb_labels).to eq([ "My Account", "Refunds", "WS-GUEST1", "Request Refund" ])
+    expect(navbar_title).to eq("Request Refund")
+    expect(back_path).to eq(guest_booking_path(booking))
   end
 
-  it "renders refund detail breadcrumbs under Refunds" do
+  it "goes back from refund detail to the booking" do
     refund_request = create(:refund_request, booking: booking)
 
     get guest_refund_request_path(refund_request)
 
     expect(response).to have_http_status(:success)
-    expect(breadcrumb_labels).to eq([ "My Account", "Refunds", "WS-GUEST1", "Refund Details" ])
+    expect(navbar_title).to eq("Refund Details")
+    expect(back_path).to eq(guest_booking_path(booking))
+  end
+
+  it "falls back to the confirmation code for a booking with no reference" do
+    allow_any_instance_of(Booking).to receive(:formatted_reservation_number).and_return(nil)
+
+    get guest_booking_path(booking)
+
+    expect(navbar_title).to eq("WS-GUEST1")
   end
 
   private
@@ -41,21 +52,15 @@ RSpec.describe "Guest navigation", type: :request do
     expect(response).to redirect_to(guest_dashboard_path)
   end
 
-  def breadcrumb_labels
-    document = Nokogiri::HTML(response.body)
-    bar = document.at_css("[data-controller='panels-ui--breadcrumb'] ol.breadcrumb-list")
+  def document
+    Nokogiri::HTML(response.body)
+  end
 
-    bar.element_children.filter_map do |segment|
-      next unless segment["class"].to_s.split.include?("breadcrumb-item")
+  def navbar_title
+    document.at_css("header.guest-navbar .guest-navbar__title")&.text&.squish
+  end
 
-      content = segment.element_children.first
-      current = if content&.name == "div"
-        content.element_children.find { |node| %w[a span].include?(node.name) }
-      else
-        content
-      end
-
-      current&.text&.squish
-    end
+  def back_path
+    document.at_css("header.guest-navbar a.guest-navbar__back")&.[]("href")
   end
 end

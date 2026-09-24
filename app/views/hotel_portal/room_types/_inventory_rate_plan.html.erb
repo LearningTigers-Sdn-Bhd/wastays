@@ -24,7 +24,7 @@
                     class: "inline-flex",
                     data: {
                       controller: "tax-registry-status",
-                      action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish panels-ui:confirm-settled->tax-registry-status#settled",
+                      action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish ui:confirm-settled->tax-registry-status#settled",
                       turbo_frame: "_top",
                       turbo_confirm: (rate_plan.archived? ? nil : "Archive '#{rate_plan.name}'?"),
                       turbo_confirm_title: (rate_plan.archived? ? nil : "Archive rate plan"),

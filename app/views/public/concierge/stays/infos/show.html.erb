@@ -1,0 +1,11 @@
+<% page = @info.page(@section) %>
+<% content_for :title, "#{page[:title]} | #{@hotel.name}" %>
+
+<%# The same pages as the public ones. The stay card is the way back, so the
+    guest returns to their stay. %>
+<% policies = @section == "policies" %>
+<%= render layout: "public/concierge/stays/shared/form_page",
+           locals: { presenter: @presenter, title: page[:title], subtitle: page[:subtitle],
+                     aside: (render("public/concierge/info/policy_glance", guide: @info.policy_guide, class: "mt-6") if policies) } do %>
+  <%= render "public/concierge/info/details", glance_in_summary: policies %>
+<% end %>

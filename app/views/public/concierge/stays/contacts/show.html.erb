@@ -1,0 +1,12 @@
+<% content_for :title, "Contact | #{@hotel.name}" %>
+
+<%# The same contacts as the public page. The stay card is the way back, so
+    the guest returns to their stay, not to the Concierge home. %>
+<%= render layout: "public/concierge/stays/shared/form_page",
+           locals: {
+             presenter: @presenter,
+             title: "Get in touch",
+             subtitle: concierge_contact_address(@hotel).presence || "We are here to help with anything you need."
+           } do %>
+  <%= render "public/concierge/contact/details" %>
+<% end %>

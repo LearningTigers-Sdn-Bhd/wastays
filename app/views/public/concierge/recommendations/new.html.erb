@@ -1,0 +1,58 @@
+<% content_for :title, "Claim a voucher | #{@hotel.name}" %>
+<%# Centred rather than top-aligned: it is one short form, and pinning it to
+    the top of a tall screen leaves the page looking half-loaded. %>
+<%= render layout: "public/concierge/shared/page_shell",
+           locals: { content_class: "flex-1 flex items-center justify-center px-4 py-10 sm:px-6",
+                     container_class: "w-full max-w-xl" } do %>
+  <%= render "public/concierge/shared/page_header",
+             back_path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id),
+             back_label: "Back to Recommendations",
+             back_wrapper_class: desktop_only_back_class,
+             eyebrow: "Guest Verification",
+             title_prefix: "Confirm your",
+             title_accent: "Stay",
+             subtitle: "Partner vouchers are for guests staying with us. Enter the confirmation code from your booking email to claim." %>
+
+  <%= render "public/concierge/shared/error_alert", message: @error %>
+
+  <%= form_with url: concierge_recommendations_lookup_path(@hotel.unique_id, @hotel.public_id), method: :post, local: true,
+        class: "rounded-2xl border border-border/60 bg-white p-6 shadow-sm" do |form| %>
+    <%= hidden_field_tag :return_to, @return_to %>
+
+    <%= form.label :confirmation_token, "Booking confirmation code",
+          class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground" %>
+    <%= form.text_field :confirmation_token,
+          value: params[:confirmation_token],
+          autofocus: true,
+          autocomplete: "off",
+          autocapitalize: "characters",
+          spellcheck: false,
+          placeholder: "e.g. K4RB7T",
+          class: "mt-3 w-full rounded-xl border border-border bg-background px-4 py-4 text-center font-mono text-xl font-bold uppercase tracking-[0.3em] text-foreground placeholder:font-guest-interface placeholder:text-base placeholder:tracking-normal placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" %>
+
+    <%= form.submit "Continue",
+          class: "mt-5 w-full cursor-pointer rounded-xl bg-primary px-6 py-4 text-[12px] font-black uppercase tracking-widest text-primary-foreground shadow-md transition-all hover:bg-primary-hover active:scale-[0.98]" %>
+  <% end %>
+
+  <p class="mt-5 text-center text-[11px] font-medium leading-relaxed text-muted-foreground">
+    Cannot find your code? <%= link_to "Contact the front desk", concierge_contact_path(@hotel.unique_id, @hotel.public_id), class: "font-bold text-primary underline underline-offset-4" %>.
+  </p>
+
+  <%# Local-only: a real confirmation code from this hotel's own data, one tap
+      from unlocking and landing straight back on the claim + QR screen. Never
+      renders outside development -- @dev_sample_booking is nil everywhere
+      else, so there is no separate flag to keep in sync with the controller. %>
+  <% if @dev_sample_code.present? %>
+    <div class="mt-8 rounded-xl border border-dashed border-amber-400/60 bg-amber-50/60 p-4">
+      <p class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-700">Dev only</p>
+      <p class="mt-1 text-[11px] font-medium leading-relaxed text-amber-900">
+        Skip straight through with a real code from this property's seed data --
+        <span class="font-mono font-bold tracking-wider"><%= @dev_sample_code %></span>.
+      </p>
+      <%= button_to "Use sample code",
+            concierge_recommendations_lookup_path(@hotel.unique_id, @hotel.public_id),
+            params: { confirmation_token: @dev_sample_code, return_to: @return_to },
+            class: "mt-3 w-full cursor-pointer rounded-lg border border-amber-400/60 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-amber-800 transition-colors hover:bg-amber-100" %>
+    </div>
+  <% end %>
+<% end %>

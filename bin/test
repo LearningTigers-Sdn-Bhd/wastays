@@ -280,6 +280,8 @@ domain_paths() {
         spec/requests/public/concierge \
         spec/requests/public/pre_checkins_spec.rb \
         spec/requests/hotel_portal/checkout_deposit_display_spec.rb \
+        spec/presenters/public/concierge \
+        spec/models/concierge_stay_access_spec.rb \
         spec/system/guest/navigation_shell_spec.rb
       ;;
     ai_concierge)

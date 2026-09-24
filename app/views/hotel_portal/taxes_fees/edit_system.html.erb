@@ -1,5 +1,5 @@
 <%= turbo_frame_tag(turbo_frame_request_id.presence || "settings_action_sheet") do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <% title = @system_tax == "sst" ? "Service Tax (SST)" : "Tourism Tax (TTx)" %>
     <% form_id = "manage-#{@system_tax.dasherize}-form" %>
     <%= render PanelsUI::Sheet.new(
@@ -62,7 +62,7 @@
       <% end %>
 
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm, data: { turbo_submits_with: "Saving…" }) do %>

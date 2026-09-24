@@ -1,16 +1,16 @@
-<%= tag.div(id: PublicUI::Chat::Panel::INPUT_REGION_ID) do %>
+<%= tag.div(id: GuestUI::Chat::Panel::INPUT_REGION_ID) do %>
   <% case input.kind %>
   <% when :confirmation_code %>
-    <%= render PublicUI::Chat::SecureInput.new(
+    <%= render GuestUI::Chat::SecureInput.new(
           url: concierge_chat_booking_path(hotel.unique_id, hotel.public_id),
           kind: :confirmation_code,
           error: input.error) %>
   <% else %>
     <% if input.suggestions.any? %>
-      <%= render PublicUI::Chat::QuickReplies.new(
+      <%= render GuestUI::Chat::QuickReplies.new(
             suggestions: input.suggestions,
             message_url: concierge_chat_messages_path(hotel.unique_id, hotel.public_id)) %>
     <% end %>
-    <%= render PublicUI::Chat::Composer.new(url: concierge_chat_messages_path(hotel.unique_id, hotel.public_id)) %>
+    <%= render GuestUI::Chat::Composer.new(url: concierge_chat_messages_path(hotel.unique_id, hotel.public_id)) %>
   <% end %>
 <% end %>

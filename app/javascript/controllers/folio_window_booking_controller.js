@@ -22,10 +22,10 @@ export default class extends Controller {
   }
 
   get partySelectMenu() {
-    const root = this.partyTarget.querySelector("[data-controller~='panels-ui--select-menu']")
+    const root = this.partyTarget.querySelector("[data-controller~='ui--select-menu']")
     if (!root) return null
 
-    return this.application.getControllerForElementAndIdentifier(root, "panels-ui--select-menu")
+    return this.application.getControllerForElementAndIdentifier(root, "ui--select-menu")
   }
 
   selectFor(wrapper) {

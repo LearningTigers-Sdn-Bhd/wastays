@@ -171,7 +171,7 @@ RSpec.describe "Booking workspace actions", frozen_time: :business_day, type: :s
     page.current_window.resize_to(390, 844)
     expect(page.evaluate_script(<<~JS)).to be(true)
       (() => {
-        const panel = document.querySelector('#booking-checkout-sheet [data-panels-ui--sheet-target="panel"]')
+        const panel = document.querySelector('#booking-checkout-sheet [data-ui--sheet-target="panel"]')
         return panel.scrollWidth <= panel.clientWidth
       })()
     JS
@@ -197,7 +197,7 @@ RSpec.describe "Booking workspace actions", frozen_time: :business_day, type: :s
     within("dialog#folio-post-transaction-sheet") do
       expect(page).to have_content("Settle checkout payment")
       expect(page).to have_content("MYR 60.00")
-      find("[data-controller~='panels-ui--select-menu'] button").click
+      find("[data-controller~='ui--select-menu'] button").click
       find("[role='option']", text: "Cash").click
       expect(page).to have_field("Description", with: "Checkout payment for Company Folio", readonly: true)
       click_button "Post checkout payment"

@@ -1,9 +1,9 @@
 <div id="<%= @id %>"
      class="dropdown-menu-root"
-     data-controller="panels-ui--dropdown-menu"
-     data-panels-ui--dropdown-menu-placement-value="<%= floating_placement %>"
-     data-panels-ui--dropdown-menu-offset-value="<%= @offset %>"
-     data-action="pointerdown@window->panels-ui--dropdown-menu#onWindowPointerDown">
+     data-controller="ui--dropdown-menu"
+     data-ui--dropdown-menu-placement-value="<%= floating_placement %>"
+     data-ui--dropdown-menu-offset-value="<%= @offset %>"
+     data-action="pointerdown@window->ui--dropdown-menu#onWindowPointerDown">
   <%= trigger %>
 
   <div id="<%= menu_id %>"
@@ -12,8 +12,8 @@
        popover="manual"
        class="<%= tw_merge("dropdown-menu", @class) %>"
        aria-labelledby="<%= trigger_id %>"
-       data-panels-ui--dropdown-menu-target="menu"
-       data-action="keydown->panels-ui--dropdown-menu#onMenuKeydown click->panels-ui--dropdown-menu#onMenuClick toggle->panels-ui--dropdown-menu#onPopoverToggle">
+       data-ui--dropdown-menu-target="menu"
+       data-action="keydown->ui--dropdown-menu#onMenuKeydown click->ui--dropdown-menu#onMenuClick toggle->ui--dropdown-menu#onPopoverToggle">
     <% if header? %>
       <div class="dropdown-menu__header" role="presentation"><%= header %></div>
     <% end %>

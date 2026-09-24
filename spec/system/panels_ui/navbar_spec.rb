@@ -33,6 +33,6 @@ RSpec.describe "PanelsUI Navbar and ProfileMenu", type: :system do
     reduced = all("header.panel-navbar[data-sticky='false']", text: "WAStays").last
 
     expect(reduced).to have_no_css("[command='show-modal']")
-    expect(reduced).to have_no_css("[data-controller='panels-ui--sidebar-toggle']")
+    expect(reduced).to have_no_css("[data-controller='ui--sidebar-toggle']")
   end
 end

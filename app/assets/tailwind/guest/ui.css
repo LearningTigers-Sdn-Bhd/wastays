@@ -1,0 +1,1362 @@
+@layer components {
+  /* GuestUI (GuestUI::*). The component language of the concierge, the one
+     place a hotel guest sees. Public pages sit outside DESIGN.md, so this
+     follows the concierge's own voice -- Playfair Display page headings, soft
+     2xl surfaces -- not the panel/ theme. Text below the page heading keeps
+     the DESIGN.md type roles: sentence-size titles, text-sm labels, text-xs
+     hints, no uppercase eyebrows.
+
+     Two rules hold across every class in this file.
+
+     1. Colour comes from a token in public/theme.css. A raw palette utility
+        (white, red-500) cannot follow the theme and cannot be re-tinted for one
+        hotel later.
+     2. A control a thumb hits is at least 44px on its short side. This is a
+        phone-first surface: a guest reads it standing in a lobby, one-handed,
+        often on a screen they have never held before. */
+
+  /* ─── Button ───
+     Sentence case, the same as the label and the field above it: a guest
+     reads the button as the end of the form's sentence, not as a sign.
+
+     One class, and the variant picks the fill. The size sets the height rather
+     than the padding, so a button beside an input lines up with it whatever
+     word it carries.
+
+     Every variant keeps a 44px floor at md and lg. sm is for a control inside
+     a row that is already a tap target, where a second 44px box would push the
+     row past a thumb's reach. */
+  .guest-button {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl text-center text-sm font-semibold transition-all;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:active:scale-100;
+  }
+
+  .guest-button[aria-disabled="true"] {
+    @apply pointer-events-none opacity-50 shadow-none;
+  }
+
+  /* active:scale is the only motion here. A guest taps this once and watches
+     the page change; anything longer reads as the page being slow. */
+  .guest-button[data-variant="primary"] {
+    @apply bg-primary text-primary-foreground shadow-md hover:bg-primary-hover active:scale-[0.98] active:bg-primary-active;
+  }
+
+  .guest-button[data-variant="secondary"] {
+    @apply border border-border bg-card text-foreground shadow-sm hover:border-border-interactive hover:bg-muted active:scale-[0.98];
+  }
+
+  .guest-button[data-variant="ghost"] {
+    @apply text-muted-foreground hover:bg-primary/5 hover:text-primary active:scale-[0.98];
+  }
+
+  /* Tinted rather than filled. A destructive action on a guest page is a
+     refund or a cancellation the guest asked for, not a warning shot, and a
+     solid red block reads as an error that already happened. */
+  .guest-button[data-variant="destructive"] {
+    @apply border border-destructive/20 bg-destructive/5 hover:bg-destructive hover:text-destructive-foreground active:scale-[0.98];
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-button[data-size="sm"] {
+    @apply min-h-9 px-4;
+  }
+
+  .guest-button[data-size="md"] {
+    @apply min-h-11 px-5;
+  }
+
+  .guest-button[data-size="lg"] {
+    @apply min-h-[52px] px-6 py-4 text-base;
+  }
+
+  .guest-button[data-block="true"] {
+    @apply w-full;
+  }
+
+  .guest-button[data-icon-only="true"] {
+    @apply aspect-square px-0;
+  }
+
+  /* ─── Input and text area ───
+     The floor is 16px text. Below that, mobile Safari zooms the page when the
+     field takes focus, and the guest is left scrolled sideways on a form they
+     have not finished.
+
+     WCAG 1.4.11: the edge of a field is what tells a guest where to tap, so
+     it takes --guest-field-border, which clears 3:1 where --border does not.
+     WCAG 2.4.7: focus is a solid ring with an offset, not a 20% tint. */
+  .guest-input,
+  .guest-text-area {
+    @apply block w-full rounded-xl border bg-card text-base font-medium text-foreground transition-colors;
+    border-color: var(--guest-field-border);
+    @apply placeholder:font-normal placeholder:text-muted-foreground;
+    @apply focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground;
+    @apply read-only:bg-muted read-only:text-muted-foreground;
+  }
+
+  .guest-input[aria-invalid="true"],
+  .guest-text-area[aria-invalid="true"] {
+    @apply border-destructive focus:border-destructive focus:ring-destructive;
+  }
+
+  .guest-input[data-size="sm"] {
+    @apply min-h-11 px-3.5 py-2.5 text-sm;
+  }
+
+  .guest-input[data-size="md"] {
+    @apply min-h-11 px-4 py-3;
+  }
+
+  .guest-input[data-size="lg"] {
+    @apply min-h-[52px] px-4 py-4;
+  }
+
+  /* A confirmation code, not a sentence. Wide tracking and a monospace face
+     let a guest compare the field against a code in a mail app, character by
+     character, without counting. */
+  .guest-input[data-variant="code"] {
+    @apply text-center font-mono text-xl font-bold uppercase tracking-[0.3em];
+  }
+
+  /* field-sizing ignores rows, so the floor is a min-height: about four
+     lines, enough that the box reads as a place to write a sentence. No
+     resize handle: the box already grows as the guest writes, and the handle
+     is a desktop control a thumb cannot use. */
+  .guest-text-area {
+    @apply min-h-32 resize-none px-4 py-3 leading-relaxed;
+    field-sizing: content;
+  }
+
+  /* ─── Check-in success ───
+     A mark, the welcome, the stay card, and the way back, in one column. */
+  .guest-check-in-success {
+    @apply mx-auto grid w-full max-w-md gap-6;
+  }
+
+  .guest-check-in-success__mark {
+    @apply mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-success/10 text-success-foreground;
+  }
+
+  /* ─── Image upload ───
+     Empty, the box is one dashed button in the field's own edge colour.
+     Filled, it is the photo with a bar under it: what happened, and Replace.
+     data-state picks which one shows; the controller flips it. */
+  .guest-image-upload {
+    @apply relative grid gap-2;
+  }
+
+  .guest-image-upload__input {
+    @apply pointer-events-none absolute bottom-0 left-4 size-px overflow-hidden opacity-0;
+  }
+
+  .guest-image-upload__empty {
+    @apply flex min-h-40 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed bg-card px-4 py-6 text-center transition-colors;
+    border-color: var(--guest-field-border);
+    @apply hover:bg-muted focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .guest-image-upload[data-invalid="true"] .guest-image-upload__empty {
+    @apply border-destructive;
+  }
+
+  .guest-image-upload__icon {
+    @apply mb-2 size-8 text-primary;
+  }
+
+  .guest-image-upload__action {
+    @apply text-base font-semibold text-foreground;
+  }
+
+  .guest-image-upload__hint {
+    @apply text-sm;
+    color: var(--muted-foreground-strong);
+  }
+
+  .guest-image-upload__filled {
+    @apply overflow-hidden rounded-xl border bg-card;
+    border-color: var(--guest-field-border);
+  }
+
+  .guest-image-upload[data-state="empty"] .guest-image-upload__filled,
+  .guest-image-upload[data-state="filled"] .guest-image-upload__empty {
+    @apply hidden;
+  }
+
+  /* contain, not cover: the guest checks that the whole card is in the
+     photo, corners and all. */
+  .guest-image-upload__preview {
+    @apply block max-h-64 w-full bg-muted object-contain;
+  }
+
+  .guest-image-upload__bar {
+    @apply flex items-center justify-between gap-3 border-t border-border px-3 py-1;
+  }
+
+  .guest-image-upload__done {
+    @apply flex items-center gap-1.5 text-sm font-medium text-success-foreground;
+  }
+
+  .guest-image-upload__replace {
+    @apply min-h-11 cursor-pointer rounded-lg px-3 text-sm font-semibold text-primary transition-colors;
+    @apply hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* ─── Sheet ───
+     A bottom sheet on a native <dialog>, run by concierge-modal: it slides up
+     when data-open lands and clears the home bar with the safe-area inset. */
+  .guest-sheet {
+    @apply fixed inset-x-0 bottom-0 top-auto m-0 w-full max-w-none translate-y-full border-0 bg-transparent p-0 transition-transform duration-300 ease-out;
+    @apply backdrop:bg-black/50 motion-reduce:transition-none;
+  }
+
+  .guest-sheet[data-open] {
+    @apply translate-y-0;
+  }
+
+  .guest-sheet__panel {
+    @apply mx-auto grid w-full max-w-lg gap-2 rounded-t-3xl bg-card px-4 pt-5 shadow-2xl;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .guest-sheet__title {
+    @apply mb-2 text-center text-base font-semibold text-foreground focus:outline-none;
+  }
+
+  .guest-sheet__option {
+    @apply flex min-h-16 w-full cursor-pointer items-center gap-4 rounded-2xl bg-muted px-4 py-3 text-left transition-colors;
+    @apply hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .guest-sheet__option-icon {
+    @apply size-6 shrink-0 text-primary;
+  }
+
+  .guest-sheet__option-label {
+    @apply block text-base font-semibold text-foreground;
+  }
+
+  .guest-sheet__option-hint {
+    @apply block text-sm;
+    color: var(--muted-foreground-strong);
+  }
+
+  /* ─── Signature pad ───
+     An input group: the pad and its footer in one frame with the field's
+     edge, split by a hairline. The footer says whether the pad is signed and
+     holds Clear. */
+  .guest-signature-pad {
+    @apply relative grid gap-2;
+  }
+
+  /* Under the pad, so the browser's "required" message points at it. */
+  .guest-signature-pad__input {
+    @apply pointer-events-none absolute bottom-12 left-1/2 size-px overflow-hidden opacity-0;
+  }
+
+  .guest-signature-pad__frame {
+    @apply overflow-hidden rounded-xl border bg-card transition-colors;
+    border-color: var(--guest-field-border);
+    @apply focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .guest-signature-pad[data-invalid="true"] .guest-signature-pad__frame {
+    @apply border-destructive;
+  }
+
+  .guest-signature-pad__canvas {
+    @apply block h-44 w-full touch-none bg-card;
+  }
+
+  .guest-signature-pad__footer {
+    @apply flex items-center justify-between gap-3 border-t border-border py-1 pl-4 pr-1;
+  }
+
+  .guest-signature-pad__status {
+    @apply text-sm;
+    color: var(--muted-foreground-strong);
+  }
+
+  .guest-signature-pad__clear {
+    @apply inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-primary transition-colors;
+    @apply hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:bg-transparent;
+  }
+
+  /* ─── Select ───
+     A trigger that looks like a text input, and a listbox under it. Until the
+     ui--select-menu controller sets data-enhanced, the native select is the
+     control; after, it is hidden from sight but not from the form, so the
+     browser still checks `required` on it. */
+  .guest-select {
+    @apply relative block w-full;
+  }
+
+  .guest-select__native {
+    @apply block min-h-11 w-full rounded-xl border bg-card px-4 py-3 text-base font-medium text-foreground;
+    border-color: var(--guest-field-border);
+  }
+
+  .guest-select[data-enhanced="true"] .guest-select__native {
+    @apply absolute bottom-0 left-4 size-px overflow-hidden p-0 opacity-0;
+  }
+
+  .guest-select__trigger {
+    @apply hidden min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left text-base font-medium text-foreground transition-colors;
+    border-color: var(--guest-field-border);
+    @apply focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply aria-expanded:border-primary aria-expanded:ring-2 aria-expanded:ring-ring aria-expanded:ring-offset-2 aria-expanded:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground;
+  }
+
+  .guest-select[data-enhanced="true"] .guest-select__trigger {
+    @apply flex;
+  }
+
+  .guest-select[data-invalid="true"] :is(.guest-select__trigger, .guest-select__native) {
+    @apply border-destructive;
+  }
+
+  .guest-select__value {
+    @apply min-w-0 flex-1 truncate;
+  }
+
+  .guest-select__value[data-placeholder="true"] {
+    @apply font-normal text-muted-foreground;
+  }
+
+  .guest-select__chevron {
+    @apply size-5 shrink-0 text-muted-foreground transition-transform;
+  }
+
+  .guest-select__trigger[aria-expanded="true"] .guest-select__chevron {
+    @apply rotate-180;
+  }
+
+  /* A popover sits in the top layer, so the page cannot clip it; the
+     controller places it under the trigger and caps its height to the space
+     left on screen. */
+  .guest-select__listbox {
+    @apply m-0 overflow-y-auto overscroll-contain rounded-xl border border-border bg-card p-1 text-foreground shadow-lg;
+    inset: auto;
+  }
+
+  .guest-select__listbox:focus {
+    @apply outline-none;
+  }
+
+  /* A thin, rounded thumb on a clear track, in the field border colour, so
+     the scrollbar reads as part of the card rather than a grey system bar.
+     The standard properties serve Chrome and Firefox; Safari reads the
+     -webkit- rules. The transparent border keeps the thumb off the card's
+     rounded edge. */
+  .guest-select__listbox {
+    scrollbar-width: thin;
+    scrollbar-color: var(--guest-field-border) transparent;
+  }
+
+  .guest-select__listbox::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .guest-select__listbox::-webkit-scrollbar-track {
+    background: transparent;
+    margin-block: 8px;
+  }
+
+  .guest-select__listbox::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background: var(--guest-field-border) padding-box;
+  }
+
+  .guest-select__listbox::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground) padding-box;
+  }
+
+  .guest-select__option {
+    @apply flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-3 text-base;
+    @apply hover:bg-muted focus:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring;
+  }
+
+  .guest-select__option[aria-selected="true"] {
+    @apply font-semibold text-primary;
+  }
+
+  .guest-select__option-label {
+    @apply min-w-0 flex-1 truncate;
+  }
+
+  .guest-select__check {
+    @apply invisible size-4 shrink-0 text-primary;
+  }
+
+  .guest-select__option[aria-selected="true"] .guest-select__check {
+    @apply visible;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .guest-select__chevron {
+      @apply transition-none;
+    }
+  }
+
+  /* ─── Form field ───
+     Label above, control, then one message under it. The label is body text
+     in the foreground colour, not an eyebrow: it is the question the guest
+     answers, and 10px uppercase grey is the hardest text on the page to
+     read. */
+  .guest-field {
+    @apply block;
+  }
+
+  .guest-field__label {
+    @apply block text-sm font-semibold text-foreground;
+  }
+
+  .guest-field__required {
+    @apply ml-0.5;
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-field__control {
+    @apply mt-2;
+  }
+
+  .guest-field__hint,
+  .guest-field__error {
+    @apply mt-2 text-sm leading-relaxed;
+  }
+
+  .guest-field__hint {
+    color: var(--muted-foreground-strong);
+  }
+
+  /* An icon as well as the colour, so the error does not rest on red alone
+     (WCAG 1.4.1). */
+  .guest-field__error {
+    @apply flex items-start gap-1.5 font-medium;
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-field__error-icon {
+    @apply mt-0.5 size-4 shrink-0;
+  }
+
+  /* ─── Fieldset ───
+     A group of fields with one name, such as the bank details of a refund.
+     The legend is read with each field in it. */
+  /* No top padding on the fieldset: a fieldset draws its legend on its top
+     edge, so the padding would land under the legend, between the title and
+     its description. The space above the group sits on the legend. */
+  .guest-fieldset {
+    @apply min-w-0;
+  }
+
+  .guest-fieldset__legend {
+    @apply pt-3 text-base font-semibold text-foreground;
+  }
+
+  /* One sentence under the legend that says what the group is for. The
+     fieldset points at it with aria-describedby, so a screen reader reads it
+     once when the guest enters the group. */
+  .guest-fieldset__description {
+    @apply mt-1 text-sm leading-relaxed;
+    color: var(--muted-foreground-strong);
+  }
+
+  .guest-fieldset > :not(legend, .guest-fieldset__description) {
+    @apply mt-5;
+  }
+
+  /* ─── Radio group ───
+     Tiles, not dots. The whole tile is the label, so the tap target is the
+     option rather than a 16px circle beside it.
+
+     The native radio stays in the DOM and keeps the keyboard behaviour: arrow
+     keys move within the group and the group is one tab stop. Rebuilding that
+     in script is how a form stops working for a guest using a switch or a
+     screen reader. */
+  .guest-radio-group {
+    @apply grid grid-cols-2 gap-3;
+  }
+
+  .guest-radio-group[data-layout="stacked"] {
+    @apply grid-cols-1;
+  }
+
+  /* An option card: the same edge, fill, radius and height as a text input,
+     so a choice reads as part of the form rather than as a button. Left
+     aligned, radio first, the way a guest scans a list of choices.
+
+     The checked card doubles its edge with an inset shadow rather than a
+     wider border, so choosing an option never moves the text. */
+  .guest-radio-group__option {
+    @apply flex min-h-[52px] cursor-pointer items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-colors;
+    border-color: var(--guest-field-border);
+    @apply hover:bg-muted;
+    @apply has-checked:border-primary;
+    @apply has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2 has-focus-visible:ring-offset-background;
+    @apply has-disabled:cursor-not-allowed has-disabled:opacity-50;
+  }
+
+  /* A solid token, not a tint of primary: a light tint sits so close to the
+     cream page that the chosen card looks see-through. */
+  .guest-radio-group__option:has(:checked) {
+    background-color: var(--guest-choice-selected);
+    box-shadow: inset 0 0 0 1px var(--primary);
+  }
+
+  .guest-radio-group[aria-invalid="true"] .guest-radio-group__option {
+    @apply border-destructive;
+  }
+
+  /* The native radio, drawn again. It stays in the DOM, so the arrow keys and
+     a screen reader still work; only its face changes. A ring when empty, a
+     ring with a dot when checked -- the dot is the card showing through an
+     inset shadow over a primary fill, which forced-colours mode flattens to a
+     solid disc, still unlike the empty ring. */
+  .guest-radio-group__input {
+    @apply m-0 size-5 shrink-0 cursor-pointer appearance-none rounded-full border-2 bg-card transition-colors focus-visible:outline-none;
+    border-color: var(--guest-field-border);
+  }
+
+  .guest-radio-group__input:checked {
+    @apply border-primary bg-primary;
+    box-shadow: inset 0 0 0 3px var(--card);
+  }
+
+  /* Forced colours (Windows high contrast) replace the fill and drop the
+     shadow, which would leave a checked radio looking empty. There, the
+     system draws its own radio. */
+  @media (forced-colors: active) {
+    .guest-radio-group__input {
+      appearance: auto;
+    }
+  }
+
+  .guest-radio-group__text {
+    @apply min-w-0;
+  }
+
+  /* One line each: a choice is a name and one short reason, and a full-width
+     stacked card has room for both. */
+  .guest-radio-group__label {
+    @apply block truncate text-base font-medium leading-tight text-foreground;
+  }
+
+  .guest-radio-group__hint {
+    @apply mt-1 block truncate text-xs leading-snug;
+    color: var(--muted-foreground-strong);
+  }
+
+  /* ─── Switch ───
+     A form button wearing a switch, not a checkbox. The state lives on the
+     server: a guest turns Do Not Disturb on, closes the page, and opens it on
+     another device, and the room has to agree with both. So the control posts
+     and the page comes back with the new state, and there is no local state to
+     disagree with it. */
+  .guest-switch {
+    @apply flex min-h-11 w-full cursor-pointer items-center justify-between gap-4 text-left;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .guest-switch__text {
+    @apply min-w-0;
+  }
+
+  .guest-switch__label {
+    @apply block text-sm font-medium text-foreground;
+  }
+
+  .guest-switch__hint {
+    @apply mt-0.5 block text-xs leading-relaxed text-muted-foreground;
+  }
+
+  .guest-switch__track {
+    @apply relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border border-border bg-muted transition-colors;
+  }
+
+  .guest-switch[aria-checked="true"] .guest-switch__track {
+    @apply border-primary bg-primary;
+  }
+
+  /* The thumb carries the state in position, and the track carries it in
+     colour. Two signals, because colour alone fails a guest who cannot tell
+     this teal from this grey. */
+  .guest-switch__thumb {
+    @apply pointer-events-none ml-0.5 size-5 rounded-full bg-card shadow-sm transition-transform motion-reduce:transition-none;
+  }
+
+  .guest-switch[aria-checked="true"] .guest-switch__thumb {
+    @apply translate-x-5;
+  }
+
+  /* ─── Card ───
+     One bounded surface. Every column section on a stay page uses it, so the
+     columns line up at the top and the padding is set in one place.
+
+     The title is a section title in the sans face, not the serif: these name
+     a group of controls (Property Services, Booking and Billing), and a serif
+     heading on each one would compete with the page's own. */
+  .guest-card {
+    @apply rounded-2xl border border-border/40 bg-card p-6 shadow-xs;
+  }
+
+  .guest-card[data-padding="tight"] {
+    @apply p-4;
+  }
+
+  .guest-card[data-variant="dashed"] {
+    @apply border-dashed bg-card shadow-none;
+  }
+
+  .guest-card__title {
+    @apply text-base font-semibold text-foreground;
+  }
+
+  .guest-card__body {
+    @apply mt-4;
+  }
+
+  /* ─── Card row ───
+     A secondary service: a row, not a tile, so the tiles above it stay the
+     primary actions. The hairline divides the rows and stops before the last
+     one, which would otherwise draw a line above the card's own edge. */
+  /* `group` is a marker rather than a utility, so it is set on the element by
+     the component and cannot be applied here. */
+  .guest-card__row {
+    @apply flex min-h-11 items-center justify-between gap-4 border-b border-border/60 py-4 last:border-b-0;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .guest-card__row-label {
+    @apply block text-sm font-medium text-foreground;
+  }
+
+  .guest-card__row-text {
+    @apply min-w-0 flex-1;
+  }
+
+  .guest-card__row-icon {
+    @apply size-4 shrink-0 text-primary;
+  }
+
+  /* A hint can be an email address with no place to break. */
+  .guest-card__row-hint {
+    @apply mt-0.5 block text-xs text-muted-foreground;
+    overflow-wrap: anywhere;
+  }
+
+  .guest-card__row-chevron {
+    @apply shrink-0 text-muted-foreground transition-colors group-hover:text-primary;
+  }
+
+  /* The icon sits over the text, so the label keeps its width when two cards
+     share a row on a phone. Top-aligned, not spread: a label that wraps to
+     two lines grows the card downward, and the icon and label of every card
+     in a row stay on the same lines. */
+  .guest-action-card {
+    @apply flex min-h-28 touch-manipulation flex-col gap-3 rounded-xl p-4 text-foreground transition-colors;
+  }
+
+  .guest-service-surface {
+    background: var(--guest-service-surface);
+  }
+
+  .guest-service-surface:is(:hover, :active) {
+    background: color-mix(in oklab, var(--guest-service-surface) 88%, var(--guest-service-ink));
+  }
+
+  .guest-action-card__icon {
+    @apply size-6 shrink-0;
+  }
+
+  .guest-service-surface__icon {
+    color: var(--guest-service-ink);
+  }
+
+  .guest-action-card__text {
+    @apply min-w-0;
+  }
+
+  .guest-service-surface[data-tone="booking"] {
+    --guest-service-surface: var(--guest-service-booking-surface);
+    --guest-service-ink: var(--guest-service-booking-ink);
+  }
+
+  .guest-service-surface[data-tone="issue"] {
+    --guest-service-surface: var(--guest-service-issue-surface);
+    --guest-service-ink: var(--guest-service-issue-ink);
+  }
+
+  .guest-service-surface[data-tone="discovery"] {
+    --guest-service-surface: var(--guest-service-discovery-surface);
+    --guest-service-ink: var(--guest-service-discovery-ink);
+  }
+
+  .guest-service-surface[data-tone="contact"] {
+    --guest-service-surface: var(--guest-service-contact-surface);
+    --guest-service-ink: var(--guest-service-contact-ink);
+  }
+
+  .guest-service-surface[data-tone="conversation"] {
+    --guest-service-surface: var(--guest-service-conversation-surface);
+    --guest-service-ink: var(--guest-service-conversation-ink);
+  }
+
+  .guest-service-surface[data-tone="guide"] {
+    --guest-service-surface: var(--guest-service-guide-surface);
+    --guest-service-ink: var(--guest-service-guide-ink);
+  }
+
+  .guest-action-card__label {
+    @apply block text-sm font-semibold leading-tight;
+  }
+
+  .guest-action-card__hint {
+    @apply mt-1 block text-xs font-normal leading-snug;
+    color: var(--muted-foreground-strong);
+  }
+
+  /* select-none: a quick double tap to open and close the disclosure would
+     otherwise select the words of the summary. */
+  .guest-more-actions > summary {
+    @apply flex min-h-11 cursor-pointer select-none list-none items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .guest-more-actions__heading {
+    @apply flex items-center gap-2;
+  }
+
+  .guest-more-actions__icon {
+    @apply size-4 shrink-0 text-primary;
+  }
+
+  .guest-more-actions > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .guest-more-actions__chevron {
+    @apply size-4 shrink-0 text-muted-foreground transition-transform;
+  }
+
+  .guest-more-actions[open] .guest-more-actions__chevron {
+    @apply rotate-180;
+  }
+
+  .guest-more-actions__list {
+    @apply mt-3 border-t border-border/60;
+  }
+
+  .guest-more-actions .guest-card__row {
+    @apply gap-3 py-3;
+  }
+
+  /* ─── Fact list ───
+     A short label over its value, two a row. A value the guest types into
+     another app, such as a Wi-Fi password, is monospace and selects in one
+     tap. */
+  .guest-fact-list {
+    @apply grid grid-cols-2 gap-x-4 gap-y-3;
+  }
+
+  .guest-fact-list__label {
+    @apply text-xs font-medium text-muted-foreground;
+  }
+
+  .guest-fact-list__value {
+    @apply mt-1 text-sm font-medium text-foreground;
+    overflow-wrap: anywhere;
+  }
+
+  .guest-fact-list__value[data-copy] {
+    @apply select-all font-mono;
+  }
+
+  .guest-fact-list[data-columns="1"] {
+    @apply grid-cols-1 gap-y-4;
+  }
+
+  .guest-fact-list__fact--icon {
+    @apply flex items-start gap-3;
+  }
+
+  .guest-fact-list__icon {
+    @apply mt-0.5 size-4 shrink-0 text-muted-foreground;
+  }
+
+  /* ─── Guide icon ───
+     The icon box of a Property Guide card: an amenity, a policy. It takes the
+     Property Guide sage, so the page reads as part of that group. */
+  .guest-guide-icon {
+    @apply flex size-10 shrink-0 items-center justify-center rounded-xl;
+    background: var(--guest-service-guide-surface);
+    color: var(--guest-service-guide-ink);
+  }
+
+  .guest-guide-icon__svg {
+    @apply size-5;
+  }
+
+  /* ─── Amenity card ───
+     One amenity, its facts in view. Book ahead is a badge in words, not a
+     colour alone. */
+  .guest-amenity {
+    @apply flex flex-col gap-4 rounded-2xl border border-border/40 bg-card p-5 shadow-xs;
+  }
+
+  .guest-amenity__header {
+    @apply flex items-start gap-3;
+  }
+
+
+  .guest-amenity__name {
+    @apply text-base font-semibold leading-snug text-foreground;
+  }
+
+  /* The category and the badge share one line under the name, so the name
+     keeps the whole width and a long one does not wrap early. */
+  .guest-amenity__meta {
+    @apply mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground;
+  }
+
+  .guest-amenity__badge {
+    @apply inline-flex items-center rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning-foreground;
+  }
+
+  .guest-amenity__facts {
+    @apply grid gap-2.5;
+  }
+
+  .guest-amenity__fact {
+    @apply flex items-start gap-2.5 text-sm text-foreground;
+  }
+
+  .guest-amenity__fact dd {
+    @apply min-w-0;
+    overflow-wrap: anywhere;
+  }
+
+  .guest-amenity__fact-icon {
+    @apply mt-0.5 size-4 shrink-0 text-muted-foreground;
+  }
+
+  /* mt-auto: a row stretches its cards to one height, and the notes sit at
+     the foot of each, so the hairlines of a row line up. */
+  .guest-amenity__notes {
+    @apply mt-auto space-y-2 border-t border-border/60 pt-4 text-sm leading-relaxed text-muted-foreground;
+  }
+
+  .guest-amenity__empty {
+    @apply text-sm text-muted-foreground;
+  }
+
+  /* ─── Card grid ───
+     Guide cards two a row once there is room; a phone reads one card at a
+     time. Amenities and the Property Info page share it. The cards of a row stretch to one height, so the rows line up.
+     data-columns="3" fits a row of three on a wide page. */
+  .guest-card-grid {
+    @apply grid gap-4 sm:grid-cols-2;
+  }
+
+  /* Two a row leaves a lone last card on an odd count. It takes the whole
+     row, so the grid has no hole. */
+  .guest-card-grid > :last-child:nth-child(odd) {
+    @apply sm:col-span-2;
+  }
+
+  .guest-card-grid[data-columns="3"] {
+    @apply lg:grid-cols-3;
+  }
+
+  /* Three a row: the odd rule above would stretch the third card of a full
+     row. */
+  .guest-card-grid[data-columns="3"] > :last-child:nth-child(odd) {
+    @apply lg:col-span-1;
+  }
+
+  /* ─── Guide card ───
+     One Property Guide card: icon, title, the fact a guest looks for first,
+     the body, and an action at the foot. A row of them stretches to one
+     height, and mt-auto keeps the actions on one line. */
+  .guest-guide-card {
+    @apply flex flex-col gap-4 rounded-2xl border border-border/40 bg-card p-5 shadow-xs md:p-6;
+  }
+
+  .guest-guide-card__header {
+    @apply flex items-center gap-3;
+  }
+
+  .guest-guide-card__title {
+    @apply text-base font-semibold leading-snug text-foreground;
+  }
+
+  .guest-guide-card__subtitle {
+    @apply mt-0.5 text-sm font-medium text-primary;
+  }
+
+  .guest-guide-card__body {
+    @apply space-y-3 text-sm leading-relaxed text-foreground;
+  }
+
+  .guest-guide-card__action {
+    @apply mt-auto pt-1;
+  }
+
+  /* ─── Wi-Fi card ───
+     The name and the password each on a line with their Copy button. The
+     values are monospace, so a guest tells 0 from O and l from 1. */
+  .guest-wifi__fields {
+    @apply grid rounded-xl border border-border/60;
+  }
+
+  .guest-wifi__field {
+    @apply flex items-center justify-between gap-4 px-4 py-3;
+  }
+
+  .guest-wifi__field + .guest-wifi__field {
+    @apply border-t border-border/60;
+  }
+
+  .guest-wifi__value {
+    @apply mt-1 select-all font-mono text-base font-medium text-foreground;
+    overflow-wrap: anywhere;
+  }
+
+  .guest-wifi__steps {
+    @apply list-decimal space-y-1.5 pl-5 text-muted-foreground marker:text-muted-foreground;
+  }
+
+  .guest-wifi__qr {
+    @apply flex flex-col items-center gap-3 rounded-xl bg-background p-4 text-center text-xs text-muted-foreground;
+  }
+
+  /* ─── Policy card ───
+     One policy, always open. Rules are a list a guest scans; a change and its
+     charge sit on one line, with the note staff wrote under it. */
+  .guest-policy__rules {
+    @apply list-disc space-y-2 pl-5 text-sm leading-relaxed text-foreground marker:text-muted-foreground;
+  }
+
+  .guest-policy__text {
+    @apply text-sm leading-relaxed text-foreground;
+  }
+
+  .guest-policy__terms {
+    @apply grid;
+  }
+
+  .guest-policy__term {
+    @apply border-b border-border/60 py-3 first:pt-0 last:border-b-0 last:pb-0;
+  }
+
+  .guest-policy__term-line {
+    @apply flex items-baseline justify-between gap-4 text-sm font-medium text-foreground;
+  }
+
+  .guest-policy__term-value {
+    @apply text-right;
+  }
+
+  .guest-policy__term-note {
+    @apply mt-1 text-xs leading-relaxed text-muted-foreground;
+  }
+
+  /* ─── Aside layout ───
+     A narrow column that stays in view beside one reading column: the
+     policy glance, the FAQ help card. data-side="end" puts the narrow column
+     on the right; the source order stays main first there, so a phone reads
+     the questions before the help card. */
+  .guest-aside-layout {
+    @apply grid items-start gap-6;
+  }
+
+  @media (min-width: 48rem) {
+    .guest-aside-layout[data-aside="true"] {
+      grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
+    }
+
+    .guest-aside-layout[data-aside="true"][data-side="end"] {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
+    }
+
+    /* The hero pins a 4rem strip to the top (plus the notch inset), so the
+       aside stops 1.5rem under that strip, not under the strip itself. The
+       same sum as the scroll padding on html:has(.guest-hero). */
+    .guest-aside-layout[data-aside="true"] > .guest-aside-layout__aside {
+      position: sticky;
+      top: calc(4rem + env(safe-area-inset-top, 0px) + 1.5rem);
+    }
+  }
+
+  /* ─── Disclosure ───
+     One entry the guest opens to read, divided from the next by a hairline.
+     The summary bleeds into the card padding, so the focus ring has room and
+     never touches the title. */
+  .guest-disclosure {
+    @apply border-b border-border/60 last:border-b-0;
+  }
+
+  .guest-disclosure > summary {
+    @apply -mx-2 flex min-h-11 cursor-pointer select-none list-none items-center justify-between gap-4 rounded-lg px-2 py-3;
+    @apply transition-colors hover:bg-muted/60;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .guest-disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .guest-disclosure__title {
+    @apply min-w-0 text-sm font-medium text-foreground;
+  }
+
+  .guest-disclosure__chevron {
+    @apply size-4 shrink-0 text-muted-foreground transition-transform;
+  }
+
+  .guest-disclosure[open] .guest-disclosure__chevron {
+    @apply rotate-180;
+  }
+
+  .guest-disclosure__body {
+    @apply space-y-3 pb-4 pt-1 text-sm leading-relaxed text-muted-foreground;
+  }
+
+  /* ─── Notice ───
+     A short status the guest has to read before the content under it. Tinted
+     rather than filled, because it sits inside a page the guest is already
+     reading and a solid block reads as a different page.
+
+     The icon is decorative and the variant is not the message. A guest who
+     cannot separate the tints still gets the whole fact from the words. */
+  .guest-notice {
+    @apply flex items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed;
+  }
+
+  /* Info carries its own tint, so a note reads as a note and not as a plain
+     box. The text stays foreground; only the icon takes the tone. */
+  .guest-notice[data-variant="info"] {
+    @apply border-info/20 bg-info/5 text-foreground;
+  }
+
+  .guest-notice[data-variant="info"] .guest-notice__icon {
+    @apply text-info;
+  }
+
+  .guest-notice[data-variant="success"] {
+    @apply border-success/25 bg-success/10 text-success-foreground;
+  }
+
+  .guest-notice[data-variant="warning"] {
+    @apply border-warning/30 bg-warning/10 text-warning-foreground;
+  }
+
+  .guest-notice[data-variant="danger"] {
+    @apply border-destructive/25 bg-destructive/5;
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-notice__icon {
+    @apply mt-0.5 size-4 shrink-0;
+  }
+
+  .guest-notice__icon {
+    @apply size-5;
+  }
+
+  .guest-notice__title {
+    @apply block font-semibold;
+  }
+
+  /* Under a title, the message is its own line in a quieter weight. */
+  .guest-notice__message {
+    @apply block;
+  }
+
+  .guest-notice__title + .guest-notice__message {
+    @apply mt-0.5 opacity-90;
+  }
+
+  /* ─── Hero ───
+     The hotel's photo and name at the top of every concierge page. It sticks
+     like a navbar: the hero scrolls up until only its bottom strip is left,
+     and that strip pins. The height never changes, so the page under it never
+     jumps.
+
+     1. The full height fits a hotel name of three lines. svh, not dvh: dvh
+        changes as the phone's URL bar hides, and the pinned offset would
+        shake with it. The 11rem floor keeps a landscape phone, which reaches
+        md, from cutting the name.
+     2. The safe-area inset keeps the pinned strip clear of the notch, because
+        the concierge layout draws under it (viewport-fit=cover).
+     3. data-compact comes from concierge-hero when the strip pins. */
+  .guest-hero {
+    --guest-hero-inset: env(safe-area-inset-top, 0px);
+    --guest-hero-compact: calc(4rem + var(--guest-hero-inset));
+    --guest-hero-height: calc(11rem + var(--guest-hero-inset));
+
+    top: calc(var(--guest-hero-compact) - var(--guest-hero-height));
+    height: var(--guest-hero-height);
+    @apply sticky z-30 w-full flex-shrink-0 overflow-hidden rounded-b-[2rem] bg-primary shadow-2xl shadow-primary/20;
+    @apply transition-[border-radius] duration-200 ease-out motion-reduce:transition-none;
+  }
+
+  @media (min-width: 48rem) {
+    .guest-hero {
+      --guest-hero-height: calc(max(11rem, 20svh) + var(--guest-hero-inset));
+    }
+  }
+
+  .guest-hero[data-compact] {
+    @apply rounded-none;
+  }
+
+  /* The part of the hero that scrolls away, less one pixel. A box that only
+     touches the screen edge still counts as on screen, so without that pixel
+     the strip would never report that it pinned. */
+  .guest-hero__sentinel {
+    height: calc(var(--guest-hero-height) - var(--guest-hero-compact) - 1px);
+    @apply pointer-events-none absolute left-0 top-0 w-px;
+  }
+
+  .guest-hero__content {
+    padding-top: var(--guest-hero-inset);
+    @apply pointer-events-none relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-6 pb-4 md:px-10 md:pb-5;
+  }
+
+  .guest-hero__name {
+    @apply line-clamp-3 break-words text-[29px] font-semibold leading-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.8)] md:text-4xl;
+    @apply transition-[font-size] duration-200 ease-out motion-reduce:transition-none;
+  }
+
+  .guest-hero__location {
+    @apply mt-0.5 max-h-6 overflow-hidden text-[11px] font-bold uppercase tracking-[0.2em] text-accent opacity-90 md:text-[12px];
+    @apply transition-[max-height,opacity,margin] duration-200 ease-out motion-reduce:transition-none;
+  }
+
+  /* One line in the 4rem strip, centred in it: 1.25rem of padding under a
+     line of about 1.5rem. */
+  .guest-hero[data-compact] .guest-hero__content {
+    @apply pb-5;
+  }
+
+  .guest-hero[data-compact] .guest-hero__name {
+    @apply line-clamp-1 text-lg leading-snug;
+  }
+
+  .guest-hero[data-compact] .guest-hero__location {
+    @apply mt-0 max-h-0 opacity-0;
+  }
+
+  /* 1. An anchor jump or a keyboard focus stops below the pinned strip, not
+        under it.
+     2. No overscroll bounce. Without this, iOS drags the pinned strip down
+        at the top of the page and pulls it away at the bottom. Android loses
+        pull-to-refresh on these pages as a result. */
+  html:has(.guest-hero) {
+    scroll-padding-top: calc(4rem + env(safe-area-inset-top, 0px));
+    overscroll-behavior-y: none;
+  }
+
+  /* ─── Page ───
+     The concierge page frame: hero, one centred container, then the footer.
+
+     The split layout puts the stay context at about a third and the actions at
+     about two thirds. It stacks on a phone, and the DOM order already matches
+     that reading order, so the grid never moves focus away from the order the
+     page is read in. */
+  .guest-page {
+    /* clip, not hidden: overflow hidden makes a scroll box, and the sticky
+       hero would stick to it instead of to the screen. */
+    @apply flex min-h-screen flex-col overflow-x-clip bg-background font-guest-interface;
+  }
+
+  .guest-page__main {
+    @apply mx-auto w-full max-w-5xl px-6 pb-12 pt-6 md:px-10 md:pb-20 md:pt-10;
+  }
+
+  .guest-page[data-variant="centered"] .guest-page__main {
+    @apply max-w-2xl;
+  }
+
+  .guest-page__grid {
+    @apply grid items-start gap-6 md:grid-cols-3 md:gap-8;
+  }
+
+  .guest-page__context {
+    @apply md:col-span-1;
+  }
+
+  .guest-page__content {
+    @apply space-y-6 md:col-span-2;
+  }
+
+  /* No context column: the content takes the whole measure rather than
+     two thirds of it with a third of white space beside it. */
+  .guest-page__grid[data-columns="1"] .guest-page__content {
+    @apply md:col-span-3;
+  }
+
+  .guest-stay-overview {
+    @apply grid items-start gap-6;
+  }
+
+  .guest-stay-overview__greeting { grid-area: greeting; }
+  .guest-stay-overview__stay { grid-area: stay; }
+  .guest-stay-overview__main { grid-area: main; }
+  .guest-stay-overview__more { grid-area: more; }
+
+  .guest-stay-overview .guest-card {
+    @apply rounded-xl border-border p-4 shadow-none;
+  }
+
+  .guest-stay-overview .guest-stay-overview__more {
+    @apply px-3 py-2;
+  }
+
+  .guest-stay-overview .guest-card__title {
+    @apply text-sm font-semibold normal-case tracking-normal text-foreground;
+  }
+
+  .guest-stay-overview {
+    grid-template-areas: "greeting" "stay" "main" "more";
+  }
+
+  @media (min-width: 48rem) {
+    .guest-stay-overview {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      /* main spans the stay row and the more row. The last row is flexible,
+         so it takes the extra height of main, and the stay row stays as tall
+         as the stay card. More Actions then sits one gap under the card. */
+      grid-template-rows: auto auto 1fr;
+      grid-template-areas: "greeting greeting" "stay main" "more main";
+      @apply gap-8;
+    }
+  }
+
+  /* ─── Form page ───
+     A phone reads the compact summary card, the heading, then the form. A
+     wider screen puts the heading across the top and the full summary card
+     beside the form. Each card is hidden at the width that shows the other
+     one, and a hidden card has no row, so it leaves no gap.
+
+     A page with nothing to summarise (data-columns="1") is the heading and
+     the form in one column, at a width a form reads well at. */
+  .guest-form-page {
+    @apply grid items-start gap-6;
+    grid-template-areas: "compact" "header" "body";
+  }
+
+  .guest-form-page__compact { grid-area: compact; }
+  .guest-form-page__header { grid-area: header; }
+  .guest-form-page__summary { grid-area: summary; }
+  .guest-form-page__body { grid-area: body; }
+
+  @media (min-width: 48rem) {
+    .guest-form-page {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      grid-template-areas: "header header" "summary body";
+      @apply gap-8;
+    }
+
+    .guest-form-page[data-columns="1"] {
+      @apply max-w-2xl;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "header" "body";
+    }
+
+    .guest-form-page[data-width="wide"] {
+      @apply max-w-none;
+    }
+  }
+
+  .guest-summary-compact {
+    @apply flex min-h-11 items-center gap-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .guest-summary-compact__back {
+    @apply size-5 shrink-0 text-primary transition-transform group-hover:-translate-x-0.5;
+  }
+
+  /* ─── Section title ───
+     A title with a hairline that runs to the end of the row, so the title
+     reads as the start of a group, not as a label on the first tile. The
+     line is a pseudo-element, so a screen reader reads only the words. */
+  .guest-section-title {
+    @apply flex items-center gap-3;
+  }
+
+  .guest-section-title::after {
+    @apply h-px flex-1 bg-border;
+    content: "";
+  }
+
+  /* ─── Tile grid ───
+     Two tiles a row, also on a phone. A tile left alone on the last row takes
+     the whole row, so an odd count never leaves a hole. */
+  .guest-tile-grid {
+    @apply grid grid-cols-2 gap-3 md:gap-4;
+  }
+
+  .guest-tile-grid > :last-child:nth-child(odd) {
+    @apply col-span-2;
+  }
+
+  /* A wider screen holds a whole row of tiles. The page sets the count, and a
+     lone last tile stays one tile wide there. */
+  .guest-tile-grid[data-columns="3"] {
+    @apply md:grid-cols-3;
+  }
+
+  .guest-tile-grid[data-columns="4"] {
+    @apply md:grid-cols-4;
+  }
+
+  .guest-tile-grid[data-columns] > :last-child:nth-child(odd) {
+    @apply md:col-span-1;
+  }
+
+  /* ─── Stay summary ───
+     The one card on the stay page with a tint, because it is the one the
+     guest comes back to. Two classes, so the tint wins over the flat card
+     treatment of the stay overview. */
+  .guest-card.guest-stay-summary {
+    @apply border-primary/20;
+    background: color-mix(in oklab, var(--primary) 5%, var(--card));
+  }
+
+  .guest-stay-summary__status {
+    @apply inline-flex shrink-0 items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground;
+  }
+
+  .guest-stay-summary__status[data-state="in-house"] {
+    @apply bg-success/10 text-success-foreground;
+  }
+
+  .guest-stay-summary__room {
+    @apply break-words text-3xl font-semibold leading-tight text-foreground;
+  }
+
+  .guest-stay-summary__refs {
+    @apply mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-border/60 pt-3 text-xs text-muted-foreground;
+  }
+
+  /* ─── Footer ───
+     A full-width band in the primary colour, to match the hero. The page
+     roots are flex columns, so mt-auto holds it at the bottom of a short
+     page. */
+  .guest-footer {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    @apply mt-auto w-full bg-primary px-6 pt-6 text-center;
+  }
+
+  .guest-footer__text {
+    @apply text-[11px] font-bold uppercase tracking-[0.25em] text-primary-foreground/80;
+  }
+}

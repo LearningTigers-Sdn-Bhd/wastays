@@ -16,13 +16,13 @@ RSpec.describe PanelsUI::TimePicker, type: :component do
     render_inline(described_class.new(form: form_for, attribute: :check_in_time))
 
     root = page.find(".panel-time-picker")
-    expect(root["data-controller"]).to include("panels-ui--time-picker")
+    expect(root["data-controller"]).to include("ui--time-picker")
     expect(root["data-size"]).to eq("md")
 
-    expect(page).to have_css("input#booking_check_in_time[type='hidden'][data-panels-ui--time-picker-target='input']", visible: :all)
-    expect(page).to have_css("button.panel-input.panel-time-picker__display[data-panels-ui--time-picker-target='trigger']")
+    expect(page).to have_css("input#booking_check_in_time[type='hidden'][data-ui--time-picker-target='input']", visible: :all)
+    expect(page).to have_css("button.panel-input.panel-time-picker__display[data-ui--time-picker-target='trigger']")
     expect(page).to have_css(".panel-time-picker__value[data-placeholder='Select a time']")
-    expect(page).to have_css(".panel-time-control[data-panels-ui--time-picker-target='timeControl']")
+    expect(page).to have_css(".panel-time-control[data-ui--time-picker-target='timeControl']")
     expect(page).to have_css(".panel-time-control[tabindex='-1'] > .panel-time-control__columns")
     expect(page).to have_css("input.panel-time-control__input[data-time-input='hours'][inputmode='numeric'][maxlength='2']")
     expect(page).to have_css("input.panel-time-control__input[data-time-input='minutes'][inputmode='numeric'][maxlength='2']")
@@ -34,9 +34,9 @@ RSpec.describe PanelsUI::TimePicker, type: :component do
   it "wires the popover outlet to the nested popover root" do
     render_inline(described_class.new(form: form_for, attribute: :check_in_time))
 
-    selector = page.find(".panel-time-picker")["data-panels-ui--time-picker-panels-ui--popover-outlet"]
+    selector = page.find(".panel-time-picker")["data-ui--time-picker-ui--popover-outlet"]
     expect(selector).to eq(".booking_check_in_time-time-picker__popover")
-    expect(page).to have_css(".popover-root#{selector}[data-controller~='panels-ui--popover']")
+    expect(page).to have_css(".popover-root#{selector}[data-controller~='ui--popover']")
   end
 
   it "emits min/max/step as data-values for the segments" do
@@ -45,18 +45,18 @@ RSpec.describe PanelsUI::TimePicker, type: :component do
     ))
 
     root = page.find(".panel-time-picker")
-    expect(root["data-panels-ui--time-picker-min-value"]).to eq("09:00")
-    expect(root["data-panels-ui--time-picker-max-value"]).to eq("17:00")
-    expect(root["data-panels-ui--time-picker-step-value"]).to eq("15")
-    expect(root["data-panels-ui--time-picker-minute-step-value"]).to eq("15")
+    expect(root["data-ui--time-picker-min-value"]).to eq("09:00")
+    expect(root["data-ui--time-picker-max-value"]).to eq("17:00")
+    expect(root["data-ui--time-picker-step-value"]).to eq("15")
+    expect(root["data-ui--time-picker-minute-step-value"]).to eq("15")
   end
 
   it "renders four columns for a 12-hour seconds picker" do
     render_inline(described_class.new(form: form_for, attribute: :check_in_time, hour_cycle: 12, precision: :seconds, second_step: 15))
 
     root = page.find(".panel-time-picker")
-    expect(root["data-panels-ui--time-picker-hour-cycle-value"]).to eq("12")
-    expect(root["data-panels-ui--time-picker-precision-value"]).to eq("seconds")
+    expect(root["data-ui--time-picker-hour-cycle-value"]).to eq("12")
+    expect(root["data-ui--time-picker-precision-value"]).to eq("seconds")
     expect(page).to have_css("[role='listbox']", count: 4)
     expect(page).to have_css("[role='listbox'][aria-label='AM/PM'] [role='option']", count: 2)
     expect(page).to have_css("[role='listbox'][aria-label='Seconds'] [role='option']", count: 4)

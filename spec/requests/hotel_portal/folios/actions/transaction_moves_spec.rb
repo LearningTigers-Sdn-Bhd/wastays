@@ -43,7 +43,7 @@ RSpec.describe "HotelPortal::Folios::Actions transaction moves", type: :request,
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      dialog = document.at_css("turbo-frame#folio_action_sheet dialog#folio-move-transaction-sheet[data-controller='panels-ui--sheet']")
+      dialog = document.at_css("turbo-frame#folio_action_sheet dialog#folio-move-transaction-sheet[data-controller='ui--sheet']")
       expect(dialog).to be_present
       expect(response.body).to include("Move transaction")
       expect(response.body).to include("Company Folio")

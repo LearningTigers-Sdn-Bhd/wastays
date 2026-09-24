@@ -42,7 +42,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       document = Nokogiri::HTML(response.body)
       frame = document.at_css("turbo-frame#booking_action_sheet")
       expect(frame).to be_present
-      dialog = frame.at_css("dialog#booking-creation-sheet[data-controller='panels-ui--sheet']")
+      dialog = frame.at_css("dialog#booking-creation-sheet[data-controller='ui--sheet']")
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("bottom")
       expect(dialog.text).to include("New Booking", "Stay details", "Guest information")
@@ -84,7 +84,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       payment_menu = rail.at_css('[data-payment-method-filter-target="method"] .panel-select-menu')
       expect(rail["class"].split).to include("min-w-0")
       expect(payment_menu["class"].split).to include("max-w-full")
-      expect(payment_menu["data-panels-ui--select-menu-fixed-width-value"]).to eq("true")
+      expect(payment_menu["data-ui--select-menu-fixed-width-value"]).to eq("true")
     end
 
     it "renders the Quick Booking sheet on the right" do
@@ -210,7 +210,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(row.at_css("[data-role='room-type'] select[name='booking[rooms][3][room_type_id]']")).to be_present
       expect(row.at_css("[data-role='rate-plan'] select")).to be_present
       popover = row.at_css("#booking-room-rate-breakdown-3")
-      expect(popover["data-panels-ui--popover-trigger-on-value"]).to eq("hover")
+      expect(popover["data-ui--popover-trigger-on-value"]).to eq("hover")
       expect(popover.at_css("button[aria-label='Show rate breakdown'] svg")).to be_present
       expect(popover.at_css("[data-role='nightly-breakdown']")).to be_present
       expect(popover.at_css("[data-role='tax-breakdown']")).to be_present

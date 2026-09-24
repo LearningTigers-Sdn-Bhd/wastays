@@ -1,0 +1,120 @@
+<% content_for :title, "Your stay | #{@hotel.name}" %>
+<% presenter = @presenter %>
+
+<%= render GuestUI::Page.new do |page| %>
+  <% page.with_hero do %>
+    <%= render "public/concierge/shared/hero" %>
+  <% end %>
+  <div class="guest-stay-overview">
+    <section class="guest-stay-overview__greeting space-y-6">
+      <%= render "public/concierge/stays/shared/page_heading",
+                 title: "Hello,",
+                 title_accent: presenter.greeting_name,
+                 subtitle: "What do you need?" %>
+
+      <%= render "public/concierge/stays/shared/flash" %>
+    </section>
+
+    <div class="guest-stay-overview__stay">
+      <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
+    </div>
+
+    <%# One area on both widths: under the stay on a phone, beside it on a wider
+        screen. %>
+    <div class="guest-stay-overview__main space-y-6">
+      <% if presenter.in_house? %>
+        <section class="guest-stay-overview__actions guest-tile-grid" aria-label="Stay actions">
+          <% if presenter.can_send_request? %>
+            <%= render "public/concierge/stays/shared/primary_tile",
+                       tone: :primary,
+                       icon: "brush-cleaning",
+                       label: "Housekeeping",
+                       description: "Cleaning or supplies",
+                       path: concierge_new_stay_request_path(*stay_route_args, kind: "housekeeping") %>
+          <% end %>
+
+          <% if presenter.can_request_check_out? %>
+            <%= render "public/concierge/stays/shared/primary_tile",
+                       icon: "log-out",
+                       label: "Check Out",
+                       description: "Tell the front desk",
+                       path: stay_check_out_path %>
+          <% elsif presenter.check_out_pending? %>
+            <%= render "public/concierge/stays/shared/primary_tile",
+                       pending: true,
+                       icon: "circle-check",
+                       label: "Check-out asked",
+                       description: "The front desk has it" %>
+          <% end %>
+        </section>
+      <% end %>
+
+      <section class="guest-stay-overview__services space-y-3" aria-labelledby="property-services-title">
+        <h2 id="property-services-title" class="guest-card__title guest-section-title">Property Services</h2>
+        <div class="guest-tile-grid">
+          <% if presenter.can_send_request? %>
+            <%= render GuestUI::ActionCard.new(label: "Report an issue",
+                                               hint: "Tell us what is wrong",
+                                               icon: "circle-alert", tone: :issue,
+                                               href: concierge_new_stay_request_path(*stay_route_args, kind: "complaint")) %>
+          <% end %>
+          <%= render GuestUI::ActionCard.new(label: "Recommendations",
+                                             hint: "Places and guest offers",
+                                             icon: "sparkles", tone: :discovery,
+                                             href: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id)) %>
+          <%= render GuestUI::ActionCard.new(label: "Property Contacts",
+                                             hint: "Phone, WhatsApp, email and map",
+                                             icon: "phone", tone: :contact,
+                                             href: concierge_stay_contact_path(*stay_route_args)) %>
+          <% if @info.section?(:wifi) %>
+            <%= render GuestUI::ActionCard.new(label: "Wi-Fi", hint: @info.hint(:wifi),
+                                               icon: "wifi", tone: :booking,
+                                               href: concierge_stay_wifi_path(*stay_route_args)) %>
+          <% end %>
+          <% if presenter.chat_available? %>
+            <%= render GuestUI::ActionCard.new(label: "Interact with Chatbot",
+                                               hint: "Instant answers, any time",
+                                               icon: "message-circle", tone: :conversation,
+                                               href: concierge_chat_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath)) %>
+          <% end %>
+        </div>
+      </section>
+
+      <%= render "public/concierge/info/guide_tiles", info: @info,
+                 path: ->(section) { section == "property" ? concierge_stay_info_path(*stay_route_args) : concierge_stay_info_section_path(*stay_route_args, section) } %>
+    </div>
+
+    <details class="guest-card guest-more-actions guest-stay-overview__more">
+      <summary>
+        <span class="guest-more-actions__heading">
+          <%= app_icon "clipboard-list", class: "guest-more-actions__icon", aria: { hidden: "true" } %>
+          <span class="guest-card__title">More Actions</span>
+        </span>
+        <%= app_icon "chevron-down", class: "guest-more-actions__chevron", aria: { hidden: "true" } %>
+      </summary>
+      <div class="guest-more-actions__list">
+        <%= render GuestUI::Card::Row.new(label: "Booking receipt", hint: "Open a PDF copy",
+                                          icon: "receipt", href: stay_document_path(:receipt), new_tab: true) %>
+        <% if presenter.invoice_available? %>
+          <%= render GuestUI::Card::Row.new(label: "Invoice", hint: "Open the final PDF",
+                                            icon: "file-text", href: stay_document_path(:invoice), new_tab: true) %>
+        <% end %>
+        <%= render GuestUI::Card::Row.new(label: "E-invoice",
+                                          hint: presenter.e_invoice_ready? ? "Ready to download" : "View or request an e-invoice",
+                                          icon: "file-text",
+                                          href: stay_e_invoice_path, new_tab: true) %>
+        <% if presenter.can_request_refund? %>
+          <%= render GuestUI::Card::Row.new(label: "Ask for a refund",
+                                            hint: "The property replies to you.",
+                                            icon: "rotate-ccw",
+                                            href: stay_refund_path) %>
+        <% elsif presenter.refund_request %>
+          <%= render GuestUI::Card::Row.new(label: "Your refund request",
+                                            hint: presenter.refund_request.status.humanize,
+                                            icon: "rotate-ccw",
+                                            href: stay_refund_path) %>
+        <% end %>
+      </div>
+    </details>
+  </div>
+<% end %>

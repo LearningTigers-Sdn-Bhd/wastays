@@ -1,5 +1,5 @@
 <%= turbo_frame_tag "nearby_attraction_form" do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "nearby-attraction-sheet",
           side: :right,
@@ -15,7 +15,7 @@
               type: :button,
               variant: :secondary,
               size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
+              data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <%= render PanelsUI::Button.new(

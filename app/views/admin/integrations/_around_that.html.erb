@@ -1,0 +1,41 @@
+<%= render "panel_intro", title: "AroundThat", description: "Nearby experiences and activities pulled into concierge recommendations." %>
+
+<%= form_with url: admin_integrations_path, method: :patch,
+      class: "mt-6 space-y-6 md:max-w-2xl",
+      data: {
+        controller: "connection-test",
+        connection_test_url_value: test_around_that_connection_admin_integrations_path
+      } do |form| %>
+  <%= hidden_field_tag :tab, "around_that" %>
+
+  <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+    <%= render PanelsUI::FormField.new(
+          form: form,
+          attribute: :aroundthat_environment,
+          label: "Environment",
+          hint: "Staging keeps test bookings out of the live catalogue.") do |field| %>
+      <% field.with_select_menu(
+           Admin::IntegrationsController::AROUND_THAT_ENVIRONMENTS,
+           selected: @around_that_values["aroundthat_environment"]) %>
+    <% end %>
+
+    <%= render "secret_field",
+        form: form,
+        name: :aroundthat_api_key,
+        label: "API key",
+        value: @around_that_values["aroundthat_api_key"],
+        placeholder: "Enter the AroundThat API key" %>
+
+    <div class="md:col-span-2">
+      <%= render PanelsUI::FormField.new(
+            form: form,
+            attribute: :aroundthat_base_url,
+            label: "Base URL",
+            hint: "The host for the selected environment. Change it when you switch environment.") do |field| %>
+        <% field.with_input(type: :url, value: @around_that_values["aroundthat_base_url"], placeholder: "https://api.aroundthat.example/v1") %>
+      <% end %>
+    </div>
+  </div>
+
+  <%= render "connection_test_footer", save_label: "Save AroundThat" %>
+<% end %>

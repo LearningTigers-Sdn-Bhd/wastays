@@ -1,0 +1,36 @@
+<% content_for :title, "E-invoice | #{@hotel.name}" %>
+
+<%= render layout: "public/concierge/stays/shared/form_page",
+           locals: {
+             presenter: @presenter,
+             title: "Your e-invoice",
+             subtitle: "A tax invoice that LHDN has validated."
+           } do %>
+  <dl class="space-y-4">
+    <div>
+      <dt class="text-[11px] font-medium text-muted-foreground">Status</dt>
+      <dd class="text-lg font-black text-foreground"><%= @status[:status].humanize %></dd>
+    </div>
+    <div>
+      <dt class="text-[11px] font-medium text-muted-foreground">What this means</dt>
+      <dd class="text-[13px] font-medium leading-relaxed text-foreground"><%= @status[:message] %></dd>
+    </div>
+    <% if @status[:document_label].present? %>
+      <div>
+        <dt class="text-[11px] font-medium text-muted-foreground">Document</dt>
+        <dd class="text-[13px] font-bold text-foreground"><%= @status[:document_label] %></dd>
+      </div>
+    <% end %>
+  </dl>
+
+  <% if @status[:download_url].present? %>
+    <%= render GuestUI::Button.new(label: "Open the e-invoice", href: @status[:download_url],
+                                   target: "_blank", rel: "noopener",
+                                   aria_label: "Open the e-invoice (opens in a new tab)",
+                                   icon: "arrow-up-right", size: :lg, block: true, class: "mt-5") %>
+  <% elsif @presenter.can_request_e_invoice? %>
+    <%= render GuestUI::Button.new(label: "Request my e-invoice",
+                                   href: concierge_stay_e_invoice_request_path(*stay_route_args),
+                                   method: :post, size: :lg, block: true, class: "mt-5") %>
+  <% end %>
+<% end %>

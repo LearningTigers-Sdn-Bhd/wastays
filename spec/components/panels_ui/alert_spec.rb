@@ -41,9 +41,9 @@ RSpec.describe PanelsUI::Alert, type: :component do
   it "renders accessible dismissal behavior only when requested" do
     render_inline(described_class.new(dismissible: true, title: "Dismiss me"))
 
-    expect(page).to have_css(".panel-alert[data-controller='panels-ui--dismissible']")
+    expect(page).to have_css(".panel-alert[data-controller='ui--dismissible']")
     expect(page).to have_css("button[aria-label='Dismiss alert']")
-    expect(page).to have_css("button[data-action='panels-ui--dismissible#dismiss']")
+    expect(page).to have_css("button[data-action='ui--dismissible#dismiss']")
   end
 
   it "supports stacked actions without changing the default layout" do

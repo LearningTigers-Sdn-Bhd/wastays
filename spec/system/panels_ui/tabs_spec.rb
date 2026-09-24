@@ -64,16 +64,16 @@ RSpec.describe "PanelsUI::Tabs", type: :system do
 
   it "updates configured breadcrumb labels for parent and nested tabs" do
     within("[data-testid='tabs-breadcrumb-demo']") do
-      expect(page).to have_css("[data-panels-ui--breadcrumb-target='tabLabel']", text: "Calendar")
+      expect(page).to have_css("[data-ui--breadcrumb-target='tabLabel']", text: "Calendar")
       expect(page).to have_css("[data-subtabs-breadcrumb-segment].hidden", visible: :all)
 
       find("#sd-tabs-linked-tab-bulk").click
-      expect(page).to have_css("[data-panels-ui--breadcrumb-target='tabLabel']", text: "Bulk Edit")
+      expect(page).to have_css("[data-ui--breadcrumb-target='tabLabel']", text: "Bulk Edit")
       expect(page).to have_css("[data-subtabs-breadcrumb-segment]:not(.hidden)")
-      expect(page).to have_css("[data-panels-ui--breadcrumb-target='subtabLabel']", text: "Pricing Rules")
+      expect(page).to have_css("[data-ui--breadcrumb-target='subtabLabel']", text: "Pricing Rules")
 
       find("#sd-subtabs-linked-tab-overrides").click
-      expect(page).to have_css("[data-panels-ui--breadcrumb-target='subtabLabel']", text: "Availability Overrides")
+      expect(page).to have_css("[data-ui--breadcrumb-target='subtabLabel']", text: "Availability Overrides")
 
       find("#sd-tabs-linked-tab-calendar").click
       expect(page).to have_css("[data-subtabs-breadcrumb-segment].hidden", visible: :all)
@@ -81,10 +81,10 @@ RSpec.describe "PanelsUI::Tabs", type: :system do
   end
 
   it "does not update an unrelated breadcrumb" do
-    expect(page).to have_css("#sd-unrelated-tabs-bc [data-panels-ui--breadcrumb-target='tabLabel']", text: "Calendar")
+    expect(page).to have_css("#sd-unrelated-tabs-bc [data-ui--breadcrumb-target='tabLabel']", text: "Calendar")
 
     find("#sd-tabs-linked-tab-bulk").click
 
-    expect(page).to have_css("#sd-unrelated-tabs-bc [data-panels-ui--breadcrumb-target='tabLabel']", text: "Calendar")
+    expect(page).to have_css("#sd-unrelated-tabs-bc [data-ui--breadcrumb-target='tabLabel']", text: "Calendar")
   end
 end

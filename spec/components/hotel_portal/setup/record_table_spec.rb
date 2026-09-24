@@ -70,7 +70,7 @@ RSpec.describe HotelPortal::Setup::RecordTable, type: :component do
 
       header = page.find("thead th", text: "Charged")
       expect(header).to have_css("button.panel-record-table__hint[aria-label='About Charged'][aria-haspopup='dialog']")
-      expect(header).to have_css("[data-panels-ui--popover-trigger-on-value='hover']")
+      expect(header).to have_css("[data-ui--popover-trigger-on-value='hover']")
       expect(header).to have_css("#record-table-help-charged-panel", text: "Per stay bills once for the booking.", visible: :all)
     end
 

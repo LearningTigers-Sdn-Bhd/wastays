@@ -1,5 +1,5 @@
 <% booking_number = @routing_booking.formatted_reservation_number.presence || "—" %>
-<div data-controller="panels-ui--sheet-frame">
+<div data-controller="ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
         id: "folio-billing-routes-sheet",
         side: :right,

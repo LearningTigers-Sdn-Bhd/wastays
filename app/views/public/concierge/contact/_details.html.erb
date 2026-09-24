@@ -1,0 +1,94 @@
+<%# The property's contacts, the same on the public page and the stay page: is
+    the front desk open, the ways to reach it, the property hours, and who to
+    call in an emergency. Each contact is a row, and the whole row is the
+    link, so a guest taps the number rather than copying it. %>
+<% status = @front_desk_status %>
+<% urgent_phone = status.duty_manager_phone unless status.open? %>
+
+<%# two_columns: on a wide screen, Hours and Emergency on the left, the
+    contacts on the right. The source order stays Hours, contacts, Emergency,
+    so a phone and a screen reader read the same order as the eye. %>
+<% two_columns = local_assigns[:two_columns] %>
+<% hours = @policy.present? && (@policy.check_in_time.present? || @policy.check_out_time.present?) %>
+
+<%# One card for time: is the desk open now, then the property hours. The
+    headline says open or closed in words; the icon only repeats it. %>
+<div class="grid items-start gap-6 <%= "md:grid-cols-2 md:grid-rows-[auto_1fr]" if two_columns %>">
+<% if status.render? || hours %>
+  <%= render GuestUI::Card.new(title: "Hours", class: ("md:col-start-1 md:row-start-1" if two_columns)) do %>
+    <% if status.render? %>
+      <p class="flex items-start gap-2 text-sm font-medium text-foreground">
+        <%= app_icon (status.open? ? "circle-check" : "clock"),
+                     class: "mt-0.5 size-4 shrink-0 #{status.open? ? "text-success-foreground" : "text-warning-foreground"}",
+                     aria: { hidden: "true" } %>
+        <span>
+          <%= status.headline %>
+          <% if status.detail.present? %>
+            <span class="mt-0.5 block text-xs font-normal text-muted-foreground"><%= status.detail %></span>
+          <% end %>
+        </span>
+      </p>
+    <% end %>
+
+    <% if hours %>
+      <dl class="grid grid-cols-2 gap-4 <%= "mt-4 border-t border-border/60 pt-4" if status.render? %>">
+        <% if @policy.check_in_time.present? %>
+          <div>
+            <dt class="text-xs font-medium text-muted-foreground">Check-in from</dt>
+            <dd class="mt-1 text-sm font-medium text-foreground"><%= @policy.check_in_time %></dd>
+          </div>
+        <% end %>
+        <% if @policy.check_out_time.present? %>
+          <div>
+            <dt class="text-xs font-medium text-muted-foreground">Check-out by</dt>
+            <dd class="mt-1 text-sm font-medium text-foreground"><%= @policy.check_out_time %></dd>
+          </div>
+        <% end %>
+      </dl>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if urgent_phone.present? || @phone.present? || @whatsapp_link.present? || @email.present? || @maps_link.present? %>
+  <%= render GuestUI::Card.new(title: "Contact us",
+                               class: ("md:col-start-2 md:row-start-1 md:row-span-2" if two_columns)) do |card| %>
+    <% if urgent_phone.present? %>
+      <% card.with_row(label: "Duty Manager (Urgent Only)", hint: urgent_phone, icon: "triangle-alert",
+                       href: "tel:#{urgent_phone.delete(' ')}") %>
+    <% end %>
+    <% if @phone.present? %>
+      <% card.with_row(label: "Call us", hint: @phone, icon: "phone", href: "tel:#{@phone.delete(' ')}") %>
+    <% end %>
+    <% if @whatsapp_link.present? %>
+      <% card.with_row(label: "WhatsApp", hint: @whatsapp_number.presence || @phone, icon: "message-circle",
+                       href: @whatsapp_link, new_tab: true) %>
+    <% end %>
+    <% if @email.present? %>
+      <% card.with_row(label: "Email", hint: @email, icon: "mail", href: "mailto:#{@email}") %>
+    <% end %>
+    <% if @maps_link.present? %>
+      <% card.with_row(label: "Get directions", hint: concierge_location_label(@hotel), icon: "map-pin",
+                       href: @maps_link, new_tab: true) %>
+    <% end %>
+  <% end %>
+<% else %>
+  <%= render GuestUI::Notice.new(message: "Please visit the front desk for help.",
+                                 class: ("md:col-start-2 md:row-start-1 md:row-span-2" if two_columns)) %>
+<% end %>
+
+<% if @guest_contact&.emergency_present? %>
+  <%= render GuestUI::Card.new(title: "Emergency", class: ("md:col-start-1 md:row-start-2" if two_columns)) do |card| %>
+    <% if @guest_contact.emergency_instructions.present? %>
+      <p class="whitespace-pre-line text-balance text-sm text-foreground"><%= @guest_contact.emergency_instructions %></p>
+    <% end %>
+    <% if @guest_contact.emergency_phone.present? %>
+      <% card.with_row(label: "Property security", hint: @guest_contact.emergency_phone, icon: "shield",
+                       href: "tel:#{@guest_contact.emergency_phone.delete(' ')}") %>
+    <% end %>
+    <% if @guest_contact.emergency_services_number.present? %>
+      <% card.with_row(label: "Police, fire, ambulance", hint: @guest_contact.emergency_services_number, icon: "siren",
+                       href: "tel:#{@guest_contact.emergency_services_number.delete(' ')}") %>
+    <% end %>
+  <% end %>
+<% end %>
+</div>

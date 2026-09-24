@@ -1,10 +1,10 @@
 <span class="<%= tw_merge("tooltip-root", @root_class) %>"
-      data-controller="panels-ui--tooltip"
-      data-panels-ui--tooltip-placement-value="<%= floating_placement %>"
-      data-panels-ui--tooltip-offset-value="<%= @offset %>"
-      data-panels-ui--tooltip-delay-value="<%= @delay %>"
-      data-panels-ui--tooltip-tooltip-id-value="<%= tooltip_id %>"
-      data-action="mouseenter->panels-ui--tooltip#show mouseleave->panels-ui--tooltip#hide focusin->panels-ui--tooltip#show focusout->panels-ui--tooltip#hide keydown->panels-ui--tooltip#onKeydown">
+      data-controller="ui--tooltip"
+      data-ui--tooltip-placement-value="<%= floating_placement %>"
+      data-ui--tooltip-offset-value="<%= @offset %>"
+      data-ui--tooltip-delay-value="<%= @delay %>"
+      data-ui--tooltip-tooltip-id-value="<%= tooltip_id %>"
+      data-action="mouseenter->ui--tooltip#show mouseleave->ui--tooltip#hide focusin->ui--tooltip#show focusout->ui--tooltip#hide keydown->ui--tooltip#onKeydown">
   <%= content %>
 
   <span id="<%= tooltip_id %>"
@@ -12,5 +12,5 @@
         popover="manual"
         data-state="closed"
         class="<%= tw_merge("tooltip", @class) %>"
-        data-panels-ui--tooltip-target="bubble"><%= @text %><% if arrow? %><span class="floating-arrow" aria-hidden="true" data-panels-ui--tooltip-target="arrow"></span><% end %></span>
+        data-ui--tooltip-target="bubble"><%= @text %><% if arrow? %><span class="floating-arrow" aria-hidden="true" data-ui--tooltip-target="arrow"></span><% end %></span>
 </span>

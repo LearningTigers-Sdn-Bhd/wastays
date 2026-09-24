@@ -10,7 +10,7 @@ RSpec.describe Concierge::BroadcastChatInput do
 
     expect(Turbo::StreamsChannel).to receive(:broadcast_replace_to).with(
       [ conversation, :guest ],
-      target: PublicUI::Chat::Panel::INPUT_REGION_ID,
+      target: GuestUI::Chat::Panel::INPUT_REGION_ID,
       partial: "public/concierge/chats/input",
       locals: { hotel: conversation.hotel, input: presenter }
     )
