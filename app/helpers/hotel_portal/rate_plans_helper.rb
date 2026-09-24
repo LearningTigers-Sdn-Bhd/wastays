@@ -56,12 +56,36 @@ module HotelPortal
         rungs = assignment.occupancy_prices.sort_by(&:adults)
         return "Not priced" if rungs.empty?
 
-        "#{currency} #{rungs.map { |rung| "#{rung.adults}p #{number_with_precision(rung.price, precision: 0, delimiter: ',')}" }.join(' · ')}"
+        occupancy_price_ladder(rungs, currency)
       else
         return "Not priced" if assignment.pricing_value.blank?
         return "Adjusts Standard Rate" if assignment.derives_price?
 
         money_summary(assignment.pricing_value, currency)
+      end
+    end
+
+    # One tag per guest count: a shaded guest-icon-and-count segment, then the
+    # price. The segment boundary keeps "1" and "1,000" from reading as one
+    # number, which a plain "icon 1 1,000" run did.
+    def occupancy_price_ladder(rungs, currency)
+      tag.span(class: "inline-flex flex-wrap items-center gap-1.5") do
+        safe_join([ tag.span(currency, class: "me-0.5 text-xs text-muted-foreground") ] + rungs.map do |rung|
+          price = number_with_precision(rung.price, precision: 0, delimiter: ",")
+          label = "#{pluralize(rung.adults, 'guest')}: #{currency} #{price}"
+          tag.span(class: "inline-flex items-stretch overflow-hidden rounded-md border border-border text-xs", title: label) do
+            safe_join([
+              tag.span(class: "inline-flex items-center gap-0.5 bg-muted px-1.5 py-0.5 text-muted-foreground", aria: { hidden: "true" }) do
+                safe_join([
+                  cached_icon("adult", library: "guest", class: "size-3 fill-current", aria: { hidden: "true" }, focusable: "false"),
+                  rung.adults.to_s
+                ])
+              end,
+              tag.span("#{pluralize(rung.adults, 'guest')}: ", class: "sr-only"),
+              tag.span(price, class: "px-1.5 py-0.5 font-medium tabular-nums text-foreground")
+            ])
+          end
+        end)
       end
     end
 

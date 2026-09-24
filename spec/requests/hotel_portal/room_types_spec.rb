@@ -512,6 +512,26 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(document.at_css("form#reorder-photos-form")).to be_present
     end
   end
+  describe "per-guest price ladder" do
+    let(:hotel) { create(:hotel, :per_person, account: account) }
+
+    it "shows each guest count with the guest icon instead of 1p/2p shorthand" do
+      villa = create(:room_type, hotel: hotel, name: "Villa", max_adults: 2)
+      plan = create(:rate_plan, :custom, hotel: hotel, name: "Full Board")
+      create(:room_type_rate_plan, rate_plan: plan, room_type: villa).tap do |assignment|
+        assignment.occupancy_prices.create!(adults: 1, price: 250)
+        assignment.occupancy_prices.create!(adults: 2, price: 1000)
+      end
+
+      get hotel_room_types_path(hotel)
+
+      row = Nokogiri::HTML(response.body).css("[id^='room-inventory-rate-plan-']").find { |node| node.text.include?("Full Board") }
+      expect(row.text.squish).to include("MYR", "1 guest: 250", "2 guests: 1,000")
+      expect(row.text).not_to include("1p ")
+      expect(row.css("svg").size).to be >= 2
+    end
+  end
+
   describe "primary rate plan" do
     before { allow_any_instance_of(HotelPortal::RoomTypePrimaryRatePlansController).to receive(:authorize).and_return(true) }
 
