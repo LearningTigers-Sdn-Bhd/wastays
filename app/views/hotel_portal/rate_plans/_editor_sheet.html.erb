@@ -108,7 +108,8 @@
             </section>
 
             <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan if current_hotel.sells_per_person? %>
-            <%= render "hotel_portal/rate_plans/stay_discounts", f: f, rate_plan: rate_plan unless rate_plan.kind == "ota" %>
+            <%= render "hotel_portal/rate_plans/stay_discounts", f: f, rate_plan: rate_plan,
+                  example_price: room_pricing&.default_rate.presence || selected_room_type&.base_price unless rate_plan.kind == "ota" %>
           <% end %>
         </div>
       <% end %>

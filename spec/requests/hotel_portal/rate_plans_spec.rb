@@ -605,7 +605,11 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.reload.rate_plan_stay_discounts.sole).to have_attributes(min_nights: 3, discount_type: "percent", value: 15, from_night: 2)
 
       get edit_hotel_rate_plan_path(hotel, rate_plan)
-      expect(response.body).to include("Long-stay discounts", "Stay 3+ nights: 15% off, from night 2")
+      row = response.parsed_body.at_css("[data-role='stay-discount-row']")
+      expect(row.at_css("input[name$='[min_nights]']")["value"]).to eq("3")
+      expect(row.at_css("input[name$='[value]']")["value"]).to eq("15.0")
+      expect(row.at_css("select[name$='[from_night]'] option[selected]").text).to eq("Night 2")
+      expect(row["data-controller"]).to eq("stay-discount-example")
     end
 
     it "rejects a long-stay discount that starts after its minimum stay" do

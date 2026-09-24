@@ -22,10 +22,4 @@ RSpec.describe RatePlanStayDiscount do
     duplicate = rate_plan.rate_plan_stay_discounts.build(min_nights: 3, discount_type: "amount", value: 20)
     expect(duplicate).not_to be_valid
   end
-
-  it "describes itself for the editor" do
-    discount = rate_plan.rate_plan_stay_discounts.build(min_nights: 3, discount_type: "percent", value: 15, from_night: 2)
-
-    expect(discount.summary(currency: "MYR")).to eq("Stay 3+ nights: 15% off, from night 2")
-  end
 end

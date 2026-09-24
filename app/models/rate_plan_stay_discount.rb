@@ -31,12 +31,6 @@ class RatePlanStayDiscount < ApplicationRecord
     [ discounted, 0.to_d ].max.round(2)
   end
 
-  def summary(currency:, per_person: false)
-    amount = percent? ? "#{value.to_d.to_s('F').sub(/\.0\z/, '')}% off" : "#{currency} #{format('%.2f', value)} off#{' per guest' if per_person} per night"
-    nights = every_night? ? "every night" : "from night #{from_night}"
-    "Stay #{min_nights}+ nights: #{amount}, #{nights}"
-  end
-
   private
 
   def from_night_within_stay

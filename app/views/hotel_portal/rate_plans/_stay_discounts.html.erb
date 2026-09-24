@@ -1,12 +1,16 @@
 <%# Long-stay discounts. Direct channels only: OTAs keep the plan's flat rate. %>
 <% per_person = current_hotel.sells_per_person? %>
+<% example_price = local_assigns[:example_price].to_f.positive? ? local_assigns[:example_price].to_f : 100 %>
 <section aria-labelledby="rate-plan-stay-discounts-heading" class="space-y-4" data-controller="nested-rows">
   <div class="flex items-start justify-between gap-3">
     <div>
       <h3 id="rate-plan-stay-discounts-heading" class="text-base font-semibold text-foreground">Long-stay discounts</h3>
       <p class="mt-1 text-sm text-muted-foreground">
-        Reward longer stays, e.g. “stay 3+ nights, 15% off”. The longest rule a stay qualifies for applies.
-        Booking site, travel agent portal and front desk only; OTAs keep the normal rate.
+        Give guests a lower price when they stay longer, for example 15% off when they stay 3 nights or more.
+        If a stay qualifies for more than one discount, the one for the longest stay is used.
+      </p>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Applies to bookings from your booking site, travel agents and the front desk. OTA bookings (e.g. Booking.com) pay the normal price.
       </p>
     </div>
     <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :xs, class: "shrink-0",
@@ -18,19 +22,19 @@
   <div data-nested-rows-target="rows" class="space-y-3">
     <% rate_plan.rate_plan_stay_discounts.each_with_index do |discount, index| %>
       <%= f.fields_for :rate_plan_stay_discounts, discount, child_index: index do |discount_form| %>
-        <%= render "hotel_portal/rate_plans/stay_discount_row", discount_form:, discount:, currency: rate_plan.currency, per_person: %>
+        <%= render "hotel_portal/rate_plans/stay_discount_row", discount_form:, discount:, currency: rate_plan.currency, per_person:, example_price: %>
       <% end %>
     <% end %>
   </div>
 
   <p class="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground <%= 'hidden' if rate_plan.rate_plan_stay_discounts.any? %>"
      data-nested-rows-target="emptyState">
-    No long-stay discounts. Every night is charged at the normal rate.
+    No long-stay discounts yet. Guests pay the normal price for every night.
   </p>
 
   <template data-nested-rows-target="template">
     <%= f.fields_for :rate_plan_stay_discounts, RatePlanStayDiscount.new(discount_type: "percent", from_night: 1), child_index: "NEW_RECORD" do |discount_form| %>
-      <%= render "hotel_portal/rate_plans/stay_discount_row", discount_form:, discount: nil, currency: rate_plan.currency, per_person: %>
+      <%= render "hotel_portal/rate_plans/stay_discount_row", discount_form:, discount: nil, currency: rate_plan.currency, per_person:, example_price: %>
     <% end %>
   </template>
 </section>

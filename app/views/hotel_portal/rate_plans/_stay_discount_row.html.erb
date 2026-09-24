@@ -1,39 +1,54 @@
-<div class="space-y-3 rounded-md border border-border p-3" data-nested-rows-target="row" data-role="stay-discount-row">
+<div class="space-y-3 rounded-md border border-border p-3"
+     data-nested-rows-target="row"
+     data-role="stay-discount-row"
+     data-controller="stay-discount-example"
+     data-stay-discount-example-price-value="<%= example_price %>"
+     data-stay-discount-example-currency-value="<%= currency %>"
+     data-stay-discount-example-per-person-value="<%= per_person %>"
+     data-action="input->stay-discount-example#render change->stay-discount-example#render">
   <div class="grid gap-3 sm:grid-cols-4">
-    <%= render PanelsUI::FormField.new(form: discount_form, attribute: :min_nights, label: "Stay at least", size: :sm, required: true) do |field| %>
-      <% field.with_input(type: :number, min: 2, step: 1, inputmode: "numeric", placeholder: "3") %>
+    <%= render PanelsUI::FormField.new(form: discount_form, attribute: :min_nights, label: "Guest stays at least", size: :sm, required: true) do |field| %>
+      <% field.with_input(type: :number, min: 2, step: 1, inputmode: "numeric", placeholder: "3",
+           data: { stay_discount_example_target: "minNights" }) %>
       <% field.with_addon(align: :inline_end, variant: :bare) { "nights" } %>
     <% end %>
 
-    <%= render PanelsUI::FormField.new(form: discount_form, attribute: :discount_type, label: "Discount", size: :sm) do |field| %>
-      <% field.with_native_select([ [ "Percent off", "percent" ], [ "Amount off#{' per guest' if per_person}", "amount" ] ],
-           selected: discount&.discount_type || "percent") %>
+    <%= render PanelsUI::FormField.new(form: discount_form, attribute: :discount_type, label: "Discount type", size: :sm) do |field| %>
+      <% field.with_native_select([ [ "Percentage (%)", "percent" ], [ "Fixed amount per night#{' per guest' if per_person}", "amount" ] ],
+           selected: discount&.discount_type || "percent",
+           data: { stay_discount_example_target: "discountType" }) %>
     <% end %>
 
-    <%= render PanelsUI::FormField.new(form: discount_form, attribute: :value, label: "Value", size: :sm, required: true,
-          hint: "% or #{currency} per night") do |field| %>
-      <% field.with_input(type: :number, min: 0.01, step: 0.01, inputmode: "decimal", placeholder: "15") %>
+    <%= render PanelsUI::FormField.new(form: discount_form, attribute: :value, label: "Discount", size: :sm, required: true) do |field| %>
+      <% field.with_input(type: :number, min: 0.01, step: 0.01, inputmode: "decimal", placeholder: "15",
+           data: { stay_discount_example_target: "value" }) %>
+      <% field.with_addon(align: :inline_end, variant: :bare) do %>
+        <span data-stay-discount-example-target="unit"><%= discount&.discount_type == "amount" ? currency : "%" %></span>
+      <% end %>
     <% end %>
 
-    <%= render PanelsUI::FormField.new(form: discount_form, attribute: :from_night, label: "Applies to", size: :sm) do |field| %>
-      <% field.with_native_select([ [ "Every night", 1 ] ] + (2..14).map { |night| [ "From night #{night}", night ] },
-           selected: discount&.from_night || 1) %>
+    <%= render PanelsUI::FormField.new(form: discount_form, attribute: :from_night, label: "Discount starts from", size: :sm) do |field| %>
+      <% field.with_native_select([ [ "The first night", 1 ] ] + (2..14).map { |night| [ "Night #{night}", night ] },
+           selected: discount&.from_night || 1,
+           data: { stay_discount_example_target: "fromNight" }) %>
     <% end %>
   </div>
 
-  <div class="flex items-center justify-between gap-3">
-    <p class="text-xs text-muted-foreground">
-      <%= discount&.persisted? ? discount.summary(currency: currency, per_person: per_person) : "“From night 2” keeps the first night at full price." %>
-    </p>
-    <div class="flex items-center">
-      <% if discount&.persisted? %>
-        <%= discount_form.hidden_field :id %>
-        <%= discount_form.hidden_field :_destroy, value: "0", data: { role: "destroy" } %>
-      <% end %>
-      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :xs, class: "text-destructive",
-            data: { action: "click->nested-rows#remove" }) do %>
-        Remove
-      <% end %>
-    </div>
+  <div class="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground" aria-live="polite">
+    <p class="font-medium text-foreground" data-stay-discount-example-target="heading">Example</p>
+    <ul class="mt-1 space-y-0.5" data-stay-discount-example-target="lines">
+      <li>Enter the nights and the discount to see an example.</li>
+    </ul>
+  </div>
+
+  <div class="flex items-center justify-end gap-3">
+    <% if discount&.persisted? %>
+      <%= discount_form.hidden_field :id %>
+      <%= discount_form.hidden_field :_destroy, value: "0", data: { role: "destroy" } %>
+    <% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :xs, class: "text-destructive",
+          data: { action: "click->nested-rows#remove" }) do %>
+      Remove
+    <% end %>
   </div>
 </div>
