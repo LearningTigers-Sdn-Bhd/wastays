@@ -27,6 +27,7 @@ module HotelPortal
         rows.filter_map { |row| row.currency.presence }.uniq.one?
       end
     end
+    StayConciergeRow = Data.define(:booking, :booking_number, :room, :email, :status, :last_sent_at, :sendable)
     FolioWindowBillingPartyOption = Data.define(:id, :group, :label, :description, :record)
     SummaryAction = Data.define(:key, :label, :tone, :offcanvas_variant, :icon, :target_booking)
     TABS = [
@@ -292,6 +293,38 @@ module HotelPortal
     def document_amount_heading(label, rows)
       currencies = rows.filter_map { |row| row.currency.presence }.uniq
       currencies.one? ? "#{label} (#{currencies.first})" : label
+    end
+
+    def stay_concierge_rows
+      return [] unless document_permission?("manage_bookings")
+
+      @stay_concierge_rows ||= begin
+        documents unless defined?(@document_bookings)
+        @document_bookings.filter_map do |child|
+          access = child.live_concierge_stay_access
+          next unless access
+
+          eligibility = ::Concierge::StayAccess::Eligibility.new(booking: child).call
+          email = child.guest_email.presence || child.primary_guest&.email
+          status = if !eligibility.success?
+            "Unavailable"
+          elsif access.locked?
+            "Locked"
+          else
+            "Available"
+          end
+
+          StayConciergeRow.new(
+            child,
+            document_booking_label(child),
+            document_booking_room_label(child),
+            mask_email(email),
+            status,
+            access.link_sent_at,
+            eligibility.success? && email.present?
+          )
+        end
+      end
     end
 
     def group_overview_header_path
@@ -1473,6 +1506,7 @@ module HotelPortal
         .where(id: ids)
         .includes(
           :guest_registration_card,
+          :live_concierge_stay_access,
           { booking_rooms: :room_type },
           { booking_guests: :guest },
           booking_folios: [
@@ -1879,6 +1913,13 @@ module HotelPortal
       return @document_permissions[slug] if @document_permissions.key?(slug)
 
       @document_permissions[slug] = !!@user&.has_permission?(slug, hotel:)
+    end
+
+    def mask_email(email)
+      local, domain = email.to_s.split("@", 2)
+      return if local.blank? || domain.blank?
+
+      "#{local.first}#{'•' * [ local.length - 1, 3 ].min}@#{domain}"
     end
 
     def routes = Rails.application.routes.url_helpers

@@ -1,5 +1,5 @@
 <% persisted = @room_block.persisted? %>
-<div data-controller="panels-ui--unsaved-changes panels-ui--sheet-frame">
+<div data-controller="ui--unsaved-changes ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
         id: "stay-view-room-block-sheet",
         side: :right,
@@ -9,7 +9,7 @@
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
       <div class="flex h-full min-h-0 flex-col">
-        <%= form_with model: @room_block, url: persisted ? hotel_stay_view_room_block_path(current_hotel, @room_block) : hotel_stay_view_room_blocks_path(current_hotel), method: persisted ? :patch : :post, class: "flex min-h-0 flex-1 flex-col", data: { turbo_stream: true, "panels-ui--unsaved-changes-target": "form" } do |form| %>
+        <%= form_with model: @room_block, url: persisted ? hotel_stay_view_room_block_path(current_hotel, @room_block) : hotel_stay_view_room_blocks_path(current_hotel), method: persisted ? :patch : :post, class: "flex min-h-0 flex-1 flex-col", data: { turbo_stream: true, "ui--unsaved-changes-target": "form" } do |form| %>
           <%= render "hotel_portal/stay_view/state_fields", state: stay_view_state, return_to: @return_to %>
           <%= form.hidden_field :room_type_id %>
           <%= form.hidden_field :room_number %>
@@ -38,7 +38,7 @@
             <% end %>
           </div>
           <div class="flex justify-end gap-2 border-t border-border p-4">
-            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
             <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Saving…" }) do %><%= persisted ? "Save block" : "Block room" %><% end %>
           </div>
         <% end %>
@@ -66,7 +66,7 @@
             <% if block_active_today %>
               <div class="space-y-3" hidden
                    data-stay-view--room-block-return-target="choice"
-                   data-panels-ui--unsaved-changes-target="step">
+                   data-ui--unsaved-changes-target="step">
                 <p class="text-sm text-foreground">
                   Room <%= @room_block.room_number %> is back in service. What state is it in?
                 </p>
@@ -95,10 +95,10 @@
             title: "Discard your progress?",
             description: "Closing this sheet now loses the progress you have not saved.",
             tone: :warning,
-            data: { "panels-ui--unsaved-changes-target": "alert" }) do |alert| %>
+            data: { "ui--unsaved-changes-target": "alert" }) do |alert| %>
         <% alert.with_icon { cached_icon "triangle-alert", class: "size-5" } %>
-        <% alert.with_cancel(label: "Keep editing", data: { action: "panels-ui--unsaved-changes#keepEditing" }) %>
-        <% alert.with_action(label: "Discard changes", data: { action: "panels-ui--unsaved-changes#discardChanges" }) %>
+        <% alert.with_cancel(label: "Keep editing", data: { action: "ui--unsaved-changes#keepEditing" }) %>
+        <% alert.with_action(label: "Discard changes", data: { action: "ui--unsaved-changes#discardChanges" }) %>
       <% end %>
     <% end %>
   <% end %>

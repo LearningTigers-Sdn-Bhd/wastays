@@ -67,20 +67,12 @@ module HotelPortal
       format("%<currency>s %<amount>.2f", currency: currency, amount: amount.to_d)
     end
 
-    def folios_charges
-      @folios_charges ||= @booking.booking_folios.sum { |f| f.total_charges.to_d + f.projected_forecasts.sum(&:amount).to_d }
-    end
+    def total_charges = guest_balance.total
+    def amount_paid = guest_balance.paid
+    def due_amount = guest_balance.due
 
-    def total_charges
-      folios_charges > 0 ? folios_charges : @booking.total_amount
-    end
-
-    def amount_paid
-      @amount_paid ||= @booking.booking_folios.sum { |f| f.total_payments.to_d }
-    end
-
-    def due_amount
-      total_charges - amount_paid
+    def guest_balance
+      @guest_balance ||= ::Bookings::GuestBalance.new(booking: @booking).call
     end
 
     def outstanding_balance?

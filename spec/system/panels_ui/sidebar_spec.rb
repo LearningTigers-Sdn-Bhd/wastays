@@ -122,7 +122,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
 
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='false'][data-locked='false']")
 
-    page.execute_script("document.querySelector('[data-controller=\"panels-ui--sidebar-toggle\"]').focus()")
+    page.execute_script("document.querySelector('[data-controller=\"ui--sidebar-toggle\"]').focus()")
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true'][data-locked='false']")
   end
 
@@ -195,7 +195,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
       expect(page).to have_no_css("a.panel-sidebar__link", text: "Arrivals")
 
       fill_in "sd-nav-sidebar-search-desktop", with: "zzzzz"
-      expect(page).to have_css("[data-panels-ui--sidebar-search-target='empty']:not(.hidden)")
+      expect(page).to have_css("[data-ui--sidebar-search-target='empty']:not(.hidden)")
     end
   end
 
@@ -241,7 +241,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
       const sidebar = document.querySelector("#sd-nav-sidebar")
       const group = sidebar.querySelector("#sd-nav-sidebar-desktop-section-1-item-2-collapsible")
       group.querySelector("a[data-sidebar-route]").setAttribute("href", window.location.pathname)
-      window.Stimulus.getControllerForElementAndIdentifier(sidebar, "panels-ui--sidebar").syncActiveLinks()
+      window.Stimulus.getControllerForElementAndIdentifier(sidebar, "ui--sidebar").syncActiveLinks()
     JS
     expect(trigger["aria-expanded"]).to eq("false")
 
@@ -415,8 +415,8 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
   it "keeps non-collapsible navigation expanded and hides its toggle" do
     page.execute_script(<<~JS)
       const sidebar = document.getElementById("sd-nav-sidebar")
-      const toggle = document.querySelector("[data-controller='panels-ui--sidebar-toggle']")
-      const controller = window.Stimulus.getControllerForElementAndIdentifier(toggle, "panels-ui--sidebar-toggle")
+      const toggle = document.querySelector("[data-controller='ui--sidebar-toggle']")
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(toggle, "ui--sidebar-toggle")
       sidebar.dataset.collapsible = "false"
       controller.disconnect()
       controller.connect()
@@ -424,7 +424,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
 
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='false']")
     expect(page).to have_css("#sd-nav-sidebar .panel-sidebar__label", visible: true, text: "Bookings")
-    expect(page).to have_css("button[data-controller='panels-ui--sidebar-toggle'][hidden]", visible: :all)
+    expect(page).to have_css("button[data-controller='ui--sidebar-toggle'][hidden]", visible: :all)
   end
 
   it "keeps the toggle visible while Turbo restores its permanent sidebar" do
@@ -433,8 +433,8 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
         const sidebar = document.getElementById("sd-nav-sidebar")
         const parent = sidebar.parentNode
         const nextSibling = sidebar.nextSibling
-        const toggle = document.querySelector("[data-controller='panels-ui--sidebar-toggle']")
-        const controller = window.Stimulus.getControllerForElementAndIdentifier(toggle, "panels-ui--sidebar-toggle")
+        const toggle = document.querySelector("[data-controller='ui--sidebar-toggle']")
+        const controller = window.Stimulus.getControllerForElementAndIdentifier(toggle, "ui--sidebar-toggle")
 
         sidebar.remove()
         controller.disconnect()
@@ -448,7 +448,7 @@ RSpec.describe "PanelsUI::Sidebar", type: :system do
     JS
 
     expect(hidden_without_sidebar).to be(false)
-    expect(page).to have_css("button[data-controller='panels-ui--sidebar-toggle']:not([hidden])")
+    expect(page).to have_css("button[data-controller='ui--sidebar-toggle']:not([hidden])")
     expect(page).to have_css("#sd-nav-sidebar[data-collapsed='true']")
   end
 

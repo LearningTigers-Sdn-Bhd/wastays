@@ -12,21 +12,21 @@
   rebuild the bar, close an open menu and throw away the scroll position in the
   middle of a conversation.
 %>
-<%= tag.div(id: PublicUI::Chat::Panel::REGION_ID, class: "flex min-h-0 flex-1 flex-col") do %>
+<%= tag.div(id: GuestUI::Chat::Panel::REGION_ID, class: "flex min-h-0 flex-1 flex-col") do %>
   <div id="concierge-chat-stream">
     <% if conversation %>
       <%= turbo_stream_from conversation, :guest %>
     <% end %>
   </div>
 
-  <%= render PublicUI::Chat::Panel.new(doodle: concierge_chat_doodle_style) do |panel| %>
+  <%= render GuestUI::Chat::Panel.new(doodle: concierge_chat_doodle_style) do |panel| %>
     <% panel.with_bar(title: hotel.name,
                       status: concierge_chat_status(conversation, hotel),
-                      back_path: concierge_home_path(hotel.unique_id, hotel.public_id),
-                      back_label: "Back to concierge",
+                      back_path: chat_back_path,
+                      back_label: chat_back_label,
                       avatar: conversation&.human? ? :staff : :bot) do |bar| %>
       <% bar.with_menu do %>
-        <%= render PublicUI::Menu.new(label: "Conversation options") do |menu| %>
+        <%= render GuestUI::Menu.new(label: "Conversation options") do |menu| %>
           <%# Nobody can be sent for before the guest has said anything: there
               would be no thread for them to arrive in. %>
           <% if conversation && !conversation.human? && !conversation.human_requested? %>
@@ -47,7 +47,7 @@
           <% menu.with_item(href: concierge_clear_chat_path(hotel.unique_id, hotel.public_id),
                             method: :delete,
                             danger: true,
-                            confirm: "Start a new conversation? This one is put away -- the hotel keeps what was said.") do %>
+                            confirm: "Start a new conversation? This one is put away -- the property keeps what was said.") do %>
             Clear conversation
           <% end %>
         <% end %>
@@ -62,7 +62,7 @@
     <% case chat_input.kind %>
     <% when :confirmation_code %>
       <% panel.with_secure_input do %>
-        <%= render PublicUI::Chat::SecureInput.new(
+        <%= render GuestUI::Chat::SecureInput.new(
               url: concierge_chat_booking_path(hotel.unique_id, hotel.public_id),
               kind: :confirmation_code,
               error: chat_input.error) %>

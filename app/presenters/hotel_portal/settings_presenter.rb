@@ -4,6 +4,7 @@ module HotelPortal
   class SettingsPresenter
     PAGE_HEADINGS = {
       "general" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
+      "ota_logins" => [ "OTA Logins", "Review the OTA login details provided during onboarding." ],
       "boat" => [ "Boat Settings", "Configure the daily boat timetable and the meals each transfer slot carries." ],
       "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ],

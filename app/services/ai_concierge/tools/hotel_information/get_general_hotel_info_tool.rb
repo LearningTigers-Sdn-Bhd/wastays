@@ -29,6 +29,7 @@ module AiConcierge
             "city" => hotel.city,
             "country" => hotel.country,
             "star_rating" => hotel.star_rating,
+            "description" => hotel.description.presence,
             "amenities" => amenity_names,
             "amenity_details" => amenity_details,
             "wifi_available" => guest_wifi_available?,
@@ -47,7 +48,9 @@ module AiConcierge
           location = [ hotel.address, hotel.city, hotel.country ].compact_blank.join(", ")
           parts << "located at #{location}" if location.present?
 
-          parts.join(" ")
+          # The description from Property Settings is the property's own
+          # summary, the same text the concierge Property Info page shows.
+          [ "#{parts.join(' ')}.", hotel.description.presence ].compact.join(" ")
         end
 
         def amenity_names
@@ -76,7 +79,7 @@ module AiConcierge
         end
 
         def guest_wifi_available?
-          hotel.hotel_wifi_networks.active.where(access_scope: %w[checked_in_guests confirmed_guests]).exists?
+          hotel.hotel_wifi_networks.for_guest.exists?
         end
 
         def structured_facts
@@ -86,6 +89,7 @@ module AiConcierge
             "city" => hotel.city,
             "country" => hotel.country,
             "star_rating" => hotel.star_rating,
+            "description" => hotel.description.presence,
             "amenities" => amenity_names,
             "amenity_details" => amenity_details,
             "wifi_available" => guest_wifi_available?,
@@ -99,6 +103,7 @@ module AiConcierge
 
           location = [ hotel.address, hotel.city, hotel.country ].compact_blank.join(", ")
           facts << "The hotel is located at #{location}." if location.present?
+          facts << hotel.description if hotel.description.present?
           facts << "Available amenities include #{amenity_names.to_sentence}." if amenity_names.present?
           facts.join(" ").presence
         end

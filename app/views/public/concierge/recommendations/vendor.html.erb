@@ -1,0 +1,158 @@
+<% content_for :title, "#{@vendor.name} | #{@hotel.name}" %>
+<%# Compact throughout -- hero, info cards and the offer list all trimmed
+    together, not just one section, so a guest reaches "Guest offers"
+    without scrolling on a normal phone instead of it sitting a screen down. %>
+<%= render layout: "public/concierge/shared/page_shell",
+           locals: { content_class: "flex-1 px-4 pt-4 pb-16 sm:px-6 md:pt-6",
+                     container_class: "w-full max-w-5xl" } do %>
+  <%= render "public/concierge/shared/back_button",
+             back_path: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id, category: @vendor.category_slug),
+             back_label: "Back to #{VendorDirectory.category(@vendor.category_slug)&.name || 'Recommendations'}",
+             wrapper_class: "#{desktop_only_back_class} mb-3" %>
+
+  <%# Hero. The photo -- temporary stock photography, see VendorDirectory::
+      MockAdapter -- sits behind a plain dark wash, the same two-layer
+      treatment the hotel's own hero uses: a flat tint for guaranteed
+      contrast plus a gradient so the photo still reads as a photo rather
+      than a flat colour block. No vendor accent here -- one neutral
+      treatment for every vendor's photo keeps it about the photo. %>
+  <div class="relative overflow-hidden rounded-2xl text-white shadow-lg">
+    <%= image_tag @vendor.photo_url, alt: "", loading: "lazy",
+          class: "absolute inset-0 h-full w-full object-cover" %>
+    <div class="absolute inset-0 bg-black/45"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20"></div>
+    <%= cached_icon category_icon_for(@vendor.category_slug),
+          class: "pointer-events-none absolute -right-4 -top-4 h-28 w-28 opacity-10" %>
+
+    <div class="relative p-4">
+      <span class="inline-flex items-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider backdrop-blur-sm">
+        <%= VendorDirectory.category(@vendor.category_slug)&.name %>
+      </span>
+      <h2 class="mt-2.5 font-guest-display text-xl font-semibold leading-tight sm:text-2xl"><%= @vendor.name %></h2>
+      <p class="mt-1 text-[13px] font-medium leading-snug text-white/85"><%= @vendor.tagline %></p>
+
+      <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-white/20 pt-2.5 text-[11px] font-bold">
+        <% if @vendor.distance_label.present? %>
+          <span class="inline-flex items-center gap-1.5">
+            <%= cached_icon "map-pin", class: "h-3.5 w-3.5 text-white/70" %><%= vendor_distance_summary(@vendor) %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <%# Clamped to four lines on a phone, where a long description could run to
+      a paragraph before a guest reaches anything else on the page; full
+      length from md up, where there is width to spare. connect() hides the
+      button entirely when the text turns out to fit within four lines
+      anyway, so there is never a "Read more" that reveals nothing. %>
+  <% if @vendor.summary.present? %>
+    <div class="mt-3.5" data-controller="concierge-read-more">
+      <p data-concierge-read-more-target="text"
+         class="line-clamp-4 font-guest-editorial text-sm leading-relaxed text-muted-foreground md:line-clamp-none"><%= @vendor.summary %></p>
+      <button type="button"
+              data-concierge-read-more-target="button"
+              data-action="concierge-read-more#toggle"
+              class="mt-1 text-[11px] font-black uppercase tracking-wider text-primary md:hidden">
+        Read more
+      </button>
+    </div>
+  <% end %>
+
+  <%# Dietary status only -- the generic descriptive tags (Western, Late
+      night, Mediterranean...) added noise without adding a decision the way
+      halal status does, so they no longer render here or anywhere else. %>
+  <% if @vendor.dietary_tags? %>
+    <div class="mt-2.5">
+      <%= render "public/concierge/recommendations/dietary_tags", vendor: @vendor %>
+    </div>
+  <% end %>
+
+  <%# One row, three actions, nothing to read first -- the address, the phone
+      number and a description of what "share" does all cost more space than
+      they're worth once the icon and a two-word label already say it. Each
+      one is a direct link: tel:, Google Maps, and the Web Share sheet (or a
+      copied link where that API doesn't exist). %>
+  <div class="mt-3.5 grid gap-2 <%= @vendor.phone.present? ? 'grid-cols-3' : 'grid-cols-2' %>">
+    <% if @vendor.phone.present? %>
+      <%= link_to "tel:#{@vendor.phone.gsub(/\s/, '')}",
+            class: "flex items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-white p-3 shadow-sm transition-all hover:shadow-md active:scale-[0.98]" do %>
+        <%= cached_icon "phone", class: "h-4 w-4 text-primary" %>
+        <span class="text-[12px] font-black uppercase tracking-wider text-foreground">Call</span>
+      <% end %>
+    <% end %>
+
+    <%= link_to @vendor.google_maps_url, target: "_blank", rel: "noopener noreferrer",
+          class: "flex items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-white p-3 shadow-sm transition-all hover:shadow-md active:scale-[0.98]" do %>
+      <%= cached_icon "navigation", class: "h-4 w-4 text-primary" %>
+      <span class="text-[12px] font-black uppercase tracking-wider text-foreground">Direction</span>
+    <% end %>
+
+    <button type="button"
+            data-controller="concierge-share"
+            data-concierge-share-title-value="<%= @vendor.name %>"
+            data-concierge-share-url-value="<%= concierge_recommendation_vendor_url(@hotel.unique_id, @hotel.public_id, @vendor) %>"
+            data-action="concierge-share#share"
+            class="flex items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-white p-3 shadow-sm transition-all hover:shadow-md active:scale-[0.98]">
+      <%= cached_icon "share", class: "h-4 w-4 text-primary" %>
+      <span data-concierge-share-target="label" class="text-[12px] font-black uppercase tracking-wider text-foreground">Share</span>
+    </button>
+  </div>
+
+  <% if @vendor.hours.any? %>
+    <div class="mt-2 rounded-xl border border-border/60 bg-white p-3 shadow-sm">
+      <div class="mb-1.5 flex items-center justify-between gap-2 border-b border-border/40 pb-1.5">
+        <p class="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+          <%= cached_icon "clock", class: "h-3 w-3" %> Opening hours
+        </p>
+        <%# Checked against the vendor's own address, not the guest's phone --
+            see VendorDirectory::Vendor#open_now?. %>
+        <% if vendor_open_now_label(@vendor).present? %>
+          <span class="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider <%= vendor_open_now_class(@vendor) %>">
+            <span class="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current"></span><%= vendor_open_now_label(@vendor) %>
+          </span>
+        <% end %>
+      </div>
+
+      <% if vendor_next_open_label(@vendor).present? %>
+        <p class="mb-1.5 text-[12px] font-bold text-foreground"><%= vendor_next_open_label(@vendor) %></p>
+      <% end %>
+
+      <dl class="space-y-1">
+        <% @vendor.hours.each do |slot| %>
+          <div class="flex items-baseline justify-between gap-3">
+            <dt class="text-[12.5px] font-bold text-foreground"><%= slot.days %></dt>
+            <dd class="text-[12.5px] font-medium <%= slot.closed? ? 'text-muted-foreground' : 'text-foreground' %>"><%= slot.label %></dd>
+          </div>
+        <% end %>
+      </dl>
+      <p class="mt-2 border-t border-border/40 pt-2 text-[11px] font-medium leading-snug text-muted-foreground">
+        Hours may change on public holidays. Call ahead to confirm before you head over.
+      </p>
+    </div>
+  <% end %>
+
+  <section class="mt-5">
+    <div class="mb-2.5 flex items-center gap-1.5">
+      <%= cached_icon "ticket", class: "h-3.5 w-3.5 text-primary" %>
+      <h3 class="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Available Vouchers</h3>
+    </div>
+
+    <% if @vendor.offers? %>
+      <div class="grid gap-2 sm:grid-cols-2">
+        <% @vendor.offers.each do |offer| %>
+          <%= render "public/concierge/recommendations/offer_card", vendor: @vendor, offer: offer %>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="rounded-xl border border-dashed border-border bg-white/60 p-6 text-center">
+        <p class="text-sm font-bold text-foreground">No offers right now</p>
+        <p class="mt-1.5 text-[13px] font-medium leading-relaxed text-muted-foreground">
+          We list <%= @vendor.name %> because it is worth your time, voucher or not. Check back later in your stay.
+        </p>
+      </div>
+    <% end %>
+  </section>
+
+  <%= render "public/concierge/recommendations/reviews", vendor: @vendor, reviews: @reviews, review_form: @review_form %>
+<% end %>

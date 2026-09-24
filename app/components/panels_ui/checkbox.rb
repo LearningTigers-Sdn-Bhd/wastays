@@ -24,10 +24,10 @@ module PanelsUI
       controller = data.delete(:controller) || data.delete("controller")
       action = data.delete(:action) || data.delete("action")
       data.merge(
-        controller: [ controller, "panels-ui--checkbox" ].compact.join(" "),
-        action: [ action, "change->panels-ui--checkbox#clearIndeterminate" ].compact.join(" "),
-        panels_ui__checkbox_indeterminate_value: true,
-        panels_ui__checkbox_target: "input"
+        controller: [ controller, "ui--checkbox" ].compact.join(" "),
+        action: [ action, "change->ui--checkbox#clearIndeterminate" ].compact.join(" "),
+        ui__checkbox_indeterminate_value: true,
+        ui__checkbox_target: "input"
       )
     end
   end

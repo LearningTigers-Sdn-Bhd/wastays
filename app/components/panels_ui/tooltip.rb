@@ -8,7 +8,7 @@ module PanelsUI
   #   <% end %>
   #
   # The trigger is the block content; positioning, ARIA wiring, and dismissal are
-  # handled by the panels-ui--tooltip Stimulus controller (mirrors DropdownMenu).
+  # handled by the ui--tooltip Stimulus controller (mirrors DropdownMenu).
   class Tooltip < PanelsUI::BaseComponent
     PLACEMENTS = %i[
       top top_start top_end right right_start right_end

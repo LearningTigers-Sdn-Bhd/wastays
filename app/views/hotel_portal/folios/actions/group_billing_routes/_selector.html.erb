@@ -73,7 +73,7 @@
     <div class="sticky bottom-0 z-30 flex shrink-0 items-center justify-between border-t border-border bg-card px-6 py-4 pointer-events-auto">
       <p class="text-xs text-muted-foreground" data-group-billing-routes-target="summary">0 codes selected</p>
       <div class="relative z-40 flex gap-3 pointer-events-auto">
-        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
         <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, disabled: true,
               data: { group_billing_routes_target: "submit", turbo_submits_with: "Reviewing…" }) do %>Review &amp; Apply<% end %>
       </div>

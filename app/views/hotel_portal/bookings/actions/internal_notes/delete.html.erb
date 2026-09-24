@@ -1,7 +1,7 @@
 <% form_id = "delete-booking-internal-note-form" %>
 <% footer = capture do %>
   <div class="flex w-full items-center justify-end gap-2">
-    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Keep note<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Keep note<% end %>
     <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, variant: :destructive, data: { turbo_submits_with: "Deleting…" }) do %>Delete note<% end %>
   </div>
 <% end %>

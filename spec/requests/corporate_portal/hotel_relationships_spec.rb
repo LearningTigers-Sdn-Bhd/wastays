@@ -17,7 +17,7 @@ RSpec.describe "CorporatePortal::HotelRelationships", type: :request do
     # contains an apostrophe -- HTML-escaped in the response ("D&#39;Amore"),
     # so the raw name has to be compared against unescaped output.
     expect(CGI.unescapeHTML(response.body)).to include("Billing details", relationship.hotel.name, "Billing address missing")
-    expect(Nokogiri::HTML(response.body).css("select:not([data-panels-ui--combobox-target])")).to be_empty
+    expect(Nokogiri::HTML(response.body).css("select:not([data-ui--combobox-target])")).to be_empty
   end
 
   it "updates contact and billing address fields" do

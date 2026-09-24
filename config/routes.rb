@@ -3,6 +3,7 @@ require_relative "../app/constraints/superadmin_constraint"
 Rails.application.routes.draw do
   hotel_code_constraint = /\d+/
   public_uuid_v4_constraint = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/
+  stay_access_id_constraint = /[A-Za-z0-9]{12}/
 
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
@@ -59,6 +60,7 @@ Rails.application.routes.draw do
         post :request_e_invoice
         get :voucher_pack, path: "voucher-pack"
         get :summary
+        get :concierge
         patch :toggle_dnd
       end
       resources :refund_requests, only: [ :new, :create ]
@@ -104,19 +106,56 @@ Rails.application.routes.draw do
     get  "check-in/now",           to: "check_ins#check_in_now",     as: :check_in_now
     post "check-in/now",           to: "check_ins#submit_check_in",  as: :submit_check_in
     get  "check-in/success",       to: "check_ins#check_in_success", as: :check_in_success
-    get  "check-out",              to: "check_outs#new",       as: :check_out
-    post "check-out",              to: "check_outs#create",    as: :create_check_out
-    get  "check-out/success",      to: "check_outs#success",   as: :check_out_success
     get  "book",                   to: "home#book",            as: :book
-    get  "requests/new",           to: "requests#new",         as: :new_request
-    post "requests",               to: "requests#create",      as: :requests
-    get  "requests/success",       to: "requests#success",     as: :request_success
     get  "contact",                to: "contact#show",         as: :contact
+    get  "info",                   to: "info#show",            as: :info
+    get  "info/:section",          to: "info#show",            as: :info_section,
+         constraints: { section: /amenities|policies|faqs/ }
     get    "chat",                 to: "chats#show",           as: :chat
     post   "chat",                 to: "chats#create",         as: :chat_messages
     post   "chat/booking",         to: "booking_links#create", as: :chat_booking
     delete "chat",                 to: "chats#destroy",        as: :clear_chat
     post   "chat/agent",           to: "chats#request_agent",  as: :chat_agent
+
+    # Static segments first: "wallet" and "unlock" must not be swallowed by the
+    # :vendor_id wildcard below.
+    get  "recommendations",                       to: "recommendations#index",  as: :recommendations
+    get  "recommendations/unlock",                to: "recommendations#new",    as: :recommendations_unlock
+    post "recommendations/unlock",                to: "recommendations#lookup", as: :recommendations_lookup
+    get  "recommendations/wallet",                to: "recommendations#wallet", as: :recommendations_wallet
+    get  "recommendations/:vendor_id",            to: "recommendations#vendor", as: :recommendation_vendor
+    post "recommendations/:vendor_id/reviews",    to: "recommendations#create_review", as: :recommendation_vendor_reviews
+    get  "recommendations/:vendor_id/:offer_id",  to: "recommendations#offer",  as: :recommendation_offer
+    post "recommendations/:vendor_id/:offer_id/claim", to: "recommendations#claim", as: :claim_recommendation_offer
+
+    # Checked-in Concierge. One stable link for one stay. The link identifies
+    # the stay; the stay-session cookie authorizes the browser. The same URL
+    # serves the locked page and the authenticated page.
+    scope "stay/:stay_access_id", module: :stays,
+          constraints: { stay_access_id: stay_access_id_constraint } do
+      get  "/",       to: "overview#show",         as: :stay
+      post "verify",  to: "verifications#create",  as: :stay_verification
+      post "recover", to: "verifications#recover", as: :stay_recovery
+
+      # The stay features. Each one gets its booking from the stay session, so
+      # no route carries a booking id or a confirmation code.
+      get    "documents/:kind", to: "documents#show",       as: :stay_document,
+             constraints: { kind: /receipt|invoice|summary|voucher_pack|e_invoice/ }
+      get    "e-invoice",       to: "e_invoices#show",      as: :stay_e_invoice
+      post   "e-invoice",       to: "e_invoices#create",    as: :stay_e_invoice_request
+      get    "e-invoice/status", to: "e_invoices#status",   as: :stay_e_invoice_status
+      get    "refund",          to: "refunds#new",          as: :stay_refund
+      post   "refund",          to: "refunds#create",       as: :stay_refunds
+      get    "check-out",       to: "check_outs#new",       as: :stay_check_out
+      post   "check-out",       to: "check_outs#create",    as: :stay_check_outs
+      get    "contact",         to: "contacts#show",        as: :stay_contact
+      get    "info",            to: "infos#show",           as: :stay_info
+      get    "info/:section",   to: "infos#show",           as: :stay_info_section,
+             constraints: { section: /amenities|policies|faqs/ }
+      get    "wifi",            to: "infos#show",           as: :stay_wifi, defaults: { section: "wifi" }
+      get    "requests/new",    to: "requests#new",         as: :new_stay_request
+      post   "requests",        to: "requests#create",      as: :stay_requests
+    end
   end
 
   scope "/concierge/:legacy_hotel_identifier", as: :legacy_concierge do
@@ -126,13 +165,13 @@ Rails.application.routes.draw do
     get  "check-in/now",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/now" }
     post "check-in/now",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/now" }
     get  "check-in/success",       to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/success" }
-    get  "check-out",              to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out" }
-    post "check-out",              to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out" }
-    get  "check-out/success",      to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-out/success" }
+    # Check-out and requests now live on the stay page only, so their old
+    # public links land on the concierge home.
+    get  "check-out",              to: "public/legacy_hotel_urls#concierge"
+    get  "check-out/success",      to: "public/legacy_hotel_urls#concierge"
     get  "book",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "book" }
-    get  "requests/new",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests/new" }
-    post "requests",               to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests" }
-    get  "requests/success",       to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "requests/success" }
+    get  "requests/new",           to: "public/legacy_hotel_urls#concierge"
+    get  "requests/success",       to: "public/legacy_hotel_urls#concierge"
     get  "contact",                to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "contact" }
     get  "chat",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
     post "chat",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
@@ -374,6 +413,7 @@ Rails.application.routes.draw do
     end
     resource :integrations, only: [ :show, :update, :destroy ] do
       post :test_r2_connection, on: :collection
+      post :test_around_that_connection, on: :collection
     end
     resources :plans, only: [ :index ] do
       collection do
@@ -533,6 +573,7 @@ Rails.application.routes.draw do
       match "void-booking/:booking_id", to: "voids#show", via: [ :get, :post ], as: :void_booking
       match "mark-no-show/:booking_id", to: "no_shows#show", via: [ :get, :post ], as: :mark_no_show
       match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
+      post "resend-stay-link/:booking_id", to: "stay_links#create", as: :resend_stay_link
       match "review-backdated-check-in/:booking_id", to: "review_backdated_check_ins#show", via: [ :get, :post ], as: :review_backdated_check_in
       match "repair-no-show-folio/:booking_id", to: "no_show_folio_repairs#show", via: [ :get, :post ], as: :repair_no_show_folio
       match "reinstate-no-show/:booking_id", to: "reinstatements#show", via: [ :get, :post ], as: :reinstate_no_show
@@ -758,6 +799,7 @@ Rails.application.routes.draw do
     scope "settings" do
       get "general", to: "settings#index", as: :general_settings, defaults: { settings_page: "general" }
       patch "general", to: "settings#update", defaults: { settings_page: "general" }
+      get "general/ota-logins", to: "settings#index", as: :ota_logins_settings, defaults: { settings_page: "ota_logins" }
       get "general/boat", to: "settings#index", as: :boat_settings, defaults: { settings_page: "boat" }
       patch "general/boat", to: "settings#update", defaults: { settings_page: "boat" }
       post "general/boat/slots", to: "boat_schedules#create", as: :boat_schedule_slots

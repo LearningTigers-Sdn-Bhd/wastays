@@ -9,6 +9,8 @@
     <% case @presenter.active_page %>
     <% when "general" %>
       <%= render "hotel_portal/settings/general_section" %>
+    <% when "ota_logins" %>
+      <%= render "hotel_portal/settings/ota_logins_section" %>
     <% when "boat" %>
       <%= render "hotel_portal/settings/boat_section" %>
     <% when "notifications" %>

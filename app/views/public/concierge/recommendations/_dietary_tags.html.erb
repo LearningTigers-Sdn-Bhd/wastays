@@ -1,0 +1,12 @@
+<%# Shared across list mode, card mode and the vendor detail page so a
+    guest sees the same badge, in the same place relative to the name, no
+    matter how they got here. %>
+<% if vendor.dietary_tags? %>
+  <div class="flex flex-wrap items-center gap-1.5">
+    <% vendor.dietary_tags.each do |label| %>
+      <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider <%= dietary_tag_classes(label) %>">
+        <%= cached_icon dietary_tag_icon(label), class: "h-3 w-3" %><%= label %>
+      </span>
+    <% end %>
+  </div>
+<% end %>

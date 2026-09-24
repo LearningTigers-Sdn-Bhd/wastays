@@ -39,7 +39,7 @@ module Public
         respond_to do |format|
           format.turbo_stream do
             render turbo_stream: turbo_stream.replace(
-              PublicUI::Chat::Panel::INPUT_REGION_ID,
+              GuestUI::Chat::Panel::INPUT_REGION_ID,
               partial: "public/concierge/chats/input",
               locals: { hotel: @hotel, input: input }
             )

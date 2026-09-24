@@ -2,24 +2,44 @@ import { Controller } from "@hotwired/stimulus"
 import SignaturePad from "signature_pad"
 
 export default class extends Controller {
-  static targets = ["canvas", "input", "clearButton", "overlay", "expandedCanvas"]
+  // clearButton, status and the overlay are optional: GuestUI::SignaturePad
+  // has a clear button and a status line, the registration card has a clear
+  // button and the full-screen overlay.
+  static targets = ["canvas", "input", "clearButton", "status", "overlay", "expandedCanvas"]
+  static values = {
+    emptyText: { type: String, default: "Sign in the box" },
+    signedText: { type: String, default: "Signed" },
+    requiredMessage: { type: String, default: "Please sign in the box." }
+  }
 
   connect() {
     this.signaturePad = this.buildPad(this.canvasTarget)
 
     this.signaturePad.addEventListener("endStroke", () => {
       this.save()
-      this.toggleClearButton()
     })
+
+    // A clear button that starts hidden is shown once there is ink. One that
+    // starts visible stays in place and is disabled while the pad is empty.
+    this.clearButtonHides = this.hasClearButtonTarget && this.clearButtonTarget.classList.contains("hidden")
 
     // Keep the bound reference so disconnect() removes this very listener.
     this.boundResizeCanvas = this.resizeCanvas.bind(this)
     window.addEventListener("resize", this.boundResizeCanvas)
     this.resizeCanvas()
+    this.updateState()
+
+    // A required signature field that is still empty says so in words, not
+    // with the browser's generic "fill in this field".
+    this.boundInvalid = () => {
+      if (this.signaturePad.isEmpty()) this.inputTarget.setCustomValidity(this.requiredMessageValue)
+    }
+    this.inputTarget.addEventListener("invalid", this.boundInvalid)
   }
 
   disconnect() {
     window.removeEventListener("resize", this.boundResizeCanvas)
+    this.inputTarget.removeEventListener("invalid", this.boundInvalid)
   }
 
   buildPad(canvas) {
@@ -49,13 +69,10 @@ export default class extends Controller {
   clear() {
     this.signaturePad.clear()
     this.inputTarget.value = ""
-    this.toggleClearButton()
-  }
-
-  toggleClearButton() {
-    if (!this.hasClearButtonTarget) return
-
-    this.clearButtonTarget.classList.toggle("hidden", this.signaturePad.isEmpty())
+    this.updateState()
+    // The button just pressed is now disabled; keep focus on the pad's frame
+    // rather than letting it fall to the page.
+    if (this.hasClearButtonTarget && !this.clearButtonHides) this.canvasTarget.closest("[tabindex]")?.focus()
   }
 
   save() {
@@ -65,6 +82,21 @@ export default class extends Controller {
       this.inputTarget.value = this.signaturePad.toDataURL()
       this.inputTarget.setCustomValidity("")
     }
+    this.updateState()
+  }
+
+  // Clear is only offered when there is something to clear, and the footer
+  // says whether the pad is signed.
+  updateState() {
+    const empty = this.signaturePad.isEmpty()
+    if (this.hasClearButtonTarget) {
+      if (this.clearButtonHides) {
+        this.clearButtonTarget.classList.toggle("hidden", empty)
+      } else {
+        this.clearButtonTarget.disabled = empty
+      }
+    }
+    if (this.hasStatusTarget) this.statusTarget.textContent = empty ? this.emptyTextValue : this.signedTextValue
   }
 
   // A signature box that fits under the stay details is too small to sign
@@ -104,7 +136,6 @@ export default class extends Controller {
     document.body.classList.remove("overflow-hidden")
     this.overlayOpen = false
     this.save()
-    this.toggleClearButton()
   }
 
   clearExpanded() {

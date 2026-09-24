@@ -10,7 +10,7 @@ RSpec.describe PanelsUI::Breadcrumb, type: :component do
   it "renders a semantic nav/ol wired to the controller" do
     render_breadcrumb([ { type: :section, label: "Operations" } ])
 
-    expect(page).to have_css("nav[aria-label='Breadcrumb'][data-controller='panels-ui--breadcrumb'] > ol.breadcrumb-list")
+    expect(page).to have_css("nav[aria-label='Breadcrumb'][data-controller='ui--breadcrumb'] > ol.breadcrumb-list")
     expect(page).to have_css("li.breadcrumb-item")
   end
 
@@ -36,7 +36,7 @@ RSpec.describe PanelsUI::Breadcrumb, type: :component do
     expect(page).to have_css("span.font-semibold.text-foreground", text: "BK-1")
   end
 
-  it "delegates the sibling dropdown to panels-ui--dropdown-menu with menuitem links" do
+  it "delegates the sibling dropdown to ui--dropdown-menu with menuitem links" do
     render_breadcrumb([
       { type: :menu, label: "Financial", path: "/f", siblings: [
         { label: "Summary", path: "/s" },
@@ -44,14 +44,14 @@ RSpec.describe PanelsUI::Breadcrumb, type: :component do
       ] }
     ])
 
-    expect(page).to have_css("div.breadcrumb-dropdown.dropdown-menu-root[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("div.breadcrumb-dropdown.dropdown-menu-root[data-controller='ui--dropdown-menu']")
     expect(page).to have_css(
       "button#bc-trigger-0.breadcrumb-dropdown__trigger[aria-controls='bc-menu-0'][aria-haspopup='menu']" \
-      "[aria-label='Open Financial navigation'][data-panels-ui--dropdown-menu-target='trigger']"
+      "[aria-label='Open Financial navigation'][data-ui--dropdown-menu-target='trigger']"
     )
     expect(page).to have_link("Financial", href: "/f")
     expect(page).to have_css(
-      "#bc-menu-0.dropdown-menu[role='menu'][popover='manual'][data-panels-ui--dropdown-menu-target='menu']",
+      "#bc-menu-0.dropdown-menu[role='menu'][popover='manual'][data-ui--dropdown-menu-target='menu']",
       visible: :all
     )
     expect(page).to have_css(
@@ -65,7 +65,7 @@ RSpec.describe PanelsUI::Breadcrumb, type: :component do
     render_breadcrumb([ { label: "Calendar", tab_label: true } ])
 
     expect(page).to have_css(
-      "span[data-tabs-breadcrumb-label][data-panels-ui--breadcrumb-target='tabLabel']",
+      "span[data-tabs-breadcrumb-label][data-ui--breadcrumb-target='tabLabel']",
       text: "Calendar"
     )
   end
@@ -76,10 +76,10 @@ RSpec.describe PanelsUI::Breadcrumb, type: :component do
       { label: "Standard Room", subtab_label: true, hidden: true }
     ])
 
-    segment = page.find("li[data-subtabs-breadcrumb-segment][data-panels-ui--breadcrumb-target='subtabSegment']", visible: :all)
+    segment = page.find("li[data-subtabs-breadcrumb-segment][data-ui--breadcrumb-target='subtabSegment']", visible: :all)
     expect(segment[:class]).to include("hidden")
     expect(page).to have_css(
-      "span[data-subtabs-breadcrumb-label][data-panels-ui--breadcrumb-target='subtabLabel']",
+      "span[data-subtabs-breadcrumb-label][data-ui--breadcrumb-target='subtabLabel']",
       text: "Standard Room",
       visible: :all
     )
@@ -92,8 +92,8 @@ RSpec.describe PanelsUI::Breadcrumb, type: :component do
     ])
 
     root = page.find("#bc")
-    expect(root["data-action"]).to eq("panels-ui--tabs:change@window->panels-ui--breadcrumb#tabsChanged")
-    expect(root["data-panels-ui--breadcrumb-tab-id-value"]).to eq("inventory-tabs")
-    expect(JSON.parse(root["data-panels-ui--breadcrumb-subtab-ids-value"])).to eq([ "pricing-tabs", "channel-tabs" ])
+    expect(root["data-action"]).to eq("ui--tabs:change@window->ui--breadcrumb#tabsChanged")
+    expect(root["data-ui--breadcrumb-tab-id-value"]).to eq("inventory-tabs")
+    expect(JSON.parse(root["data-ui--breadcrumb-subtab-ids-value"])).to eq([ "pricing-tabs", "channel-tabs" ])
   end
 end

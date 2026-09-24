@@ -1,0 +1,43 @@
+<% content_for :title, "Ask for a refund | #{@hotel.name}" %>
+<% existing = @presenter.refund_request %>
+
+<%= render layout: "public/concierge/stays/shared/form_page",
+           locals: {
+             presenter: @presenter,
+             error: @error,
+             title: "Ask for a refund",
+             subtitle: "This is a request, not a payment. The property reads it and replies to you."
+           } do %>
+  <% if existing && !existing.rejected? %>
+    <dl class="space-y-4">
+      <div>
+        <dt class="text-[11px] font-medium text-muted-foreground">Status</dt>
+        <dd class="text-lg font-black text-foreground"><%= existing.status.humanize %></dd>
+      </div>
+      <div>
+        <dt class="text-[11px] font-medium text-muted-foreground">Amount asked</dt>
+        <dd class="text-[13px] font-bold text-foreground"><%= @presenter.booking.currency %> <%= number_with_precision(existing.refund_amount, precision: 2) %></dd>
+      </div>
+      <% if existing.hotel_note.present? %>
+        <div>
+          <dt class="text-[11px] font-medium text-muted-foreground">From the property</dt>
+          <dd class="text-[13px] font-medium leading-relaxed text-foreground"><%= existing.hotel_note %></dd>
+        </div>
+      <% end %>
+    </dl>
+  <% else %>
+    <% if existing&.rejected? && existing.hotel_note.present? %>
+      <%= render GuestUI::Notice.new(variant: :warning, class: "mb-5") do %>
+        The property asked for a change: <%= existing.hotel_note %>
+      <% end %>
+    <% end %>
+
+    <%= form_with model: @refund_request, url: concierge_stay_refunds_path(*stay_route_args),
+          scope: :refund_request, method: :post, local: true, class: "space-y-5" do |form| %>
+      <%= render "shared/refunds/fields", form:, booking: @presenter.booking, mode: :post_stay %>
+
+      <%= render GuestUI::Button.new(label: "Send my request", size: :lg, block: true, type: "submit",
+                                     data: { turbo_submits_with: "Sending…" }) %>
+    <% end %>
+  <% end %>
+<% end %>

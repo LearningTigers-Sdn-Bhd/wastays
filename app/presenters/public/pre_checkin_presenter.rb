@@ -82,10 +82,6 @@ module Public
       guest_document_type == "passport" ? "Passport Photo Page" : "Front ID Card"
     end
 
-    def front_scanner_height_class
-      guest_document_type == "passport" ? "h-44 md:h-64 md:max-w-[480px]" : "h-44"
-    end
-
     def hours_options
       (1..12).to_a
     end

@@ -1,7 +1,7 @@
 <%#
   Reusable shell for booking-action Sheets.
 
-  Lazy-loaded into a booking-action Turbo Frame; panels-ui--sheet-frame auto-opens
+  Lazy-loaded into a booking-action Turbo Frame; ui--sheet-frame auto-opens
   the native <dialog> on connect and clears its own frame on close.
 
   The sheet renders into whichever frame requested it (echoing the Turbo-Frame
@@ -27,7 +27,7 @@
 <% dismissible = local_assigns.fetch(:dismissible, true) %>
 <% frame = local_assigns.fetch(:frame) { turbo_frame_request_id.presence || "booking_action_sheet" } %>
 <%= turbo_frame_tag frame do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: id,
           side: local_assigns.fetch(:side, :right),

@@ -1,7 +1,7 @@
 <%# A thumb needs something to press; a cursor does not. Solid green button on a
     phone, plain underlined link above sm — where it also sits at the right edge
     with the rest of the page chrome, unless the caller places it itself. %>
-<div class="<%= local_assigns.fetch(:wrapper_class, "mb-6 flex sm:justify-end") %>">
+<div class="<%= local_assigns[:wrapper_class].presence || "mb-6 flex sm:justify-end" %>">
   <%= link_to back_path,
         class: "group inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-3.5 text-primary-foreground shadow-xs transition-all active:scale-95 sm:min-h-0 sm:rounded-none sm:bg-transparent sm:px-0 sm:shadow-none sm:active:scale-100" do %>
     <%= cached_icon "chevron-left", stroke_width: 3,

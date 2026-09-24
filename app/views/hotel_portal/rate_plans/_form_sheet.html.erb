@@ -3,7 +3,7 @@
 <% per_person = current_hotel.sells_per_person? %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame rate-plan-editor"
+  <div data-controller="ui--sheet-frame rate-plan-editor"
        data-rate-plan-editor-edit-url-value="<%= new_hotel_rate_plan_path(current_hotel) %>"
        data-rate-plan-editor-room-type-id-value="<%= @selected_room_type&.id %>">
     <%= render PanelsUI::Sheet.new(
@@ -18,7 +18,7 @@
         <header class="shrink-0 border-b border-border px-4 py-4">
           <div class="flex w-full items-start justify-between gap-4">
             <div>
-              <h2 class="text-base font-semibold text-foreground" tabindex="-1" data-panels-ui--sheet-target="initialFocus"><%= title %></h2>
+              <h2 class="text-base font-semibold text-foreground" tabindex="-1" data-ui--sheet-target="initialFocus"><%= title %></h2>
               <p class="mt-1 text-sm text-muted-foreground">Configure this rate plan for one room category. Attach it to more rooms separately.</p>
             </div>
             <button type="button"
@@ -78,7 +78,7 @@
                        placeholder: "Non-refundable",
                        data: {
                          rate_plan_editor_target: "ratePlanName",
-                         action: "input->rate-plan-editor#clearRatePlanSelection panels-ui:autocomplete-select->rate-plan-editor#selectRatePlan"
+                         action: "input->rate-plan-editor#clearRatePlanSelection ui:autocomplete-select->rate-plan-editor#selectRatePlan"
                        }) %>
                 <% end %>
                 <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>

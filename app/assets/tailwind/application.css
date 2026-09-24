@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "./public/theme.css";
-@import "./public/chat.css";
+@import "./guest/chat.css";
+@import "./guest/menu.css";
+@import "./guest/portal.css";
+@import "./guest/ui.css";
 @import "./panel/theme.css";
 @import "./panel/page.css";
 @import "./panel/page-header.css";
@@ -168,6 +171,9 @@
 
   /* Typography */
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-guest-interface: "Lato", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-guest-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-guest-editorial: Georgia, "Times New Roman", serif;
 
   /* Border Radius */
   --radius-sm: 0.25rem;
@@ -262,12 +268,6 @@
 
   html.landing-loader-active #abw-btn-cont {
     display: none !important;
-  }
-
-  @media (max-width: 767px) {
-    html.scanner-active #abw-btn-cont {
-      display: none !important;
-    }
   }
 
   /* Dynamically adjust WhatsApp widget bottom offset to prevent overlap with sticky actions */

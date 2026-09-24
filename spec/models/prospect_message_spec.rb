@@ -84,7 +84,7 @@ RSpec.describe ProspectMessage, type: :model do
       payloads = turbo_broadcasts_to(conversation, :guest)
 
       expect(payloads.join).to include("Any parking?")
-      expect(payloads.join).to include(PublicUI::Chat::Log::DEFAULT_ID)
+      expect(payloads.join).to include(GuestUI::Chat::Log::DEFAULT_ID)
     end
 
     it "clears the empty-state line out of the way of the first message" do
@@ -92,7 +92,7 @@ RSpec.describe ProspectMessage, type: :model do
       payloads = turbo_broadcasts_to(conversation, :guest)
 
       expect(payloads.first).to include(%(action="remove"))
-      expect(payloads.first).to include("#{PublicUI::Chat::Log::DEFAULT_ID}-empty")
+      expect(payloads.first).to include("#{GuestUI::Chat::Log::DEFAULT_ID}-empty")
     end
 
     it "pushes the same message to the inbox as well" do

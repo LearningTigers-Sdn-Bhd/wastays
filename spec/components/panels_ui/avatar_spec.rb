@@ -41,10 +41,10 @@ RSpec.describe PanelsUI::Avatar, type: :component do
   it "renders an image over its fallback with failure-controller hooks" do
     render_inline(described_class.new(name: "Aisha Rahman", src: "/aisha.png", fallback: "Guest"))
 
-    expect(page).to have_css(".panel-avatar[data-controller='panels-ui--avatar']")
+    expect(page).to have_css(".panel-avatar[data-controller='ui--avatar']")
     expect(page).to have_css(
-      "img.panel-avatar__image[src='/aisha.png'][alt=''][data-panels-ui--avatar-target='image'][data-slot='avatar-image']" \
-      "[data-action='error->panels-ui--avatar#hideFailedImage']"
+      "img.panel-avatar__image[src='/aisha.png'][alt=''][data-ui--avatar-target='image'][data-slot='avatar-image']" \
+      "[data-action='error->ui--avatar#hideFailedImage']"
     )
     expect(page).to have_css(".panel-avatar__fallback", text: "Guest")
   end

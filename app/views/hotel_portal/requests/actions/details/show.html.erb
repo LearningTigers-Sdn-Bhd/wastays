@@ -1,5 +1,5 @@
 <%= turbo_frame_tag(turbo_frame_request_id.presence || "requests_action_sheet") do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "request-detail-sheet",
           side: :right,

@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
-import { syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
-import { serializeForm } from "controllers/panels_ui/support/form_state"
+import { syncSelectMenu } from "controllers/ui/select_menu_sync"
+import { serializeForm } from "controllers/ui/support/form_state"
 
 export default class extends Controller {
   static targets = ["form", "selectedRatePlanId"]
@@ -111,7 +111,7 @@ export default class extends Controller {
 
   closeSheet() {
     const dialog = this.element.querySelector("#edit-rate-plan-sheet, #new-rate-plan-sheet")
-    const controller = this.application.getControllerForElementAndIdentifier(dialog, "panels-ui--sheet")
+    const controller = this.application.getControllerForElementAndIdentifier(dialog, "ui--sheet")
     controller?.close()
   }
 

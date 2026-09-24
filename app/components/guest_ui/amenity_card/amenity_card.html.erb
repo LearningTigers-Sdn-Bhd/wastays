@@ -1,0 +1,43 @@
+<%= tag.article(**card_attributes) do %>
+  <header class="guest-amenity__header">
+    <span class="guest-guide-icon">
+      <%= helpers.app_icon(icon, class: "guest-guide-icon__svg", aria: { hidden: "true" }) %>
+    </span>
+    <div class="min-w-0 flex-1">
+      <h3 class="guest-amenity__name"><%= name %></h3>
+      <% if category.present? || book_ahead? %>
+        <p class="guest-amenity__meta">
+          <% if category.present? %><span><%= category %></span><% end %>
+          <% if book_ahead? %><span class="guest-amenity__badge">Book ahead</span><% end %>
+        </p>
+      <% end %>
+    </div>
+  </header>
+
+  <% if facts.any? %>
+    <dl class="guest-amenity__facts">
+      <% facts.each do |label, fact_icon, value| %>
+        <div class="guest-amenity__fact">
+          <dt>
+            <%= helpers.app_icon(fact_icon, class: "guest-amenity__fact-icon", aria: { hidden: "true" }) %>
+            <span class="sr-only"><%= label %></span>
+          </dt>
+          <dd><%= value %></dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <% if booking.present? || notes.present? %>
+    <div class="guest-amenity__notes">
+      <% if booking.present? %>
+        <p><span class="font-medium text-foreground">How to book:</span> <%= booking %></p>
+      <% end %>
+      <%= helpers.simple_format(notes) if notes.present? %>
+    </div>
+  <% end %>
+
+  <% if empty? %>
+    <p class="guest-amenity__empty">Ask the front desk for details.</p>
+  <% end %>
+<% end %>

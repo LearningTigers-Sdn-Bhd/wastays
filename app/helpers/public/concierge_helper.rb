@@ -49,7 +49,7 @@ module Public::ConciergeHelper
     asset = Rails.application.assets.load_path.find(CHAT_DOODLE_ASSET)
     return if asset.blank?
 
-    "--public-chat-doodle: url(#{image_path(CHAT_DOODLE_ASSET)});"
+    "--guest-chat-doodle: url(#{image_path(CHAT_DOODLE_ASSET)});"
   end
 
   def concierge_room_details(booking)

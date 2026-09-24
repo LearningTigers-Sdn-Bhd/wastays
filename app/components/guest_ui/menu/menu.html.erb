@@ -1,0 +1,16 @@
+<%= tag.div(**root_attributes) do %>
+  <button type="button"
+          class="guest-menu__trigger"
+          aria-haspopup="menu"
+          aria-expanded="false"
+          aria-controls="<%= list_id %>"
+          aria-label="<%= label %>"
+          data-guest-menu-target="trigger"
+          data-action="guest-menu#toggle">
+    <%= helpers.app_icon icon, class: "size-5", aria: { hidden: "true" } %>
+  </button>
+
+  <div id="<%= list_id %>" class="guest-menu__list" role="menu" hidden data-guest-menu-target="menu">
+    <%= safe_join(items) %>
+  </div>
+<% end %>

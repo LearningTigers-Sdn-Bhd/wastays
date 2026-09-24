@@ -43,7 +43,7 @@ RSpec.describe "HotelPortal::Folios::Actions transaction splits", type: :request
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      expect(document.at_css("turbo-frame#folio_action_sheet dialog#folio-split-transaction-sheet[data-controller='panels-ui--sheet']")).to be_present
+      expect(document.at_css("turbo-frame#folio_action_sheet dialog#folio-split-transaction-sheet[data-controller='ui--sheet']")).to be_present
       expect(response.body).to include("Split transaction")
       expect(response.body).to include("Company Folio")
       expect(response.body).not_to include("offcanvas")

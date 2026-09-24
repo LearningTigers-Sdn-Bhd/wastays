@@ -2,7 +2,7 @@
 <% update_form_id = "update-admin-attraction-form" %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "review-attraction-sheet",
           side: :right,
@@ -217,7 +217,7 @@
               type: :button,
               variant: :secondary,
               size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
+              data: { action: "click->ui--sheet#close" }) do %>
           Close
         <% end %>
         <%= render PanelsUI::Button.new(

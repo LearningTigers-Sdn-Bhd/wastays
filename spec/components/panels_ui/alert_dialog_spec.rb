@@ -38,8 +38,8 @@ RSpec.describe PanelsUI::AlertDialog, type: :component do
 
     it "reuses the non-dismissible native dialog lifecycle" do
       expect(page).to have_css(
-        "dialog[data-controller~='panels-ui--dialog']" \
-        "[data-panels-ui--dialog-dismissible-value='false']"
+        "dialog[data-controller~='ui--dialog']" \
+        "[data-ui--dialog-dismissible-value='false']"
       )
       expect(page).to have_no_css("button[aria-label='Close']")
     end
@@ -151,14 +151,14 @@ RSpec.describe PanelsUI::AlertDialog, type: :component do
 
       root = page.find("dialog")
       expect(root[:class]).to include("rounded-2xl")
-      expect(root["data-controller"]).to eq("panels-ui--dialog example")
+      expect(root["data-controller"]).to eq("ui--dialog example")
       expect(root["data-action"]).to include("example:event->example#handle")
       expect(root["aria-live"]).to eq("assertive")
       expect(page.find("[data-slot='alert-dialog-cancel']")["data-action"]).to eq(
-        "example#cancel panels-ui--dialog#close"
+        "example#cancel ui--dialog#close"
       )
       expect(page.find("[data-slot='alert-dialog-action']")["data-action"]).to eq(
-        "example#continue panels-ui--dialog#close"
+        "example#continue ui--dialog#close"
       )
     end
   end

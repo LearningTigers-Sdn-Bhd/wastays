@@ -2,7 +2,7 @@
 <% form_id = "create-hotel-form" %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame admin--owner-provisioning">
+  <div data-controller="ui--sheet-frame admin--owner-provisioning">
     <%= render PanelsUI::Sheet.new(
           id: "create-hotel-sheet",
           side: :right,
@@ -117,7 +117,7 @@
               type: :button,
               variant: :secondary,
               size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
+              data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <div style="display: contents" data-admin--owner-provisioning-target="inviteActions">

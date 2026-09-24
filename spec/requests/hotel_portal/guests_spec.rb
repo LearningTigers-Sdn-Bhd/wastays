@@ -473,7 +473,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       body_text = CGI.unescapeHTML(response.body)
       expect(body_text).to include(%(<turbo-frame id="settings_action_sheet">))
       expect(body_text).to include(%(<dialog id="new-guest-sheet"))
-      expect(body_text).to include("panels-ui--sheet-frame")
+      expect(body_text).to include("ui--sheet-frame")
       expect(body_text).to include("New guest record")
       expect(body_text).to include("Create guest record")
       # No page chrome: the sheet arrives on its own.

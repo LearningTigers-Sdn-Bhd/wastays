@@ -113,6 +113,25 @@
             </th>
           <% end %>
 
+          <% if @visible_columns.include?("booking_status") %>
+            <th scope="col" id="hk-booking-status-filter-cell" class="text-center" data-column-key="booking_status" data-turbo-permanent>
+              <%= render PanelsUI::DropdownMenu.new(id: "hk-booking-status-filter", placement: :bottom_start, class: "w-64") do |menu| %>
+                <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
+                      aria_label: housekeeping_filter_aria(title: "booking status", selected: selected_booking_statuses)) do %>
+                  Booking status
+                  <%= housekeeping_filter_badge(name: "booking_statuses[]", title: "booking status",
+                        noun: "booking statuses", selected: selected_booking_statuses) %>
+                  <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
+                <% end %>
+                  <% menu.with_checkbox(name: "booking_statuses[]", value: "__all__", checked: all_booking_statuses) { "All booking statuses" } %>
+                  <% HousekeepingTasks::BoardBuilder::BOOKING_STATUSES.each do |value, label| %>
+                    <% menu.with_checkbox(name: "booking_statuses[]", value: value,
+                          checked: all_booking_statuses || selected_booking_statuses.include?(value)) { label } %>
+                  <% end %>
+              <% end %>
+            </th>
+          <% end %>
+
           <% if @visible_columns.include?("assigned_to") %>
             <th scope="col" id="hk-assigned-to-filter-cell" data-column-key="assigned_to" data-turbo-permanent>
               <%= render PanelsUI::DropdownMenu.new(id: "hk-assigned-to-filter", placement: :bottom_start, class: "w-64") do |menu| %>
@@ -132,23 +151,8 @@
             </th>
           <% end %>
 
-          <% if @visible_columns.include?("booking_status") %>
-            <th scope="col" id="hk-booking-status-filter-cell" class="text-center" data-column-key="booking_status" data-turbo-permanent>
-              <%= render PanelsUI::DropdownMenu.new(id: "hk-booking-status-filter", placement: :bottom_start, class: "w-64") do |menu| %>
-                <% menu.with_trigger(variant: :ghost, size: :sm, class: "-mx-2 h-8 px-2 font-medium",
-                      aria_label: housekeeping_filter_aria(title: "booking status", selected: selected_booking_statuses)) do %>
-                  Booking status
-                  <%= housekeeping_filter_badge(name: "booking_statuses[]", title: "booking status",
-                        noun: "booking statuses", selected: selected_booking_statuses) %>
-                  <%= app_icon "chevron-down", class: "size-3.5 text-muted-foreground", aria: { hidden: true } %>
-                <% end %>
-                  <% menu.with_checkbox(name: "booking_statuses[]", value: "__all__", checked: all_booking_statuses) { "All booking statuses" } %>
-                  <% HousekeepingTasks::BoardBuilder::BOOKING_STATUSES.each do |value, label| %>
-                    <% menu.with_checkbox(name: "booking_statuses[]", value: value,
-                          checked: all_booking_statuses || selected_booking_statuses.include?(value)) { label } %>
-                  <% end %>
-              <% end %>
-            </th>
+          <% if @visible_columns.include?("guest_name") %>
+            <th scope="col" data-column-key="guest_name">Guest name</th>
           <% end %>
 
           <% if @visible_columns.include?("arrival") %>
@@ -290,6 +294,13 @@
                 </td>
               <% end %>
 
+              <% if @visible_columns.include?("booking_status") %>
+                <td class="w-36 text-center" data-column-key="booking_status">
+                  <%= render PanelsUI::Badge.new(label: room.booking_status_label,
+                        variant: room.booking_status_badge_variant, size: :sm, class: "w-full justify-center") %>
+                </td>
+              <% end %>
+
               <% if @visible_columns.include?("assigned_to") %>
                 <td class="whitespace-nowrap" data-column-key="assigned_to">
                   <% if dispatch_housekeeping? && room.writable? %>
@@ -310,11 +321,8 @@
                 </td>
               <% end %>
 
-              <% if @visible_columns.include?("booking_status") %>
-                <td class="w-36 text-center" data-column-key="booking_status">
-                  <%= render PanelsUI::Badge.new(label: room.booking_status_label,
-                        variant: room.booking_status_badge_variant, size: :sm, class: "w-full justify-center") %>
-                </td>
+              <% if @visible_columns.include?("guest_name") %>
+                <td class="whitespace-nowrap" data-column-key="guest_name"><%= room.guest_name %></td>
               <% end %>
               <% if @visible_columns.include?("arrival") %>
                 <td class="whitespace-nowrap text-end" data-column-key="arrival"><%= room.arrival %></td>

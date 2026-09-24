@@ -1,0 +1,34 @@
+<%# The two immediate stay actions, side by side on a phone. The tile stacks
+    the icon over the text so the label keeps its width at half a screen. A
+    pending request keeps its place without offering a second link. %>
+<%
+  tone = local_assigns.fetch(:tone, :secondary)
+  pending = local_assigns.fetch(:pending, false)
+  surface = if pending
+    "border border-dashed border-border bg-card"
+  elsif tone == :primary
+    "bg-primary transition-colors hover:bg-primary-hover active:bg-primary-active"
+  else
+    "border border-border bg-card transition-colors hover:bg-muted active:bg-muted"
+  end
+  primary = tone == :primary && !pending
+  caption = primary ? "text-primary-foreground" : "text-foreground"
+  description_color = primary ? "text-primary-foreground/75" : "text-muted-foreground"
+  icon_color = primary ? "text-accent" : "text-primary"
+%>
+<% tile = capture do %>
+  <%= app_icon icon, class: "size-6 shrink-0 #{icon_color}", aria: { hidden: "true" } %>
+  <span class="min-w-0">
+    <span class="block text-sm font-semibold leading-tight <%= caption %>"><%= label %></span>
+    <span class="mt-1 block text-xs leading-snug <%= description_color %>"><%= description %></span>
+  </span>
+<% end %>
+
+<%# The same box as GuestUI::ActionCard, so the two grids on the stay page
+    read as one set. %>
+<% classes = "flex min-h-28 flex-col gap-3 rounded-xl p-4 #{surface}" %>
+<% if pending %>
+  <div class="<%= classes %>"><%= tile %></div>
+<% else %>
+  <%= link_to path, class: "#{classes} touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" do %><%= tile %><% end %>
+<% end %>

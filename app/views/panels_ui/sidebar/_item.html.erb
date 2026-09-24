@@ -12,7 +12,7 @@
        href="<%= entry.path %>"
        data-sidebar-route
        <%= %(data-turbo-frame="#{ERB::Util.html_escape(entry.turbo_frame)}").html_safe if entry.turbo_frame.present? %>
-       <%= 'data-action="click->panels-ui--sheet#close"'.html_safe if surface == :mobile && entry.turbo_frame.present? %>
+       <%= 'data-action="click->ui--sheet#close"'.html_safe if surface == :mobile && entry.turbo_frame.present? %>
        <%= %(data-sidebar-active-paths="#{ERB::Util.html_escape(entry.active_paths.join(" "))}").html_safe if entry.active_paths.any? %>
        <%= 'target="_blank" rel="noopener noreferrer"'.html_safe if entry.external? %>
        <%= 'aria-current="page"'.html_safe if entry.active? %>>
@@ -48,7 +48,7 @@
 <div class="panel-sidebar__item"
      <%= "data-sidebar-group-item" if item.children? %>
      <%= "data-sidebar-active" if item.active? %>
-     <%= 'data-panels-ui--sidebar-search-target="item"'.html_safe if search_target %>
+     <%= 'data-ui--sidebar-search-target="item"'.html_safe if search_target %>
      <%= %(data-search-text="#{ERB::Util.html_escape(item.search_text || item.label)}").html_safe if search_target %>>
   <% if surface == :desktop %>
     <div class="panel-sidebar__presentation panel-sidebar__presentation--expanded"

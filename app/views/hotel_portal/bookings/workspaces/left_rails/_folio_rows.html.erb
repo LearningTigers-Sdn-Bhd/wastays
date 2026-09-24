@@ -3,7 +3,7 @@
     <% link_data = { turbo_frame: "_top", turbo_action: "advance" } %>
     <% if mobile_entity_selection %>
       <% link_data.merge!(
-        action: "workspace-entity-selection#select panels-ui--sheet#close",
+        action: "workspace-entity-selection#select ui--sheet#close",
         workspace_entity_selection_heading_param: "folio-operations-panel"
       ) %>
     <% end %>

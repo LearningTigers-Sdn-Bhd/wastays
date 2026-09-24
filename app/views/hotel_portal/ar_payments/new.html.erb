@@ -77,7 +77,7 @@
           <% end %>
         <% end %>
         <% dialog.with_footer do %>
-          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "panels-ui--dialog#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "ui--dialog#close" }) do %>Cancel<% end %>
           <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, size: :sm) do %>Reject Submission<% end %>
         <% end %>
       <% end %>

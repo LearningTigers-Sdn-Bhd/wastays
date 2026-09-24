@@ -47,8 +47,8 @@ export default class extends Controller {
 
   replaceMenu(id, choices, selectedValue) {
     const native = this.element.querySelector(`#${CSS.escape(id)}`)
-    const root = native?.closest("[data-controller~='panels-ui--select-menu']")
-    const controller = root && this.application.getControllerForElementAndIdentifier(root, "panels-ui--select-menu")
+    const root = native?.closest("[data-controller~='ui--select-menu']")
+    const controller = root && this.application.getControllerForElementAndIdentifier(root, "ui--select-menu")
     controller?.replaceOptions(choices, selectedValue || "")
   }
 

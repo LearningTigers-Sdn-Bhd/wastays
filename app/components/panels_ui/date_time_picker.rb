@@ -48,7 +48,7 @@ module PanelsUI
     end
 
     def native_id = @id || @form.field_id(@attribute)
-    def stimulus_identifier = "panels-ui--date-time-picker"
+    def stimulus_identifier = "ui--date-time-picker"
     def root_id = "#{native_id}-date-time-picker"
     def root_class = "panel-date-time-picker"
     def popover_id = "#{native_id}-datetime"
@@ -90,7 +90,7 @@ module PanelsUI
         data: data.merge(
           {
             controller: [ data.delete(:controller), stimulus_identifier ].compact.join(" "),
-            "#{stimulus_identifier}-panels-ui--popover-outlet" => ".#{popover_root_class}",
+            "#{stimulus_identifier}-ui--popover-outlet" => ".#{popover_root_class}",
             "#{stimulus_identifier}-mode-value" => mode,
             "#{stimulus_identifier}-min-value" => serialize_bound(@min),
             "#{stimulus_identifier}-max-value" => serialize_bound(@max),

@@ -125,14 +125,14 @@ module PanelsUI
         data: data.merge(
           slot: "accordion",
           variant: @variant,
-          controller: [ caller_controller, "panels-ui--accordion" ].compact.join(" "),
+          controller: [ caller_controller, "ui--accordion" ].compact.join(" "),
           action: [
             caller_action,
-            "keydown->panels-ui--accordion#navigate",
-            "panels-ui--collapsible:change->panels-ui--accordion#itemChanged"
+            "keydown->ui--accordion#navigate",
+            "ui--collapsible:change->ui--accordion#itemChanged"
           ].compact.join(" "),
-          panels_ui__accordion_type_value: @type,
-          panels_ui__accordion_collapsible_value: @collapsible
+          ui__accordion_type_value: @type,
+          ui__accordion_collapsible_value: @collapsible
         )
       )
     end

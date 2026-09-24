@@ -1,6 +1,6 @@
 <% unavailable = duplicate_attraction&.status.in?(%w[rejected archived]) %>
 <%= turbo_frame_tag "nearby_attraction_form" do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "nearby-attraction-sheet",
           side: :right,
