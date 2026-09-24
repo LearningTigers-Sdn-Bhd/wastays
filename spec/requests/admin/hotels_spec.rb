@@ -289,6 +289,7 @@ RSpec.describe 'Admin::Hotels', type: :request do
     let(:hotel_account) { create(:account, name: "Luma Hospitality Group #{token}", status: 'active') }
     let(:hotel) { create(:hotel, account: hotel_account, name: "Luma Stay #{token}", status: 'live') }
     let!(:owner) { create(:user, :admin, account: hotel_account, name: 'Rose Yeo', email: "rose-#{token}@luma.test") }
+    let!(:owner_access) { create(:user_hotel_access, user: owner, hotel: hotel, role: create(:role, account: hotel_account, slug: 'hotel_owner')) }
     let!(:banking_detail) do
       create(
         :banking_detail,
@@ -340,41 +341,35 @@ RSpec.describe 'Admin::Hotels', type: :request do
       )
     end
 
-    it 'shows account details separately from account users' do
+    it 'shows hotel metrics and tab navigation' do
       get admin_hotel_path(hotel)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Back to Hotels')
-      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to include(hotel.name)
-      expect(Nokogiri::HTML(response.body).at_css(".panel-page-header__description").text).to eq("Review hotel details, account ownership, and current operating performance before taking action.")
-      expect(response.body).to include('Review hotel details, account ownership, and current operating performance before taking action.')
-      expect(response.body).to include('Suspend')
-      expect(response.body).not_to include('Suspend Hotel')
-      expect(response.body).to include('Account Information')
-      expect(response.body).to include('Luma Hospitality Group')
-      expect(response.body).to include('Active')
-      expect(response.body).to include('Account Users')
-      expect(response.body).to include('Rose Yeo')
-      expect(response.body).to include("rose-#{token}@luma.test")
-      expect(response.body).to include('Admin')
-      expect(response.body).to include('Ken Tan')
-      expect(response.body).to include("ken-#{token}@luma.test")
-      expect(response.body).to include('Hotel Staff')
-      expect(response.body).to include('Banking Details')
-      expect(response.body).to include('Rose Yeo')
-      expect(response.body).to include('Maybank')
-      expect(response.body).to include('5142 1234 5678')
-      expect(response.body).to include('Gross Revenue This Month')
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css('h1').text).to eq(hotel.name)
+      expect(document.css('#admin-hotel-tabs .tabs-tab').size).to eq(6)
+      expect(document.css('#admin-hotel-tabs .tabs-tab svg[aria-hidden="true"]').size).to eq(6)
+      expect(document.at_css('#admin-hotel-tabs-tab-hotel_details')['aria-current']).to eq('page')
+      expect(response.body).to include('Go to dashboard', 'More actions', 'Suspend')
+      expect(response.body).to include('Gross revenue this month')
       expect(response.body).to include('RM 800.00')
-      expect(response.body).to include('WAStays Earned Margin This Month')
+      expect(response.body).to include('WAStays earned margin this month')
       expect(response.body).to include('RM 95.00')
-      expect(response.body).to include('Hotel Net Earnings This Month')
+      expect(response.body).to include('Hotel net earnings this month')
       expect(response.body).to include('RM 705.00')
-      expect(response.body).to include('Bookings This Month')
+      expect(response.body).to include('Bookings this month')
       expect(response.body).to include('2')
-      expect(response.body).to include('Configured Margin Rate')
+      expect(response.body).to include('Configured margin rate')
       expect(response.body).to include('12.00%')
       expect(response.body).not_to include('Realized Margin Rate')
+    end
+
+    it 'shows owner and banking details in their tabs' do
+      get admin_hotel_path(hotel, tab: 'account_information')
+      expect(response.body).to include(hotel_account.name, owner.email, staff.email, 'Send password reset link')
+
+      get admin_hotel_path(hotel, tab: 'banking_details')
+      expect(response.body).to include('Maybank', '5142 1234 5678')
     end
   end
 
@@ -382,24 +377,9 @@ RSpec.describe 'Admin::Hotels', type: :request do
     let(:edit_hotel_account) { create(:account, name: "Edit Hotel #{token}") }
     let(:hotel) { create(:hotel, account: edit_hotel_account, status: 'live', name: "Urielle Preston #{token}") }
 
-    it 'shows the redesigned hotel edit workspace and keeps cancel on the details page' do
+    it 'redirects the retired edit page to hotel details' do
       get edit_admin_hotel_path(hotel)
-
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Edit Hotel Details')
-      expect(Nokogiri::HTML(response.body).at_css("header.panel-page-header h1").text).to eq("Edit Hotel Details")
-      expect(Nokogiri::HTML(response.body).at_css(".panel-page-header__description").text).to eq("Manage profile information for #{hotel.name} and return to the hotel detail workspace when you are done.")
-      expect(response.body).to include("Manage profile information for #{hotel.name} and return to the hotel detail workspace when you are done.")
-      expect(response.body).to include('Property Profile')
-      expect(response.body).to include('class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Property Profile')
-      expect(response.body).not_to include('Operational Notes')
-      expect(response.body).to include(%(href="#{admin_hotel_path(hotel)}"))
-      expect(response.body).to include('Cancel')
-      expect(response.body).not_to include('Status')
-      expect(response.body).not_to include('hotel[status]')
-      expect(response.body).to include('Sells per room')
-      expect(response.body).to include('cannot be changed after the hotel is created')
-      expect(Nokogiri::HTML(response.body).at_css("[name='hotel[sell_mode]']")).to be_nil
+      expect(response).to redirect_to(admin_hotel_path(hotel, tab: 'hotel_details'))
     end
   end
 
@@ -431,11 +411,11 @@ RSpec.describe 'Admin::Hotels', type: :request do
     end
   end
 
-  describe 'GET /admin/hotels/:id/edit' do
+  describe 'GET /admin/hotels/:id?tab=hotel_details' do
     let(:hotel) { create(:hotel, hide_payout_reports: true) }
 
     it 'renders the checked payout reports switch' do
-      get edit_admin_hotel_path(hotel)
+      get admin_hotel_path(hotel, tab: 'hotel_details')
 
       document = Nokogiri::HTML(response.body)
       payout_switch = document.at_css("input[type='checkbox'][name='hotel[hide_payout_reports]']")

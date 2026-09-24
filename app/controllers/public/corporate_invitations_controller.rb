@@ -29,7 +29,7 @@ module Public
       ).call
 
       if result.success?
-        session[:user_id] = result.user.id
+        sign_in_user(result.user)
         redirect_to corporate_dashboard_path, notice: "Welcome to your corporate account."
       else
         @user = User.new(user_params.merge(email: @invitation.email))

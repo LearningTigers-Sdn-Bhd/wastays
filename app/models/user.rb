@@ -5,6 +5,7 @@ class User < ApplicationRecord
   ROLES = %w[superadmin admin hotel_staff salesperson corporate].freeze
 
   has_secure_password
+  has_many :owner_password_resets, dependent: :delete_all
 
   has_many :user_hotel_accesses, dependent: :destroy
   has_many :active_user_hotel_accesses, -> { active }, class_name: "UserHotelAccess"
