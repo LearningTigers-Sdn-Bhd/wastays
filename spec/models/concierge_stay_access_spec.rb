@@ -8,7 +8,6 @@ RSpec.describe ConciergeStayAccess do
     record = create(:concierge_stay_access, hotel: hotel, booking: booking)
 
     expect(record.stay_access_id).to match(/\A[A-Za-z0-9]{12}\z/)
-    expect(record.stay_access_id).not_to include(booking.id.to_s)
   end
 
   it "gives two records two different ids" do

@@ -16,7 +16,7 @@ class Public::SessionsController < ApplicationController
         return
       end
 
-      session[:user_id] = user.id
+      sign_in_user(user)
       redirect_to_dashboard(user)
     else
       flash.now[:alert] = "Invalid email or password"
@@ -25,7 +25,8 @@ class Public::SessionsController < ApplicationController
   end
 
   def destroy
-    session[:user_id] = nil
+    session.delete(:user_id)
+    session.delete(:auth_version)
     redirect_to root_path, notice: "Logged out successfully"
   end
 

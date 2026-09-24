@@ -1,0 +1,41 @@
+<div class="space-y-8 py-4">
+  <div><h2 class="text-base font-semibold">Salesperson</h2><p class="text-sm text-muted-foreground">Manage this hotel's salesperson assignment.</p></div>
+
+  <%= form_with url: update_salesperson_admin_hotel_path(@hotel), method: :patch, scope: :salesperson, class: "space-y-4" do |form| %>
+    <%= form.hidden_field :operation, value: "assign" %>
+    <%= render PanelsUI::FieldSet.new(legend: "Assign salesperson") do %>
+      <%= render PanelsUI::FieldGroup.new do %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :id, label: "Salesperson") do |field| %>
+          <% field.with_select_menu([{ label: "No salesperson", value: "" }] + @salespersons.map { |person| { label: "#{person.name} · #{person.email}", value: person.id } }, selected: @hotel.salesperson_id, prompt: "Select salesperson") %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Save assignment<% end %>
+  <% end %>
+
+  <div class="grid gap-8 border-t border-border pt-6 lg:grid-cols-2 lg:items-start">
+    <%= form_with url: update_salesperson_admin_hotel_path(@hotel), method: :patch, scope: :salesperson, class: "space-y-4" do |form| %>
+      <%= form.hidden_field :operation, value: "create" %>
+      <%= render PanelsUI::FieldSet.new(legend: "Create new salesperson") do %>
+        <%= render PanelsUI::FieldGroup.new do %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Name", required: true, id: "new-salesperson-name") do |field| %><% field.with_input %><% end %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email", required: true, id: "new-salesperson-email") do |field| %><% field.with_input(type: :email) %><% end %>
+        <% end %>
+      <% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary) do %>Create and assign<% end %>
+    <% end %>
+
+    <% if @hotel.salesperson %>
+      <%= form_with url: update_salesperson_admin_hotel_path(@hotel), method: :patch, scope: :salesperson, class: "space-y-4" do |form| %>
+        <%= form.hidden_field :operation, value: "update_contact" %>
+        <%= render PanelsUI::FieldSet.new(legend: "Edit assigned salesperson", description: "Contact changes affect every hotel assigned to this salesperson.") do %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Name", required: true, id: "assigned-salesperson-name") do |field| %><% field.with_input(value: @hotel.salesperson.name) %><% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :email, label: "Email", required: true, id: "assigned-salesperson-email") do |field| %><% field.with_input(type: :email, value: @hotel.salesperson.email) %><% end %>
+          <% end %>
+        <% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary) do %>Save contact details<% end %>
+      <% end %>
+    <% end %>
+  </div>
+</div>

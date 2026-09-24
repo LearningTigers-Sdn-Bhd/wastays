@@ -48,7 +48,7 @@ module Public
 
     def accept_invitation_for(user)
       @invitation.accept!(user)
-      session[:user_id] = user.id
+      sign_in_user(user)
       redirect_to invitation_destination, notice: "Welcome to #{@invitation.hotel.name}."
     end
 

@@ -1,10 +1,27 @@
 # frozen_string_literal: true
 
 class Admin::HotelsController < Admin::BaseController
-  before_action :set_hotel, only: [ :show, :edit, :update ]
-  before_action :load_salespersons, only: [ :new, :create, :edit, :update ]
-  before_action :set_plans, only: [ :new, :create, :edit, :update ]
-  before_action :set_breadcrumbs, only: [ :show, :new, :edit, :create, :update ]
+  TAB_LABELS = {
+    "hotel_details" => "Hotel details",
+    "room_inventory" => "Room inventory",
+    "channel_manager" => "Channel manager",
+    "account_information" => "Account information",
+    "banking_details" => "Banking details",
+    "salesperson" => "Salesperson"
+  }.freeze
+  TAB_ICONS = {
+    "hotel_details" => "building-2",
+    "room_inventory" => "bed-double",
+    "channel_manager" => "radio",
+    "account_information" => "users",
+    "banking_details" => "credit-card",
+    "salesperson" => "user-round"
+  }.freeze
+
+  before_action :set_hotel, only: [ :show, :update ]
+  before_action :load_salespersons, only: [ :new, :create ]
+  before_action :set_plans, only: [ :new, :create ]
+  before_action :set_breadcrumbs, only: [ :show, :new, :create, :update ]
 
   def index
     page_size = Admin::Hotels::IndexPresenter.normalize_page_size(params[:per_page])
@@ -19,7 +36,29 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def show
+    @active_tab = TAB_LABELS.key?(params[:tab]) ? params[:tab] : "hotel_details"
     @configured_margin_rate = @hotel.effective_margin_rate
+    case @active_tab
+    when "hotel_details"
+      set_plans
+    when "room_inventory"
+      @room_types = @hotel.room_types.includes(rooms: :room_group).order(:name)
+    when "channel_manager"
+      @room_type_count = @hotel.room_types.count
+      @mapped_room_type_count = @hotel.room_types.joins(:channel_mapping).count
+    when "account_information"
+      @owners = @hotel.user_hotel_accesses.active.joins(:role)
+        .where(roles: { slug: "hotel_owner" }).includes(:user).map(&:user).sort_by(&:name)
+      @selected_owner = @owners.find { |owner| owner.id.to_s == params[:owner_id].to_s }
+      @selected_owner ||= @owners.first if @owners.one?
+      @account_users = @hotel.account.users.where.not(role: "salesperson").order(:created_at)
+      @pending_owner_invitations = @hotel.staff_invitations.unaccepted.joins(:role)
+        .where(roles: { slug: "hotel_owner" }).order(:created_at)
+    when "banking_details"
+      @banking_detail = @hotel.account.banking_detail
+    when "salesperson"
+      load_salespersons
+    end
   end
 
   def new
@@ -44,21 +83,20 @@ class Admin::HotelsController < Admin::BaseController
     end
   end
 
-  def edit; end
-
   def update
     result = Admin::Hotels::UpdateService.new(
       hotel: @hotel,
-      hotel_params: update_hotel_params,
-      salesperson_params: { name: salesperson_name_param, email: salesperson_email_param },
-      current_user: current_user
+      hotel_params: update_hotel_params
     ).call
 
     if result.success?
-      redirect_to admin_hotel_path(@hotel), notice: "Hotel updated successfully."
+      destination = params[:tab] == "channel_manager" ? admin_hotel_path(@hotel, tab: "channel_manager") : admin_hotel_path(@hotel)
+      notice = params[:tab] == "channel_manager" ? "Channel manager preference saved." : "Hotel details saved."
+      redirect_to destination, notice:
     else
       @hotel.errors.add(:base, result.error)
-      render :edit, status: :unprocessable_content
+      show
+      render :show, status: :unprocessable_content
     end
   end
 
@@ -79,7 +117,6 @@ class Admin::HotelsController < Admin::BaseController
   def set_breadcrumbs
     if @hotel&.persisted?
       append_breadcrumb @hotel.name, admin_hotel_path(@hotel)
-      append_breadcrumb "Edit" if action_name.in?([ "edit", "update" ])
     else
       append_breadcrumb "New"
     end
@@ -129,15 +166,7 @@ class Admin::HotelsController < Admin::BaseController
   end
 
   def update_hotel_params
-    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :salesperson_id, :preferred_channel_manager, :plan_id, :sell_mode, :allow_boat_information, :hide_payout_reports,
+    params.require(:hotel).permit(:name, :address, :city, :country, :star_rating, :hotel_prefix, :preferred_channel_manager, :plan_id, :sell_mode, :allow_boat_information, :hide_payout_reports,
       :grc_tablet_signing_enabled, amenities: [])
-  end
-
-  def salesperson_name_param
-    params.dig(:hotel, :salesperson_name).to_s.strip
-  end
-
-  def salesperson_email_param
-    params.dig(:hotel, :salesperson_email).to_s.strip
   end
 end

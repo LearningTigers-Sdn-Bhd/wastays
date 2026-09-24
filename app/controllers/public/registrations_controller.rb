@@ -15,7 +15,7 @@ class Public::RegistrationsController < ApplicationController
     ).call
 
     if result[:success]
-      session[:user_id] = result[:user].id
+      sign_in_user(result[:user])
       redirect_to hotel_dashboard_path(result[:hotel]), notice: "Welcome! Your hotel account has been created."
     else
       flash.now[:alert] = result[:error]
