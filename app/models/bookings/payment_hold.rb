@@ -27,7 +27,7 @@ module Bookings
   #   own promise -- money before the guest walks in -- is already unkeepable,
   #   so nothing is lost by letting the deadline sit slightly beyond it.
   module PaymentHold
-    DEFAULT_HOURS = 48
+    DEFAULT_HOURS = 72
 
     # The least time an agent can be given, however late the booking is taken.
     # Safe to apply unconditionally: both hold columns are integer hours under a

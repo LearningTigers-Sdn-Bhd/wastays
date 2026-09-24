@@ -36,20 +36,34 @@
     <% end %>
   </div>
 
-  <%# The mirror image: only a standard account holds rooms against a payment
-      deadline. Deliberately not the payment terms above -- those say when an
-      invoice falls due, and sharing them would let an invoicing change release
-      inventory.
+  <%# Booking on a client's behalf is a permission, not something every linked
+      account has. Nothing below it means anything until it is granted, so it
+      gates the payment hold rather than sitting beside it. %>
+  <%= render PanelsUI::Switch.new(
+        form: form,
+        attribute: :agent_booking_enabled,
+        tone: :success,
+        checked: agent_booking_enabled,
+        label: "Allow bookings for their clients",
+        description: "Lets this account reserve rooms at this hotel for its own guests, from its portal.") %>
 
-      Set on the relationship, not proposed on an invitation: until the account
-      exists there is nothing holding rooms, and the hotel default covers it. %>
-  <% if local_assigns.fetch(:agent_payment_hold_hours, :absent) != :absent %>
+  <%# The mirror image of the billing fields: only a standard account holds
+      rooms against a payment deadline. Deliberately not the payment terms above
+      -- those say when an invoice falls due, and sharing them would let an
+      invoicing change release inventory. %>
+  <%# safe_join rather than interpolation: the hint renders as HTML, and the
+      hotel's default is the one thing in it an operator has to be able to pick
+      out at a glance. %>
   <div data-corporate-billing-terms-target="hold">
     <%= render "hotel_portal/shared/agent_payment_hold_field",
           form: form,
+          record: record,
           label: "Payment hold",
           placeholder: "Hotel default (#{agent_payment_hold_default})",
-          hint: "How long this account's bookings are held before the rooms are released for non-payment. Leave blank to use the hotel default of #{agent_payment_hold_default}. A hold never runs past the arrival date." %>
+          hint: safe_join([
+            "How long this account's bookings are held before the rooms are released for non-payment. Leave blank to use the hotel default of ",
+            tag.strong(agent_payment_hold_default),
+            ". A hold never runs past the arrival date."
+          ]) %>
   </div>
-  <% end %>
 </section>

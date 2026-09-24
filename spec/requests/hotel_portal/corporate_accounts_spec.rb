@@ -267,6 +267,77 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     )
   end
 
+  # Booking on a client's behalf is a permission the hotel grants, and the hold
+  # only means anything once it has been. Both travel with the invitation so the
+  # accepted relationship starts on the terms that were offered.
+  describe "the booking permission on an invitation" do
+    it "carries the permission and the proposed hold through to the invitation" do
+      post hotel_corporate_accounts_path(hotel), params: {
+        corporate_invitation: {
+          email: "agent@acme.test",
+          relationship_type: "standard",
+          credit_currency: "MYR",
+          agent_booking_enabled: "1",
+          agent_payment_hold_amount: "3",
+          agent_payment_hold_unit: "days"
+        }
+      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+      invitation = CorporateInvitation.last
+      expect(invitation.agent_booking_enabled).to be(true)
+      expect(invitation.agent_payment_hold_hours).to eq(72)
+    end
+
+    # An account that cannot book has nothing to hold. Keeping the number would
+    # quietly apply it the day someone switched booking on.
+    it "drops a hold offered without the permission" do
+      post hotel_corporate_accounts_path(hotel), params: {
+        corporate_invitation: {
+          email: "agent@acme.test",
+          relationship_type: "standard",
+          credit_currency: "MYR",
+          agent_booking_enabled: "0",
+          agent_payment_hold_amount: "3",
+          agent_payment_hold_unit: "days"
+        }
+      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+      invitation = CorporateInvitation.last
+      expect(invitation.agent_booking_enabled).to be(false)
+      expect(invitation.agent_payment_hold_hours).to be_nil
+    end
+
+    it "offers the switch and the hold on the invite form, with days first" do
+      get new_hotel_corporate_account_path(hotel)
+
+      document = response.parsed_body
+      switch = document.at_css('input[type="checkbox"][name="corporate_invitation[agent_booking_enabled]"]')
+      expect(switch).to be_present
+      expect(switch["checked"]).to be_nil
+      # The stimulus controller hides the hold until the switch is on, so the
+      # block it looks for has to be here and has to hold the two controls.
+      hold = document.at_css("[data-corporate-billing-terms-target='hold']")
+      expect(hold).to be_present
+      expect(hold.css("input[name], select[name]").map { |node| node["name"] })
+        .to include(a_string_including("agent_payment_hold_amount"),
+                    a_string_including("agent_payment_hold_unit"))
+      units = hold.css('select[name$="[agent_payment_hold_unit]"] option').map { |node| node["value"] }
+      expect(units.first).to eq("days")
+    end
+
+    it "grants the permission on the relationship when the invitation is accepted" do
+      invitation = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user,
+                                                 agent_booking_enabled: true, agent_payment_hold_hours: 72)
+      corporate_user = create(:user, :corporate, email: invitation.email)
+
+      result = CorporateInvitations::AcceptService.new(invitation: invitation, accepting_user: corporate_user).call
+
+      expect(result.success?).to be(true)
+      expect(result.relationship.agent_booking_enabled).to be(true)
+      expect(result.relationship.agent_payment_hold_hours).to eq(72)
+    end
+  end
+
   it "keeps service errors and submitted values inside the sheet" do
     create(:user, email: "staff@example.com")
 

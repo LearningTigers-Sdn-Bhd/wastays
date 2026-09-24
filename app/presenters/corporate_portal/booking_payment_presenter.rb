@@ -200,7 +200,6 @@ module CorporatePortal
       return "The guest has checked in. Settle this booking with the hotel before they check out." if in_house?
       return "This booking is past its payment deadline. Send your transfer slip or contact the hotel to keep these rooms." if overdue?
       return "The guest can arrive at any time from now, so this booking has a short hold rather than the usual one." if booked_after_arrival?
-      return "These rooms arrive soon, so the deadline falls on the arrival date rather than the usual hold." if floored_at_arrival?
 
       "These rooms are held for you until the deadline above. Send your transfer slip any time before then."
     end

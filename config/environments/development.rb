@@ -84,6 +84,24 @@ Rails.application.configure do
   config.hosts << /\A.*\.wastays\.com\z/
   config.hosts << /\A[a-z0-9-]+\.trycloudflare\.com\z/
 
+  # config.hosts and this are two different checks, and passing the first tells
+  # you nothing about the second. Action Cable defaults to localhost only in
+  # development (see actioncable/lib/action_cable/engine.rb), so a page served
+  # over a tunnel loads fine and then fails the WebSocket handshake -- which
+  # surfaces as a signing tablet stuck on "Not connected" and no error anywhere
+  # obvious. Listed explicitly rather than reached for with
+  # disable_request_forgery_protection, which turns the check off for every
+  # origin including a hostile one.
+  config.action_cable.allowed_request_origins = [
+    %r{\Ahttps?://localhost:\d+\z},
+    %r{\Ahttps?://127\.0\.0\.1:\d+\z},
+    # A tablet on the LAN, reaching `bin/rails s -b 0.0.0.0` by IP.
+    %r{\Ahttps?://\d{1,3}(\.\d{1,3}){3}(:\d+)?\z},
+    %r{\Ahttps://[a-z0-9-]+\.trycloudflare\.com\z},
+    %r{\Ahttps://.*\.wastays\.com\z},
+    "https://wastays.jesseltonpixel.com"
+  ]
+
   # Enable Bullet N+1 query detection in development
   config.after_initialize do
     Bullet.enable = true

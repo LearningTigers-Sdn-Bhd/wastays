@@ -8,6 +8,8 @@ class Public::GuestRegistrationCardsController < ApplicationController
   before_action :set_hotel
   before_action :set_presenter, only: %i[show update]
 
+  helper_method :signing_device
+
   def show
   end
 
@@ -19,6 +21,11 @@ class Public::GuestRegistrationCardsController < ApplicationController
     )
 
     if result.success?
+      # A tablet goes back to the desk's queue rather than sitting on the card it
+      # just signed: the next guest is served without anyone walking over, and
+      # the last guest's details leave the screen the moment they are done.
+      return redirect_to next_signing_device_path(signing_device.public_token) if signing_device
+
       redirect_to guest_registration_card_path(@card.public_token), notice: "Thank you — your signature has been recorded."
     elsif result.error.in?(%i[already_signed terms_missing])
       redirect_to guest_registration_card_path(@card.public_token), alert: result.message
@@ -31,11 +38,13 @@ class Public::GuestRegistrationCardsController < ApplicationController
 
   # The PDF is generated the same way the front desk's own print action does —
   # a browser request, not a background job — which sidesteps whatever made
-  # the emailed attachment come out unreadable.
+  # the emailed attachment come out unreadable. Available before signing too,
+  # same as the staff print action, so the official form can be printed blank
+  # for a guest to sign on paper instead of on screen.
   def pdf
-    unless @card.signed?
+    unless @card.ready_for_guest?
       return redirect_to guest_registration_card_path(@card.public_token),
-        alert: "Sign the card first — the PDF is available once it's signed."
+        alert: "This card isn't ready to print yet — the property hasn't set its Terms & Conditions."
     end
 
     presenter = HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking)
@@ -48,6 +57,17 @@ class Public::GuestRegistrationCardsController < ApplicationController
   end
 
   private
+
+  # Set when this browser is a tablet the front desk enrolled, which is the only
+  # thing that distinguishes it from a guest signing on their own phone. Scoped
+  # to the card's own hotel so a stale session cannot steer one property's
+  # tablet from another's card.
+  def signing_device
+    return @signing_device if defined?(@signing_device)
+
+    token = session[:signing_device_token]
+    @signing_device = token.presence && @card.hotel.signing_devices.find_by(public_token: token)
+  end
 
   def set_card
     @card = GuestRegistrationCard.find_by!(public_token: params[:token])

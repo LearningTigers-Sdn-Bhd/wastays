@@ -175,6 +175,29 @@ Rails.application.routes.draw do
     resources :guest_registration_cards, only: [ :show, :update ], param: :token, path: "guest-registration-card" do
       get :pdf, on: :member
     end
+
+    # The tablet's own pages. `show` is the idle screen it parks on; `next`
+    # hands it whichever card is due, or sends it back to idle when the stay is
+    # done. Token-addressed like the card above, and for the same reason: the
+    # device holds no session.
+    resources :signing_devices, only: [ :show ], param: :token, path: "signing-device" do
+      get :next, on: :member
+      # The idle screen beats here while its stream is up, so the desk's tablet
+      # picker can tell a listening tablet from one that merely loaded the page
+      # once and went to sleep.
+      post :heartbeat, on: :member
+      # Lets the tablet itself back out of a stay the desk sent it by mistake,
+      # without waiting for every guest to sign or for the desk to notice.
+      post :release, on: :member
+    end
+    # Pairing a tablet, unauthenticated: the code IS the credential, and it is
+    # single use and measured in minutes. Kept short because it is read off one
+    # screen and typed into another.
+    get  "pair", to: "signing_device_pairings#new", as: :pair
+    post "pair", to: "signing_device_pairings#lookup", as: :pair_lookup
+    get  "pair/:token", to: "signing_device_pairings#show", as: :pair_token
+    post "pair/:token", to: "signing_device_pairings#create", as: :claim_pair_token
+
     post "payments/checkout_session", to: "payments#checkout_session", as: :checkout_payment_session
     get "payments/verify", to: "payments#verify"
     post "payments/verify", to: "payments#verify", as: :verify_payment
@@ -251,6 +274,15 @@ Rails.application.routes.draw do
         post :full_refresh, to: "hotels/channel_managers#full_refresh"
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
         post :repair_channex_mapping, to: "hotels/channel_managers#repair_mapping"
+      end
+      # Migrating a property's unarrived reservations off its old PMS. Run once
+      # per hotel by whoever onboards it, which is why it sits here and not in
+      # the hotel portal.
+      resources :reservation_imports, module: :hotels, only: [ :index, :new, :create, :show ] do
+        member do
+          get :rows
+          post :commit
+        end
       end
       resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do
@@ -366,6 +398,12 @@ Rails.application.routes.draw do
     end
 
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
+
+    # Managing the tablets a property signs on. Pairing is not here: the device
+    # that ends up holding the token has to be the one that claims it, so this
+    # screen only mints the QR and the tablet claims it under /pair.
+    resources :signing_devices, only: [ :index, :update, :destroy ]
+    resources :signing_device_pairings, only: [ :create, :destroy ]
     get "onboarding", to: "onboarding#index", as: :onboarding
     get "onboarding/:section_key", to: "onboarding#show", as: :onboarding_section
     patch "onboarding/:section_key", to: "onboarding#update"
@@ -445,6 +483,7 @@ Rails.application.routes.draw do
       end
 
       resources :refund_requests, only: [ :new, :create ]
+      resource :signing_handoff, only: [ :create ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
       resource :guest_registration_card_pdf, only: [ :show ], module: :bookings
       resource :guest_registration_card_email, only: [ :create ], module: :bookings

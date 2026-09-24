@@ -91,7 +91,7 @@ RSpec.describe CorporatePortal::CreateAgentBooking do
       freeze_time do
         result = call([ [ { name: "Ada Lim", phone: "+60123456789" } ] ])
 
-        expect(result.booking.payment_due_at).to eq(Time.current + 48.hours)
+        expect(result.booking.payment_due_at).to eq(Time.current + 72.hours)
       end
     end
 

@@ -109,13 +109,17 @@ module HotelPortal
         :relationship_type,
         :credit_limit,
         :credit_currency,
-        :payment_terms_days
+        :payment_terms_days,
+        :agent_booking_enabled,
+        :agent_payment_hold_amount,
+        :agent_payment_hold_unit
       )
     end
 
     def relationship_params
       params.require(:hotel_corporate_account).permit(
         :account_type,
+        :agent_booking_enabled,
         :relationship_type,
         :credit_limit,
         :credit_currency,

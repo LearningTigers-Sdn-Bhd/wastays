@@ -80,13 +80,16 @@ RSpec.describe CorporatePortal::BookingPaymentPresenter do
   # today's check-in time: whether that is ahead of or behind Time.current
   # decides which of the two arrival messages applies, and the example would
   # otherwise change meaning at 3pm.
-  it "explains a deadline that was cut short by the arrival date" do
+  # The deadline is still cut short -- the predicate says so, and callers use it
+  # -- but the note no longer remarks on it. The shortened date is already on
+  # screen above the note, and the agent's instruction is the same either way.
+  it "says nothing extra about a deadline cut short by the arrival date" do
     booking.update!(check_in: 6.hours.from_now, check_out: 2.days.from_now,
                     payment_due_at: 6.hours.from_now)
 
     expect(presenter).to be_floored_at_arrival
     expect(presenter).not_to be_booked_after_arrival
-    expect(presenter.status_note).to include("arrival date")
+    expect(presenter.status_note).to include("held for you until the deadline above")
   end
 
   # The case that used to read "Payment past due" the instant it was made: an

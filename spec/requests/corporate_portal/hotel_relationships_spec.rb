@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rails_helper"
+require "cgi"
 
 RSpec.describe "CorporatePortal::HotelRelationships", type: :request do
   let(:user) { create(:user, :corporate) }
@@ -12,7 +13,10 @@ RSpec.describe "CorporatePortal::HotelRelationships", type: :request do
     get edit_corporate_hotel_relationship_path(relationship)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Billing details", relationship.hotel.name, "Billing address missing")
+    # The hotel's name comes from Faker::Company.name, which sometimes
+    # contains an apostrophe -- HTML-escaped in the response ("D&#39;Amore"),
+    # so the raw name has to be compared against unescaped output.
+    expect(CGI.unescapeHTML(response.body)).to include("Billing details", relationship.hotel.name, "Billing address missing")
     expect(Nokogiri::HTML(response.body).css("select:not([data-panels-ui--combobox-target])")).to be_empty
   end
 

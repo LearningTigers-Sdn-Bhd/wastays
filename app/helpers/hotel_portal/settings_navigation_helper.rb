@@ -205,8 +205,13 @@ module HotelPortal
           { key: "hotel-album", label: "Hotel Album", path: hotel_album_path(current_hotel), icon: "images", active: controller_name == "profiles" && action_name == "album" },
           { key: "room-groups", label: "Room Groups", path: hotel_room_groups_path(current_hotel), icon: "layout-grid", active: controller_name == "room_groups" },
           { key: "room-inventory", label: "Room Inventory", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name.in?(%w[room_types rate_plan_attachments rate_plans rate_plan_room_pricings]) },
-          { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" }
-        ]
+          { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" },
+          # Only for a property a superadmin has granted the feature to. The tab
+          # is the only way in, so hiding it is most of the gate -- the
+          # controllers refuse as well, for the case where the grant is
+          # withdrawn while someone is on the page.
+          current_hotel.grc_tablet_signing_enabled? ? { key: "signing-tablets", label: "Signing Tablets", path: hotel_signing_devices_path(current_hotel), icon: "tablet-smartphone", active: controller_name.in?(%w[signing_devices signing_device_pairings]) } : nil
+        ].compact
       when :commercial
         [
           hotel_permission_granted?("manage_hotel_profile") ? { key: "taxes-fees", label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), icon: "receipt", active: controller_name.in?(%w[taxes_fees hotel_taxes]) } : nil,

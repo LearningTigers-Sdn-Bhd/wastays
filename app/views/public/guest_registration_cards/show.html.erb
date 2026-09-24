@@ -1,8 +1,27 @@
 <% content_for :title, "Guest Registration Card" %>
+<%# Kiosk lockdown: a tablet parked on this page has nothing else it should be
+    able to reach -- no marketing nav, no login link out to the rest of the
+    site. hide_chrome drops the shared header and footer entirely. %>
+<% content_for :hide_chrome, true %>
 
 <div class="bg-muted min-h-screen pb-16">
-  <div class="max-w-3xl mx-auto px-4 py-10">
-    <div class="mb-8">
+  <% if signing_device %>
+    <div class="border-b border-border bg-card px-4 py-3">
+      <div class="max-w-3xl mx-auto flex items-center justify-between gap-3">
+        <span class="text-xs font-bold uppercase tracking-widest text-muted-foreground"><%= signing_device.label %></span>
+        <%= button_to release_signing_device_path(signing_device.public_token),
+              method: :post,
+              class: "inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted",
+              data: { turbo_confirm: "Send this tablet back without signing? Nothing already signed will change." } do %>
+          <%= cached_icon "arrow-left", class: "size-3.5", aria: { hidden: true } %>
+          Back
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="max-w-3xl mx-auto px-4 py-6">
+    <div class="mb-5">
       <p class="text-xs font-black uppercase tracking-widest text-primary">Guest Registration Card</p>
       <h1 class="mt-2 text-3xl font-black text-foreground"><%= @hotel.name %></h1>
       <p class="mt-2 text-sm text-muted-foreground">Registration No. <%= @booking.guest_registration_card_number_display %></p>
@@ -10,21 +29,21 @@
     </div>
 
     <% if flash[:notice].present? %>
-      <div class="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700"><%= flash[:notice] %></div>
+      <div class="mb-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700"><%= flash[:notice] %></div>
     <% end %>
     <% if flash[:alert].present? %>
-      <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= flash[:alert] %></div>
+      <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= flash[:alert] %></div>
     <% end %>
     <% if @card.errors.any? %>
-      <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= @card.errors.full_messages.to_sentence %></div>
+      <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= @card.errors.full_messages.to_sentence %></div>
     <% end %>
 
-    <div class="space-y-6">
-      <div class="card p-6 md:p-8">
-        <div class="mb-6">
+    <div class="space-y-4">
+      <div class="card p-5 md:p-6">
+        <div class="mb-3">
           <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Stay Details</h2>
         </div>
-        <dl class="grid gap-4 md:grid-cols-2 text-sm">
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
           <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Name</dt><dd class="font-semibold text-foreground"><%= @presenter.guest_name %></dd></div>
           <% if @card.field_visible?(:phone) %>
             <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Phone</dt><dd class="font-semibold text-foreground"><%= @presenter.guest_phone %></dd></div>
@@ -33,7 +52,7 @@
             <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Email</dt><dd class="font-semibold text-foreground break-all"><%= @presenter.guest_email %></dd></div>
           <% end %>
           <% if @card.field_visible?(:address) %>
-            <div class="md:col-span-2"><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Address</dt><dd class="whitespace-pre-line font-semibold text-foreground"><%= @presenter.guest_address_display %></dd></div>
+            <div class="col-span-2"><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Address</dt><dd class="whitespace-pre-line font-semibold text-foreground"><%= @presenter.guest_address_display %></dd></div>
           <% end %>
           <% if @card.field_visible?(:nationality) %>
             <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Nationality</dt><dd class="font-semibold text-foreground"><%= @presenter.guest_country_display %></dd></div>
@@ -53,11 +72,11 @@
         </dl>
       </div>
 
-      <div class="card p-6 md:p-8">
-        <div class="mb-6">
+      <div class="card p-5 md:p-6">
+        <div class="mb-3">
           <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Payment</h2>
         </div>
-        <dl class="grid gap-4 md:grid-cols-2 text-sm">
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
           <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Room price</dt><dd class="font-semibold text-foreground"><%= @presenter.room_price_display %></dd></div>
           <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Amount paid</dt><dd class="font-semibold text-foreground"><%= @presenter.format_money(@presenter.amount_paid) %></dd></div>
           <div><dt class="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Total charges</dt><dd class="font-semibold text-foreground"><%= @presenter.format_money(@presenter.total_charges) %></dd></div>
@@ -66,23 +85,25 @@
       </div>
 
       <% if @presenter.terms.present? && @presenter.cancellation_summary.present? %>
-        <div class="card p-6 md:p-8">
+        <div class="card p-5 md:p-6">
           <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Cancellation Policy</h2>
-          <div class="mt-3 text-sm text-muted-foreground">
+          <div class="mt-2 text-sm text-muted-foreground">
             <%= render "hotel_portal/bookings/guest_registration_cards/cancellation_policy", summary: @presenter.cancellation_summary %>
           </div>
         </div>
       <% end %>
 
-      <div class="card p-6 md:p-8">
+      <% if @presenter.terms_and_conditions.present? %>
+        <div class="card p-5 md:p-6">
+          <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Terms &amp; Conditions</h2>
+          <div class="mt-2 whitespace-pre-wrap text-sm text-muted-foreground"><%= @presenter.terms_and_conditions %></div>
+        </div>
+      <% end %>
+
+      <div class="card p-5 md:p-6">
         <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Signature</h2>
-        <p class="mt-2 text-sm text-muted-foreground">
-          Please read the terms and conditions carefully. Your signature confirms you have reviewed the check-in, check-out, and hotel policy terms shown on this card.
-          <% if @presenter.terms_and_conditions.present? %>
-            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :xs,
-                  command: "show-modal", commandfor: "grc-terms-dialog",
-                  class: "mt-1 h-auto p-0 underline") do %>View T&amp;C<% end %>
-          <% end %>
+        <p class="mt-2 text-sm text-foreground">
+          Please read the terms and conditions above carefully. Your signature confirms you have reviewed the check-in, check-out, and hotel policy terms shown on this card.
         </p>
 
         <% if @card.signed? && @card.signature_data_url.present? %>
@@ -96,19 +117,30 @@
             This card isn't ready for signature yet. Please contact the hotel.
           </div>
         <% else %>
-          <%= form_with model: @card, url: guest_registration_card_path(@card.public_token), method: :patch, local: true, class: "mt-6 space-y-4", data: { controller: "signature" } do |form| %>
+          <%# Paper is the fallback for a guest who would rather sign by hand --
+              printed blank, same as the front desk's own print action. %>
+          <%= link_to pdf_guest_registration_card_path(@card.public_token), target: "_blank", rel: "noopener",
+                class: "mt-2 inline-flex text-xs font-bold uppercase tracking-widest text-primary hover:underline" do %>Prefer paper? Print official form<% end %>
+
+          <%= form_with model: @card, url: guest_registration_card_path(@card.public_token), method: :patch, local: true, class: "mt-4 space-y-3", data: { controller: "signature" } do |form| %>
             <div>
               <%= form.label :signer_name, "Signer name", class: "block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2" %>
               <%= form.text_field :signer_name, value: @card.signer_name.presence || @presenter.guest_name, class: "form-input py-3 px-5 border border-border", required: true %>
             </div>
 
             <div class="relative space-y-2">
-              <label class="block text-xs font-bold uppercase tracking-widest text-muted-foreground">Signature</label>
+              <div class="flex items-center justify-between">
+                <label class="block text-xs font-bold uppercase tracking-widest text-muted-foreground">Signature</label>
+                <div class="flex items-center gap-3">
+                  <button type="button" data-signature-target="clearButton" data-action="click->signature#clear" class="hidden text-xs font-bold uppercase tracking-widest text-primary hover:underline">Clear signature</button>
+                  <button type="button" data-action="click->signature#expand" class="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-primary hover:underline">
+                    <%= cached_icon "maximize-2", class: "size-3.5", aria: { hidden: true } %>
+                    Full screen
+                  </button>
+                </div>
+              </div>
               <div class="rounded-xl border border-border bg-white p-2">
                 <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
-              </div>
-              <div class="flex justify-end">
-                <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-primary hover:underline">Clear signature</button>
               </div>
               <%= form.hidden_field :signature_data_url, data: { signature_target: "input" }, required: true %>
             </div>
@@ -116,17 +148,25 @@
             <div class="flex justify-end">
               <%= form.submit "Sign registration card", class: "btn btn-primary px-6 py-3 text-sm font-black uppercase tracking-widest" %>
             </div>
+
+            <%# Full-screen signing surface -- same pad, scaled up, for a
+                canvas too small to sign comfortably on a phone. %>
+            <div data-signature-target="overlay" class="hidden fixed inset-0 z-50 flex flex-col bg-white">
+              <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sign here</p>
+                <button type="button" data-action="click->signature#collapse" class="text-xs font-bold uppercase tracking-widest text-primary hover:underline">Close</button>
+              </div>
+              <div class="relative flex-1 bg-white">
+                <canvas data-signature-target="expandedCanvas" class="h-full w-full touch-none"></canvas>
+              </div>
+              <div class="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+                <button type="button" data-action="click->signature#clearExpanded" class="text-xs font-bold uppercase tracking-widest text-primary hover:underline">Clear</button>
+                <button type="button" data-action="click->signature#collapse" class="btn btn-primary px-6 py-2.5 text-sm font-black uppercase tracking-widest">Done</button>
+              </div>
+            </div>
           <% end %>
         <% end %>
       </div>
     </div>
-
-    <% if @presenter.terms_and_conditions.present? %>
-      <%= render PanelsUI::Dialog.new(id: "grc-terms-dialog", title: "Terms & Conditions", size: :lg) do |dialog| %>
-        <% dialog.with_body do %>
-          <div class="whitespace-pre-wrap text-sm text-foreground"><%= @presenter.terms_and_conditions %></div>
-        <% end %>
-      <% end %>
-    <% end %>
   </div>
 </div>

@@ -103,6 +103,15 @@ RSpec.describe AgentPaymentHoldUnit do
       expect(relationship.agent_payment_hold_amount).to be_nil
       expect(relationship.agent_payment_hold_label).to be_nil
     end
+
+    # A hold is far more often set in days than in hours, so an empty field
+    # offers days rather than making the admin change the unit first.
+    it "offers days for an unset override, and lists days first" do
+      relationship = create(:hotel_corporate_account, hotel: hotel, agent_payment_hold_hours: nil)
+
+      expect(relationship.agent_payment_hold_unit).to eq("days")
+      expect(described_class::UNITS.first).to eq("days")
+    end
   end
 
   # The validation lives on the stored column, but the field an admin can see
