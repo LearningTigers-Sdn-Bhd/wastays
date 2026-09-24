@@ -512,6 +512,20 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(document.at_css("form#reorder-photos-form")).to be_present
     end
   end
+  describe "reopening a room category" do
+    it "expands the category named by open and ignores one that is not on the page" do
+      villa = create(:room_type, hotel: hotel, name: "Villa")
+
+      get hotel_room_types_path(hotel, open: villa.id)
+      trigger = Nokogiri::HTML(response.body).at_css("#room-inventory-#{villa.id} button[aria-expanded]")
+      expect(trigger["aria-expanded"]).to eq("true")
+
+      get hotel_room_types_path(hotel, open: "999999")
+      expect(response).to have_http_status(:ok)
+      expect(Nokogiri::HTML(response.body).css("button[aria-expanded='true']")).to be_empty
+    end
+  end
+
   describe "per-guest price ladder" do
     let(:hotel) { create(:hotel, :per_person, account: account) }
 

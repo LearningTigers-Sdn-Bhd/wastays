@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class HotelPortal::RatePlanRoomPricingsController < HotelPortal::BaseController
+class HotelPortal::RatePlanRoomPricingsController < HotelPortal::SettingsBaseController
   include RatePlanEditorLoading
 
   before_action :authorize_rate_plan_editor!
@@ -9,8 +9,7 @@ class HotelPortal::RatePlanRoomPricingsController < HotelPortal::BaseController
   before_action :require_attached_room_type!, only: %i[edit update]
 
   def edit
-    load_rate_plan_editor(room_type_id: @room_type.id)
-    render "hotel_portal/rate_plans/edit", layout: false
+    redirect_to edit_hotel_rate_plan_path(current_hotel, @rate_plan, room_type_id: @room_type.id, tab: "pricing")
   end
 
   def update
@@ -26,7 +25,7 @@ class HotelPortal::RatePlanRoomPricingsController < HotelPortal::BaseController
 
     if result.success?
       ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: [ @room_type.id ])
-      render_editor_saved("#{@room_type.name} pricing saved.")
+      redirect_to_rate_plan_editor("#{@room_type.name} pricing saved.", room_type_id: @room_type.id)
     else
       render_editor_errors(room_type_id: @room_type.id)
     end
@@ -46,7 +45,7 @@ class HotelPortal::RatePlanRoomPricingsController < HotelPortal::BaseController
 
     if result.success?
       next_room_id = @rate_plan.room_type_rate_plans.order(:id).pick(:room_type_id)
-      render_editor_success("#{@room_type.name} removed from this rate plan.", room_type_id: next_room_id)
+      redirect_to_rate_plan_editor("#{@room_type.name} removed from this rate plan.", room_type_id: next_room_id)
     else
       @rate_plan.errors.add(:base, result.error)
       render_editor_errors(room_type_id: @room_type.id)

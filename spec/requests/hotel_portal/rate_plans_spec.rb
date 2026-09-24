@@ -34,39 +34,31 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response).to have_http_status(:moved_permanently)
     end
 
-    it 'renders the create form in a sheet' do
-      get new_hotel_rate_plan_path(hotel)
+    it 'renders the create form as a full page with tabs' do
+      get new_hotel_rate_plan_path(hotel, room_type_id: room_type.id)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("New rate plan")
-      sheet = Nokogiri::HTML(response.body).at_css('turbo-frame#settings_action_sheet dialog#new-rate-plan-sheet')
-      expect(sheet).to be_present
-      expect(sheet["class"]).to include("w-[48rem]")
-      expect(sheet["data-panels-ui-sheet-side"]).to eq("right")
-      expect(sheet["data-panels-ui-sheet-variant"]).to eq("edge")
-      expect(sheet["data-ui--sheet-dismissible-value"]).to eq("false")
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css('turbo-frame#settings_action_sheet dialog')).to be_nil
+      expect(doc.at_css('h1').text).to eq("New rate plan")
+      expect(doc.at_css('form#new-rate-plan-form')["action"]).to eq("#{hotel_rate_plans_path(hotel)}?tab=details")
+      expect(doc.css('[role="tab"]').map { |tab| tab.text.squish }).to eq(%w[Details Pricing Discounts Availability])
+      expect(doc.at_css("a[href='#{hotel_room_types_path(hotel, open: room_type.id)}']").text.squish).to include("Room Inventory")
     end
 
-    it 'puts the full-width room context first and uses a two-column occupancy grid' do
+    it 'puts name and guests on Details, and the room category with its price on Pricing' do
       get new_hotel_rate_plan_path(hotel)
 
       doc = Nokogiri::HTML(response.body)
-      form = doc.at_css('form#new-rate-plan-form')
-      room_selector = form.at_css('select[name="rate_plan[room_type_id]"]')
-      details = doc.at_css('section[aria-labelledby="new-rate-plan-details-heading"]')
-      occupancy = doc.at_css('section[aria-labelledby="new-rate-plan-occupancy-heading"]')
-      pricing = doc.at_css('section[aria-labelledby="new-rate-plan-room-pricing-heading"]')
-      pricing_context = form.at_css('.panel-alert[data-tone="info"]')
+      details = doc.at_css('[data-tab-panel="details"]')
+      pricing = doc.at_css('[data-tab-panel="pricing"]')
 
-      expect(form.to_html.index(room_selector.to_html)).to be < form.to_html.index('new-rate-plan-details-heading')
-      expect(room_selector.ancestors.map { |node| node["class"] }.compact.join(" ")).not_to include("max-w-sm")
-      expect(pricing_context.text.squish).to include("Property pricing settings", "The property charges per room", "Prices use MYR")
-      expect(form.at_css('textarea#rate_plan_description')).to be_present
-      expect(details.at_css('.grid.items-start.gap-4')["class"]).not_to include("sm:grid-cols-2")
-      expect(occupancy.at_css('.grid.items-start.gap-4')["class"]).to include("sm:grid-cols-2")
-      expect(form.at_css('dl[aria-label="Property-controlled rate plan settings"]')).to be_nil
-      expect(occupancy["class"]).not_to include("border-t")
-      expect(pricing["class"]).not_to include("border-t")
+      expect(details.at_css('textarea#rate_plan_description')).to be_present
+      expect(details.at_css('#rate_plan_base_occupancy')).to be_present
+      expect(pricing.at_css('select[name="rate_plan[room_type_id]"]')).to be_present
+      expect(pricing.text.squish).to include("The property charges per room", "Prices are in MYR")
+      expect(pricing.at_css('section[aria-labelledby="rate-plan-room-pricing-heading"]')).to be_present
+      expect(pricing["hidden"]).not_to be_nil
     end
 
     it 'uses autocomplete and one room selector as the pricing context' do
@@ -79,7 +71,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       selector = doc.at_css('select[name="rate_plan[room_type_id]"]')
       expect(selector.at_css('option[selected]')["value"]).to eq(other_room.id.to_s)
       expect(doc.css('[name^="room_pricing[prices]"]').size).to eq(0)
-      expect(response.body).to include("Pricing for Grand Villa")
+      expect(response.body).to include("Grand Villa: up to")
     end
 
     it 'renders only the selected room occupancy ladder in per-guest mode', :per_person do
@@ -108,10 +100,9 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       get new_hotel_rate_plan_path(hotel)
 
-      context = Nokogiri::HTML(response.body).at_css('.panel-alert[data-tone="info"]')
-      expect(context.text.squish).to include('The property charges per guest')
-      expect(context.text.squish).to include('Prices use USD')
-      expect(Nokogiri::HTML(response.body).at_css('#rate_plan_sell_mode')).to be_nil
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css('[data-tab-panel="pricing"]').text.squish).to include('The property charges per guest', 'Prices are in USD')
+      expect(doc.at_css('#rate_plan_sell_mode')).to be_nil
     end
 
     it 'explains the capability requirements for a connected per-guest hotel', :per_person do
@@ -119,57 +110,44 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       get new_hotel_rate_plan_path(hotel)
 
-      expect(response.body).to include('Per-guest channel requirements')
-      expect(response.body).to include('Complete every adult occupancy price')
-      expect(response.body).to include('rate_plan_channex_children_fee')
-      expect(response.body).to include('rate_plan_channex_infant_fee')
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css('[data-tab-panel="pricing"]').text).to include('Per-guest channel requirements', 'Complete every adult price')
+      settings = doc.at_css('[data-tab-panel="settings"]')
+      expect(settings.at_css('#rate_plan_channex_children_fee')).to be_present
+      expect(settings.at_css('#rate_plan_channex_infant_fee')).to be_present
     end
   end
 
   describe 'GET /hotel/:hotel_id/rate_plans/:id/edit' do
     let!(:rate_plan) { create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Promo Rate') }
 
-    it 'renders a non-dismissible XL right edge sheet as one form without tabs' do
+    it 'renders the plan as a full page: one form split across tabs' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       expect(response).to have_http_status(:ok)
       doc = Nokogiri::HTML(response.body)
-      sheet = doc.at_css('turbo-frame#settings_action_sheet dialog#edit-rate-plan-sheet')
-      expect(sheet).to be_present
-      expect(sheet["class"]).to include("w-[48rem]")
-      expect(sheet["data-panels-ui-sheet-side"]).to eq("right")
-      expect(sheet["data-panels-ui-sheet-variant"]).to eq("edge")
-      expect(sheet["data-ui--sheet-dismissible-value"]).to eq("false")
-      expect(doc.at_css("form#edit-rate-plan-#{rate_plan.id}-form")).to be_present
-      expect(doc.css('[role="tab"]')).to be_empty
-      expect(doc.text.squish).to include("Plan details")
-      expect(doc.text.squish).to include("Room pricing")
+      expect(doc.at_css('turbo-frame#settings_action_sheet dialog')).to be_nil
+      form = doc.at_css("form#edit-rate-plan-#{rate_plan.id}-form")
+      expect(form).to be_present
+      expect(form.css('[role="tab"]').map { |tab| tab.text.squish }).to eq(%w[Details Pricing Discounts Availability Settings])
+      expect(form.css('[data-tab-panel]').map { |panel| panel["data-tab-panel"] }).to eq(%w[details pricing discounts availability settings])
+      expect(doc.at_css('h1').text).to eq("Promo Rate")
+      expect(doc.css("button[type='submit'][form='#{form['id']}']").map { |button| button.text.squish }.uniq).to eq([ "Save rate plan" ])
       expect(doc.at_css('dialog[role="alertdialog"]')).to be_present
-      expect(response.body).to include("Promo Rate")
     end
 
-    it 'puts the full-width room context first and uses a two-column occupancy grid' do
+    it 'groups the edit form into Details, Pricing, Availability and Settings' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       doc = Nokogiri::HTML(response.body)
-      form = doc.at_css("form#edit-rate-plan-#{rate_plan.id}-form")
-      room_selector = form.at_css('select[name="rate_plan[room_type_id]"]')
-      details = doc.at_css('section[aria-labelledby="rate-plan-details-heading"]')
-      occupancy = doc.at_css('section[aria-labelledby="rate-plan-occupancy-heading"]')
-      pricing = doc.at_css('section[aria-labelledby="rate-plan-room-pricing-heading"]')
-      status = doc.at_css('section[aria-labelledby="rate-plan-status-heading"]')
-      pricing_context = form.at_css('.panel-alert[data-tone="info"]')
-
-      expect(form.to_html.index(room_selector.to_html)).to be < form.to_html.index('rate-plan-details-heading')
-      expect(room_selector.ancestors.map { |node| node["class"] }.compact.join(" ")).not_to include("max-w-sm")
-      expect(pricing_context.text.squish).to include("Property pricing settings", "The property charges per room", "Prices use MYR")
-      expect(form.at_css('textarea#rate_plan_description')).to be_present
-      expect(details.at_css('.grid.items-start.gap-4')["class"]).not_to include("sm:grid-cols-2")
-      expect(occupancy.at_css('.grid.items-start.gap-4')["class"]).to include("sm:grid-cols-2")
-      expect(form.at_css('dl[aria-label="Property-controlled rate plan settings"]')).to be_nil
-      expect(occupancy["class"]).not_to include("border-t")
-      expect(pricing["class"]).not_to include("border-t")
-      expect(status["class"]).not_to include("border-t")
+      expect(doc.at_css('[data-tab-panel="details"] #rate_plan_name')).to be_present
+      expect(doc.at_css('[data-tab-panel="details"] #rate_plan_base_occupancy')).to be_present
+      expect(doc.at_css('[data-tab-panel="pricing"] select[name="rate_plan[room_type_id]"]')).to be_present
+      expect(doc.at_css('[data-tab-panel="discounts"] [data-controller="nested-rows"]')).to be_present
+      expect(doc.at_css('[data-tab-panel="availability"] select[name="rate_plan[ta_access]"]')).to be_present
+      expect(doc.at_css('[data-tab-panel="settings"]').text).to include("Archive plan", "Delete plan")
+      expect(doc.at_css('[data-tab-panel="details"]')["hidden"]).to be_nil
+      expect(doc.at_css('[data-tab-panel="pricing"]')["hidden"]).not_to be_nil
     end
 
     it 'never asks the operator how the plan is charged — the property decides' do
@@ -202,12 +180,14 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.text.squish).to include("Child pricing")
     end
 
-    it 'shows a delete action when the plan has no bookings' do
+    it 'offers archive and delete on the Settings tab when the plan has no bookings' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
-      expect(delete_action_labels(response.body)).to include("Delete")
-      expect(response.body).not_to include(archive_hotel_rate_plan_path(hotel, rate_plan))
-      expect(response.body).not_to include(unarchive_hotel_rate_plan_path(hotel, rate_plan))
+      expect(delete_action_labels(response.body)).to include("Delete plan")
+      archive = Nokogiri::HTML(response.body).at_css('[data-tab-panel="settings"] a[data-turbo-method="patch"]')
+      expect(archive.text.squish).to eq("Archive plan")
+      expect(archive["href"]).to start_with(archive_hotel_rate_plan_path(hotel, rate_plan))
+      expect(CGI.unescape(archive["href"])).to include("return_to=#{edit_hotel_rate_plan_path(hotel, rate_plan)}")
     end
 
     it 'hides the delete action once the plan has a booking' do
@@ -339,11 +319,11 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         }
       }.to change(RatePlan, :count).by(1)
 
-      expect(response).to redirect_to(hotel_room_types_path(hotel))
-      follow_redirect!
-      expect(response.body).to include("created successfully")
-
       rate_plan = RatePlan.last
+      expect(response).to redirect_to(edit_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id))
+      follow_redirect!
+      expect(response.body).to include("Rate plan &#39;Flexible Breakfast Rate&#39; created.")
+
       expect(rate_plan.name).to eq('Flexible Breakfast Rate')
       expect(rate_plan.room_types).to include(room_type)
       expect(rate_plan.extra_pax_charge).to eq(50.to_d)
@@ -365,7 +345,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         }
       }.not_to change(RatePlan, :count)
 
-      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(response).to redirect_to(edit_hotel_rate_plan_path(hotel, existing, room_type_id: room_type.id))
       expect(existing.reload.description).to eq("Shared terms")
       expect(existing.room_type_rate_plans.sole).to have_attributes(room_type: room_type, pricing_value: 145.to_d)
     end
@@ -384,7 +364,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       form = response.parsed_body.at_css("form#new-rate-plan-form")
-      expect(form["action"]).to eq(hotel_rate_plans_path(hotel))
+      expect(form["action"]).to eq("#{hotel_rate_plans_path(hotel)}?tab=details")
       expect(form["method"]).to eq("post")
       expect(existing.room_type_rate_plans).to be_empty
     end
@@ -416,7 +396,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         room_pricing: { rate_mode: "manual", prices: { "1" => "180", "2" => "300" } }
       }
 
-      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(response).to redirect_to(edit_hotel_rate_plan_path(hotel, RatePlan.last, room_type_id: room_type.id))
       assignment = RatePlan.last.room_type_rate_plans.sole
       expect(assignment.occupancy_prices.order(:adults).pluck(:adults, :price)).to eq([
         [ 1, 180.to_d ],
@@ -437,8 +417,9 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         room_pricing: { rate_mode: 'manual', prices: { '1' => '180', '2' => '300' } }
       }
 
-      expect(response).to redirect_to(hotel_room_types_path(hotel))
-      expect(hotel.rate_plans.find_by!(name: 'Family OTA Rate')).to have_attributes(
+      plan = hotel.rate_plans.find_by!(name: 'Family OTA Rate')
+      expect(response).to redirect_to(edit_hotel_rate_plan_path(hotel, plan, room_type_id: room_type.id))
+      expect(plan).to have_attributes(
         channex_children_fee: 25.5.to_d,
         channex_infant_fee: 0.to_d
       )
@@ -544,10 +525,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         room_pricing: { rate_mode: "manual", default_rate: "225" }
       }, headers: turbo_headers
 
-      expect(response).to have_http_status(:ok)
-      expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
-      expect(response.body).to include('action="complete_sheet"', 'target="settings_action_sheet"')
-      expect(response.body).to include(%(url="#{hotel_room_types_path(hotel)}"))
+      expect(response).to redirect_to(edit_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id))
+      expect(response).to have_http_status(:see_other)
       expect(rate_plan.reload).to have_attributes(name: "Advance purchase", description: "Pay before arrival")
       expect(rate_plan.room_type_rate_plans.sole.pricing_value).to eq(225.to_d)
     end
@@ -567,7 +546,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         room_pricing: { rate_mode: "manual", prices: { "1" => "180", "2" => "300" } }
       }, headers: turbo_headers
 
-      expect(response).to have_http_status(:ok)
+      expect(response).to have_http_status(:see_other)
       expect(rate_plan.reload.name).to eq("Family offer")
       expect(rate_plan.child_price_multiplier).to eq(0.5.to_d)
       expect(rate_plan.rate_plan_age_bands.sole).to have_attributes(label: "Child", min_age: 3, max_age: 12)
@@ -583,7 +562,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         room_pricing: { rate_mode: "manual", prices: { "1" => "180", "2" => "300" } }
       }, headers: turbo_headers
 
-      expect(response).to have_http_status(:ok)
+      expect(response).to have_http_status(:see_other)
       expect(standard.reload).to have_attributes(name: "Renamed", kind: "standard")
       expect(room_type.reload.standard_rate_plan).to eq(standard)
       expect(standard.room_type_rate_plans.sole.occupancy_prices.count).to eq(2)
@@ -601,7 +580,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
         room_pricing: { rate_mode: "manual", default_rate: "225" }
       }, headers: turbo_headers
 
-      expect(response.body).to include('action="complete_sheet"')
+      expect(response).to redirect_to(edit_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id))
       expect(rate_plan.reload.rate_plan_stay_discounts.sole).to have_attributes(min_nights: 3, discount_type: "percent", value: 15, from_night: 2)
 
       get edit_hotel_rate_plan_path(hotel, rate_plan)
@@ -638,7 +617,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       it "offers the plan to only the agencies picked" do
         save_access("only", [ agency.id ])
 
-        expect(response).to have_http_status(:ok)
+        expect(response).to have_http_status(:see_other)
         expect(rate_plan.reload.ta_access).to eq("only")
         expect(rate_plan.rate_plan_agency_rules.pluck(:hotel_corporate_account_id)).to eq([ agency.id ])
         expect(rate_plan.offered_to_agency?(agency)).to be(true)
@@ -684,7 +663,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
           room_pricing: { rate_mode: "manual", default_rate: "225" }
         }, headers: turbo_headers
 
-        expect(response).to have_http_status(:ok)
+        expect(response).to have_http_status(:see_other)
         expect(rate_plan.reload.hidden_from_public).to be(true)
         expect(rate_plan.bookable_by?(:public)).to be(false)
         expect(rate_plan.bookable_by?(:staff)).to be(true)
@@ -788,27 +767,26 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Enter a price for 2 adults")
-      expect(response.body).to include("data-rate-plan-editor-room-type-id-value=\"#{room_type.id}\"")
+      selected = response.parsed_body.at_css('select[name="rate_plan[room_type_id]"] option[selected]')
+      expect(selected["value"]).to eq(room_type.id.to_s)
     end
 
-    it "closes the sheet after saving one room's pricing" do
+    it "returns to the plan page after saving one room's pricing" do
       put hotel_rate_plan_room_pricing_path(hotel, rate_plan, room_type), params: {
         room_pricing: { rate_mode: "manual", default_rate: "240" }
       }, headers: turbo_headers
 
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include('action="complete_sheet"', %(url="#{hotel_room_types_path(hotel)}"))
+      expect(response).to redirect_to(edit_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id))
       expect(rate_plan.room_type_rate_plans.sole.pricing_value).to eq(240.to_d)
     end
 
-    it "removes an eligible room immediately and keeps the editor open" do
+    it "removes an eligible room immediately and returns to the plan on the remaining room" do
       other_room = create(:room_type, hotel: hotel, name: "Garden villa")
       create(:room_type_rate_plan, rate_plan: rate_plan, room_type: other_room, pricing_value: 200)
 
       delete hotel_rate_plan_room_pricing_path(hotel, rate_plan, other_room), headers: turbo_headers
 
-      expect(response).to have_http_status(:ok)
-      expect(response.body).to include('target="settings_action_sheet"')
+      expect(response).to redirect_to(edit_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id))
       expect(rate_plan.reload.room_types).to contain_exactly(room_type)
     end
 
@@ -861,6 +839,12 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response).to redirect_to(hotel_room_types_path(hotel))
     end
 
+    it 'returns to Room Inventory with the plan\'s room category open' do
+      delete hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id)
+
+      expect(response).to redirect_to(hotel_room_types_path(hotel, open: room_type.id))
+    end
+
     it 'prevents deleting standard rate plan' do
       standard_rate = hotel.rate_plans.find_by(name: 'Standard Rate') || create(:rate_plan, hotel: hotel, name: 'Standard Rate')
 
@@ -896,6 +880,22 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response).to redirect_to(hotel_room_types_path(hotel))
       expect(rate_plan.reload.archived?).to be true
+    end
+
+    it 'returns to the plan page when archived from it, even as a Turbo request' do
+      return_to = edit_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id, tab: "settings")
+
+      patch archive_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id, return_to: return_to), as: :turbo_stream
+
+      expect(response).to redirect_to(return_to)
+      expect(flash[:notice]).to include("archived")
+      expect(rate_plan.reload.archived?).to be true
+    end
+
+    it 'ignores a return_to outside this hotel' do
+      patch archive_hotel_rate_plan_path(hotel, rate_plan, return_to: "https://evil.example/steal")
+
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
     end
 
     it 'replaces the affected inventory row and appends a success toast' do
@@ -973,6 +973,22 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response).to redirect_to(hotel_room_types_path(hotel))
       expect(rate_plan.reload.archived?).to be false
+    end
+
+    it 'returns to the plan page when archived from it, even as a Turbo request' do
+      return_to = edit_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id, tab: "settings")
+
+      patch archive_hotel_rate_plan_path(hotel, rate_plan, room_type_id: room_type.id, return_to: return_to), as: :turbo_stream
+
+      expect(response).to redirect_to(return_to)
+      expect(flash[:notice]).to include("archived")
+      expect(rate_plan.reload.archived?).to be true
+    end
+
+    it 'ignores a return_to outside this hotel' do
+      patch archive_hotel_rate_plan_path(hotel, rate_plan, return_to: "https://evil.example/steal")
+
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
     end
 
     it 'replaces the affected inventory row and appends a success toast' do

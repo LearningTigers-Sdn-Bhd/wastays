@@ -1,0 +1,67 @@
+<%# locals: (f:, rate_plan:, new_plan:, room_types:, selected_room_type:, room_pricing:) %>
+<% per_person = current_hotel.sells_per_person? %>
+<section aria-labelledby="rate-plan-room-pricing-heading" class="space-y-4">
+  <div>
+    <h3 id="rate-plan-room-pricing-heading" class="text-base font-semibold text-foreground">Room pricing</h3>
+    <p class="mt-1 text-sm text-muted-foreground">
+      <%= per_person ? "The property charges per guest" : "The property charges per room" %>. Prices are in <%= rate_plan.currency %>.
+      <%= new_plan ? "Choose the first room category for this plan; you can add it to more categories from Room Inventory." : "Each room category on this plan has its own price. Pick one to change it." %>
+    </p>
+  </div>
+
+  <% if room_types.any? %>
+    <% choices = room_types.map { |room_type| { label: "#{room_type.name} · #{pluralize(room_type.max_adults, 'adult')}", value: room_type.id } } %>
+    <div class="max-w-md">
+      <%= fields_for :rate_plan, HotelPortal::RatePlansHelper::RoomSelectionScope.new(selected_room_type&.id) do |selector| %>
+        <%= render PanelsUI::FormField.new(form: selector, attribute: :room_type_id, label: "Room category", required: new_plan) do |field| %>
+          <% field.with_select_menu(choices, selected: selected_room_type&.id,
+               data: { action: "change->rate-plan-editor#selectRoom" }) %>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: new_plan ? "Create a room category first" : "No room category assigned", role: :status) do |alert| %>
+      <% alert.with_description { new_plan ? "A rate plan needs a room category to price." : "Add this plan to a room category from Room Inventory before setting its price." } %>
+    <% end %>
+  <% end %>
+
+  <% if per_person && current_hotel.preferred_channel_manager.present? %>
+    <%= render PanelsUI::Alert.new(tone: :info, title: "Per-guest channel requirements", role: :status) do |alert| %>
+      <% alert.with_description { "Complete every adult price for each room category. If you add age groups, also set the flat child and infant fees under Settings." } %>
+    <% end %>
+  <% end %>
+
+  <% if selected_room_type && room_pricing %>
+    <div class="max-w-3xl space-y-4"
+         data-controller="rate-plan-room-pricing"
+         data-rate-plan-room-pricing-anchor-value="<%= selected_room_type.base_price.to_f %>"
+         data-rate-plan-room-pricing-max-adults-value="<%= room_pricing.max_adults %>"
+         data-rate-plan-room-pricing-currency-value="<%= rate_plan.currency %>"
+         data-rate-plan-room-pricing-per-person-value="<%= room_pricing.per_person? %>"
+         data-action="input->rate-plan-room-pricing#refresh change->rate-plan-room-pricing#refresh">
+      <p class="text-sm text-muted-foreground">
+        <%= selected_room_type.name %>: up to <%= pluralize(selected_room_type.max_adults, "adult") %> and <%= pluralize(selected_room_type.max_children, "child") %> · Standard Rate <%= rate_plan_money(selected_room_type.base_price, rate_plan.currency) %>
+      </p>
+
+      <% if !new_plan && rate_plan.standard_rate? && !per_person %>
+        <%= render PanelsUI::Alert.new(tone: :info, title: "#{rate_plan.name} follows the room category", role: :status) do |alert| %>
+          <% alert.with_description { "Change the default nightly amount on the room category, and use Rates & Availability for date-specific prices." } %>
+        <% end %>
+      <% else %>
+        <%= fields_for :room_pricing, room_pricing do |pricing_form| %>
+          <%= render "hotel_portal/rate_plans/room_pricing_fields",
+                f: pricing_form, pricing: room_pricing, room_type: selected_room_type,
+                currency: rate_plan.currency, form_prefix: "#{new_plan ? 'new_rate_plan' : 'editor'}_room_#{selected_room_type.id}" %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <p class="text-sm text-muted-foreground">Prices for specific dates, availability and restrictions are set under Rates &amp; Availability.</p>
+</section>
+
+<% if per_person %>
+  <div class="max-w-3xl">
+    <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan %>
+  </div>
+<% end %>

@@ -1,4 +1,6 @@
-<%= render "hotel_portal/rate_plans/editor_sheet",
+<%= render "hotel_portal/rate_plans/editor_page",
       rate_plan: @rate_plan,
+      new_plan: false,
+      room_types: @assigned_room_types,
       selected_room_type: @selected_room_type,
       room_pricing: @room_pricing %>

@@ -1,0 +1,49 @@
+<%# locals: (f:, rate_plan:, new_plan:) %>
+<section aria-labelledby="rate-plan-details-heading" class="space-y-4">
+  <div>
+    <h3 id="rate-plan-details-heading" class="text-base font-semibold text-foreground">Plan details</h3>
+    <p class="mt-1 text-sm text-muted-foreground">
+      <%= new_plan ? "Pick an existing plan to add it to another room category, or type a new name." : "These apply to every room category on this plan." %>
+    </p>
+  </div>
+
+  <div class="grid max-w-2xl items-start gap-4">
+    <% if new_plan %>
+      <%= hidden_field_tag "rate_plan[rate_plan_id]", params.dig(:rate_plan, :rate_plan_id), data: { rate_plan_editor_target: "selectedRatePlanId" } %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true,
+            hint: "Search existing plans or type a new name.") do |field| %>
+        <% field.with_autocomplete(
+             endpoint: autocomplete_hotel_rate_plan_attachments_path(current_hotel),
+             placeholder: "Non-refundable",
+             data: { action: "input->rate-plan-editor#clearRatePlanSelection panels-ui:autocomplete-select->rate-plan-editor#selectRatePlan" }) %>
+      <% end %>
+    <% else %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true,
+            hint: (rate_plan.standard_rate? ? "This is the room category's base rate. Rename it freely; other plans keep pricing from it." : nil)) do |field| %>
+        <% field.with_input(autocomplete: "off") %>
+      <% end %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description",
+          hint: "Shown to guests and agents when they choose a plan.") do |field| %>
+      <% field.with_text_area(rows: 3, placeholder: "Pay in full at booking. No changes or refunds.") %>
+    <% end %>
+  </div>
+</section>
+
+<% unless current_hotel.sells_per_person? %>
+  <section aria-labelledby="rate-plan-occupancy-heading" class="space-y-4">
+    <div>
+      <h3 id="rate-plan-occupancy-heading" class="text-base font-semibold text-foreground">Guests in the room price</h3>
+      <p class="mt-1 text-sm text-muted-foreground">How many guests the nightly room price covers, and what each extra guest pays.</p>
+    </div>
+    <div class="grid max-w-2xl items-start gap-4 sm:grid-cols-2">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Guests included", hint: "Number of guests covered by the room price.") do |field| %>
+        <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :extra_pax_charge, label: "Extra guest charge", hint: "Per night, for each guest above that number.") do |field| %>
+        <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+        <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+      <% end %>
+    </div>
+  </section>
+<% end %>

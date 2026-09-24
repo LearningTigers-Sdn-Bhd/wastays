@@ -101,8 +101,7 @@
         <%= app_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
       <% end %>
       <% menu.with_item(
-           href: edit_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: room_type.id),
-           data: { turbo_frame: "settings_action_sheet" }) do %>
+           href: edit_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: room_type.id)) do %>
         <%= app_icon "pencil", class: "size-4", aria: { hidden: true } %>
         <span>Edit rate</span>
       <% end %>

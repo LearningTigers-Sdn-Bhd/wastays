@@ -1,15 +1,13 @@
 # frozen_string_literal: true
 
-# Loads the selected attached-room context for the flat rate-plan editor and
-# provides consistent Turbo/HTML responses for its writes.
+# Loads the selected attached-room context for the rate plan page and the
+# responses its writes share.
 module RatePlanEditorLoading
   extend ActiveSupport::Concern
 
   included do
     include SheetActionCompletion
   end
-
-  EDITOR_FRAME = "settings_action_sheet"
 
   private
 
@@ -36,42 +34,16 @@ module RatePlanEditorLoading
     end
   end
 
-  # Save is the end of an edit: close the sheet and land back on Room
-  # Inventory, whose rows show what was just changed. Re-rendering the editor
-  # in place left staff unsure whether the save had gone through.
-  def render_editor_saved(message)
-    complete_sheet_action(
-      destination: hotel_room_types_path(current_hotel),
-      notice: message,
-      frame: turbo_frame_request_id.presence || EDITOR_FRAME
-    )
-  end
-
-  # In-editor actions (detaching a room) keep the sheet open on the next room.
-  def render_editor_success(message, room_type_id: params[:room_type_id])
-    load_rate_plan_editor(room_type_id: room_type_id)
-
-    respond_to do |format|
-      format.turbo_stream do
-        render turbo_stream: [
-          turbo_stream.replace(EDITOR_FRAME, partial: "hotel_portal/rate_plans/editor_sheet", locals: {
-            rate_plan: @rate_plan,
-            selected_room_type: @selected_room_type,
-            room_pricing: @room_pricing
-          }),
-          toast_stream(message, type: :success)
-        ]
-      end
-      format.html do
-        redirect_to edit_hotel_rate_plan_path(current_hotel, @rate_plan, room_type_id: room_type_id),
-                    notice: message, status: :see_other
-      end
-    end
+  # Saving keeps staff on the plan's page, on the room category and tab they
+  # were working in, so they can see what was saved and carry on.
+  def redirect_to_rate_plan_editor(message, room_type_id: params[:room_type_id])
+    redirect_to edit_hotel_rate_plan_path(current_hotel, @rate_plan, room_type_id: room_type_id.presence, tab: params[:tab].presence),
+                notice: message, status: :see_other
   end
 
   def render_editor_errors(room_type_id: params[:room_type_id])
     load_rate_plan_editor(room_type_id: room_type_id)
-    render "hotel_portal/rate_plans/edit", formats: :html, layout: false, status: :unprocessable_content
+    render "hotel_portal/rate_plans/edit", formats: :html, status: :unprocessable_content
   end
 
   # RoomTypeRatePlan#trigger_ari_sync fires per row, which would enqueue a
