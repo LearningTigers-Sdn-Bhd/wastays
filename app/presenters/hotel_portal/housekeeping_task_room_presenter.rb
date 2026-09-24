@@ -21,7 +21,7 @@ module HotelPortal
 
     attr_reader :room_number, :resolved_status, :booking, :room_type, :hotel, :view_context,
                 :booking_status, :booking_status_label, :notes, :assigned_to, :assigned_to_id,
-                :selected_date, :pax, :late_checkout_eligible, :room_group_id
+                :selected_date, :pax, :guest_name, :late_checkout_eligible, :room_group_id
 
     def initialize(room_data, hotel:, view_context:, selected_date:)
       @room_number = room_data.fetch(:room_number)
@@ -38,6 +38,7 @@ module HotelPortal
       @assigned_to = room_data[:assigned_to]
       @assigned_to_id = room_data[:assigned_to_id]
       @pax = room_data.fetch(:pax)
+      @guest_name = room_data.fetch(:guest_name)
       @late_checkout_eligible = room_data.fetch(:late_checkout_eligible, false)
       @selected_date = selected_date.to_date
     end
