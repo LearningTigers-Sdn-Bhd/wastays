@@ -56,7 +56,9 @@
       </ul>
     </div>
 
-    <% if (transfers = room.transfers).any? %>
+    <% transfers = room.transfers %>
+    <% missing_legs = room.missing_boat_legs %>
+    <% if transfers.any? || missing_legs.any? %>
       <div>
         <h3 class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Boat transfers</h3>
         <ul class="mt-2 space-y-1">
@@ -69,7 +71,14 @@
               <% end %>
             </li>
           <% end %>
+          <% missing_legs.each do |leg| %>
+            <li class="text-muted-foreground"><span class="font-semibold text-foreground"><%= leg %></span> not added yet</li>
+          <% end %>
         </ul>
+        <% if missing_legs.any? && room.editable? %>
+          <%= link_to "Add boat times", edit_corporate_booking_guests_path(room.booking),
+                class: "mt-2 inline-block text-xs font-bold text-primary hover:underline" %>
+        <% end %>
       </div>
     <% end %>
 

@@ -43,6 +43,7 @@ module CorporatePortal
       @hotel = relationship.hotel
       @params = params.to_h.symbolize_keys
       @user = user
+      @boat_times = AgentBoatTimes.new(hotel: @hotel, params: @params)
     end
 
     def call
@@ -52,6 +53,7 @@ module CorporatePortal
       @rate_plan = resolve_rate_plan(room_type)
       return failure("Choose a rate plan.") if @rate_plan.blank?
       return failure("Name the lead guest for each room.") if rooms.empty?
+      return failure(*@boat_times.errors) if @boat_times.errors.any?
 
       availability = check_availability(room_type)
       return failure(availability) if availability.is_a?(String)
@@ -119,6 +121,8 @@ module CorporatePortal
       raise Failed, Array(result.errors).to_sentence unless result.success?
 
       add_companions(result.booking, guests)
+      # Every room in the party takes the same boats, landing on its own stay dates.
+      ::Boats::AssignTimes.call(booking: result.booking, params: @boat_times.params)
       stamp_payment_deadline(result.booking)
       result.booking
     end

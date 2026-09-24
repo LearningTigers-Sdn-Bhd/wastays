@@ -258,6 +258,19 @@
                 </fieldset>
               <% end %>
 
+              <% boat_schedule = Boats::Schedule.new(@relationship.hotel) %>
+              <% if boat_schedule.enabled? %>
+                <fieldset class="space-y-3">
+                  <legend class="text-sm font-semibold text-foreground">Boat transfer</legend>
+                  <p class="text-sm text-muted-foreground">
+                    This hotel is reached by boat. Pick the guests' boats if you know them; you can add or change them later, before arrival.
+                  </p>
+                  <%= render "hotel_portal/bookings/boat_transfer_fields",
+                        form: form, schedule: boat_schedule,
+                        boat_in: params.dig(:booking, :boat_in_time), boat_out: params.dig(:booking, :boat_out_time) %>
+                </fieldset>
+              <% end %>
+
               <%= render PanelsUI::FormField.new(form:, attribute: :agent_reference,
                     label: "Your reference", hint: "Optional. Your own voucher or file number, shown on this booking.") do |field| %>
                 <% field.with_input(placeholder: "e.g. TRV-2026-0142", maxlength: 100, autocomplete: "off") %>

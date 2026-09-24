@@ -158,7 +158,7 @@ module CorporatePortal
     def booking_params
       params.require(:booking).permit(
         :room_type_id, :rate_plan_id, :check_in, :check_out, :adults, :children, :rooms,
-        :special_requests, :agent_reference, rooms_detail: {}
+        :special_requests, :agent_reference, :boat_in_time, :boat_out_time, rooms_detail: {}
       )
     end
 

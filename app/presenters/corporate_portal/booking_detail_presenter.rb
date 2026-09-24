@@ -64,6 +64,15 @@ module CorporatePortal
       end
     end
 
+    # Legs the agent could still fill in: only on a hotel that runs boats and
+    # has a timetable to pick from.
+    def missing_boat_legs
+      return [] unless schedule.enabled?
+
+      lead = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
+      { "Boat-in" => lead&.boat_in_at, "Boat-out" => lead&.boat_out_at }.select { |_, time| time.blank? }.keys
+    end
+
     def nightly_rates
       booking_room&.nightly_rate_snapshot.to_h.sort.map do |date, night|
         Night.new(date: Date.parse(date), amount: night.to_h["price"].to_d)

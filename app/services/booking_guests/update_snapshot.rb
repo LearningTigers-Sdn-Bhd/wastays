@@ -36,7 +36,9 @@ module BookingGuests
       return Result.new(false, candidate.errors.full_messages) unless candidate.valid?
 
       normalized = candidate.attributes.symbolize_keys.slice(*EDITABLE_ATTRIBUTES)
-      old_values = snapshot_values
+      # Boat times join the before-picture too, so the audit reads "09:00 -> 11:00"
+      # rather than as a time that appeared from nowhere.
+      old_values = snapshot_values.merge(@bibo_attributes.keys.to_h { |key| [ key.to_s, @booking_guest.public_send(key) ] })
 
       ActiveRecord::Base.transaction do
         @booking_guest.update!(snapshot_updates(normalized).merge(@bibo_attributes))

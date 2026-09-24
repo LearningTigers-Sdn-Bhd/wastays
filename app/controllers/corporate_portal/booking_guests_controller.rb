@@ -12,7 +12,7 @@ module CorporatePortal
     end
 
     def update
-      result = UpdateAgentBookingGuests.call(booking: @booking, user: current_user, guests: guests_params)
+      result = UpdateAgentBookingGuests.call(booking: @booking, user: current_user, guests: guests_params, boat: boat_params)
 
       if result.success?
         redirect_to corporate_booking_path(@booking), notice: "Guest details updated."
@@ -35,6 +35,11 @@ module CorporatePortal
       return if UpdateAgentBookingGuests.editable?(@booking)
 
       redirect_to corporate_booking_path(@booking), alert: "Guest details can only be changed before arrival."
+    end
+
+    # Only the fields the form sent: an absent one leaves the stored time alone.
+    def boat_params
+      params.slice(:boat_in_time, :boat_out_time).permit(:boat_in_time, :boat_out_time).to_h
     end
 
     # Keyed by booking guest id, or "newN" for a companion added here.

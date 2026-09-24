@@ -49,6 +49,22 @@
         </fieldset>
       <% end %>
 
+      <% boat_schedule = Boats::Schedule.new(@booking.hotel) %>
+      <% if boat_schedule.enabled? %>
+        <% lead = @guests.find(&:primary?) || @guests.first %>
+        <% hotel = @booking.hotel %>
+        <fieldset class="space-y-3 border-t border-border pt-5">
+          <legend class="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Boat transfer</legend>
+          <p class="text-sm text-muted-foreground">This hotel is reached by boat. Pick the boats the guests will take, or leave as "No boat transfer" if not known yet.</p>
+          <%= render "hotel_portal/bookings/boat_transfer_fields",
+                form: form, schedule: boat_schedule,
+                boat_in: params[:boat_in_time] || Boats::Schedule.time_of_day(hotel: hotel, timestamp: lead&.boat_in_at),
+                boat_out: params[:boat_out_time] || Boats::Schedule.time_of_day(hotel: hotel, timestamp: lead&.boat_out_at),
+                boat_in_date: @booking.check_in.in_time_zone(hotel.hotel_time_zone).to_date.strftime("%d %b %Y"),
+                boat_out_date: @booking.check_out.in_time_zone(hotel.hotel_time_zone).to_date.strftime("%d %b %Y") %>
+        </fieldset>
+      <% end %>
+
       <div class="flex flex-wrap gap-3">
         <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>Save guests<% end %>
         <%= link_to "Cancel", corporate_booking_path(@booking),

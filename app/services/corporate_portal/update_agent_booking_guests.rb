@@ -6,7 +6,8 @@ module CorporatePortal
   # details were not known at booking time.
   #
   # Only the details an agent would reasonably hold are editable -- name,
-  # contact, nationality, identity number and date of birth. Everything goes
+  # contact, nationality, identity number and date of birth -- plus the boat
+  # slots, on hotels reached by boat. Everything goes
   # through the same guest services the front desk uses, so the booking's lead
   # fields stay in step and every change lands in the booking's audit trail,
   # attributed to the agent and marked as coming from the portal.
@@ -32,10 +33,11 @@ module CorporatePortal
       booking.check_in.to_date >= business_date
     end
 
-    def initialize(booking:, user:, guests:)
+    def initialize(booking:, user:, guests:, boat: {})
       @booking = booking
       @user = user
       @guests = guests.to_h.transform_keys(&:to_s)
+      @boat_times = AgentBoatTimes.new(hotel: booking.hotel, params: boat)
     end
 
     def call
@@ -45,6 +47,7 @@ module CorporatePortal
       ActiveRecord::Base.transaction do
         existing_rows.each { |booking_guest, attrs| errors.concat(update(booking_guest, attrs)) }
         new_rows.each { |attrs| errors.concat(add(attrs)) }
+        errors.concat(update_boats) if errors.empty?
         raise ActiveRecord::Rollback if errors.any?
       end
 
@@ -106,6 +109,28 @@ module CorporatePortal
           .merge(identity_attributes(country: country, id_number: attrs[:government_id]))
       )
       result.success? ? [] : Array(result.errors).map { |error| "#{attrs[:name]}: #{error}" }
+    end
+
+    # Boat times live on the lead guest, like every other booking. Written
+    # through UpdateSnapshot so the change is audited as the agent's, and only
+    # when a time actually moved.
+    def update_boats
+      return @boat_times.errors if @boat_times.errors.any?
+
+      attributes = ::Boats::ResolveTimes.call(
+        hotel: @booking.hotel, check_in: @booking.check_in, check_out: @booking.check_out, params: @boat_times.params
+      )
+      lead = @booking.booking_guests.reload.find(&:primary?) || @booking.booking_guests.first
+      changed = attributes.reject { |column, value| lead&.public_send(column) == value }
+      return [] if lead.blank? || changed.empty?
+
+      baseline = BookingGuests::UpdateSnapshot::SNAPSHOT_ATTRIBUTES.to_h do |key|
+        [ key, lead.public_send(:"#{key}_snapshot") ]
+      end.merge(tin: @booking.guest_tin)
+      result = BookingGuests::UpdateSnapshot.call(
+        booking_guest: lead, attributes: baseline, actor: @user, source: SOURCE, bibo_attributes: changed
+      )
+      result.success? ? [] : result.errors
     end
 
     def unchanged?(booking_guest, changes)
