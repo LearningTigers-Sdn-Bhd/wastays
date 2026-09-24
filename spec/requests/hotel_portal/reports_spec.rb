@@ -1512,7 +1512,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get deposit_liability_hotel_reports_path(hotel, format: :csv), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
-      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Deposit Received,Earned,Refunds,Remaining Liability,Latest Deposit Date")
+      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Payment Reference,Deposit Received,Earned,Refunds,Remaining Liability,Latest Deposit Date")
       expect(response.body).to include(HotelPortal::Reports::DepositLiabilityReport::SCOPE_NOTE)
 
       get deposit_liability_hotel_reports_path(hotel, format: :xlsx), params: { as_of_date: as_of_date.to_s }
@@ -1856,24 +1856,38 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         document = Nokogiri::HTML(response.body)
         headers = document.css("[aria-labelledby='cashier-activity-heading'] thead th[data-column-key]").map { |header| header["data-column-key"] }
-        expect(headers).to eq(%w[date_time booking_number guest_details handling payment_mode stage received_by currency amount])
+        expect(headers).to eq(%w[date_time booking_number guest_details handling payment_mode payment_reference stage received_by currency amount])
 
         rows = document.css('[data-testid="cashier-row"]')
         expect(rows.size).to eq(2)
 
         advance_row = rows.find { |row| row.text.include?("Bank Transfer Payment") }
         advance_cells = advance_row.css("td")
-        expect(advance_cells.size).to eq(10)
+        expect(advance_cells.size).to eq(11)
         expect(advance_cells[2].text.squish).to eq(booking.formatted_reservation_number)
         expect(advance_cells[3].text.squish).to include(booking.guest_name, "Room —")
         expect(advance_cells[4].text.strip).to eq("At desk")
-        expect(advance_cells[6].text.strip).to eq("Advance")
+        expect(advance_cells[7].text.strip).to eq("Advance")
 
-        settlement_row = rows.find { |row| row.css("td")[6].text.strip == "Settlement" }
+        settlement_row = rows.find { |row| row.css("td")[7].text.strip == "Settlement" }
         expect(settlement_row).to be_present
         [ advance_row, settlement_row ].each do |row|
           expect(row.css("td").last["class"].split).to include("whitespace-nowrap")
         end
+      end
+
+      it "shows the payment reference staff recorded" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 50,
+          posting_date: start_date, metadata: { payment_source: "bank", bank_reference: "TT-778899" })
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        document = Nokogiri::HTML(response.body)
+        headers = document.css("[aria-labelledby='cashier-activity-heading'] thead th[data-column-key]").map { |header| header["data-column-key"] }
+        row = document.at_css('[data-testid="cashier-row"]')
+        expect(row.css("td")[headers.index("payment_reference") + 1].text.strip).to eq("TT-778899")
       end
 
       it "shows a refund under its resolved settlement mode" do
@@ -1885,7 +1899,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         refund_row = Nokogiri::HTML(response.body).at_css('[data-testid="cashier-row"]')
         expect(refund_row.text).to include("Cash Payment")
-        expect(refund_row.css("td")[6].text.strip).to eq("Refund")
+        expect(refund_row.css("td")[7].text.strip).to eq("Refund")
       end
 
       it "separates Razorpay payments from the at-desk summary" do
@@ -2132,7 +2146,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(response).to have_http_status(:success)
         expect(response.body).to include(
           "Payment Activity", "Activity By Payment Mode", "Currency Summary",
-          "Date & Time,Booking No.,Guest,Room,Handling,Payment Mode,Stage,Received By,Currency,Amount",
+          "Date & Time,Booking No.,Guest,Room,Handling,Payment Mode,Payment Reference,Stage,Received By,Currency,Amount",
           booking.formatted_reservation_number,
           "Cash Payment"
         )
