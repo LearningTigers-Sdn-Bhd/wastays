@@ -43,6 +43,25 @@ RSpec.describe "Rate plan page", type: :system, js: true do
   def save = click_button("Save rate plan", match: :first)
   def discard_dialog = find("#rate-plan-editor-discard-alert", visible: :all)
 
+  # The inventory list is a Turbo frame; a link inside it that forgets to
+  # target the whole page loads into the frame and shows "Content missing".
+  it "opens the plan's page from Room Inventory's Edit rate and New rate" do
+    visit hotel_room_types_path(hotel, open: villa.id)
+    menu_trigger = find("button[aria-label='Actions for Full Board in Villa']")
+    click_in_overlay(menu_trigger)
+    click_in_overlay("Edit rate", selector: :link)
+
+    expect(page).to have_css("h1", text: "Full Board", wait: 10)
+    expect(page).to have_current_path(edit_hotel_rate_plan_path(hotel, full_board, room_type_id: villa.id))
+    expect(page).not_to have_text("Content missing")
+
+    visit hotel_room_types_path(hotel, open: villa.id)
+    within("#room-inventory-#{villa.id}") { click_link "New rate" }
+
+    expect(page).to have_css("h1", text: "New rate plan", wait: 10)
+    expect(page).to have_current_path(new_hotel_rate_plan_path(hotel, room_type_id: villa.id))
+  end
+
   it "keeps the tab in the URL and returns to it after saving" do
     open_plan
     expect(active_tab).to eq("Details")
