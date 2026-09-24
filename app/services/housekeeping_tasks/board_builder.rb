@@ -94,6 +94,7 @@ module HousekeepingTasks
         active_booking: booking,
         booking_status:,
         booking_status_label: BOOKING_STATUSES.fetch(booking_status),
+        guest_name: guest_name_for(booking),
         late_checkout_eligible: late_checkout_eligible?(booking),
         pax: booking ? "#{booking.adults}/#{booking.children || 0}" : "—",
         assigned_to: persisted_status&.assigned_to,
@@ -120,6 +121,23 @@ module HousekeepingTasks
         .joins(:booking_rooms)
         .select("bookings.*, booking_rooms.room_type_id AS scoped_room_type_id, booking_rooms.room_number AS scoped_room_number")
         .group_by { |booking| room_key(booking.scoped_room_type_id, booking.scoped_room_number) }
+    end
+
+    def primary_guest_names_by_booking
+      @primary_guest_names_by_booking ||= begin
+        booking_ids = bookings_by_room.values.flatten.map(&:id).uniq
+        if booking_ids.empty?
+          {}
+        else
+          BookingGuest.where(booking_id: booking_ids, role: "primary").pluck(:booking_id, :name_snapshot).to_h
+        end
+      end
+    end
+
+    def guest_name_for(booking)
+      return "—" unless booking
+
+      primary_guest_names_by_booking[booking.id].presence || booking.guest_name
     end
 
     def blocks_by_room

@@ -46,6 +46,43 @@ RSpec.describe HousekeepingTasks::BoardBuilder, frozen_time: Time.zone.local(202
     expect(rows).to all(satisfy { |entry| !entry.key?(:hk_requests) })
   end
 
+  it "uses the primary guest snapshot, then the booking name, and leaves vacant rooms unnamed" do
+    primary_booking = stay(
+      status: "checked_in", check_in: selected_date - 1.day, check_out: selected_date + 1.day,
+      guest_name: "Booking Name"
+    )
+    create(:booking_guest, booking: primary_booking, guest: create(:guest, name: "Profile Name"),
+      is_primary: true, name_snapshot: "Stay Guest")
+    create(:booking_guest, booking: primary_booking, guest: create(:guest, name: "Companion"),
+      name_snapshot: "Companion")
+    fallback_booking = stay(room_number: "102", status: "checked_in", check_in: selected_date - 1.day,
+      check_out: selected_date + 1.day, guest_name: "Legacy Guest")
+    fallback_guest = create(:booking_guest, booking: fallback_booking, guest: create(:guest), is_primary: true)
+    fallback_guest.update_column(:name_snapshot, nil)
+
+    rows = build_board.index_by { |entry| entry[:room_number] }
+
+    expect(rows.fetch("101")[:guest_name]).to eq("Stay Guest")
+    expect(rows.fetch("102")[:guest_name]).to eq("Legacy Guest")
+    expect(rows.fetch("201")[:guest_name]).to eq("—")
+  end
+
+  it "loads primary guest names with one query for multiple occupied rooms" do
+    %w[101 102].each do |number|
+      booking = stay(room_number: number, status: "checked_in", check_in: selected_date - 1.day,
+        check_out: selected_date + 1.day)
+      create(:booking_guest, booking:, guest: create(:guest), is_primary: true)
+    end
+    guest_queries = []
+    subscriber = lambda do |_name, _start, _finish, _id, payload|
+      guest_queries << payload[:sql] if payload[:sql].include?('FROM "booking_guests"') && !payload[:cached]
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { build_board }
+
+    expect(guest_queries.size).to eq(1)
+  end
+
   it "keeps a booking on one room type off the rooms of another" do
     stay(
       status: "checked_in",
