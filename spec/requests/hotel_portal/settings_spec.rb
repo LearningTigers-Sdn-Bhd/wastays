@@ -91,6 +91,47 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response.parsed_body.css("title").text).to eq("General | #{hotel.name}")
     end
 
+    it "shows the OTA Logins tab and an empty state" do
+      get hotel_ota_logins_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      expect(document.at_css("h1").text).to eq("OTA Logins")
+      expect(document.at_css("#ota-logins-heading").text).to eq("Recorded OTA Logins")
+      expect(document.at_css("#hotel-breadcrumb").text).to include("OTA Logins")
+      expect(document.at_css("[data-testid='settings-tabs'] a[aria-current='page']").text.squish).to eq("OTA Logins")
+      expect(document.text).to include("No OTA logins were provided during onboarding.")
+      expect(document.at_css("section[aria-labelledby='ota-logins-heading']").css("form")).to be_empty
+    end
+
+    it "shows only this hotel's saved OTA details without exposing passwords" do
+      create(:hotel_ota_credential, hotel: hotel, channel_name: "Booking.com", property_code: "BC-42",
+             username: "booking-user", password: "private-ota-password", status: "processed",
+             market_manager_name: "Amina", market_manager_phone: "+60123456789",
+             market_manager_email: "amina@example.com")
+      create(:hotel_ota_credential, hotel: hotel, channel_name: "Agoda", password: nil)
+      create(:hotel_ota_credential, hotel: create(:hotel, account: account), channel_name: "Foreign OTA")
+
+      get hotel_ota_logins_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      rows = document.css("table tbody tr")
+      expect(rows.map { |row| row.at_css("th[scope='row']").text }).to eq([ "Booking.com", "Agoda" ])
+      expect(rows.first.text).to include("BC-42", "booking-user", "On file", "Amina", "+60123456789", "amina@example.com", "Processed")
+      expect(rows.last.text).to include("Not provided", "Pending")
+      expect(response.body).not_to include("private-ota-password", "Foreign OTA")
+      expect(document.at_css("section[aria-labelledby='ota-logins-heading']").css("form")).to be_empty
+    end
+
+    it "does not show OTA logins to a user with only account permission" do
+      RolePermission.find_by!(role: role, permission: Permission.find_by!(slug: "manage_hotel_profile")).destroy!
+
+      get hotel_ota_logins_settings_path(hotel)
+
+      expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
+    end
+
     it "shows concierge QR entry when AI concierge page is enabled" do
       get hotel_general_settings_path(hotel)
 
@@ -244,7 +285,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[2].at_css("a")&.text&.squish).to eq("General")
       expect(breadcrumb_items[2].at_css("button[aria-label='Open General navigation']")).to be_present
       expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "General", "Notifications", "Plan & Billing" ]
+        [ "General", "OTA Logins", "Notifications", "Plan & Billing" ]
       )
     end
 

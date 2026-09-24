@@ -1,0 +1,39 @@
+<section aria-labelledby="ota-logins-heading" class="space-y-4">
+  <div>
+    <h2 id="ota-logins-heading" class="text-base font-semibold text-foreground">Recorded OTA Logins</h2>
+    <p class="mt-2 text-sm text-muted-foreground">These details were provided during onboarding. Passwords are never shown in the hotel portal.</p>
+  </div>
+
+  <% if @ota_credentials.any? %>
+    <%= render PanelsUI::Table.new(caption: "OTA logins", header_style: :sentence) do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Channel</th>
+          <th scope="col">Property ID</th>
+          <th scope="col">Username</th>
+          <th scope="col">Password on file</th>
+          <th scope="col">Market manager</th>
+          <th scope="col">Phone</th>
+          <th scope="col">Email</th>
+          <th scope="col">Processing status</th>
+        </tr>
+      <% end %>
+      <% table.with_body do %>
+        <% @ota_credentials.each do |credential| %>
+          <tr>
+            <th scope="row"><%= credential.channel_name %></th>
+            <td><%= credential.property_code.presence || "—" %></td>
+            <td><%= credential.username.presence || "—" %></td>
+            <td><%= credential.password_saved? ? "On file" : "Not provided" %></td>
+            <td><%= credential.market_manager_name.presence || "—" %></td>
+            <td><%= credential.market_manager_phone.presence || "—" %></td>
+            <td><%= credential.market_manager_email.presence || "—" %></td>
+            <td><%= credential.status.humanize %></td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% else %>
+    <p class="text-sm text-muted-foreground">No OTA logins were provided during onboarding.</p>
+  <% end %>
+</section>

@@ -799,6 +799,7 @@ Rails.application.routes.draw do
     scope "settings" do
       get "general", to: "settings#index", as: :general_settings, defaults: { settings_page: "general" }
       patch "general", to: "settings#update", defaults: { settings_page: "general" }
+      get "general/ota-logins", to: "settings#index", as: :ota_logins_settings, defaults: { settings_page: "ota_logins" }
       get "general/boat", to: "settings#index", as: :boat_settings, defaults: { settings_page: "boat" }
       patch "general/boat", to: "settings#update", defaults: { settings_page: "boat" }
       post "general/boat/slots", to: "boat_schedules#create", as: :boat_schedule_slots

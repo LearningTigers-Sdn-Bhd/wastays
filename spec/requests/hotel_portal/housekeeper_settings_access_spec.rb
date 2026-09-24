@@ -24,6 +24,13 @@ RSpec.describe 'HotelPortal::Settings Housekeeper Access', type: :request do
       expect(response).to redirect_to(root_path)
       expect(flash[:alert]).to eq('You are not authorized to perform this action.')
     end
+
+    it 'denies access to OTA logins' do
+      get hotel_ota_logins_settings_path(hotel)
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq('You are not authorized to perform this action.')
+    end
   end
 
   describe 'PATCH /hotel/:hotel_id/settings' do
