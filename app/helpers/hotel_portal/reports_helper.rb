@@ -149,6 +149,7 @@ module HotelPortal::ReportsHelper
     case meal.downcase
     when "breakfast" then "text-[#b45309]"
     when "lunch" then "text-[#15803d]"
+    when "hi-tea", "hi_tea" then "text-[#7c3aed]"
     when "dinner" then "text-[#c2410c]"
     else "text-slate-700"
     end

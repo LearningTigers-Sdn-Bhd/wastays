@@ -269,7 +269,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         "registration_cards" => { tables: 1, metrics: 3 },
         "bibo" => { tables: 2, metrics: 0 },
         # The meal tab lands on "All": one table per meal.
-        "meal_prep" => { tables: 3, metrics: 0 }
+        "meal_prep" => { tables: 4, metrics: 0 }
       }.each do |tab, expected|
         get guest_reports_hotel_reports_path(hotel), params: {
           start_date: start_date.to_s,

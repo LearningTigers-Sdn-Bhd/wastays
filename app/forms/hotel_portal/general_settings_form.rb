@@ -29,7 +29,7 @@ module HotelPortal
         :agent_payment_hold_amount, :agent_payment_hold_unit,
         :guest_registration_card_terms,
         guest_registration_card_fields: [],
-        hotel_boat_setting_attributes: [ :id, :breakfast_time, :lunch_time, :dinner_time ],
+        hotel_boat_setting_attributes: [ :id, :breakfast_time, :lunch_time, :hi_tea_time, :dinner_time ],
         property_policy_attributes: [ :id, :check_in_time, :check_out_time ]
       )
 

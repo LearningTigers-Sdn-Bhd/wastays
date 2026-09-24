@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_24_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1413,6 +1413,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.datetime "created_at", null: false
     t.boolean "has_breakfast", default: false, null: false
     t.boolean "has_dinner", default: false, null: false
+    t.boolean "has_hi_tea", default: false, null: false
     t.boolean "has_lunch", default: false, null: false
     t.bigint "hotel_id", null: false
     t.string "kind", null: false
@@ -1428,6 +1429,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.time "breakfast_time"
     t.datetime "created_at", null: false
     t.time "dinner_time"
+    t.time "hi_tea_time"
     t.bigint "hotel_id", null: false
     t.time "lunch_time"
     t.datetime "updated_at", null: false

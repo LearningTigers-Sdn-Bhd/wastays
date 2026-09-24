@@ -486,7 +486,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response.body).to include("09:30", "16:45")
     end
 
-    it "hides Save until a slot changes, keeps the new-slot card collapsed, and wires each button to its own form" do
+    it "hides Discard until a slot changes, keeps the new-slot card collapsed, and wires each button to its own form" do
       hotel.update!(allow_boat_information: true)
       slot = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
 
@@ -495,20 +495,18 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       document = Nokogiri::HTML(response.body)
       row = document.at_css("li[data-controller='boat-slot']:not([hidden])")
 
-      # Save and Discard are hidden on the buttons themselves -- no wrapper, so
-      # they stay direct children of the group -- and the row's Stimulus
-      # controller reveals both once the row differs from what was saved.
-      save = row.at_css("button[data-boat-slot-target='save']")
-      expect(save["hidden"]).not_to be_nil
-      expect(save["form"]).to eq("boat-slot-#{slot.id}")
-
-      # Discard resets the edit form rather than submitting anything, which is
-      # the only way out of a dirty row that is not Save.
+      # There's no per-row Save button -- every dirty row is saved together
+      # from the page-level bulk bar. Discard is hidden on the button itself
+      # -- no wrapper, so it stays a direct child of the group -- and the
+      # row's Stimulus controller reveals it once the row differs from what
+      # was saved.
+      expect(row.at_css("button[data-boat-slot-target='save']")).to be_nil
       discard = row.at_css("button[data-boat-slot-target='discard']")
       expect(discard["hidden"]).not_to be_nil
       expect(discard["type"]).to eq("button")
       expect(discard["data-action"]).to eq("boat-slot#discard")
       expect(row.at_css("form[data-boat-slot-target='form']")["id"]).to eq("boat-slot-#{slot.id}")
+      expect(row.at_css("form[data-boat-slot-target='form']")["data-slot-id"]).to eq(slot.id.to_s)
 
       # Retire submits its own form, so the two live in one button group
       # without nesting a form inside a form.
@@ -518,12 +516,12 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       state_form = document.at_css("form#boat-slot-#{slot.id}-state")
       expect(state_form.at_css("input[name='_method']")["value"]).to eq("delete")
 
-      # All three are icon-only direct children of one group -- a wrapper would
+      # Both are icon-only direct children of one group -- a wrapper would
       # drop out of the selectors that join their corners -- and neither
-      # secondary button falls back to the primary variant that an unknown
-      # variant name silently produces.
+      # falls back to the primary variant that an unknown variant name
+      # silently produces.
       group = row.at_css(".panel-button-group")
-      expect(group.css("> button").size).to eq(3)
+      expect(group.css("> button").size).to eq(2)
       expect(group.css("button").map { |button| button.text.squish }).to all(be_empty)
       expect(retire["data-variant"]).to eq("neutral")
       expect(discard["data-variant"]).to eq("neutral")
@@ -532,6 +530,13 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       section = document.at_css("section[data-controller='boat-slots']")
       expect(section.at_css("[data-boat-slots-target='trigger']").text).to include("Add slot")
       expect(section.at_css("li[data-boat-slots-target='card']")["hidden"]).not_to be_nil
+
+      # The bulk save bar wraps both sections and starts hidden -- shown once
+      # any row goes dirty.
+      bar = document.at_css("[data-boat-slots-bulk-target='bar']")
+      expect(bar["hidden"]).not_to be_nil
+      expect(bar.at_css("[data-action='boat-slots-bulk#save']").text).to include("Save changes")
+      expect(bar.at_css("[data-action='boat-slots-bulk#discardAll']").text).to include("Discard all")
     end
 
     it "saves meal service times on the Boat Settings tab" do
@@ -560,6 +565,23 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(slot.meals).to eq(%i[lunch dinner])
     end
 
+    it "saves a hi-tea service time and a hi-tea entitlement on a slot" do
+      hotel.update!(allow_boat_information: true)
+
+      patch hotel_boat_settings_path(hotel), params: {
+        form_id: "boat_settings",
+        hotel: { hotel_boat_setting_attributes: { breakfast_time: "08:00", lunch_time: "12:00", hi_tea_time: "15:30", dinner_time: "19:00" } }
+      }
+      expect(hotel.reload.hotel_boat_setting.hi_tea_time.strftime("%H:%M")).to eq("15:30")
+
+      post hotel_boat_schedule_slots_path(hotel), params: { hotel_boat_schedule: { kind: "boat_in", time: "14:00" } }
+      slot = hotel.hotel_boat_schedules.find_by!(kind: "boat_in", time: "14:00")
+      expect(slot.meals).to eq(%i[hi_tea dinner])
+
+      get hotel_boat_settings_path(hotel)
+      expect(Nokogiri::HTML(response.body).css("label").map { |label| label.text.squish }).to include("Hi-Tea")
+    end
+
     it "retires a slot rather than destroying it, so booked guests keep it" do
       hotel.update!(allow_boat_information: true)
       slot = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
@@ -585,6 +607,55 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       }.not_to change(HotelBoatSchedule, :count)
 
       expect(flash[:alert]).to include("already has a slot at this time")
+    end
+
+    it "saves several boat slots in one bulk request" do
+      hotel.update!(allow_boat_information: true)
+      morning = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30", has_breakfast: true, has_lunch: false)
+      evening = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "18:00", has_dinner: false)
+
+      patch hotel_boat_schedule_slots_bulk_update_path(hotel), params: {
+        hotel_boat_schedules: {
+          morning.id.to_s => { time: "09:45", has_breakfast: "0", has_lunch: "1" },
+          evening.id.to_s => { has_dinner: "1" }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_boat_settings_path(hotel))
+      expect(flash[:notice]).to eq("2 boat slots updated.")
+      expect(morning.reload.time_of_day).to eq("09:45")
+      expect(morning.has_breakfast).to eq(false)
+      expect(morning.has_lunch).to eq(true)
+      expect(evening.reload.has_dinner).to eq(true)
+    end
+
+    it "saves none of the batch when one slot in it fails validation" do
+      hotel.update!(allow_boat_information: true)
+      keeper = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      breaker = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "18:00")
+
+      patch hotel_boat_schedule_slots_bulk_update_path(hotel), params: {
+        hotel_boat_schedules: {
+          keeper.id.to_s => { time: "10:00" },
+          breaker.id.to_s => { time: "" }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_boat_settings_path(hotel))
+      expect(flash[:alert]).to be_present
+      expect(keeper.reload.time_of_day).to eq("09:30")
+    end
+
+    it "ignores a bulk-update id that doesn't belong to this hotel" do
+      hotel.update!(allow_boat_information: true)
+      other_slot = create(:hotel_boat_schedule, kind: "boat_in", time: "09:30")
+
+      patch hotel_boat_schedule_slots_bulk_update_path(hotel), params: {
+        hotel_boat_schedules: { other_slot.id.to_s => { time: "10:00" } }
+      }
+
+      expect(flash[:alert]).to be_present
+      expect(other_slot.reload.time_of_day).to eq("09:30")
     end
 
     it "discards unknown guest registration card fields and allows none" do
