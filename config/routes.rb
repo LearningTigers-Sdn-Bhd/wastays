@@ -844,6 +844,7 @@ Rails.application.routes.draw do
             patch "photos/feature", action: :set_featured_photo, as: :photo_feature
             patch "photos/reorder", action: :reorder_photos, as: :reorder_photos
           end
+          resource :primary_rate_plan, only: :update, controller: "room_type_primary_rate_plans"
         end
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do
           get :autocomplete, on: :collection

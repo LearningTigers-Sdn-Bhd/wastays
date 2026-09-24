@@ -26,7 +26,7 @@ class HotelPortal::RatePlanRoomPricingsController < HotelPortal::BaseController
 
     if result.success?
       ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: [ @room_type.id ])
-      render_editor_success("#{@room_type.name} pricing saved.", room_type_id: @room_type.id)
+      render_editor_saved("#{@room_type.name} pricing saved.")
     else
       render_editor_errors(room_type_id: @room_type.id)
     end

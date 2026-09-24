@@ -6,19 +6,62 @@
     <p class="mt-1 text-sm text-muted-foreground">Name, description, occupancy, and child-pricing changes apply to every room category attached to this plan.</p>
   </div>
 
-  <% unless rate_plan.standard_rate? %>
-    <div class="grid items-start gap-4">
-      <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true) do |field| %>
-        <% field.with_input(autocomplete: "off") %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
-        <% field.with_text_area(rows: 3, placeholder: "Pay in full at booking. No changes or refunds.") %>
-      <% end %>
-    </div>
-  <% end %>
+  <div class="grid items-start gap-4">
+    <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true,
+          hint: (rate_plan.standard_rate? ? "This is the room category's base rate. Rename it freely; other plans keep pricing from it." : nil)) do |field| %>
+      <% field.with_input(autocomplete: "off") %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description") do |field| %>
+      <% field.with_text_area(rows: 3, placeholder: "Pay in full at booking. No changes or refunds.") %>
+    <% end %>
+  </div>
 
   <p class="text-sm text-muted-foreground">Daily prices, availability, and restrictions are managed under Rates &amp; Availability.</p>
 </section>
+
+<% if rate_plan.kind.in?(RatePlan.kinds_for(:public)) %>
+  <section aria-labelledby="rate-plan-public-visibility-heading" class="space-y-4">
+    <div>
+      <h3 id="rate-plan-public-visibility-heading" class="text-base font-semibold text-foreground">Public booking site</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Hide this plan from the booking site's own room search. Front desk staff, and travel agents where allowed below, can still book it.</p>
+    </div>
+    <%= render PanelsUI::Checkbox.new(
+          form: f,
+          attribute: :hidden_from_public,
+          label: "Hide from the public booking site",
+          checked: rate_plan.hidden_from_public) %>
+  </section>
+<% end %>
+
+<% if rate_plan.kind.in?(RatePlan.kinds_for(:corporate)) %>
+  <section aria-labelledby="rate-plan-ta-access-heading" class="space-y-4" data-controller="value-reveal">
+    <div>
+      <h3 id="rate-plan-ta-access-heading" class="text-base font-semibold text-foreground">Travel agent portal</h3>
+      <p class="mt-1 text-sm text-muted-foreground">Which travel agents can book this plan from their own portal. Front desk staff always see every active plan.</p>
+    </div>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :ta_access, label: "Who can book it") do |field| %>
+      <% field.with_native_select(
+           RatePlan::TA_ACCESS_LABELS.map { |value, label| [ label, value ] },
+           selected: rate_plan.ta_access,
+           data: { value_reveal_target: "source", action: "value-reveal#update" }) %>
+    <% end %>
+    <% agencies = current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).sort_by { |account| account.corporate_account.name.to_s.downcase } %>
+    <div data-value-reveal-target="panel" data-reveal-values="except only" <%= "hidden" unless rate_plan.agency_rules? %>>
+      <% if agencies.any? %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :agency_account_ids, label: "Travel agents",
+              hint: "Excluded under “All travel agents except…”, the only ones allowed under “Only selected travel agents”.") do |field| %>
+          <% field.with_multi_select(
+               agencies.map { |account| { label: account.corporate_account.name, value: account.id } },
+               selected: rate_plan.agency_account_ids,
+               prompt: "Search travel agents",
+               empty_text: "No travel agents found") %>
+        <% end %>
+      <% else %>
+        <p class="text-sm text-muted-foreground">No travel agent accounts are linked to this property yet.</p>
+      <% end %>
+    </div>
+  </section>
+<% end %>
 
 <% unless current_hotel.sells_per_person? %>
   <section aria-labelledby="rate-plan-occupancy-heading" class="space-y-4">

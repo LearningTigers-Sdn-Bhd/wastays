@@ -81,6 +81,20 @@ class RoomType < ApplicationRecord
     @standard_rate_plan = system_rate_plan("standard") || active_rate_plans.first
   end
 
+  # The plan the property chose to lead with -- listed first and quoted as the
+  # "from" price to guests and agents. A display choice only: pricing,
+  # derivation and restrictions still anchor on standard_rate_plan. Nil until
+  # a plan is picked (or once the picked plan is archived), in which case every
+  # surface keeps its old behaviour -- the booking site quoting the best price.
+  def primary_rate_plan
+    flagged = room_type_rate_plans.find(&:primary_plan?)&.rate_plan_id
+    active_rate_plans.find { |plan| plan.id == flagged } if flagged
+  end
+
+  def primary_rate_plan?(rate_plan)
+    rate_plan.present? && primary_rate_plan&.id == rate_plan.id
+  end
+
   def walk_in_rate_plan
     system_rate_plan("walk_in")
   end

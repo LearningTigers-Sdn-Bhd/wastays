@@ -78,7 +78,6 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     attrs = rate_plan_params
     room_type_id = attrs.delete(:room_type_id)
     attrs.delete(:rate_plan_id)
-    attrs = attrs.except(:name, :description) if @rate_plan.standard_rate?
     @selected_room_type = @rate_plan.room_types.find_by(id: room_type_id)
     @room_pricing = if @selected_room_type
       HotelPortal::RatePlanRoomPricing.from_h(
@@ -120,7 +119,7 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
       # Plan-level fields (including flattened Channex child fees) apply to
       # every assignment, so one batched reconciliation covers them all.
       ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: @rate_plan.room_type_ids)
-      render_editor_success("Rate plan saved.", room_type_id: @selected_room_type.id)
+      render_editor_saved("Rate plan '#{@rate_plan.name}' saved.")
     else
       render_editor_errors(room_type_id: room_type_id)
     end
@@ -222,7 +221,11 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
       :child_price_multiplier,
       :channex_children_fee,
       :channex_infant_fee,
-      rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ]
+      :ta_access,
+      :hidden_from_public,
+      agency_account_ids: [],
+      rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ],
+      rate_plan_stay_discounts_attributes: [ :id, :min_nights, :discount_type, :value, :from_night, :_destroy ]
     )
   end
 

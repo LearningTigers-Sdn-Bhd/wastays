@@ -433,6 +433,13 @@ RSpec.describe BookingEngine::AvailabilityService do
         service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
         expect(service.send(:candidate_rate_plans_for, room_type)).not_to include(walk_in)
       end
+
+      it "drops a plan hidden from the public booking site" do
+        pax_rate_plan.update!(hidden_from_public: true)
+
+        service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
+        expect(service.send(:candidate_rate_plans_for, room_type)).not_to include(pax_rate_plan)
+      end
     end
 
     context "when the hotel sells per guest", :per_person do
@@ -454,6 +461,19 @@ RSpec.describe BookingEngine::AvailabilityService do
         service = described_class.new(check_in: check_in, check_out: check_out, adults: 1)
         expect(service.send(:candidate_rate_plans_for, room_type)).not_to include(walk_in)
       end
+    end
+  end
+  describe "long-stay discounts" do
+    it "quotes a qualifying stay at the discounted nightly rate and records the full price" do
+      standard_plan = room_type.standard_rate_plan
+      standard_plan.rate_plan_stay_discounts.create!(min_nights: 2, discount_type: "percent", value: 20, from_night: 2)
+
+      service = described_class.new(check_in: check_in, check_out: check_out, adults: 2)
+      summary = service.pricing_summary_for(room_type, rate_plan: standard_plan)
+
+      expect(summary[:total_price]).to eq(180.to_d) # 100 + 80
+      second_night = service.send(:pricing_option_for, room_type, standard_plan).nightly_rates[check_in + 1.day]
+      expect(second_night).to include("price" => "80.0", "undiscounted_price" => "100.0")
     end
   end
 end

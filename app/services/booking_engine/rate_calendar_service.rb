@@ -22,7 +22,7 @@ module BookingEngine
                 ON ri.room_type_id = room_rates.room_type_id
                AND ri.date         = room_rates.date")
         .where(room_type_id: room_type_ids, date: dates)
-        .where(rate_plans: { hotel_id: @hotel.id, archived_at: nil, kind: RatePlan.kinds_for(:public) })
+        .where(rate_plans: { hotel_id: @hotel.id, archived_at: nil, kind: RatePlan.kinds_for(:public), hidden_from_public: false })
         .where(ri: { status: "open" })
         .where("ri.quantity >= ?", @room_count)
         .group("room_rates.date")
@@ -53,7 +53,7 @@ module BookingEngine
                 ON ri.room_type_id = room_rates.room_type_id
                AND ri.date         = room_rates.date")
         .where(room_type_id: room_type_ids, date: dates)
-        .where(rate_plans: { hotel_id: @hotel.id, archived_at: nil, kind: RatePlan.kinds_for(:public) })
+        .where(rate_plans: { hotel_id: @hotel.id, archived_at: nil, kind: RatePlan.kinds_for(:public), hidden_from_public: false })
         .where(ri: { status: "open" })
         .where("ri.quantity >= ?", @room_count)
       room_rates_data = eligible_room_rates

@@ -5,6 +5,10 @@
 module RatePlanEditorLoading
   extend ActiveSupport::Concern
 
+  included do
+    include SheetActionCompletion
+  end
+
   EDITOR_FRAME = "settings_action_sheet"
 
   private
@@ -32,6 +36,18 @@ module RatePlanEditorLoading
     end
   end
 
+  # Save is the end of an edit: close the sheet and land back on Room
+  # Inventory, whose rows show what was just changed. Re-rendering the editor
+  # in place left staff unsure whether the save had gone through.
+  def render_editor_saved(message)
+    complete_sheet_action(
+      destination: hotel_room_types_path(current_hotel),
+      notice: message,
+      frame: turbo_frame_request_id.presence || EDITOR_FRAME
+    )
+  end
+
+  # In-editor actions (detaching a room) keep the sheet open on the next room.
   def render_editor_success(message, room_type_id: params[:room_type_id])
     load_rate_plan_editor(room_type_id: room_type_id)
 

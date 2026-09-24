@@ -296,13 +296,13 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(empty_state["class"]).to include("hidden")
     end
 
-    it "uses the same shell for Standard Rate while locking its identity and room membership" do
+    it "uses the same shell for Standard Rate, lets it be renamed, and locks its room membership" do
       standard = room_type.standard_rate_plan
 
       get edit_hotel_rate_plan_path(hotel, standard)
 
       doc = Nokogiri::HTML(response.body)
-      expect(doc.at_css('#rate_plan_name')).to be_nil
+      expect(doc.at_css('#rate_plan_name')["value"]).to eq("Standard Rate")
       expect(doc.text.squish).to include("Standard Rate follows the room category")
       expect(doc.text.squish).to include(room_type.name)
       expect(doc.text.squish).not_to include("Remove #{room_type.name}")
@@ -319,7 +319,6 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       get edit_hotel_rate_plan_path(hotel, standard)
 
       doc = Nokogiri::HTML(response.body)
-      expect(doc.at_css('#rate_plan_name')).to be_nil
       expect(doc.at_css('[name="room_pricing[prices][1]"]')["value"]).to eq("180.0")
       expect(doc.at_css('[name="room_pricing[prices][2]"]')["value"]).to eq("300.0")
       expect(doc.text.squish).to include("Child pricing")
@@ -547,8 +546,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
-      expect(response.body).to include('target="settings_action_sheet"')
-      expect(response.body).not_to include('action="complete_sheet"')
+      expect(response.body).to include('action="complete_sheet"', 'target="settings_action_sheet"')
+      expect(response.body).to include(%(url="#{hotel_room_types_path(hotel)}"))
       expect(rate_plan.reload).to have_attributes(name: "Advance purchase", description: "Pay before arrival")
       expect(rate_plan.room_type_rate_plans.sole.pricing_value).to eq(225.to_d)
     end
@@ -575,7 +574,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.room_type_rate_plans.sole.occupancy_prices.order(:adults).pluck(:price)).to eq([ 180.to_d, 300.to_d ])
     end
 
-    it "keeps Standard Rate identity locked while saving its per-guest room pricing", :per_person do
+    it "renames the Standard Rate while keeping it the base rate", :per_person do
       room_type.update!(max_adults: 2)
       standard = room_type.standard_rate_plan
 
@@ -585,8 +584,117 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       }, headers: turbo_headers
 
       expect(response).to have_http_status(:ok)
-      expect(standard.reload.name).to eq("Standard Rate")
+      expect(standard.reload).to have_attributes(name: "Renamed", kind: "standard")
+      expect(room_type.reload.standard_rate_plan).to eq(standard)
       expect(standard.room_type_rate_plans.sole.occupancy_prices.count).to eq(2)
+    end
+
+    it "saves long-stay discounts from the editor" do
+      patch hotel_rate_plan_path(hotel, rate_plan), params: {
+        rate_plan: {
+          room_type_id: room_type.id,
+          rate_plan_stay_discounts_attributes: {
+            "0" => { min_nights: "3", discount_type: "percent", value: "15", from_night: "2" },
+            "1" => { min_nights: "", value: "" }
+          }
+        },
+        room_pricing: { rate_mode: "manual", default_rate: "225" }
+      }, headers: turbo_headers
+
+      expect(response.body).to include('action="complete_sheet"')
+      expect(rate_plan.reload.rate_plan_stay_discounts.sole).to have_attributes(min_nights: 3, discount_type: "percent", value: 15, from_night: 2)
+
+      get edit_hotel_rate_plan_path(hotel, rate_plan)
+      expect(response.body).to include("Long-stay discounts", "Stay 3+ nights: 15% off, from night 2")
+    end
+
+    it "rejects a long-stay discount that starts after its minimum stay" do
+      patch hotel_rate_plan_path(hotel, rate_plan), params: {
+        rate_plan: {
+          room_type_id: room_type.id,
+          rate_plan_stay_discounts_attributes: { "0" => { min_nights: "2", discount_type: "percent", value: "15", from_night: "4" } }
+        },
+        room_pricing: { rate_mode: "manual", default_rate: "225" }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(rate_plan.reload.rate_plan_stay_discounts).to be_empty
+    end
+
+    describe "travel agent portal access" do
+      let(:agency) { create(:hotel_corporate_account, hotel: hotel) }
+
+      def save_access(ta_access, agency_ids)
+        patch hotel_rate_plan_path(hotel, rate_plan), params: {
+          rate_plan: { room_type_id: room_type.id, ta_access: ta_access, agency_account_ids: [ "" ] + agency_ids.map(&:to_s) },
+          room_pricing: { rate_mode: "manual", default_rate: "225" }
+        }, headers: turbo_headers
+      end
+
+      it "offers the plan to only the agencies picked" do
+        save_access("only", [ agency.id ])
+
+        expect(response).to have_http_status(:ok)
+        expect(rate_plan.reload.ta_access).to eq("only")
+        expect(rate_plan.rate_plan_agency_rules.pluck(:hotel_corporate_account_id)).to eq([ agency.id ])
+        expect(rate_plan.offered_to_agency?(agency)).to be(true)
+      end
+
+      it "drops the named agencies when the plan is opened to everyone" do
+        rate_plan.update!(ta_access: "only", agency_account_ids: [ agency.id ])
+
+        save_access("all", [ agency.id ])
+
+        expect(rate_plan.reload.ta_access).to eq("all")
+        expect(rate_plan.rate_plan_agency_rules).to be_empty
+      end
+
+      it "refuses an only-these plan that names no agency" do
+        save_access("only", [])
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("must name at least one travel agent")
+        expect(rate_plan.reload.ta_access).to eq("hidden")
+      end
+
+      it "refuses an agency linked to another property" do
+        foreign = create(:hotel_corporate_account)
+
+        save_access("except", [ foreign.id ])
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(rate_plan.reload.rate_plan_agency_rules).to be_empty
+      end
+
+      it "shows the setting in the editor" do
+        get edit_hotel_rate_plan_path(hotel, rate_plan)
+
+        expect(response.parsed_body.at_css("select[name='rate_plan[ta_access]']")).to be_present
+      end
+    end
+
+    describe "public booking site visibility" do
+      it "hides the plan from the public booking site" do
+        patch hotel_rate_plan_path(hotel, rate_plan), params: {
+          rate_plan: { room_type_id: room_type.id, hidden_from_public: "1" },
+          room_pricing: { rate_mode: "manual", default_rate: "225" }
+        }, headers: turbo_headers
+
+        expect(response).to have_http_status(:ok)
+        expect(rate_plan.reload.hidden_from_public).to be(true)
+        expect(rate_plan.bookable_by?(:public)).to be(false)
+        expect(rate_plan.bookable_by?(:staff)).to be(true)
+      end
+
+      it "shows the setting in the editor, only for a publicly-sellable plan" do
+        get edit_hotel_rate_plan_path(hotel, rate_plan)
+        expect(response.parsed_body.at_css("input[name='rate_plan[hidden_from_public]'][type='checkbox']")).to be_present
+
+        walk_in = create(:rate_plan, :walk_in_tier, hotel: hotel)
+        RoomTypeRatePlan.create!(room_type: room_type, rate_plan: walk_in)
+        get edit_hotel_rate_plan_path(hotel, walk_in, room_type_id: room_type.id)
+        expect(response.parsed_body.at_css("input[name='rate_plan[hidden_from_public]']")).to be_nil
+      end
     end
 
     it "rolls back shared fields when selected-room pricing is invalid" do
@@ -677,6 +785,16 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Enter a price for 2 adults")
       expect(response.body).to include("data-rate-plan-editor-room-type-id-value=\"#{room_type.id}\"")
+    end
+
+    it "closes the sheet after saving one room's pricing" do
+      put hotel_rate_plan_room_pricing_path(hotel, rate_plan, room_type), params: {
+        room_pricing: { rate_mode: "manual", default_rate: "240" }
+      }, headers: turbo_headers
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('action="complete_sheet"', %(url="#{hotel_room_types_path(hotel)}"))
+      expect(rate_plan.room_type_rate_plans.sole.pricing_value).to eq(240.to_d)
     end
 
     it "removes an eligible room immediately and keeps the editor open" do

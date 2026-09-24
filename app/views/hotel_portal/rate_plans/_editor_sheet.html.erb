@@ -25,7 +25,7 @@
                 <%= render PanelsUI::Badge.new(label: rate_plan.archived? ? "Archived" : "Active", variant: rate_plan.archived? ? :warning : :success, size: :sm) %>
               </div>
               <p class="mt-1 text-sm text-muted-foreground">
-                <%= current_hotel.sells_per_person? ? "Price per guest" : "One price per room" %> · <span translate="no"><%= rate_plan.currency %></span><%= " · Standard Rate" if rate_plan.standard_rate? %>
+                <%= current_hotel.sells_per_person? ? "Price per guest" : "One price per room" %> · <span translate="no"><%= rate_plan.currency %></span><%= " · Base rate" if rate_plan.standard_rate? %>
               </p>
             </div>
             <button type="button"
@@ -89,7 +89,7 @@
                   </div>
 
                   <% if rate_plan.standard_rate? && !current_hotel.sells_per_person? %>
-                    <%= render PanelsUI::Alert.new(tone: :info, title: "Standard Rate follows the room category", role: :status) do |alert| %>
+                    <%= render PanelsUI::Alert.new(tone: :info, title: "#{rate_plan.name} follows the room category", role: :status) do |alert| %>
                       <% alert.with_description { "Change the default nightly amount on the room category, and use Rates & Availability for date-specific prices." } %>
                     <% end %>
                   <% else %>
@@ -108,6 +108,7 @@
             </section>
 
             <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan if current_hotel.sells_per_person? %>
+            <%= render "hotel_portal/rate_plans/stay_discounts", f: f, rate_plan: rate_plan unless rate_plan.kind == "ota" %>
           <% end %>
         </div>
       <% end %>

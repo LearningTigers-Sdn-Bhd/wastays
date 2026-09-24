@@ -37,7 +37,10 @@ module Bookings
 
       return nil if nightly.any?(&:nil?)
 
-      nightly.sum(0.to_d)
+      Rates::ApplyStayDiscount.amounts(
+        rate_plan: @rate_plan, amounts: nightly,
+        guests: Rates::ApplyStayDiscount.guests_for(@rate_plan, adults: @adults, children: @children)
+      ).sum(0.to_d)
     end
 
     private

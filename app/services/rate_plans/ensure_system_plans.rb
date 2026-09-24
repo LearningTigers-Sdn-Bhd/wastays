@@ -67,7 +67,10 @@ module RatePlans
         base_occupancy: source&.base_occupancy || 2,
         single_supplement: source&.single_supplement || 0,
         child_price_multiplier: source&.child_price_multiplier || 1,
-        extra_pax_charge: source&.extra_pax_charge || 0
+        extra_pax_charge: source&.extra_pax_charge || 0,
+        # The Corporate Rate exists to be sold to agents; the others are opted
+        # in per plan from the rate plan editor.
+        ta_access: kind == "corporate" ? "all" : "hidden"
       }
     end
 

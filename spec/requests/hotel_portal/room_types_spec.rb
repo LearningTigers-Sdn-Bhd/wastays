@@ -117,12 +117,12 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
 
       standard_assignment = grouped_room_type.room_type_rate_plans.find { |assignment| assignment.rate_plan.standard_rate? }
       standard_row = document.at_css("#room-inventory-rate-plan-#{standard_assignment.id}")
-      expect(standard_row.text.squish).to include("Standard Rate", "Default", "MYR 99.99", "Ready")
+      expect(standard_row.text.squish).to include("Standard Rate", "Base rate", "MYR 99.99", "Ready")
       expect(standard_row.text.squish).not_to include("Standard Rate MYR", "Detach rate")
       # Every other plan prices against Standard, so the switch is locked on
       # rather than absent — the row still reads as having an availability slot,
       # and it can never post an archive request.
-      expect(standard_row.at_css("form")).to be_nil
+      expect(standard_row.at_css("form[action*='archive']")).to be_nil
       standard_switch = standard_row.at_css("input[role='switch']")
       expect(standard_switch["disabled"]).to eq("disabled")
       expect(standard_switch["checked"]).to eq("checked")
@@ -510,6 +510,24 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       # inside the category form would end it early.
       expect(document.at_css("#room-type-photos-manager input[name='ordered_ids']")[:form]).to eq("reorder-photos-form")
       expect(document.at_css("form#reorder-photos-form")).to be_present
+    end
+  end
+  describe "primary rate plan" do
+    before { allow_any_instance_of(HotelPortal::RoomTypePrimaryRatePlansController).to receive(:authorize).and_return(true) }
+
+    it "makes a plan primary from Room Inventory" do
+      room_type = Rooms::SaveSeedRoomType.call!(
+        hotel: hotel,
+        attributes: { name: "Villa", room_number_mode: "custom", quantity: 1, base_price: 250.0, max_adults: 2, room_numbers: %w[V1] }
+      )
+      package = create(:rate_plan, :custom, hotel: hotel, name: "Full Board")
+      create(:room_type_rate_plan, rate_plan: package, room_type: room_type, pricing_value: 400)
+
+      patch hotel_room_type_primary_rate_plan_path(hotel, room_type, rate_plan_id: package.id)
+
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(flash[:notice]).to include("Full Board is now the primary plan for Villa")
+      expect(room_type.reload.primary_rate_plan).to eq(package)
     end
   end
 end
