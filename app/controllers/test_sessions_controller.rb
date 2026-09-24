@@ -7,7 +7,7 @@ class TestSessionsController < ApplicationController
   def create
     raise ActionController::RoutingError, "Not Found" unless Rails.env.test?
 
-    session[:user_id] = params[:user_id]
+    sign_in_user(User.find(params[:user_id]))
     head :ok
   end
 end

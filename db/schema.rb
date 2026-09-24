@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2503,6 +2503,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_120000) do
     t.check_constraint "mode::text = ANY (ARRAY['recommended'::character varying, 'strict'::character varying, 'custom'::character varying]::text[])", name: "ota_rate_variance_policies_mode_allowed"
   end
 
+  create_table "owner_password_resets", force: :cascade do |t|
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "token_digest", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["token_digest"], name: "index_owner_password_resets_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_owner_password_resets_on_user_id"
+  end
+
   create_table "payment_settings", force: :cascade do |t|
     t.string "api_key"
     t.datetime "created_at", null: false
@@ -3176,6 +3187,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_120000) do
 
   create_table "users", force: :cascade do |t|
     t.bigint "account_id", null: false
+    t.integer "auth_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.string "email"
     t.string "name"
@@ -3473,6 +3485,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_120000) do
   add_foreign_key "ota_financial_snapshots", "group_bookings"
   add_foreign_key "ota_financial_snapshots", "hotels"
   add_foreign_key "ota_rate_variance_policies", "hotels"
+  add_foreign_key "owner_password_resets", "users"
   add_foreign_key "payment_transactions", "ar_payments"
   add_foreign_key "payment_transactions", "booking_quotes"
   add_foreign_key "payment_transactions", "bookings"

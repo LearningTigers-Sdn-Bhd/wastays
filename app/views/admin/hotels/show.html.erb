@@ -1,308 +1,61 @@
-<div class="w-full space-y-6">
-  <div>
-    <%= link_to admin_hotels_path, class: "inline-flex items-center gap-x-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground" do %>
-      <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-      Back to Hotels
-    <% end %>
-  </div>
-
-  <%# Shown once, on the redirect straight after creation. The password is not %>
-  <%# stored in readable form anywhere, so this is the only chance to copy it. %>
+<% content_for :full_height_page, true %>
+<div class="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-hidden px-5 py-4">
   <% if (credentials = flash[:owner_credentials]).present? %>
     <%= render "admin/hotels/owner_credentials", credentials: credentials %>
   <% end %>
-
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-    <div class="space-y-6 xl:col-span-8">
-      <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div class="border-b border-border px-6 py-6 sm:px-8">
-          <%= render PanelsUI::PageHeader.new(
-                title: safe_join([
-                  @hotel.name,
-                  tag.span(@hotel.status.titleize, class: "inline-flex items-center gap-x-1.5 rounded-full px-3 py-1.5 text-xs font-semibold #{case @hotel.status
-                  when 'live' then 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
-                  when 'pending_review' then 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
-                  when 'suspended' then 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200'
-                  else 'bg-muted text-foreground ring-1 ring-inset ring-ring'
-                  end}")
-                ], " "),
-                description: "Review hotel details, account ownership, and current operating performance before taking action.") do |header| %>
-            <% header.with_caption do %>
-              <%= @hotel.city %>, <%= @hotel.country %>
-            <% end %>
-          <% end %>
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div class="flex min-w-0 items-start gap-3">
+      <%= link_to admin_hotels_path, class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", aria: { label: "Back to hotels" } do %>
+        <%= app_icon "arrow-left", class: "size-4", aria: { hidden: "true" } %>
+      <% end %>
+      <div class="min-w-0 space-y-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="min-w-0 truncate text-base font-semibold tracking-tight"><%= @hotel.name %></h1>
+          <%= render PanelsUI::Badge.new(label: @hotel.status.humanize, variant: @hotel.status.in?(%w[live ready_to_launch]) ? :success : :warning, size: :sm) %>
         </div>
-
-        <div class="px-6 py-6 sm:px-8">
-          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-xl border border-border bg-muted/60 px-4 py-4">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Address</p>
-              <p class="mt-2 text-sm font-medium text-foreground"><%= @hotel.address.presence || 'N/A' %></p>
-            </div>
-            <div class="rounded-xl border border-border bg-muted/60 px-4 py-4">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Star Rating</p>
-              <p class="mt-2 text-sm font-medium text-foreground"><%= @hotel.star_rating.present? ? "#{@hotel.star_rating} Stars (#{'★' * @hotel.star_rating})" : 'N/A' %></p>
-            </div>
-            <div class="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-4">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-blue-700">Configured Margin Rate</p>
-              <p class="mt-2 text-2xl font-bold tracking-tight text-foreground"><%= format_number(@configured_margin_rate, precision: 2) %>%</p>
-            </div>
-            <div class="rounded-xl border border-teal-100 bg-teal-50/60 px-4 py-4">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-teal-700">Subscription Plan</p>
-              <% if @hotel.plan %>
-                <p class="mt-2 text-sm font-bold text-foreground">
-                  <%= @hotel.plan.name %>
-                  <% if @hotel.plan.most_popular %>
-                    <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Most Popular</span>
-                  <% end %>
-                </p>
-              <% else %>
-                <p class="mt-2 text-sm font-medium text-muted-foreground">No plan assigned</p>
-              <% end %>
-            </div>
-          </div>
-        </div>
-
-        <div class="border-t border-border bg-muted/70 px-6 py-6 sm:px-8">
-          <div class="mb-4">
-            <h2 class="text-sm font-bold uppercase tracking-[0.18em] text-foreground">Performance Snapshot</h2>
-            <p class="mt-1 text-xs font-medium text-muted-foreground">Month-to-date business summary for this hotel.</p>
-          </div>
-
-          <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
-            <div class="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
-              <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Gross Revenue This Month</p>
-              <p class="mt-3 text-2xl font-bold tracking-tight text-foreground">RM <%= format_number(@hotel.gross_revenue_mtd, precision: 2) %></p>
-            </div>
-            <div class="rounded-2xl border border-red-100 bg-red-50/60 px-5 py-4 shadow-sm">
-              <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-600">WAStays Earned Margin This Month</p>
-              <p class="mt-3 text-2xl font-bold tracking-tight text-red-600">RM <%= format_number(@hotel.wastays_margin_mtd, precision: 2) %></p>
-            </div>
-            <div class="rounded-2xl border border-blue-100 bg-blue-50/60 px-5 py-4 shadow-sm">
-              <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700">Hotel Net Earnings This Month</p>
-              <p class="mt-3 text-2xl font-bold tracking-tight text-blue-700">RM <%= format_number(@hotel.hotel_net_earnings_mtd, precision: 2) %></p>
-            </div>
-            <div class="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
-              <p class="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Bookings This Month</p>
-              <p class="mt-3 text-2xl font-bold tracking-tight text-foreground"><%= format_number(@hotel.booking_count_mtd) %></p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div class="border-b border-border px-6 py-5 sm:px-8">
-          <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Room Types</h2>
-        </div>
-
-        <div class="px-6 py-2 sm:px-8">
-          <% if @hotel.room_types.any? %>
-            <% @hotel.room_types.each do |rt| %>
-              <div class="flex items-center justify-between gap-4 border-b border-border py-5 last:border-0">
-                <div>
-                  <p class="text-lg font-semibold text-foreground"><%= rt.name %></p>
-                  <p class="mt-1 text-sm text-muted-foreground"><%= rt.max_adults %> Adults, <%= rt.max_children %> Children</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-lg font-semibold text-foreground"><%= rt.quantity %> Rooms</p>
-                  <p class="mt-1 text-sm font-medium text-blue-700"><%= number_to_currency(rt.base_price, unit: 'RM ') %></p>
-                </div>
-              </div>
-            <% end %>
-          <% else %>
-            <div class="py-6">
-              <p class="text-sm italic text-muted-foreground">No room types added.</p>
-            </div>
-          <% end %>
-        </div>
-      </section>
+        <p class="text-xs text-muted-foreground"><%= [@hotel.city, @hotel.country].compact_blank.join(", ") %></p>
+      </div>
     </div>
-
-    <aside class="space-y-6 xl:col-span-4">
-      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <h2 class="mb-4 text-lg font-bold tracking-tight text-foreground sm:text-xl">Hotel Dashboard</h2>
-        <div class="space-y-3">
-          <%= link_to hotel_dashboard_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted", target: "_blank" do %>
-            <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-            Go to Hotel Dashboard
-          <% end %>
-        </div>
-      </section>
-
-      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-bold tracking-tight text-foreground sm:text-xl">Channel Management</h2>
-          <% if @hotel.channel_mapping&.external_id.present? %>
-            <div class="relative inline-flex" data-controller="dropdown" data-dropdown-floating="true" data-dropdown-align="right">
-              <button
-                type="button"
-                class="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                data-dropdown-target="button"
-                data-action="click->dropdown#toggle keydown->dropdown#handleKeydown"
-                aria-expanded="false"
-                aria-haspopup="true"
-                aria-label="Channel Manager actions">
-                <%= cached_icon "ellipsis", stroke_width: 2.5, class: "size-4" %>
-              </button>
-
-              <div data-dropdown-target="menu" class="hidden absolute right-0 top-full z-[100] mt-2 w-64 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl shadow-foreground/10" role="menu" aria-orientation="vertical" tabindex="-1">
-                <%= button_to "Full Refresh (500 Days)", full_refresh_admin_hotel_path(@hotel), role: "menuitem", form_class: "contents", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted focus-visible:bg-muted focus-visible:outline-none cursor-pointer", data: { turbo_confirm: "This will push 500 days of availability, rates and restrictions. Continue?" } %>
-                <%= button_to "Refresh Channel Mapping", repair_channex_mapping_admin_hotel_path(@hotel), role: "menuitem", form_class: "contents", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground transition hover:bg-muted focus-visible:bg-muted focus-visible:outline-none cursor-pointer", data: { turbo_confirm: "This will check for mapping drift and, if found, repoint this hotel's Channel Manager mapping and trigger a full refresh. Continue?" } %>
-
-                <div class="my-1 border-t border-border"></div>
-
-                <%= button_to "Disconnect Channel Manager", disconnect_channex_admin_hotel_path(@hotel), role: "menuitem", form_class: "contents", class: "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none cursor-pointer", data: { turbo_confirm: "Are you sure? This will remove all mapping IDs for this hotel and its rooms." } %>
-              </div>
-            </div>
-          <% end %>
-        </div>
-        <div class="space-y-4">
-          <div>
-            <p class="text-sm font-semibold text-foreground mb-1.5">Connectivity</p>
-            <% if @hotel.channel_mapping&.external_id.present? %>
-              <span class="inline-flex items-center gap-x-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                <span class="inline-flex size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Connected
-              </span>
-              <p class="mt-1.5 text-xs font-medium text-muted-foreground break-all">ID: <%= @hotel.channel_mapping.external_id %></p>
-            <% else %>
-              <span class="inline-flex items-center gap-x-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-inset ring-ring">
-                <span class="inline-flex size-1.5 rounded-full bg-muted-foreground"></span>
-                Not Connected
-              </span>
-            <% end %>
-          </div>
-
-          <%# A per-guest property has nothing the channel manager can carry:
-              Channex models one flat child fee per rate plan, taken from a
-              property-level policy, with no per-band pricing. Room types and
-              availability still sync; rates and restrictions do not. %>
-          <% if @hotel.sells_per_person? %>
-            <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <p class="text-xs font-semibold text-amber-900">Rates will not be distributed</p>
-              <p class="mt-1 text-xs leading-relaxed text-amber-800">
-                This property sells per guest, which the channel manager cannot represent. Room types and availability still sync; rate plans and restrictions are skipped.
-              </p>
-            </div>
-          <% end %>
-
-          <% if @hotel.channel_mapping&.external_id.present? %>
-            <div class="rounded-xl bg-muted p-3 border border-border">
-              <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Mapped Entities</p>
-              <div class="space-y-1">
-                <div class="flex justify-between text-xs">
-                  <span class="text-muted-foreground">Room Types</span>
-                  <span class="font-medium text-foreground"><%= @hotel.room_types.joins(:channel_mapping).count %> / <%= @hotel.room_types.count %></span>
-                </div>
-              </div>
-            </div>
-            <%= button_to "Onboard / Sync structure", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground transition hover:bg-primary-hover shadow-sm" %>
-          <% else %>
-            <p class="text-xs text-muted-foreground leading-relaxed italic">Provision this property, its room types and default rate plans directly into Channel Manager via API.</p>
-            <%= button_to "Connect to Channel Manager", onboard_channex_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover shadow-lg" %>
-          <% end %>
-        </div>
-      </section>
-
-      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <h2 class="mb-4 text-lg font-bold tracking-tight text-foreground sm:text-xl">Admin Actions</h2>
-        <div class="space-y-3">
-          <%= link_to edit_admin_hotel_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-blue-700" do %>
-            Edit Details
-          <% end %>
-
-          <%= link_to admin_hotel_reservation_imports_path(@hotel), class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted" do %>
-            Import Reservations (eZee)
-          <% end %>
-
-          <% if @hotel.status == 'pending_review' %>
-            <%= button_to "Approve Hotel", approve_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-emerald-700" %>
-          <% end %>
-
-          <% if @hotel.status != 'suspended' %>
-            <%= button_to "Suspend", suspend_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-red-700", data: { turbo_confirm: "Are you sure you want to suspend this hotel and its account? It will no longer be bookable.", turbo_confirm_title: "Suspend Account and Hotel", turbo_confirm_color: "red" } %>
-          <% else %>
-            <%= button_to "Reactivate", approve_admin_hotel_path(@hotel), class: "w-full inline-flex justify-center items-center gap-x-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-emerald-700", data: { turbo_confirm: "Are you sure you want to reactivate this hotel and its account?", turbo_confirm_title: "Reactivate Account and Hotel" } %>
-          <% end %>
-        </div>
-      </section>
-
-      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <h2 class="mb-4 text-lg font-bold tracking-tight text-foreground sm:text-xl">Salesperson</h2>
-        <% if @hotel.salesperson %>
-          <div class="flex items-center gap-3">
-            <div class="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <svg class="size-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
-            <div>
-              <p class="text-sm font-bold text-foreground"><%= @hotel.salesperson.name.capitalize %></p>
-              <p class="text-xs text-muted-foreground break-all"><%= @hotel.salesperson.email %></p>
-              <p class="text-xs text-muted-foreground uppercase">Salesperson</p>
-            </div>
-          </div>
-        <% else %>
-          <p class="text-sm italic text-muted-foreground">No salesperson for this hotel.</p>
+    <div class="flex flex-wrap items-center gap-2">
+      <%= render PanelsUI::Button.new(href: hotel_dashboard_path(@hotel), variant: :secondary, target: "_blank", rel: "noopener") do %>
+        Go to dashboard <%= app_icon "external-link", class: "size-4", aria: { hidden: "true" } %>
+      <% end %>
+      <%= render PanelsUI::DropdownMenu.new(id: "admin-hotel-actions", placement: :bottom_end, class: "w-64") do |menu| %>
+        <% menu.with_trigger(variant: :primary, size: :md, aria_label: "More hotel actions") do %>
+          More actions <%= app_icon "chevron-down", class: "size-4", aria: { hidden: "true" } %>
         <% end %>
-      </section>
-
-      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <h2 class="mb-5 text-lg font-bold tracking-tight text-foreground sm:text-xl">Account Information</h2>
-        <div class="space-y-5 text-sm">
-          <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Account Name</p>
-            <p class="mt-1 font-medium text-foreground"><%= @hotel.account.name %></p>
-          </div>
-          <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Account Status</p>
-            <p class="mt-1 text-foreground"><%= @hotel.account.status.titleize %></p>
-          </div>
-          <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Account Slug</p>
-            <p class="mt-1 break-all text-foreground"><%= @hotel.account.slug.presence || 'N/A' %></p>
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <h2 class="mb-5 text-lg font-bold tracking-tight text-foreground sm:text-xl">Account Users</h2>
-        <div class="space-y-4 text-sm">
-          <% account_users = @hotel.account.users.where.not(role: "salesperson").order(:created_at) %>
-          <% if account_users.any? %>
-            <% account_users.each do |user| %>
-              <div class="border-b border-border pb-4 last:border-0 last:pb-0">
-                <p class="font-medium text-foreground"><%= user.name %></p>
-                <p class="mt-1 break-all text-muted-foreground"><%= user.email %></p>
-                <p class="mt-1 text-xs uppercase tracking-[0.08em] text-muted-foreground"><%= user.role.titleize %></p>
-              </div>
-            <% end %>
-          <% else %>
-            <p class="text-sm italic text-muted-foreground">No other users in this account.</p>
-          <% end %>
-        </div>
-      </section>
-
-      <% banking_detail = @hotel.account.banking_detail %>
-      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <h2 class="mb-5 text-lg font-bold tracking-tight text-foreground sm:text-xl">Banking Details</h2>
-        <% if banking_detail %>
-          <div class="space-y-5 text-sm">
-            <div>
-              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Account Holder Name</p>
-              <p class="mt-1 text-foreground"><%= banking_detail.account_holder_name %></p>
-            </div>
-            <div>
-              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Bank Name</p>
-              <p class="mt-1 text-foreground"><%= banking_detail.bank_name %></p>
-            </div>
-            <div>
-              <p class="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Account Number</p>
-              <p class="mt-1 text-foreground"><%= banking_detail.account_number %></p>
-            </div>
-          </div>
+        <% menu.with_item(href: admin_hotel_reservation_imports_path(@hotel)) { "Import reservations (eZee)" } %>
+        <% if @hotel.status == "pending_review" %>
+          <% menu.with_item(href: onboarding_admin_hotel_path(@hotel)) { "Review onboarding" } %>
+          <% menu.with_item(href: approve_admin_hotel_path(@hotel), method: :post, variant: :success, form: { data: { turbo_confirm: "Approve #{@hotel.name}?" } }) { "Approve hotel" } %>
+        <% elsif @hotel.status == "suspended" %>
+          <% menu.with_item(href: approve_admin_hotel_path(@hotel), method: :post, variant: :success, form: { data: { turbo_confirm: "Reactivate #{@hotel.name} and its account?" } }) { "Reactivate" } %>
         <% else %>
-          <p class="text-sm italic text-muted-foreground">No banking details have been submitted yet.</p>
+          <% menu.with_item(href: suspend_admin_hotel_path(@hotel), method: :post, variant: :danger, form: { data: { turbo_confirm: "Suspend #{@hotel.name} and its account? It will no longer be bookable." } }) { "Suspend" } %>
         <% end %>
-      </section>
-    </aside>
+      <% end %>
+    </div>
+  </header>
+
+  <%= render PanelsUI::Tabs.new(id: "admin-hotel-tabs", active: @active_tab, variant: :line, aria_label: "Hotel sections") do |tabs| %>
+    <% Admin::HotelsController::TAB_LABELS.each do |tab, label| %>
+      <% tabs.with_tab(name: tab, label:, icon: Admin::HotelsController::TAB_ICONS.fetch(tab), href: admin_hotel_path(@hotel, tab:)) %>
+    <% end %>
+  <% end %>
+  <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar" data-testid="admin-hotel-tab-content">
+    <% case @active_tab %>
+    <% when "room_inventory" %>
+      <%= render "admin/hotels/tabs/room_inventory" %>
+    <% when "channel_manager" %>
+      <%= render "admin/hotels/tabs/channel_manager" %>
+    <% when "account_information" %>
+      <%= render "admin/hotels/tabs/account_information" %>
+    <% when "banking_details" %>
+      <%= render "admin/hotels/tabs/banking_details" %>
+    <% when "salesperson" %>
+      <%= render "admin/hotels/tabs/salesperson" %>
+    <% else %>
+      <%= render "admin/hotels/tabs/hotel_details" %>
+    <% end %>
   </div>
 </div>

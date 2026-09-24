@@ -40,6 +40,8 @@ Rails.application.routes.draw do
   get "terms-and-conditions", to: "legal_pages#terms_and_conditions", as: :terms_and_conditions
 
   # Help Center
+  get "owner-password-reset/:token", to: "public/owner_password_resets#show", as: :owner_password_reset
+  patch "owner-password-reset/:token", to: "public/owner_password_resets#update"
   get "help", to: "help_center#index", as: :help_center
   get "help/:audience/:id", to: "help_center#show", as: :help_guide
 
@@ -290,6 +292,7 @@ Rails.application.routes.draw do
   end
 
   # Superadmin dashboard
+  get "/admin/hotels/:id/edit", to: redirect("/admin/hotels/%{id}?tab=hotel_details"), as: :edit_admin_hotel
   namespace :admin do
     resource :profile, only: [ :edit, :update ], controller: "profiles"
     get "audit_logs/index"
@@ -298,7 +301,13 @@ Rails.application.routes.draw do
     get "margin_rules/destroy"
     get "dashboard", to: "dashboard#index"
     get "analytics", to: "dashboard#analytics"
-    resources :hotels do
+    resources :hotels, except: [ :edit ] do
+      member do
+        patch :update_account, to: "hotels/settings#update_account"
+        patch :update_salesperson, to: "hotels/settings#update_salesperson"
+        post :send_owner_password_reset, to: "hotels/settings#send_owner_password_reset"
+        patch :set_owner_password, to: "hotels/settings#set_owner_password"
+      end
       member do
         get :onboarding, to: "hotels/onboarding#show"
         get "onboarding/:tab", to: "hotels/onboarding#show", as: :onboarding_tab,
