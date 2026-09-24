@@ -197,7 +197,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "keeps the hotel's name above the thread" do
       get chat_path
 
-      expect(response.body).to include(hotel.name)
+      expect(response.body).to include(ERB::Util.html_escape(hotel.name))
       expect(response.body).to include("public-chat__bar-title")
     end
 
