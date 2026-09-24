@@ -21,11 +21,12 @@ module BookingGuests
     PROFILE_ATTRIBUTES = %i[tin].freeze
     EDITABLE_ATTRIBUTES = (SNAPSHOT_ATTRIBUTES + PROFILE_ATTRIBUTES).freeze
 
-    def self.call(booking:, attributes:, actor:, existing_guest: nil, update_profile: false)
-      new(booking:, attributes:, actor:, existing_guest:, update_profile:).call
+    def self.call(booking:, attributes:, actor:, existing_guest: nil, update_profile: false, source: nil)
+      new(booking:, attributes:, actor:, existing_guest:, update_profile:, source:).call
     end
 
-    def initialize(booking:, attributes:, actor:, existing_guest: nil, update_profile: false)
+    def initialize(booking:, attributes:, actor:, existing_guest: nil, update_profile: false, source: nil)
+      @source = source
       @booking = booking
       @attributes = attributes
       @actor = actor
@@ -63,6 +64,7 @@ module BookingGuests
           auditable: @booking,
           user: @actor,
           action_type: "guest_added",
+          source: @source,
           old_value: {},
           new_value: normalized.stringify_keys.slice(*AUDIT_ATTRIBUTES)
         )

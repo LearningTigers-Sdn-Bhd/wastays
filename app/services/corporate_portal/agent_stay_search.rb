@@ -17,10 +17,9 @@ module CorporatePortal
   # an open row for every night of the stay, so a property that has not
   # published inventory looks empty. Counting real stays works either way.
   #
-  # Pricing comes from the corporate audience, so an agent is quoted the
-  # corporate plan where the property has one and the standard plan otherwise.
-  # Per-agency contracted rates do not exist yet -- every agency currently sees
-  # the same corporate rate.
+  # Pricing comes from the plans the property opened to this agency (RatePlan
+  # #ta_access and its agency rules), one option per room category and plan,
+  # so an agent can choose between, say, a room-only and a full-board rate.
   class AgentStaySearch
     # A stay in one of these states is holding a room over its dates.
     OCCUPYING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required].freeze
@@ -50,8 +49,11 @@ module CorporatePortal
 
     def self.call(...) = new(...).call
 
-    def initialize(hotel:, check_in:, check_out:, adults: 2, children: 0, rooms: 1)
+    def initialize(hotel:, check_in:, check_out:, adults: 2, children: 0, rooms: 1, relationship: nil)
       @hotel = hotel
+      # Which agency is searching decides which plans it is offered. Without
+      # one, only the plans opened to every agency are.
+      @relationship = relationship
       # Both callers reach here: the search form sends strings, the confirm step
       # re-checks with whatever it was given.
       @check_in = to_date(check_in)
@@ -86,26 +88,30 @@ module CorporatePortal
     def business_date = @hotel.current_business_date || @hotel.business_date_for
 
     def options_for_room_types
-      @hotel.room_types.includes(:rate_plans).filter_map do |room_type|
-        next if room_type.max_adults.to_i.positive? && @adults > room_type.max_adults.to_i
+      @hotel.room_types.flat_map do |room_type|
+        next [] if room_type.max_adults.to_i.positive? && @adults > room_type.max_adults.to_i
 
-        rate_plan = rate_plan_for(room_type)
-        next if rate_plan.blank?
-
-        snapshot = snapshot_for(room_type, rate_plan)
-        next if snapshot.blank?
-
-        Option.new(
-          room_type: room_type,
-          rate_plan: rate_plan,
-          available_count: remaining_capacity(room_type),
-          per_room_amount: snapshot.room_total + Booking.non_tourism_tax_total_for(snapshot.tax_lines),
-          rooms: @rooms,
-          currency: @hotel.default_currency.presence || "MYR",
-          tax_lines: snapshot.tax_lines.reject { |line| Booking.tourism_tax_line?(line) },
-          tourism_tax_note: tourism_tax_note
-        )
+        capacity = nil
+        rate_plans_for(room_type).filter_map do |rate_plan|
+          option_for(room_type, rate_plan, capacity ||= remaining_capacity(room_type))
+        end
       end
+    end
+
+    def option_for(room_type, rate_plan, capacity)
+      snapshot = snapshot_for(room_type, rate_plan)
+      return if snapshot.blank?
+
+      Option.new(
+        room_type: room_type,
+        rate_plan: rate_plan,
+        available_count: capacity,
+        per_room_amount: snapshot.room_total + Booking.non_tourism_tax_total_for(snapshot.tax_lines),
+        rooms: @rooms,
+        currency: @hotel.default_currency.presence || "MYR",
+        tax_lines: snapshot.tax_lines.reject { |line| Booking.tourism_tax_line?(line) },
+        tourism_tax_note: tourism_tax_note
+      )
     end
 
     # Guest nationality is not asked at search time, so the tourism tax cannot
@@ -120,9 +126,18 @@ module CorporatePortal
         "added at checkout once nationality is known."
     end
 
-    # The corporate plan when the property has one, the standard plan otherwise.
-    def rate_plan_for(room_type)
-      room_type.corporate_rate_plan || room_type.standard_rate_plan
+    # The category's primary plan first, then the rest by name.
+    def rate_plans_for(room_type)
+      primary_id = room_type.primary_rate_plan&.id
+      offered_plans
+        .select { |rate_plan| rate_plan.room_type_rate_plans.any? { |assignment| assignment.room_type_id == room_type.id } }
+        .sort_by { |rate_plan| [ rate_plan.id == primary_id ? 0 : 1, rate_plan.name.downcase, rate_plan.id ] }
+    end
+
+    # Resolved once per search, not once per room category.
+    def offered_plans
+      @offered_plans ||= @hotel.rate_plans.offered_to_agency(@relationship)
+        .includes(:room_type_rate_plans, :rate_plan_stay_discounts).order(:name, :id).to_a
     end
 
     # Rooms the category has, less the stays already holding one over these

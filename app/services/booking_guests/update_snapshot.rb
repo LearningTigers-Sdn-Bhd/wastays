@@ -15,11 +15,12 @@ module BookingGuests
     EDITABLE_ATTRIBUTES = (SNAPSHOT_ATTRIBUTES + PROFILE_ATTRIBUTES).freeze
     BIBO_ATTRIBUTES = %i[boat_in_at boat_out_at].freeze
 
-    def self.call(booking_guest:, attributes:, actor:, update_profile: false, bibo_attributes: {})
-      new(booking_guest:, attributes:, actor:, update_profile:, bibo_attributes:).call
+    def self.call(booking_guest:, attributes:, actor:, update_profile: false, bibo_attributes: {}, source: nil)
+      new(booking_guest:, attributes:, actor:, update_profile:, bibo_attributes:, source:).call
     end
 
-    def initialize(booking_guest:, attributes:, actor:, update_profile:, bibo_attributes:)
+    def initialize(booking_guest:, attributes:, actor:, update_profile:, bibo_attributes:, source: nil)
+      @source = source
       @booking_guest = booking_guest
       @booking = booking_guest.booking
       @guest = booking_guest.guest
@@ -87,6 +88,7 @@ module BookingGuests
         auditable: @booking,
         user: @actor,
         action_type: "guest_updated",
+        source: @source,
         old_value: old_values,
         new_value: values.stringify_keys.merge(@bibo_attributes.stringify_keys),
         metadata: { "save_scope" => @update_profile ? "snapshot_and_profile" : "snapshot" }

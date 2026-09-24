@@ -27,6 +27,8 @@ module CorporatePortal
   # No money is taken: they are created unpaid and settle by the relationship --
   # direct bill is invoiced, standard settles at checkout.
   class CreateAgentBooking
+    include AgentGuestIdentity
+
     class Failed < StandardError; end
 
     Result = Struct.new(:bookings, :group_booking, :errors, keyword_init: true) do
@@ -46,6 +48,9 @@ module CorporatePortal
     def call
       room_type = @hotel.room_types.find_by(id: @params[:room_type_id])
       return failure("Choose a room category.") if room_type.blank?
+
+      @rate_plan = resolve_rate_plan(room_type)
+      return failure("Choose a rate plan.") if @rate_plan.blank?
       return failure("Name the lead guest for each room.") if rooms.empty?
 
       availability = check_availability(room_type)
@@ -60,6 +65,18 @@ module CorporatePortal
 
     def rooms_requested = [ @params[:rooms].to_i, rooms.size, 1 ].max
 
+    # The plan comes from the form, so it is re-checked against what this agency
+    # may book -- a hidden plan's id typed into the request is refused like any
+    # other. A form that names no plan (a page rendered before plans were
+    # selectable) still books when the category offers exactly one.
+    def resolve_rate_plan(room_type)
+      offered = @hotel.rate_plans.offered_to_agency(@relationship)
+        .joins(:room_type_rate_plans).where(room_type_rate_plans: { room_type_id: room_type.id })
+      return offered.find_by(id: @params[:rate_plan_id]) if @params[:rate_plan_id].present?
+
+      offered.one? ? offered.first : nil
+    end
+
     # CreateManualBooking only checks availability when a room number is given,
     # and an agent sells a category -- so without this the confirm step would
     # accept anything the search had already refused, including a stale page or
@@ -67,11 +84,14 @@ module CorporatePortal
     def check_availability(room_type)
       result = AgentStaySearch.call(
         hotel: @hotel, check_in: @params[:check_in], check_out: @params[:check_out],
-        adults: @params[:adults], children: @params[:children], rooms: rooms_requested
+        adults: @params[:adults], children: @params[:children], rooms: rooms_requested,
+        relationship: @relationship
       )
       return result.error unless result.success?
 
-      option = result.options.find { |candidate| candidate.room_type.id == room_type.id }
+      option = result.options.find do |candidate|
+        candidate.room_type.id == room_type.id && candidate.rate_plan.id == @rate_plan.id
+      end
       return nil if option&.available?
 
       "#{room_type.name} no longer has #{ActionController::Base.helpers.pluralize(rooms_requested, 'room')} " \
@@ -139,7 +159,7 @@ module CorporatePortal
         adults: [ @params[:adults].to_i, 1 ].max,
         children: @params[:children].to_i,
         room_type_id: room_type.id,
-        rate_plan_id: (room_type.corporate_rate_plan || room_type.standard_rate_plan)&.id,
+        rate_plan_id: @rate_plan.id,
         # The agent sells the category, not a numbered room. The desk assigns one
         # at arrival, as it does for any unassigned reservation.
         require_room_number: false,
@@ -151,6 +171,7 @@ module CorporatePortal
         corporate_booked_by_id: @user&.id,
         corporate_booked_at: Time.current,
         special_requests: @params[:special_requests].presence,
+        agent_reference: @params[:agent_reference].to_s.strip.first(100).presence,
         internal_notes: "Booked through the corporate portal by " \
                         "#{@relationship.corporate_account&.name}#{" (room #{index + 1} of #{rooms.size})" if rooms.many?}."
       }.compact
@@ -175,41 +196,6 @@ module CorporatePortal
 
         Rails.logger.warn("Agent booking #{booking.id} could not add #{attrs[:name]}: #{result.errors.to_sentence}")
       end
-    end
-
-    # Routes the one "IC / Passport" field the agent actually sees into
-    # whichever column Guest validates against. A Malaysian's IC drives
-    # document_type and, from there, lets Guest derive date of birth straight
-    # from the number (see Guest#populate_date_of_birth_from_malaysian_ic) --
-    # a passport number carries no such date, so nothing is inferred from it.
-    def identity_attributes(country:, id_number:)
-      id_number = id_number.presence
-      return {} if id_number.blank? || country.blank?
-
-      if country.to_s.casecmp?("Malaysia")
-        malaysian_ic_attributes(id_number)
-      else
-        # The field allows headroom (20 characters) for spaces, hyphens or a
-        # check digit an agent might type or paste in -- none of them are part
-        # of the number itself, so they are stripped here rather than kept as
-        # noise in what gets filed against the guest.
-        { document_type: "passport", passport_number: id_number.gsub(/[\s-]/, "") }
-      end
-    end
-
-    # The form's own script blocks a malformed IC before it can be submitted
-    # (agent_guest_identity_controller.js), but that is a client the request
-    # does not have to go through -- so this is the one place a stray letter
-    # actually stops it. Filed as-is under government_id either way (it is
-    # still a Malaysian identity number field), but document_type is only set
-    # to "malaysian_nric" for something that looks like a real one: setting it
-    # for "9902031z26661zz" would let Guest derive a date of birth off digits
-    # a letter had silently fallen out of (see
-    # Guests::MalaysianIcDateOfBirthParser, which reads the same way).
-    def malaysian_ic_attributes(id_number)
-      return { government_id: id_number } unless id_number.match?(/\A[\d\s-]+\z/)
-
-      { document_type: "malaysian_nric", government_id: id_number }
     end
 
     def group_for(bookings)

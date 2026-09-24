@@ -96,13 +96,16 @@
           <% else %>
             <ul class="divide-y divide-border">
               <% @search.available.each do |option| %>
-                <% chosen = @selected&.room_type&.id == option.room_type.id %>
+                <% chosen = @selected&.room_type&.id == option.room_type.id && @selected&.rate_plan&.id == option.rate_plan.id %>
                 <li class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6">
                   <div class="min-w-0">
                     <p class="font-bold text-foreground"><%= option.room_type.name %></p>
                     <p class="mt-0.5 text-xs text-muted-foreground">
-                      <%= option.rate_plan.name %> · <%= pluralize(option.available_count, "room") %> free
+                      <span class="font-semibold text-foreground"><%= option.rate_plan.name %></span> · <%= pluralize(option.available_count, "room") %> free
                     </p>
+                    <% if option.rate_plan.description.present? %>
+                      <p class="mt-0.5 text-xs text-muted-foreground"><%= option.rate_plan.description %></p>
+                    <% end %>
                     <% if option.tax_lines.present? %>
                       <p class="mt-0.5 text-xs text-muted-foreground">
                         Includes <%= option.tax_lines.map { |line| "#{line['name']} (#{option.currency} #{number_with_precision(line['amount'].to_d * option.rooms, precision: 2)})" }.to_sentence %>
@@ -125,7 +128,7 @@
                           href: new_corporate_booking_path(
                             hotel_relationship_id: @relationship.id, check_in: @check_in,
                             check_out: @check_out, adults: @adults, children: @children,
-                            rooms: @rooms, room_type_id: option.room_type.id)) do %>
+                            rooms: @rooms, room_type_id: option.room_type.id, rate_plan_id: option.rate_plan.id)) do %>
                       <%= chosen ? "Selected" : "Select" %>
                     <% end %>
                   </div>
@@ -144,7 +147,7 @@
           <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <h2 class="text-sm font-bold text-foreground">Guest details</h2>
             <p class="mt-1 text-xs text-muted-foreground">
-              <%= pluralize(@rooms, "×") %> <%= @selected.room_type.name %> ·
+              <%= pluralize(@rooms, "×") %> <%= @selected.room_type.name %> · <%= @selected.rate_plan.name %> ·
               <%= @selected.currency %> <%= number_with_precision(@selected.total_amount, precision: 2) %> for the stay.
             </p>
 
@@ -152,6 +155,7 @@
                           class: "mt-5 space-y-5" do |form| %>
               <%= hidden_field_tag :hotel_relationship_id, @relationship.id %>
               <%= form.hidden_field :room_type_id, value: @selected.room_type.id %>
+              <%= form.hidden_field :rate_plan_id, value: @selected.rate_plan.id %>
               <%= form.hidden_field :check_in, value: @check_in %>
               <%= form.hidden_field :check_out, value: @check_out %>
               <%= form.hidden_field :adults, value: @adults %>
@@ -252,6 +256,11 @@
                     <% end %>
                   </div>
                 </fieldset>
+              <% end %>
+
+              <%= render PanelsUI::FormField.new(form:, attribute: :agent_reference,
+                    label: "Your reference", hint: "Optional. Your own voucher or file number, shown on this booking.") do |field| %>
+                <% field.with_input(placeholder: "e.g. TRV-2026-0142", maxlength: 100, autocomplete: "off") %>
               <% end %>
 
               <%= render PanelsUI::FormField.new(form:, attribute: :special_requests,

@@ -272,6 +272,7 @@ Rails.application.routes.draw do
     # deleted, it becomes cancelled history and the rooms go back on sale.
     resources :bookings, only: [ :index, :new, :create, :show ] do
       resource :cancellation, only: [ :new, :create ], controller: "booking_cancellations"
+      resource :guests, only: [ :edit, :update ], controller: "booking_guests"
     end
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
     resources :ar_statements, only: [ :index, :show ], path: "statements" do

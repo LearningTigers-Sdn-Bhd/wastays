@@ -551,6 +551,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_070000) do
 
   create_table "bookings", force: :cascade do |t|
     t.integer "adults", null: false
+    t.string "agent_reference"
     t.bigint "booking_quote_id"
     t.text "cancellation_policy_snapshot"
     t.jsonb "cancellation_policy_snapshot_data", default: {}, null: false
@@ -634,6 +635,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_070000) do
     t.index ["group_booking_id", "group_position"], name: "idx_bookings_group_position", unique: true, where: "(group_booking_id IS NOT NULL)"
     t.index ["group_booking_id"], name: "index_bookings_on_group_booking_id"
     t.index ["hotel_corporate_account_id"], name: "index_bookings_on_hotel_corporate_account_id"
+    t.index ["hotel_id", "agent_reference"], name: "idx_bookings_on_hotel_agent_reference", where: "(agent_reference IS NOT NULL)"
     t.index ["hotel_id", "folio_account_reference"], name: "idx_bookings_on_hotel_folio_account_reference", unique: true, where: "(folio_account_reference IS NOT NULL)"
     t.index ["hotel_id", "guest_registration_reference"], name: "index_bookings_on_hotel_id_and_guest_registration_reference", unique: true, where: "(guest_registration_reference IS NOT NULL)"
     t.index ["hotel_id", "guest_registration_year", "guest_registration_number"], name: "idx_bookings_guest_registration_year_number", unique: true, where: "(guest_registration_number IS NOT NULL)"

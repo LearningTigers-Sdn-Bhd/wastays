@@ -47,14 +47,15 @@ module CorporatePortal
       @children = params[:children].to_i
       @rooms = [ (params[:rooms].presence || 1).to_i, 1 ].max
       @room_type_id = params[:room_type_id]
+      @rate_plan_id = params[:rate_plan_id]
 
       return if @relationship.blank? || @check_in.blank? || @check_out.blank?
 
       @search = AgentStaySearch.call(
         hotel: @relationship.hotel, check_in: @check_in, check_out: @check_out,
-        adults: @adults, children: @children, rooms: @rooms
+        adults: @adults, children: @children, rooms: @rooms, relationship: @relationship
       )
-      @selected = @search.options.find { |option| option.room_type.id.to_s == @room_type_id.to_s }
+      @selected = selected_option
     end
 
     def create
@@ -71,13 +72,16 @@ module CorporatePortal
       end
     end
 
+    # What each room card reads (CorporatePortal::BookingDetailPresenter).
+    ROOM_DETAIL_INCLUDES = [ { booking_rooms: %i[room_type rate_plan] }, { booking_guests: :guest } ].freeze
+
     def show
-      @booking = corporate_bookings.includes(:hotel, :ar_payment_submissions, :hotel_corporate_account).find(params[:id])
+      @booking = corporate_bookings.includes(:hotel, :ar_payment_submissions, :hotel_corporate_account, :corporate_booked_by, *ROOM_DETAIL_INCLUDES).find(params[:id])
       @payment = payment_presenters_for([ @booking ]).fetch(@booking.id)
       # A multi-room stay is several bookings under one group; the confirmation
       # should show the stay, not one room of it.
       @bookings = if @booking.group_booking_id.present?
-        corporate_bookings.where(group_booking_id: @booking.group_booking_id).order(:group_position, :id)
+        corporate_bookings.where(group_booking_id: @booking.group_booking_id).includes(:hotel, *ROOM_DETAIL_INCLUDES).order(:group_position, :id)
       else
         [ @booking ]
       end
@@ -87,6 +91,15 @@ module CorporatePortal
     end
 
     private
+
+    # A link that names no plan (bookmarked before plans were selectable)
+    # still selects the category when it offers exactly one.
+    def selected_option
+      candidates = @search.options.select { |option| option.room_type.id.to_s == @room_type_id.to_s }
+      return candidates.find { |option| option.rate_plan.id.to_s == @rate_plan_id.to_s } if @rate_plan_id.present?
+
+      candidates.first if candidates.one?
+    end
 
     # Keyed by booking id, so a view can ask for one row's payment state without
     # reaching back into the database.
@@ -144,8 +157,8 @@ module CorporatePortal
     # which takes only the guest keys it knows.
     def booking_params
       params.require(:booking).permit(
-        :room_type_id, :check_in, :check_out, :adults, :children, :rooms,
-        :special_requests, rooms_detail: {}
+        :room_type_id, :rate_plan_id, :check_in, :check_out, :adults, :children, :rooms,
+        :special_requests, :agent_reference, rooms_detail: {}
       )
     end
 
@@ -154,7 +167,8 @@ module CorporatePortal
         hotel_relationship_id: @relationship.id,
         check_in: booking_params[:check_in], check_out: booking_params[:check_out],
         adults: booking_params[:adults], children: booking_params[:children],
-        rooms: booking_params[:rooms], room_type_id: booking_params[:room_type_id]
+        rooms: booking_params[:rooms], room_type_id: booking_params[:room_type_id],
+        rate_plan_id: booking_params[:rate_plan_id]
       ), alert: flash.now[:alert]
     end
 
