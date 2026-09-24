@@ -7,6 +7,11 @@ class HotelPortal::Bookings::GuestRegistrationCardsController < HotelPortal::Bas
   before_action :set_card
 
   def show
+    # Persisted on first view rather than left in memory: the guest's own
+    # signing link is built from the card's public_token, which only exists
+    # once the row does, and staff can open that link the moment they land
+    # here -- before anyone has typed a signature.
+    @card.save! if @card.new_record?
     @presenter = HotelPortal::GuestRegistrationCardPresenter.new(@card, @booking, booking_guest_id: params[:booking_guest_id])
   end
 

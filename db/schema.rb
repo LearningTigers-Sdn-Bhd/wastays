@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_063000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1458,6 +1458,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
 
   create_table "hotel_corporate_accounts", force: :cascade do |t|
     t.string "account_type", default: "company", null: false
+    t.boolean "agent_booking_enabled", default: false, null: false
     t.string "agent_code"
     t.integer "agent_payment_hold_hours"
     t.boolean "auto_allocate_payments", default: false, null: false
@@ -1881,7 +1882,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
   create_table "hotels", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "address"
-    t.integer "agent_payment_hold_hours", default: 48, null: false
+    t.integer "agent_payment_hold_hours", default: 72, null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.boolean "ai_provider_enabled", default: false
     t.text "ai_provider_key"
@@ -1904,6 +1905,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
     t.string "fixed_line_number"
     t.boolean "geolocation_enabled", default: true, null: false
     t.string "google_map_link"
+    t.boolean "grc_tablet_signing_enabled", default: false, null: false
     t.boolean "guest_chat_enabled", default: true, null: false
     t.jsonb "guest_registration_card_fields"
     t.text "guest_registration_card_terms"
@@ -2752,6 +2754,62 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
     t.index ["user_id"], name: "index_report_view_preferences_on_user_id"
   end
 
+  create_table "reservation_import_rows", force: :cascade do |t|
+    t.integer "adults", default: 0, null: false
+    t.string "agency_name"
+    t.decimal "amount_paid", precision: 10, scale: 2
+    t.date "arrival"
+    t.datetime "booked_at"
+    t.string "booked_by"
+    t.bigint "booking_id"
+    t.integer "children", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.date "departure"
+    t.string "group_key"
+    t.string "guest_name"
+    t.jsonb "issues", default: [], null: false
+    t.integer "nights", default: 0, null: false
+    t.string "rate_type"
+    t.text "remark"
+    t.bigint "reservation_import_id", null: false
+    t.string "reservation_number", null: false
+    t.bigint "room_id"
+    t.string "room_number"
+    t.bigint "room_type_id"
+    t.string "room_type_name"
+    t.integer "sheet_row", null: false
+    t.string "source"
+    t.string "status", null: false
+    t.decimal "total_amount", precision: 10, scale: 2
+    t.datetime "updated_at", null: false
+    t.index ["reservation_import_id", "sheet_row"], name: "idx_reservation_import_rows_on_import_and_sheet_row", unique: true
+    t.index ["reservation_import_id", "status"], name: "idx_reservation_import_rows_on_import_and_status"
+    t.index ["reservation_import_id"], name: "index_reservation_import_rows_on_reservation_import_id"
+    t.check_constraint "status::text = ANY (ARRAY['importable'::character varying, 'imported'::character varying, 'past'::character varying, 'blocked'::character varying, 'created'::character varying, 'failed'::character varying]::text[])", name: "reservation_import_rows_status_allowed"
+  end
+
+  create_table "reservation_imports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "created_count", default: 0, null: false
+    t.text "error_message"
+    t.integer "failed_count", default: 0, null: false
+    t.jsonb "failures", default: [], null: false
+    t.datetime "finished_at"
+    t.integer "group_count", default: 0, null: false
+    t.bigint "hotel_id", null: false
+    t.integer "processed_rows", default: 0, null: false
+    t.integer "skipped_count", default: 0, null: false
+    t.datetime "started_at"
+    t.string "status", default: "draft", null: false
+    t.string "step"
+    t.integer "total_rows", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["hotel_id"], name: "index_reservation_imports_on_hotel_id"
+    t.index ["user_id"], name: "index_reservation_imports_on_user_id"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'queued'::character varying, 'running'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "reservation_imports_status_allowed"
+  end
+
   create_table "role_permissions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "permission_id", null: false
@@ -2987,6 +3045,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
     t.index ["settable_type", "settable_id"], name: "index_setup_fee_rules_on_active_hotel_overrides", unique: true, where: "(((status)::text = 'active'::text) AND ((settable_type)::text = 'Hotel'::text))"
     t.index ["settable_type", "settable_id"], name: "index_setup_fee_rules_on_settable"
     t.index ["status"], name: "index_setup_fee_rules_on_active_global_default", unique: true, where: "(((status)::text = 'active'::text) AND (settable_type IS NULL) AND (settable_id IS NULL))"
+  end
+
+  create_table "signing_device_pairings", force: :cascade do |t|
+    t.datetime "claimed_at"
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.bigint "created_by_user_id"
+    t.datetime "expires_at", null: false
+    t.bigint "hotel_id", null: false
+    t.bigint "signing_device_id"
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_signing_device_pairings_on_code", unique: true
+    t.index ["created_by_user_id"], name: "index_signing_device_pairings_on_created_by_user_id"
+    t.index ["hotel_id", "claimed_at", "expires_at"], name: "index_signing_device_pairings_on_hotel_and_state"
+    t.index ["hotel_id"], name: "index_signing_device_pairings_on_hotel_id"
+    t.index ["signing_device_id"], name: "index_signing_device_pairings_on_signing_device_id"
+    t.index ["token"], name: "index_signing_device_pairings_on_token", unique: true
+  end
+
+  create_table "signing_devices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "current_booking_id"
+    t.bigint "hotel_id", null: false
+    t.string "label", null: false
+    t.datetime "last_seen_at"
+    t.string "public_token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["current_booking_id"], name: "index_signing_devices_on_current_booking_id"
+    t.index ["hotel_id"], name: "index_signing_devices_on_hotel_id"
+    t.index ["public_token"], name: "index_signing_devices_on_public_token", unique: true
   end
 
   create_table "staff_notifications", force: :cascade do |t|
@@ -3387,6 +3476,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
   add_foreign_key "refund_requests", "bookings"
   add_foreign_key "report_view_preferences", "hotels"
   add_foreign_key "report_view_preferences", "users"
+  add_foreign_key "reservation_import_rows", "reservation_imports"
+  add_foreign_key "reservation_imports", "hotels"
+  add_foreign_key "reservation_imports", "users"
   add_foreign_key "role_permissions", "permissions"
   add_foreign_key "role_permissions", "roles"
   add_foreign_key "roles", "accounts"
@@ -3421,6 +3513,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_18_015602) do
   add_foreign_key "rooms", "hotels"
   add_foreign_key "rooms", "room_groups"
   add_foreign_key "rooms", "room_types"
+  add_foreign_key "signing_device_pairings", "hotels"
+  add_foreign_key "signing_device_pairings", "signing_devices", on_delete: :nullify
+  add_foreign_key "signing_device_pairings", "users", column: "created_by_user_id", on_delete: :nullify
+  add_foreign_key "signing_devices", "bookings", column: "current_booking_id", on_delete: :nullify
+  add_foreign_key "signing_devices", "hotels"
   add_foreign_key "staff_notifications", "hotels"
   add_foreign_key "staff_notifications", "users", column: "recipient_id"
   add_foreign_key "transaction_code_taxes", "hotel_taxes"

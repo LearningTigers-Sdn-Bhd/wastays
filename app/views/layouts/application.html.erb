@@ -148,7 +148,8 @@
       <%= yield %>
     </main>
 
-    <% hide_mobile_bottom_nav = (controller_name == "static_pages" && (action_name == "home" || action_name == "explore")) ||
+    <% hide_mobile_bottom_nav = content_for?(:hide_chrome) ||
+                                (controller_name == "static_pages" && (action_name == "home" || action_name == "explore")) ||
                                 (controller_name == "legal_pages" && %w[privacy_policy terms_and_conditions].include?(action_name)) %>
     <% unless hide_mobile_bottom_nav %>
       <!-- Mobile Bottom Nav (Phase 4 requirement) -->

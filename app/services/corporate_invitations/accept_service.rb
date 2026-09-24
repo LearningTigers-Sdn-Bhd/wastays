@@ -36,6 +36,8 @@ module CorporateInvitations
           credit_limit: @invitation.credit_limit,
           credit_currency: @invitation.credit_currency,
           payment_terms_days: @invitation.payment_terms_days,
+          agent_booking_enabled: @invitation.agent_booking_enabled,
+          agent_payment_hold_hours: @invitation.agent_payment_hold_hours,
           contact_email: @invitation.email,
           status: "active"
         )

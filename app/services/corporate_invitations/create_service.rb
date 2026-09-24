@@ -36,6 +36,11 @@ module CorporateInvitations
     private
 
     def invitation_attributes(email, token)
+      # A hold only means something for an account that can take rooms, so an
+      # invitation that does not grant booking carries no hold either. Storing
+      # one anyway would quietly apply it the day booking was switched on.
+      booking_enabled = ActiveModel::Type::Boolean.new.cast(@attributes[:agent_booking_enabled]).present?
+
       {
         account: @hotel.account,
         invited_by_user: @invited_by_user,
@@ -45,6 +50,9 @@ module CorporateInvitations
         credit_limit: @attributes[:credit_limit].presence,
         credit_currency: @attributes[:credit_currency].presence || @hotel.default_currency,
         payment_terms_days: @attributes[:payment_terms_days].presence,
+        agent_booking_enabled: booking_enabled,
+        agent_payment_hold_amount: booking_enabled ? @attributes[:agent_payment_hold_amount] : nil,
+        agent_payment_hold_unit: @attributes[:agent_payment_hold_unit],
         token_digest: Invitation.digest(token),
         expires_at: Invitation::EXPIRY.from_now,
         last_sent_at: Time.current

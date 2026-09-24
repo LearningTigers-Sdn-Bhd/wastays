@@ -10,11 +10,27 @@ module CorporatePortal
     before_action :authenticate_corporate_user!
 
     helper CorporatePortal::NavigationHelper
+    # Views need it to decide whether to offer "Book a stay" at all.
+    helper_method :may_book_anywhere?
 
     private
 
     def corporate_relationships
       current_user.account.hotel_corporate_accounts
+    end
+
+    # The relationships this account may actually take rooms on. Booking for a
+    # client is a permission each hotel grants on its own relationship, so an
+    # account can be bookable at one property and billing-only at another.
+    #
+    # Deliberately not applied to corporate_bookings: revoking the permission
+    # must not hide the stays the agent already has with the hotel.
+    def bookable_relationships
+      corporate_relationships.active.booking_enabled
+    end
+
+    def may_book_anywhere?
+      bookable_relationships.exists?
     end
 
     # Only bookings this account is the billed party on. The dashboard, the

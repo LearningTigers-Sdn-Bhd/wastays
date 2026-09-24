@@ -27,11 +27,12 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Guest Registration No.")
       expect(response.body).to include("Pending check-in")
-      expect(response.body).to include("Review before signing")
-      expect(response.body).to include("Collect the guest's digital signature here")
-      expect(response.body).to include("sign the printed form")
-      expect(response.body).to include("The signature confirms that the guest reviewed")
+      # Informational for staff -- signing happens on the guest's own page,
+      # linked from here, not on this screen.
+      expect(response.body).to include("Open signing page")
       expect(response.body.scan("Print official form").size).to eq(1)
+      expect(response.body).not_to include("Review before signing")
+      expect(response.body).not_to include("Save Signature")
       expect(response.body).not_to include("Hotel acknowledgement")
       expect(response.body).not_to include("Cancellation Policy")
     end
@@ -70,14 +71,14 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       document = Nokogiri::HTML(response.body)
-      alert = document.at_css(".panel-alert[data-tone='warning']")
+      alert = document.at_css("[data-tone='warning']")
       expect(alert.text.squish).to include(
         "Outstanding balance: MYR 138.24",
         "If payment has already been received, record it before printing or emailing this card.",
         "Ask an authorized staff member to record the payment."
       )
       expect(alert.at_css("a")).to be_nil
-      expect(response.body).to include("Print official form", "Email to guest", "Save Signature")
+      expect(response.body).to include("Print official form", "Email to guest", "Open signing page")
       expect(document.at_css("article.grc-print").text).not_to include("Outstanding balance:")
     end
 
@@ -90,7 +91,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       document = Nokogiri::HTML(response.body)
-      alert = document.at_css(".panel-alert[data-tone='warning']")
+      alert = document.at_css("[data-tone='warning']")
       link = alert.at_xpath(".//a[contains(., 'Add Payment')]")
       expect(alert.text.squish).to include("Outstanding balance: MYR 88.24")
       expect(link["href"]).to eq(hotel_folio_action_post_transaction_path(
@@ -148,15 +149,15 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
       actions = Nokogiri::HTML(response.body).at_css("aside section")
-      expect(actions.text).to include("Configure displayed details")
-      configure_link = actions.at_xpath(".//a[contains(., 'Configure displayed details')]")
+      expect(actions.text).to include("Go to Settings")
+      configure_link = actions.at_xpath(".//a[contains(., 'Go to Settings')]")
       expect(configure_link["href"]).to eq("#{hotel_settings_path(hotel, tab: "general")}#guest-registration-card")
     end
 
     it "hides display configuration from staff without profile permission" do
       get hotel_booking_guest_registration_card_path(hotel, booking)
 
-      expect(response.body).not_to include("Configure displayed details")
+      expect(response.body).not_to include("Go to Settings")
     end
 
     it "renders primary stay snapshot details instead of later profile changes" do
@@ -269,7 +270,7 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
 
       actions = screen.at_xpath(".//h2[normalize-space()='Actions']/parent::section")
       email_button = actions.at_xpath(".//button[contains(normalize-space(), 'Email to guest')]")
-      settings_button = actions.at_xpath(".//a[contains(normalize-space(), 'Configure displayed details')]")
+      settings_button = actions.at_xpath(".//a[contains(normalize-space(), 'Go to Settings')]")
       expect(email_button["data-variant"]).to eq("neutral")
       expect(settings_button["data-variant"]).to eq("neutral")
     end
@@ -380,6 +381,29 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
 
       expect(response.body).to include("Terms &amp; Conditions")
       expect(response.body).to include("Valid photo ID is required at check-in.")
+    end
+
+    # Signing -- including the tablet handoff -- moved entirely to the
+    # guest's own page. This screen only links to it now; see
+    # "offers a link to the guest's own signing page" below and
+    # spec/requests/public/signing_devices_spec.rb for the tablet flow.
+
+    it "offers a link to the guest's own signing page" do
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      card = booking.reload.guest_registration_card
+      expect(response.body).to include("Open signing page")
+      expect(response.body).to include(guest_registration_card_path(card.public_token))
+    end
+
+    it "persists the card on first view, so the signing link works immediately" do
+      expect(booking.guest_registration_card).to be_nil
+
+      expect {
+        get hotel_booking_guest_registration_card_path(hotel, booking)
+      }.to change(GuestRegistrationCard, :count).by(1)
+
+      expect(response).to have_http_status(:success)
     end
   end
 

@@ -2,10 +2,13 @@
     value: AgentPaymentHoldUnit converts days to hours before validation, so
     agent_payment_hold_hours stays the one number Bookings::PaymentHold reads.
 
-    Shared between the property default (Settings) and an agency's override
-    (External Accounts), which differ only in their label, hint and whether
-    blank is allowed. %>
-<% record = form.object %>
+    Shared between the property default (Settings), an agency's override
+    (External Accounts) and the terms an invitation proposes, which differ only
+    in their label, hint and whether blank is allowed.
+
+    `record` is passed in rather than taken from the builder, because the invite
+    form is scoped to a symbol and has no object to read the current pair off. %>
+<% record = local_assigns.fetch(:record) { form.object } %>
 <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
   <%= render PanelsUI::FormField.new(form: form, attribute: :agent_payment_hold_amount,
         label: label, hint: hint) do |field| %>

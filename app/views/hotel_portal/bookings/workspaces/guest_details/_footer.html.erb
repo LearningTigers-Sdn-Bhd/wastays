@@ -1,8 +1,13 @@
 <% booking_guest = presenter.selected_booking_guest %>
 <% can_manage = presenter.can_manage_bookings?(current_user) %>
 <% can_view_grc = presenter.can_view_grc?(current_user) %>
+<%# Ordered by last beat, so a tablet that is actually listening sorts above one
+    that went to sleep hours ago. %>
+<% tablet_signing = can_manage && current_hotel.grc_tablet_signing_enabled? %>
+<% signing_devices = tablet_signing ? current_hotel.signing_devices.recently_seen_first.to_a : [] %>
 <% return_to = presenter.guest_details_return_to_path(booking, booking_guest) %>
 <% grc_path = presenter.guest_registration_card_path(booking, booking_guest) %>
+<% guest_already_signed = booking_guest.guest_registration_card&.signed_for_guest? %>
 
 <footer class="shrink-0 bg-card px-5 pb-4 pt-2 lg:px-8" data-testid="guest-details-footer">
   <div class="flex max-w-6xl items-center justify-between gap-3">
@@ -17,6 +22,50 @@
         <% end %>
         <%= form_with url: hotel_booking_action_set_primary_guest_path(current_hotel, booking, booking_guest), method: :patch, class: "inline-flex" do %>
           <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>Make primary<% end %>
+        <% end %>
+      <% end %>
+
+      <%# Sends the whole stay, not this one guest: the tablet walks everyone who
+          still owes a signature. It sits in this group rather than beside Save
+          because this group is the one that may scroll -- Save and View GRC
+          keep the width they need on a narrow screen. %>
+      <% if signing_devices.any? %>
+        <%= form_with url: hotel_booking_signing_handoff_path(current_hotel, booking), method: :post, class: "inline-flex items-center gap-2" do %>
+          <%# Advisory only -- the handoff refuses an offline or occupied tablet
+              on its own, and this state can go stale between renders. It is
+              here so staff pick the right one first rather than finding out
+              from an alert. %>
+          <% if signing_devices.many? %>
+            <label class="sr-only" for="signing-device-token">Tablet</label>
+            <select id="signing-device-token" name="device_token" class="form-input h-8 w-auto py-0 text-sm">
+              <% signing_devices.each do |device| %>
+                <option value="<%= device.public_token %>"><%= signing_device_option_label(device, booking) %></option>
+              <% end %>
+            </select>
+          <% else %>
+            <% device = signing_devices.first %>
+            <%= hidden_field_tag :device_token, device.public_token %>
+            <% status = signing_device_status(device, booking) %>
+            <% unless status == :ready %>
+              <span class="text-xs font-semibold text-amber-600">
+                <%= status == :offline ? "Tablet not connected" : "Tablet busy" %>
+              </span>
+            <% end %>
+          <% end %>
+
+          <% if guest_already_signed %>
+            <%= render PanelsUI::Tooltip.new(text: "This guest has signed. Remove signature to activate.", placement: :top) do %>
+              <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm, disabled: true) do %>
+                <%= cached_icon "tablet-smartphone", class: "size-4", aria: { hidden: true } %>
+                Send to tablet
+              <% end %>
+            <% end %>
+          <% else %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>
+              <%= cached_icon "tablet-smartphone", class: "size-4", aria: { hidden: true } %>
+              Send to tablet
+            <% end %>
+          <% end %>
         <% end %>
       <% end %>
     </div>

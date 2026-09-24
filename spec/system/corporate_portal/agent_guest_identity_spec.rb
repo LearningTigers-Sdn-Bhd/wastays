@@ -11,7 +11,12 @@ require "rails_helper"
 RSpec.describe "Agent guest identity fields", type: :system, js: true do
   let(:user) { create(:user, :corporate) }
   let(:hotel) { create(:hotel, status: "live") }
-  let(:relationship) { create(:hotel_corporate_account, corporate_account: user.account, hotel: hotel) }
+  # The booking form is only reachable once the hotel has granted this account
+  # the permission to book for its clients.
+  let(:relationship) do
+    create(:hotel_corporate_account, corporate_account: user.account, hotel: hotel,
+                                     agent_booking_enabled: true)
+  end
   let!(:room_type) do
     Rooms::SaveSeedRoomType.call!(
       hotel: hotel,

@@ -7,10 +7,16 @@ module PanelsUI
   # the ARIA role differ, giving assistive tech the on/off "switch" semantics.
   class Switch < PanelsUI::ToggleField
     VARIANTS = %i[default card icon].freeze
+    # The "on" colour. `default` is the product's primary; `success` is for a
+    # switch whose on state is a permission being granted, where green is what
+    # an operator reads as "allowed" without having to read the label twice.
+    # Off is grey either way -- an inactive permission carries no colour.
+    TONES = %i[default success].freeze
 
-    def initialize(off_icon: nil, on_icon: nil, **options)
+    def initialize(off_icon: nil, on_icon: nil, tone: :default, **options)
       @off_icon = off_icon
       @on_icon = on_icon
+      @tone = TONES.include?(tone) ? tone : :default
       super(**options)
     end
 
@@ -30,6 +36,11 @@ module PanelsUI
     end
 
     private
+
+    def wrapper_attributes
+      attributes = super
+      attributes.merge(data: attributes[:data].merge(tone: @tone))
+    end
 
     def css_prefix = "panel-switch"
     def control_noun = "Switches"

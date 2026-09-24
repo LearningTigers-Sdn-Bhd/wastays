@@ -43,6 +43,9 @@
               credit_currency: @corporate_invitation.credit_currency,
               credit_limit: @corporate_invitation.credit_limit,
               payment_terms_days: @corporate_invitation.payment_terms_days,
+              record: @corporate_invitation,
+              agent_booking_enabled: @corporate_invitation.agent_booking_enabled,
+              agent_payment_hold_default: current_hotel.agent_payment_hold_label,
               hint: "These proposed terms become the relationship when the invitation is accepted." %>
           </div>
         </div>

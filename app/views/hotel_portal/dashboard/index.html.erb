@@ -105,6 +105,18 @@
         </div>
       <% end %>
 
+      <%# Import Reservations -- hidden until hotel_portal has its own scoped
+          import flow (today this only exists under the superadmin Admin::
+          namespace). Flip the condition on once that lands. %>
+      <% if false && current_user.admin? %>
+        <div class="rounded-2xl border border-border bg-card px-6 py-3 shadow-sm">
+          <h3 class="mb-2 border-b border-border pb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Tools</h3>
+          <%= link_to "#", class: "w-full inline-flex items-center justify-center gap-x-2 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted" do %>
+            Import Reservations
+          <% end %>
+        </div>
+      <% end %>
+
     </div>
 
     <%# MAIN PANE: ARRIVALS AND TRANSACTIONS ─── %>
