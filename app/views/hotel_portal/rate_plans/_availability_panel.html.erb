@@ -15,20 +15,20 @@
 
 <% if rate_plan.kind.in?(RatePlan.kinds_for(:corporate)) %>
   <section aria-labelledby="rate-plan-ta-access-heading" class="space-y-4" data-controller="value-reveal">
-    <div>
-      <h3 id="rate-plan-ta-access-heading" class="text-base font-semibold text-foreground">Travel agent portal</h3>
-      <p class="mt-1 text-sm text-muted-foreground">Which travel agents can book this plan from their own portal. Front desk staff always see every active plan.</p>
+    <div class="flex items-center gap-1.5">
+      <h3 id="rate-plan-ta-access-heading" class="text-base font-semibold text-foreground">Corporate/TA Portal</h3>
+      <%= section_info_tip("Which travel agents can book this plan from their own portal. Front desk staff always see every active plan.") %>
     </div>
     <div class="max-w-md">
       <%= render PanelsUI::FormField.new(form: f, attribute: :ta_access, label: "Who can book it") do |field| %>
-        <% field.with_native_select(
-             RatePlan::TA_ACCESS_LABELS.map { |value, label| [ label, value ] },
+        <% field.with_select_menu(
+             RatePlan::TA_ACCESS_LABELS.map { |value, label| { label: label, value: value } },
              selected: rate_plan.ta_access,
-             data: { value_reveal_target: "source", action: "value-reveal#update" }) %>
+             data: { value_reveal_target: "source", action: "change->value-reveal#update" }) %>
       <% end %>
     </div>
     <% agencies = current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).sort_by { |account| account.corporate_account.name.to_s.downcase } %>
-    <div class="max-w-2xl" data-value-reveal-target="panel" data-reveal-values="except only" <%= "hidden" unless rate_plan.agency_rules? %>>
+    <div class="max-w-3xl" data-value-reveal-target="panel" data-reveal-values="except only" <%= "hidden" unless rate_plan.agency_rules? %>>
       <% if agencies.any? %>
         <%= render PanelsUI::FormField.new(form: f, attribute: :agency_account_ids, label: "Travel agents",
               hint: "Under “All travel agents except…” these are left out; under “Only selected travel agents” only these can book.") do |field| %>

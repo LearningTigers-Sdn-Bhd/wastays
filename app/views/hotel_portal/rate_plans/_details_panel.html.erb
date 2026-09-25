@@ -1,13 +1,15 @@
 <%# locals: (f:, rate_plan:, new_plan:) %>
 <section aria-labelledby="rate-plan-details-heading" class="space-y-4">
-  <div>
+  <div class="flex items-center gap-1.5">
     <h3 id="rate-plan-details-heading" class="text-base font-semibold text-foreground">Plan details</h3>
-    <p class="mt-1 text-sm text-muted-foreground">
-      <%= new_plan ? "Pick an existing plan to add it to another room category, or type a new name." : "These apply to every room category on this plan." %>
-    </p>
+    <% if new_plan %>
+      <p class="text-sm text-muted-foreground">Pick an existing plan to add it to another room category, or type a new name.</p>
+    <% else %>
+      <%= section_info_tip("These apply to every room category on this plan.") %>
+    <% end %>
   </div>
 
-  <div class="grid max-w-2xl items-start gap-4">
+  <div class="grid max-w-3xl items-start gap-4">
     <% if new_plan %>
       <%= hidden_field_tag "rate_plan[rate_plan_id]", params.dig(:rate_plan, :rate_plan_id), data: { rate_plan_editor_target: "selectedRatePlanId" } %>
       <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true,
@@ -36,7 +38,7 @@
       <h3 id="rate-plan-occupancy-heading" class="text-base font-semibold text-foreground">Guests in the room price</h3>
       <p class="mt-1 text-sm text-muted-foreground">How many guests the nightly room price covers, and what each extra guest pays.</p>
     </div>
-    <div class="grid max-w-2xl items-start gap-4 sm:grid-cols-2">
+    <div class="grid max-w-3xl items-start gap-4 sm:grid-cols-2">
       <%= render PanelsUI::FormField.new(form: f, attribute: :base_occupancy, label: "Guests included", hint: "Number of guests covered by the room price.") do |field| %>
         <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
       <% end %>

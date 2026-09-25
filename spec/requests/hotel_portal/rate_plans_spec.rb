@@ -23,7 +23,10 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   def delete_action_labels(body)
-    Nokogiri::HTML(body).css('a[data-turbo-method="delete"]').map { |link| link.text.strip }
+    menu = Nokogiri::HTML(body).at_css("#rate-plan-editor-actions")
+    return [] unless menu
+
+    menu.css('form input[name="_method"][value="delete"]').map { |input| input.parent.at_css("button").text.strip }
   end
 
   describe 'GET /hotel/:hotel_id/rate_plans/new' do
@@ -42,7 +45,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.at_css('turbo-frame#settings_action_sheet dialog')).to be_nil
       expect(doc.at_css('h1').text).to eq("New rate plan")
       expect(doc.at_css('form#new-rate-plan-form')["action"]).to eq("#{hotel_rate_plans_path(hotel)}?tab=details")
-      expect(doc.css('[role="tab"]').map { |tab| tab.text.squish }).to eq(%w[Details Pricing Discounts Availability])
+      expect(doc.css('[role="tab"]').map { |tab| tab.text.squish }).to eq([ "Details", "Pricing", "Discounts", "Corporate/TA Portal" ])
       expect(doc.at_css("a[href='#{hotel_room_types_path(hotel, open: room_type.id)}']").text.squish).to include("Room Inventory")
     end
 
@@ -105,16 +108,15 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.at_css('#rate_plan_sell_mode')).to be_nil
     end
 
-    it 'explains the capability requirements for a connected per-guest hotel', :per_person do
+    it 'puts the OTA child/infant fees on the Pricing tab for a connected per-guest hotel', :per_person do
       hotel.update!(preferred_channel_manager: 'channex')
 
       get new_hotel_rate_plan_path(hotel)
 
-      doc = Nokogiri::HTML(response.body)
-      expect(doc.at_css('[data-tab-panel="pricing"]').text).to include('Per-guest channel requirements', 'Complete every adult price')
-      settings = doc.at_css('[data-tab-panel="settings"]')
-      expect(settings.at_css('#rate_plan_channex_children_fee')).to be_present
-      expect(settings.at_css('#rate_plan_channex_infant_fee')).to be_present
+      pricing = Nokogiri::HTML(response.body).at_css('[data-tab-panel="pricing"]')
+      expect(pricing.text).to include('Charge a different price for children on OTAs')
+      expect(pricing.at_css('#rate_plan_channex_children_fee')).to be_present
+      expect(pricing.at_css('#rate_plan_channex_infant_fee')).to be_present
     end
   end
 
@@ -129,8 +131,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.at_css('turbo-frame#settings_action_sheet dialog')).to be_nil
       form = doc.at_css("form#edit-rate-plan-#{rate_plan.id}-form")
       expect(form).to be_present
-      expect(form.css('[role="tab"]').map { |tab| tab.text.squish }).to eq(%w[Details Pricing Discounts Availability Settings])
-      expect(form.css('[data-tab-panel]').map { |panel| panel["data-tab-panel"] }).to eq(%w[details pricing discounts availability settings])
+      expect(form.css('[role="tab"]').map { |tab| tab.text.squish }).to eq([ "Details", "Pricing", "Discounts", "Corporate/TA Portal" ])
+      expect(form.css('[data-tab-panel]').map { |panel| panel["data-tab-panel"] }).to eq(%w[details pricing discounts availability])
       expect(doc.at_css('h1').text).to eq("Promo Rate")
       expect(doc.css("button[type='submit'][form='#{form['id']}']").map { |button| button.text.squish }.uniq).to eq([ "Save rate plan" ])
       expect(doc.at_css('dialog[role="alertdialog"]')).to be_present
@@ -142,10 +144,12 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       doc = Nokogiri::HTML(response.body)
       expect(doc.at_css('[data-tab-panel="details"] #rate_plan_name')).to be_present
       expect(doc.at_css('[data-tab-panel="details"] #rate_plan_base_occupancy')).to be_present
-      expect(doc.at_css('[data-tab-panel="pricing"] select[name="rate_plan[room_type_id]"]')).to be_present
-      expect(doc.at_css('[data-tab-panel="discounts"] [data-controller="nested-rows"]')).to be_present
+      # A plan attached to only one room category shows it read-only rather than
+      # a switcher with nothing else to switch to.
+      expect(doc.at_css('[data-tab-panel="pricing"] input[name="rate_plan[room_type_id]"][type="hidden"]')["value"]).to eq(room_type.id.to_s)
+      expect(doc.at_css('[data-tab-panel="discounts"] [data-controller~="nested-rows"]')).to be_present
       expect(doc.at_css('[data-tab-panel="availability"] select[name="rate_plan[ta_access]"]')).to be_present
-      expect(doc.at_css('[data-tab-panel="settings"]').text).to include("Archive plan", "Delete plan")
+      expect(doc.text).to include("Archive plan", "Delete plan")
       expect(doc.at_css('[data-tab-panel="details"]')["hidden"]).to be_nil
       expect(doc.at_css('[data-tab-panel="pricing"]')["hidden"]).not_to be_nil
     end
@@ -180,14 +184,16 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.text.squish).to include("Child pricing")
     end
 
-    it 'offers archive and delete on the Settings tab when the plan has no bookings' do
+    it 'offers archive beside Cancel and delete from the page header when the plan has no bookings' do
       get edit_hotel_rate_plan_path(hotel, rate_plan)
 
       expect(delete_action_labels(response.body)).to include("Delete plan")
-      archive = Nokogiri::HTML(response.body).at_css('[data-tab-panel="settings"] a[data-turbo-method="patch"]')
-      expect(archive.text.squish).to eq("Archive plan")
-      expect(archive["href"]).to start_with(archive_hotel_rate_plan_path(hotel, rate_plan))
-      expect(CGI.unescape(archive["href"])).to include("return_to=#{edit_hotel_rate_plan_path(hotel, rate_plan)}")
+      doc = Nokogiri::HTML(response.body)
+      archive_form = doc.at_css("#rate-plan-editor-footer form[action^='#{archive_hotel_rate_plan_path(hotel, rate_plan)}']")
+      expect(archive_form).to be_present
+      expect(archive_form.at_css("button").text.squish).to eq("Archive plan")
+      expect(archive_form.at_css('input[name="_method"]')["value"]).to eq("patch")
+      expect(CGI.unescape(archive_form["action"])).to include("return_to=#{edit_hotel_rate_plan_path(hotel, rate_plan)}")
     end
 
     it 'hides the delete action once the plan has a booking' do
@@ -246,23 +252,22 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(response.body).to include('Add age group')
     end
 
-    it 'keeps cards only for the pricing mode choices', :per_person do
+    it 'walks Auto pricing one question at a time, in the wizard steps', :per_person do
       per_person_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, name: 'Family Plan')
 
       get edit_hotel_rate_plan_path(hotel, per_person_plan)
 
       doc = Nokogiri::HTML(response.body)
-      primary_rate_row = doc.at_css('[data-rate-plan-room-pricing-target="autoPanel"]')
-      ladder = doc.at_css('[data-rate-plan-room-pricing-target="ladderPanel"]')
+      auto_panel = doc.at_css('[data-rate-plan-room-pricing-target="autoPanel"]')
       mode_choice = doc.at_css('input[data-rate-plan-room-pricing-target="mode"]').parent
 
-      expect(primary_rate_row["class"]).to include("grid", "sm:grid-cols-3")
-      expect(primary_rate_row.css('.panel-form-field[data-size="md"]').size).to eq(3)
-      expect(primary_rate_row.at_css('select[name="room_pricing[increase_unit]"]')).to be_present
-      expect(primary_rate_row.at_css('select[name="room_pricing[decrease_unit]"]')).to be_present
-      expect(ladder["class"]).not_to include("border", "rounded-md", "p-4")
-      expect(ladder.at_css('select[name="room_pricing[increase_unit]"]')).to be_nil
-      expect(ladder.at_css('select[name="room_pricing[decrease_unit]"]')).to be_nil
+      steps = auto_panel.css('[data-rate-plan-pricing-wizard-target="step"]')
+      expect(steps.map { |step| step["data-wizard-step"] }).to eq(%w[2 3 4 5])
+      expect(steps[0].at_css('#room_pricing_primary_occupancy')).to be_present
+      expect(steps[1].at_css('#room_pricing_default_rate')).to be_present
+      expect(steps[2].at_css('select[name="room_pricing[increase_unit]"]')).to be_present
+      expect(steps[3].at_css('select[name="room_pricing[decrease_unit]"]')).to be_present
+      expect(auto_panel.at_css('[data-rate-plan-room-pricing-target="preview"]')).to be_present
       expect(mode_choice["class"]).to include("border", "rounded-md", "p-3")
     end
 
@@ -767,8 +772,8 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
 
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Enter a price for 2 adults")
-      selected = response.parsed_body.at_css('select[name="rate_plan[room_type_id]"] option[selected]')
-      expect(selected["value"]).to eq(room_type.id.to_s)
+      hidden = response.parsed_body.at_css('input[name="rate_plan[room_type_id]"][type="hidden"]')
+      expect(hidden["value"]).to eq(room_type.id.to_s)
     end
 
     it "returns to the plan page after saving one room's pricing" do

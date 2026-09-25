@@ -1,67 +1,96 @@
 <%# locals: (f:, rate_plan:, new_plan:, room_types:, selected_room_type:, room_pricing:) %>
 <% per_person = current_hotel.sells_per_person? %>
-<section aria-labelledby="rate-plan-room-pricing-heading" class="space-y-4">
-  <div>
-    <h3 id="rate-plan-room-pricing-heading" class="text-base font-semibold text-foreground">Room pricing</h3>
-    <p class="mt-1 text-sm text-muted-foreground">
-      <%= per_person ? "The property charges per guest" : "The property charges per room" %>. Prices are in <%= rate_plan.currency %>.
-      <%= new_plan ? "Choose the first room category for this plan; you can add it to more categories from Room Inventory." : "Each room category on this plan has its own price. Pick one to change it." %>
-    </p>
-  </div>
-
-  <% if room_types.any? %>
-    <% choices = room_types.map { |room_type| { label: "#{room_type.name} · #{pluralize(room_type.max_adults, 'adult')}", value: room_type.id } } %>
-    <div class="max-w-md">
-      <%= fields_for :rate_plan, HotelPortal::RatePlansHelper::RoomSelectionScope.new(selected_room_type&.id) do |selector| %>
-        <%= render PanelsUI::FormField.new(form: selector, attribute: :room_type_id, label: "Room category", required: new_plan) do |field| %>
-          <% field.with_select_menu(choices, selected: selected_room_type&.id,
-               data: { action: "change->rate-plan-editor#selectRoom" }) %>
-        <% end %>
-      <% end %>
+<% card_class = "rounded-lg border border-border bg-card p-4 sm:p-5" %>
+<%# Room rate is the main column; at a per-guest property the child prices sit
+    beside it on desktop so each section reads as its own block. %>
+<div class="<%= per_person ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' : 'max-w-4xl' %>">
+  <section aria-labelledby="rate-plan-room-pricing-heading" class="<%= card_class %> space-y-4">
+    <div class="flex items-center gap-1.5">
+      <h3 id="rate-plan-room-pricing-heading" class="text-base font-semibold text-foreground">Room pricing</h3>
+      <%= section_info_tip("#{per_person ? 'The property charges per guest' : 'The property charges per room'}. Prices are in #{rate_plan.currency}. " \
+            "#{new_plan ? 'Choose the first room category for this plan; you can add it to more categories from Room Inventory.' : 'Each room category on this plan has its own price. Pick one to change it.'}") %>
     </div>
-  <% else %>
-    <%= render PanelsUI::Alert.new(tone: :warning, title: new_plan ? "Create a room category first" : "No room category assigned", role: :status) do |alert| %>
-      <% alert.with_description { new_plan ? "A rate plan needs a room category to price." : "Add this plan to a room category from Room Inventory before setting its price." } %>
-    <% end %>
-  <% end %>
 
-  <% if per_person && current_hotel.preferred_channel_manager.present? %>
-    <%= render PanelsUI::Alert.new(tone: :info, title: "Per-guest channel requirements", role: :status) do |alert| %>
-      <% alert.with_description { "Complete every adult price for each room category. If you add age groups, also set the flat child and infant fees under Settings." } %>
-    <% end %>
-  <% end %>
-
-  <% if selected_room_type && room_pricing %>
-    <div class="max-w-3xl space-y-4"
-         data-controller="rate-plan-room-pricing"
-         data-rate-plan-room-pricing-anchor-value="<%= selected_room_type.base_price.to_f %>"
-         data-rate-plan-room-pricing-max-adults-value="<%= room_pricing.max_adults %>"
-         data-rate-plan-room-pricing-currency-value="<%= rate_plan.currency %>"
-         data-rate-plan-room-pricing-per-person-value="<%= room_pricing.per_person? %>"
-         data-action="input->rate-plan-room-pricing#refresh change->rate-plan-room-pricing#refresh">
-      <p class="text-sm text-muted-foreground">
-        <%= selected_room_type.name %>: up to <%= pluralize(selected_room_type.max_adults, "adult") %> and <%= pluralize(selected_room_type.max_children, "child") %> · Standard Rate <%= rate_plan_money(selected_room_type.base_price, rate_plan.currency) %>
-      </p>
-
-      <% if !new_plan && rate_plan.standard_rate? && !per_person %>
-        <%= render PanelsUI::Alert.new(tone: :info, title: "#{rate_plan.name} follows the room category", role: :status) do |alert| %>
-          <% alert.with_description { "Change the default nightly amount on the room category, and use Rates & Availability for date-specific prices." } %>
-        <% end %>
+    <% if room_types.any? %>
+      <% choices = room_types.map { |room_type| { label: "#{room_type.name} · #{pluralize(room_type.max_adults, 'adult')}", value: room_type.id } } %>
+      <% if !new_plan && room_types.one? %>
+        <%# Shown read-only on the page header instead — nothing to pick here. %>
+        <%= hidden_field_tag "rate_plan[room_type_id]", selected_room_type&.id %>
       <% else %>
-        <%= fields_for :room_pricing, room_pricing do |pricing_form| %>
-          <%= render "hotel_portal/rate_plans/room_pricing_fields",
-                f: pricing_form, pricing: room_pricing, room_type: selected_room_type,
-                currency: rate_plan.currency, form_prefix: "#{new_plan ? 'new_rate_plan' : 'editor'}_room_#{selected_room_type.id}" %>
-        <% end %>
+        <div class="max-w-md">
+          <%= fields_for :rate_plan, HotelPortal::RatePlansHelper::RoomSelectionScope.new(selected_room_type&.id) do |selector| %>
+            <%= render PanelsUI::FormField.new(form: selector, attribute: :room_type_id, label: "Room category", required: new_plan) do |field| %>
+              <% field.with_select_menu(choices, selected: selected_room_type&.id,
+                   data: { action: "change->rate-plan-editor#selectRoom" }) %>
+            <% end %>
+          <% end %>
+        </div>
       <% end %>
+    <% else %>
+      <%= render PanelsUI::Alert.new(tone: :warning, title: new_plan ? "Create a room category first" : "No room category assigned", role: :status) do |alert| %>
+        <% alert.with_description { new_plan ? "A rate plan needs a room category to price." : "Add this plan to a room category from Room Inventory before setting its price." } %>
+      <% end %>
+    <% end %>
+
+    <% if selected_room_type && room_pricing %>
+      <div class="space-y-4"
+           data-controller="rate-plan-room-pricing"
+           data-rate-plan-room-pricing-anchor-value="<%= selected_room_type.base_price.to_f %>"
+           data-rate-plan-room-pricing-max-adults-value="<%= room_pricing.max_adults %>"
+           data-rate-plan-room-pricing-currency-value="<%= rate_plan.currency %>"
+           data-rate-plan-room-pricing-per-person-value="<%= room_pricing.per_person? %>"
+           data-action="input->rate-plan-room-pricing#refresh change->rate-plan-room-pricing#refresh">
+        <p class="text-sm text-muted-foreground">
+          <%= selected_room_type.name %>: up to <%= pluralize(selected_room_type.max_adults, "adult") %> and <%= pluralize(selected_room_type.max_children, "child") %> · Standard Rate <%= rate_plan_money(selected_room_type.base_price, rate_plan.currency) %>
+        </p>
+
+        <% if !new_plan && rate_plan.standard_rate? && !per_person %>
+          <%= render PanelsUI::Alert.new(tone: :info, title: "#{rate_plan.name} follows the room category", role: :status) do |alert| %>
+            <% alert.with_description { "Change the default nightly amount on the room category, and use Rates & Availability for date-specific prices." } %>
+          <% end %>
+        <% else %>
+          <%= fields_for :room_pricing, room_pricing do |pricing_form| %>
+            <%= render "hotel_portal/rate_plans/room_pricing_fields",
+                  f: pricing_form, pricing: room_pricing, room_type: selected_room_type,
+                  currency: rate_plan.currency, form_prefix: "#{new_plan ? 'new_rate_plan' : 'editor'}_room_#{selected_room_type.id}" %>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <p class="text-sm text-muted-foreground">Prices for specific dates, availability and restrictions are set under Rates &amp; Availability.</p>
+  </section>
+
+  <% if per_person %>
+    <%# OTAs can't carry age-banded prices — they take one flat child fee and
+        one flat infant fee instead. Most properties are happy leaving children
+        free there (channex_children_fee/infant_fee nil, formatted as 0 when
+        synced), so the flat-fee inputs start collapsed behind a checkbox
+        rather than sitting in their own always-open section. %>
+    <% ota_fees_set = rate_plan.channex_children_fee.present? || rate_plan.channex_infant_fee.present? %>
+    <div class="<%= card_class %> space-y-6" data-controller="value-reveal">
+      <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan %>
+
+      <div class="space-y-4 border-t border-border pt-4">
+        <%= render PanelsUI::Checkbox.new(name: "ota_child_fees_differ",
+              label: "Charge a different price for children on OTAs",
+              description: "Booking.com, Agoda and other OTAs can't use the age-specific prices above — they need one flat fee. " \
+                "Leave this off and children stay free there; turn it on to set a fee.",
+              checked: ota_fees_set,
+              data: { value_reveal_target: "source", action: "change->value-reveal#update" }) %>
+
+        <div data-value-reveal-target="panel" data-reveal-values="checked"
+             class="grid gap-4 sm:grid-cols-2" <%= "hidden" unless ota_fees_set %>>
+          <%= render PanelsUI::FormField.new(form: f, attribute: :channex_children_fee, label: "Flat child fee") do |field| %>
+            <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+            <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+          <% end %>
+          <%= render PanelsUI::FormField.new(form: f, attribute: :channex_infant_fee, label: "Flat infant fee") do |field| %>
+            <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+            <% field.with_addon(align: :inline_start) { rate_plan.currency } %>
+          <% end %>
+        </div>
+      </div>
     </div>
   <% end %>
-
-  <p class="text-sm text-muted-foreground">Prices for specific dates, availability and restrictions are set under Rates &amp; Availability.</p>
-</section>
-
-<% if per_person %>
-  <div class="max-w-3xl">
-    <%= render "hotel_portal/rate_plans/age_bands", f: f, rate_plan: rate_plan %>
-  </div>
-<% end %>
+</div>

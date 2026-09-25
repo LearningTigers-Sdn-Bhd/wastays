@@ -33,6 +33,15 @@ module HotelPortal
       [ { label: currency, value: "amount" }, { label: "%", value: "percent" } ]
     end
 
+    # A small info-icon tooltip for background copy that would otherwise sit as a
+    # paragraph under every section heading, crowding the page (client feedback:
+    # too much text shown at once).
+    def section_info_tip(text)
+      render(PanelsUI::Tooltip.new(text: text, placement: :top_start)) do
+        cached_icon "info", class: "size-4 text-muted-foreground", aria: { hidden: true }
+      end
+    end
+
     def rate_plan_money(amount, currency)
       "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
     end
