@@ -100,13 +100,16 @@ module Bookings
     # The band says who this child is; what they cost can be answered by the
     # room they are staying in, since a child in a suite is not worth the same
     # as one in a single. A pairing that has priced nothing leaves the band's
-    # own figure standing.
+    # own figure standing. A percentage band is a share of what one adult pays
+    # alone, not of this party's per-adult share, whether the band or the room
+    # names the figure: two adults sharing a room should not make their child
+    # cheaper.
     def per_child_price(age)
       band = @rate_plan.age_banded? ? @rate_plan.band_for_age(age) : nil
       return @base_nightly_rate * (@rate_plan.child_price_multiplier || 1.to_d) if band.nil?
 
       pricing = @assignment&.effective_age_band_pricing_for(band)
-      return band.price_for(@base_nightly_rate) if pricing.nil?
+      return band.price_for(@child_percentage_base) if pricing.nil?
       return pricing.value if pricing.mode == "amount"
 
       @child_percentage_base.to_d * pricing.value / 100.to_d

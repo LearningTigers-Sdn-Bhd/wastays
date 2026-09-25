@@ -26,6 +26,10 @@
   <td class="whitespace-nowrap text-muted-foreground"><%= row.check_out.strftime("%d %b %Y") %></td>
 <% when "source" %>
   <td class="whitespace-nowrap"><%= row.source_label %></td>
+<% when "rate_plan" %>
+  <td><%= row.rate_plan_label %></td>
+<% when "room_nights" %>
+  <td class="whitespace-nowrap text-right tabular-nums"><%= row.room_nights %></td>
 <% when "fund_collector" %>
   <td class="whitespace-nowrap"><%= row.fund_collector_label %></td>
 <% when "status" %>

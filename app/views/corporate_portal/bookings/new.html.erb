@@ -51,6 +51,15 @@
           <% end %>
         </div>
 
+        <%# A per-guest property prices each child by age, so the search asks
+            for one age per child; a per-room property has no use for them. %>
+        <% asks_child_ages = @relationships.any? { |relationship| relationship.hotel.sells_per_person? } %>
+        <div class="space-y-4"
+             <% if asks_child_ages %>
+               data-controller="child-ages"
+               data-child-ages-name-value="child_ages[]"
+               data-child-ages-ages-value="<%= @child_ages.to_json %>"
+             <% end %>>
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <%= render PanelsUI::FormField.new(form:, attribute: :check_in, label: "Arrival", required: true) do |field| %>
             <% field.with_date_picker(value: @check_in, linked_to: :check_out, min: Date.current) %>
@@ -64,9 +73,21 @@
             <% field.with_input(type: :number, value: @adults, min: 1, max: 10) %>
           <% end %>
 
-          <%= render PanelsUI::FormField.new(form:, attribute: :children, label: "Children per room") do |field| %>
-            <% field.with_input(type: :number, value: @children, min: 0, max: 10) %>
-          <% end %>
+          <div <% if asks_child_ages %>data-child-ages-target="count"<% end %>>
+            <%= render PanelsUI::FormField.new(form:, attribute: :children, label: "Children per room") do |field| %>
+              <% field.with_input(type: :number, value: @children, min: 0, max: 10,
+                                  data: (asks_child_ages ? { action: "input->child-ages#sync change->child-ages#sync" } : {})) %>
+            <% end %>
+          </div>
+        </div>
+
+        <% if asks_child_ages %>
+          <div class="<%= 'hidden' if @children.zero? %>" data-child-ages-target="wrapper">
+            <p class="text-sm font-medium text-foreground">Children's ages</p>
+            <p class="mt-0.5 text-xs text-muted-foreground">Children are priced by age, so every child in the room needs one.</p>
+            <div class="mt-2 flex flex-wrap gap-2" data-child-ages-target="list"></div>
+          </div>
+        <% end %>
         </div>
 
         <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
@@ -127,7 +148,7 @@
                           as: :a, variant: chosen ? :secondary : :primary, size: :sm, class: "shrink-0",
                           href: new_corporate_booking_path(
                             hotel_relationship_id: @relationship.id, check_in: @check_in,
-                            check_out: @check_out, adults: @adults, children: @children,
+                            check_out: @check_out, adults: @adults, children: @children, child_ages: @child_ages,
                             rooms: @rooms, room_type_id: option.room_type.id, rate_plan_id: option.rate_plan.id)) do %>
                       <%= chosen ? "Selected" : "Select" %>
                     <% end %>
@@ -135,6 +156,29 @@
                 </li>
               <% end %>
             </ul>
+          <% end %>
+          <% if @search.too_small.any? %>
+            <div class="border-t border-border px-4 py-4 sm:px-6">
+              <h3 class="text-xs font-bold text-muted-foreground">Too small for this party</h3>
+              <ul class="mt-2 space-y-2">
+                <% @search.too_small.each do |room_type| %>
+                  <li class="text-xs text-muted-foreground"><%= room_type.occupancy_limit_message %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+          <% if @search.restricted.any? %>
+            <div class="border-t border-border px-4 py-4 sm:px-6">
+              <h3 class="text-xs font-bold text-muted-foreground">Not bookable for these dates</h3>
+              <ul class="mt-2 space-y-2">
+                <% @search.restricted.each do |option| %>
+                  <li class="text-xs text-muted-foreground">
+                    <span class="font-semibold text-foreground"><%= option.room_type.name %></span> ·
+                    <%= option.rate_plan.name %> · <%= option.restriction %>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
           <% end %>
           <% if (note = @search.available.first&.tourism_tax_note).present? %>
             <p class="border-t border-border px-6 py-3 text-xs text-muted-foreground">
@@ -160,6 +204,9 @@
               <%= form.hidden_field :check_out, value: @check_out %>
               <%= form.hidden_field :adults, value: @adults %>
               <%= form.hidden_field :children, value: @children %>
+              <% @child_ages.each do |age| %>
+                <%= hidden_field_tag "booking[child_ages][]", age %>
+              <% end %>
               <%= form.hidden_field :rooms, value: @rooms %>
 
               <%# One block per room, and inside it one per adult sharing that

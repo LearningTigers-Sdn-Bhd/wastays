@@ -45,7 +45,8 @@ module HotelPortal
             check_in: Date.parse(@check_in_value),
             check_out: Date.parse(@check_out_value),
             adults: @booking.adults,
-            children: @booking.children
+            children: @booking.children,
+            child_ages: @booking.child_ages
           ).call
           options.map do |option|
             label = "#{option[:name]} · #{option[:currency]} #{format('%.2f', option[:total_amount].to_d)}"

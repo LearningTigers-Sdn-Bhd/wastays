@@ -54,7 +54,7 @@ module HotelPortal
       return false unless assignment
       return assignment.pricing_value.present? unless per_person
 
-      assignment.occupancy_prices.map(&:adults).sort == (1..room_type.max_adults).to_a
+      occupancy_rungs(assignment, room_type).map(&:adults).sort == (1..room_type.max_adults).to_a
     end
 
     def room_pricing_summary(assignment, room_type, currency, per_person: current_hotel.sells_per_person?)
@@ -62,15 +62,32 @@ module HotelPortal
       return "Not priced" unless assignment
 
       if per_person
-        rungs = assignment.occupancy_prices.sort_by(&:adults)
+        rungs = occupancy_rungs(assignment, room_type).sort_by(&:adults)
         return "Not priced" if rungs.empty?
+        return occupancy_price_ladder(rungs, currency) unless assignment.derives_price?
 
-        occupancy_price_ladder(rungs, currency)
+        safe_join([ tag.span("Adjusts Standard Rate", class: "me-1.5 text-xs text-muted-foreground"), occupancy_price_ladder(rungs, currency) ])
       else
         return "Not priced" if assignment.pricing_value.blank?
         return "Adjusts Standard Rate" if assignment.derives_price?
 
         money_summary(assignment.pricing_value, currency)
+      end
+    end
+
+    OccupancyRung = Data.define(:adults, :price)
+
+    # A per-guest plan's price for each adult count. A derived plan stores none
+    # of its own -- it follows Standard's list -- so its rungs are worked out
+    # from Standard's as they stand today.
+    def occupancy_rungs(assignment, room_type)
+      return assignment.occupancy_prices.to_a unless assignment.derives_price?
+
+      standard = room_type.room_type_rate_plans.find { |candidate| candidate.rate_plan&.standard_rate? }
+      return [] if standard.nil? || standard == assignment
+
+      standard.occupancy_prices.map do |rung|
+        OccupancyRung.new(adults: rung.adults, price: assignment.derive_price(rung.price).round(2))
       end
     end
 

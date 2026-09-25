@@ -45,6 +45,7 @@ module CorporatePortal
       @check_out = parse_date(params[:check_out])
       @adults = (params[:adults].presence || 2).to_i
       @children = params[:children].to_i
+      @child_ages = Bookings::ChildAges.normalize(params[:child_ages], @children)
       @rooms = [ (params[:rooms].presence || 1).to_i, 1 ].max
       @room_type_id = params[:room_type_id]
       @rate_plan_id = params[:rate_plan_id]
@@ -53,7 +54,7 @@ module CorporatePortal
 
       @search = AgentStaySearch.call(
         hotel: @relationship.hotel, check_in: @check_in, check_out: @check_out,
-        adults: @adults, children: @children, rooms: @rooms, relationship: @relationship
+        adults: @adults, children: @children, child_ages: @child_ages, rooms: @rooms, relationship: @relationship
       )
       @selected = selected_option
     end
@@ -93,9 +94,10 @@ module CorporatePortal
     private
 
     # A link that names no plan (bookmarked before plans were selectable)
-    # still selects the category when it offers exactly one.
+    # still selects the category when it offers exactly one. A plan closed for
+    # these dates is never selected: there is nothing the agent could book.
     def selected_option
-      candidates = @search.options.select { |option| option.room_type.id.to_s == @room_type_id.to_s }
+      candidates = @search.options.reject(&:restricted?).select { |option| option.room_type.id.to_s == @room_type_id.to_s }
       return candidates.find { |option| option.rate_plan.id.to_s == @rate_plan_id.to_s } if @rate_plan_id.present?
 
       candidates.first if candidates.one?
@@ -158,7 +160,7 @@ module CorporatePortal
     def booking_params
       params.require(:booking).permit(
         :room_type_id, :rate_plan_id, :check_in, :check_out, :adults, :children, :rooms,
-        :special_requests, :agent_reference, :boat_in_time, :boat_out_time, rooms_detail: {}
+        :special_requests, :agent_reference, :boat_in_time, :boat_out_time, child_ages: [], rooms_detail: {}
       )
     end
 
@@ -166,7 +168,7 @@ module CorporatePortal
       redirect_to new_corporate_booking_path(
         hotel_relationship_id: @relationship.id,
         check_in: booking_params[:check_in], check_out: booking_params[:check_out],
-        adults: booking_params[:adults], children: booking_params[:children],
+        adults: booking_params[:adults], children: booking_params[:children], child_ages: booking_params[:child_ages],
         rooms: booking_params[:rooms], room_type_id: booking_params[:room_type_id],
         rate_plan_id: booking_params[:rate_plan_id]
       ), alert: flash.now[:alert]

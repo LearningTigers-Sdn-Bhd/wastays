@@ -24,6 +24,7 @@ module Bookings
       @existing_guest_id = @params.delete(:existing_guest_id)
       @guest_update_intent = @params.delete(:guest_update_intent)
       @rate_plan_id = @params.delete(:rate_plan_id)
+      @child_ages = @params.delete(:child_ages)
       @apply_stop_sell_restriction = @params.delete(:apply_stop_sell_restriction)
       @apply_arrival_departure_restrictions = @params.delete(:apply_arrival_departure_restrictions)
       @apply_stay_length_restrictions = @params.delete(:apply_stay_length_restrictions)
@@ -81,6 +82,8 @@ module Bookings
         return OpenStruct.new(success?: false, errors: [ "Room #{@room_number} is currently being assigned by another staff member." ])
       end
 
+      child_ages = ChildAges.normalize(@child_ages, booking.children)
+
       begin
         financial_snapshot = BuildFinancialSnapshot.new(
           hotel: @hotel,
@@ -91,7 +94,8 @@ module Bookings
           guest_country: booking.guest_country,
           manual_total_amount: booking.manual_rate_override,
           adults: booking.adults,
-          children: booking.children
+          children: booking.children,
+          child_ages: child_ages
         ).call
       rescue ArgumentError => e
         return OpenStruct.new(success?: false, errors: [ e.message ])
@@ -135,7 +139,8 @@ module Bookings
             rate_plan: rate_plan,
             subtotal: financial_snapshot.room_total,
             room_type_snapshot: room_type.as_json,
-            nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot
+            nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot,
+            occupancy_snapshot: { "adults" => booking.adults, "children" => booking.children, "child_ages" => child_ages }
           )
 
           if booking.save
@@ -218,7 +223,8 @@ module Bookings
         check_out: booking.check_out,
         guest_country: booking.guest_country,
         adults: booking.adults,
-        children: booking.children
+        children: booking.children,
+        child_ages: booking.child_ages
       ).call.room_total
     rescue ArgumentError => e
       # The booking is already valid; a failed counterfactual quote must not

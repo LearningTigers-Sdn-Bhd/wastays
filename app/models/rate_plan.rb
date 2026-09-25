@@ -72,12 +72,16 @@ class RatePlan < ApplicationRecord
   }
 
   # The plans one agency may book, as a relation so callers can keep chaining.
+  # "All except" is a list of agencies to leave out, so it only ever offers to
+  # an agency it can check against that list -- with none, only "all" answers.
   scope :offered_to_agency, lambda { |relationship|
-    named = RatePlanAgencyRule.where(hotel_corporate_account_id: relationship&.id)
+    open_to_all = for_audience(:corporate).where(ta_access: "all")
+    next open_to_all if relationship.nil?
+
+    named = RatePlanAgencyRule.where(hotel_corporate_account_id: relationship.id)
       .where(RatePlanAgencyRule.arel_table[:rate_plan_id].eq(arel_table[:id]))
       .arel.exists
-    for_audience(:corporate)
-      .where(ta_access: "all")
+    open_to_all
       .or(for_audience(:corporate).where(ta_access: "except").where.not(named))
       .or(for_audience(:corporate).where(ta_access: "only").where(named))
   }
@@ -140,7 +144,7 @@ class RatePlan < ApplicationRecord
 
     case ta_access
     when "all" then true
-    when "except" then !agency_named?(relationship)
+    when "except" then relationship.present? && !agency_named?(relationship)
     when "only" then agency_named?(relationship)
     else false
     end

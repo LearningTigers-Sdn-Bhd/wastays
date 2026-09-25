@@ -85,7 +85,8 @@ module Bookings
               rate_plan: new_rate_plan,
               manual_total_amount: @booking.manual_rate_override,
               adults: @booking.adults,
-              children: @booking.children
+              children: @booking.children,
+              child_ages: @booking.child_ages
             ).call
 
             # Update the booking room

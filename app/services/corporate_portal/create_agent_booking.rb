@@ -49,10 +49,12 @@ module CorporatePortal
     def call
       room_type = @hotel.room_types.find_by(id: @params[:room_type_id])
       return failure("Choose a room category.") if room_type.blank?
+      return failure(room_type.occupancy_limit_message) unless room_type.fits?(adults: @params[:adults], children: @params[:children])
 
       @rate_plan = resolve_rate_plan(room_type)
       return failure("Choose a rate plan.") if @rate_plan.blank?
       return failure("Name the lead guest for each room.") if rooms.empty?
+      return failure(unnamed_rooms_message) if unnamed_rooms.any?
       return failure(*@boat_times.errors) if @boat_times.errors.any?
 
       availability = check_availability(room_type)
@@ -65,7 +67,18 @@ module CorporatePortal
 
     private
 
-    def rooms_requested = [ @params[:rooms].to_i, rooms.size, 1 ].max
+    def rooms_requested = [ @params[:rooms].to_i, room_blocks.size, 1 ].max
+
+    # Positions (1-based) of rooms asked for but left without a lead guest.
+    # Booking the named ones alone would hand the agent fewer rooms than they
+    # asked for without a word, so the whole request is sent back instead.
+    def unnamed_rooms
+      @unnamed_rooms ||= (0...rooms_requested).select { |index| room_blocks[index].nil? }.map { |index| index + 1 }
+    end
+
+    def unnamed_rooms_message
+      "Name the lead guest for #{unnamed_rooms.one? ? 'room' : 'rooms'} #{unnamed_rooms.to_sentence}."
+    end
 
     # The plan comes from the form, so it is re-checked against what this agency
     # may book -- a hidden plan's id typed into the request is refused like any
@@ -86,7 +99,7 @@ module CorporatePortal
     def check_availability(room_type)
       result = AgentStaySearch.call(
         hotel: @hotel, check_in: @params[:check_in], check_out: @params[:check_out],
-        adults: @params[:adults], children: @params[:children], rooms: rooms_requested,
+        adults: @params[:adults], children: @params[:children], child_ages: @params[:child_ages], rooms: rooms_requested,
         relationship: @relationship
       )
       return result.error unless result.success?
@@ -95,6 +108,7 @@ module CorporatePortal
         candidate.room_type.id == room_type.id && candidate.rate_plan.id == @rate_plan.id
       end
       return nil if option&.available?
+      return "#{@rate_plan.name} can't be booked for these dates: #{option.restriction}." if option&.restricted?
 
       "#{room_type.name} no longer has #{ActionController::Base.helpers.pluralize(rooms_requested, 'room')} " \
         "free for these dates."
@@ -162,11 +176,20 @@ module CorporatePortal
         check_out: @params[:check_out],
         adults: [ @params[:adults].to_i, 1 ].max,
         children: @params[:children].to_i,
+        # Every room shares one occupancy, ages included, so each is priced
+        # exactly as the search quoted it.
+        child_ages: @params[:child_ages],
         room_type_id: room_type.id,
         rate_plan_id: @rate_plan.id,
         # The agent sells the category, not a numbered room. The desk assigns one
         # at arrival, as it does for any unassigned reservation.
         require_room_number: false,
+        # Re-checked at creation too, so no path books a night the property
+        # closed -- the search above already refused it, but it is cheap to
+        # make the booking itself agree.
+        apply_stop_sell_restriction: true,
+        apply_arrival_departure_restrictions: true,
+        apply_stay_length_restrictions: true,
         source: "travel_agent",
         hotel_corporate_account_id: @relationship.id,
         # Which agency is already known from the relationship; these say which
@@ -220,10 +243,16 @@ module CorporatePortal
       nil
     end
 
-    # Guest blocks arrive keyed by position, nested under the room they belong
-    # to. A room with no named lead is not a room anyone asked for.
+    # The rooms that will be booked: every requested room, once each has a lead.
     def rooms
-      @rooms ||= ordered(@params[:rooms_detail]).filter_map do |room|
+      @rooms ||= room_blocks.compact
+    end
+
+    # Guest blocks arrive keyed by position, nested under the room they belong
+    # to. A room with no named lead stays in its place as nil, so it can be
+    # reported rather than quietly left out.
+    def room_blocks
+      @room_blocks ||= ordered(@params[:rooms_detail]).map do |room|
         guests = ordered(room.is_a?(Hash) ? room.symbolize_keys[:guests] : nil)
                  .map { |attrs| attrs.to_h.symbolize_keys.slice(:name, :email, :phone, :country, :government_id, :date_of_birth) }
                  .reject { |attrs| attrs.except(:country, :government_id, :date_of_birth).values.all?(&:blank?) }

@@ -19,7 +19,7 @@ module RatePlans
     end
 
     def call
-      unless pricing.valid?
+      unless pricing.valid? && derivable?
         return Result.new(assignment: nil, pricing: pricing, error: pricing.errors.full_messages.to_sentence)
       end
 
@@ -31,7 +31,7 @@ module RatePlans
     end
 
     def call!
-      raise ActiveRecord::RecordInvalid.new(rate_plan) unless pricing.valid?
+      raise ActiveRecord::RecordInvalid.new(rate_plan) unless pricing.valid? && derivable?
 
       assignment = nil
       ActiveRecord::Base.transaction do
@@ -45,6 +45,15 @@ module RatePlans
     private
 
     attr_reader :rate_plan, :room_type, :pricing
+
+    # A derived price is worked out from Standard's each night, so Standard
+    # itself cannot be one: it would have nothing to start from.
+    def derivable?
+      return true unless pricing.derived? && rate_plan.standard_rate?
+
+      pricing.errors.add(:base, "The Standard Rate can't adjust itself. Set its prices directly.")
+      false
+    end
 
     def replace_occupancy_matrix!(assignment)
       expected = pricing.occupancy_matrix

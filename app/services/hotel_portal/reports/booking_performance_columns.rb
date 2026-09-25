@@ -12,6 +12,8 @@ module HotelPortal
         ReportColumns.column(key: "check_in", label: "Check-in", export_labels: [ "Check In" ], pdf_label: "Check In", pdf_width: 58, excel_width: 14, type: :date),
         ReportColumns.column(key: "check_out", label: "Check-out", export_labels: [ "Check Out" ], pdf_label: "Check Out", pdf_width: 58, excel_width: 14, type: :date),
         ReportColumns.column(key: "source", label: "Source", export_labels: [ "Source" ], pdf_label: "Source", pdf_width: 62, excel_width: 18, type: :text),
+        ReportColumns.column(key: "rate_plan", label: "Rate plan", export_labels: [ "Rate Plan" ], pdf_label: "Rate Plan", pdf_width: 80, excel_width: 22, type: :text),
+        ReportColumns.column(key: "room_nights", label: "Room nights", export_labels: [ "Room Nights" ], pdf_label: "Nights", pdf_width: 40, excel_width: 12, type: :text),
         ReportColumns.column(key: "fund_collector", label: "Collected by", export_labels: [ "Collected By" ], pdf_label: "Collected By", pdf_width: 68, excel_width: 18, type: :text),
         ReportColumns.column(key: "status", label: "Status", export_labels: [ "Status" ], pdf_label: "Status", pdf_width: 62, excel_width: 18, type: :text),
         ReportColumns.column(key: "payment_status", label: "Payment status", export_labels: [ "Payment Status" ], pdf_label: "Payment", pdf_width: 62, excel_width: 18, type: :text),

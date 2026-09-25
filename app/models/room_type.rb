@@ -62,6 +62,18 @@ class RoomType < ApplicationRecord
     max_adults.to_i + max_children.to_i
   end
 
+  # Whether one room of this category can hold the party, by its separate adult
+  # and child limits -- the same test the public booking engine applies.
+  def fits?(adults:, children: 0)
+    adults.to_i <= max_adults.to_i && children.to_i <= max_children.to_i
+  end
+
+  # Says what the category holds, for a party it cannot.
+  def occupancy_limit_message
+    "#{name} holds up to #{ActionController::Base.helpers.pluralize(max_adults.to_i, 'adult')} " \
+      "and #{ActionController::Base.helpers.pluralize(max_children.to_i, 'child')}."
+  end
+
   # The plan that anchors this category's pricing: the one EnsureSystemPlans
   # creates alongside the category, the row the pricing rules write to, and the
   # plan every booking path falls back to when no rate was picked.

@@ -324,8 +324,8 @@ RSpec.describe BookingEngine::AvailabilityService do
     it "prices the searched family rather than 4 adults" do
       service = described_class.new(check_in: check_in, check_out: check_out, adults: 2, children: 2, child_ages: [ 6, 6 ])
 
-      # 2 adults @ 300 + 2 children @ (300/2)*0.4 = 300 + 120 = 420/night, 2 nights
-      expect(service.pricing_summary_for(family_room)[:total_price]).to eq(840.0)
+      # 2 adults @ 300 + 2 children @ 40% of the 1-adult 180 = 300 + 144 = 444/night, 2 nights
+      expect(service.pricing_summary_for(family_room)[:total_price]).to eq(888.0)
     end
 
     it "still honours an explicitly named occupancy" do

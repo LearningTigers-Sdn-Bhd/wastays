@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_24_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -3045,6 +3045,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_070000) do
     t.integer "base_occupancy"
     t.datetime "created_at", null: false
     t.decimal "extra_pax_charge", precision: 10, scale: 2
+    t.jsonb "occupancy_ladder"
     t.string "pricing_mode", default: "fixed", null: false
     t.decimal "pricing_value", precision: 10, scale: 2
     t.boolean "primary_plan", default: false, null: false
