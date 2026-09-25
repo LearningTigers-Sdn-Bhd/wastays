@@ -148,6 +148,46 @@ RSpec.describe "Admin::Attractions", type: :request do
   end
 
   describe "review actions" do
+    it "does not offer status or merge actions for a merged record" do
+      kept = create(:attraction)
+      merged = create(:attraction, :archived, merged_into: kept)
+
+      get edit_admin_attraction_path(merged)
+
+      document = response.parsed_body
+      expect(document.at_css("form[action='#{merge_admin_attraction_path(merged)}']")).to be_nil
+      expect(document.at_css("form[action='#{approve_admin_attraction_path(merged)}']")).to be_nil
+      expect(document.at_css("form[action='#{restore_admin_attraction_path(merged)}']")).to be_nil
+      expect(document.at_css("form[action='#{reject_admin_attraction_path(merged)}']")).to be_nil
+    end
+
+    it "rejects direct requests to reactivate a merged record" do
+      kept = create(:attraction)
+      merged = create(:attraction, :archived, merged_into: kept)
+
+      patch approve_admin_attraction_path(merged)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(merged.reload).to be_status_archived
+
+      patch restore_admin_attraction_path(merged)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(merged.reload).to be_status_archived
+
+      patch reject_admin_attraction_path(merged), params: { attraction: { review_note: "Wrong place" } }
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(merged.reload).to be_status_archived
+    end
+
+    it "rejects a second merge of an already merged source" do
+      kept = create(:attraction)
+      merged = create(:attraction, :archived, merged_into: kept)
+
+      patch merge_admin_attraction_path(merged), params: { merge: { target_id: kept.id } }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("The source attraction was already merged.")
+    end
+
     it "approves a pending attraction" do
       attraction = create(:attraction, :pending)
 

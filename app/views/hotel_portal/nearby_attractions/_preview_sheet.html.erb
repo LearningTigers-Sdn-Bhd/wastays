@@ -1,4 +1,4 @@
-<% unavailable = duplicate_attraction&.status.in?(%w[rejected archived]) %>
+<% unavailable = duplicate_attraction&.status.in?(%w[rejected archived]) || duplicate_attraction&.merged_into_id.present? %>
 <%= turbo_frame_tag "nearby_attraction_form" do %>
   <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
@@ -12,10 +12,10 @@
           <div class="rounded-lg border border-border bg-card p-4">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="text-base font-semibold text-foreground"><%= parsed_attraction.name %></p>
+                <p class="text-base font-semibold text-foreground"><%= display_attraction.name %></p>
                 <p class="mt-1 text-sm text-muted-foreground">
-                  <%= number_with_precision(parsed_attraction.latitude, precision: 5) %>,
-                  <%= number_with_precision(parsed_attraction.longitude, precision: 5) %>
+                  <%= number_with_precision(display_attraction.latitude, precision: 5) %>,
+                  <%= number_with_precision(display_attraction.longitude, precision: 5) %>
                 </p>
               </div>
               <% if unavailable %>
@@ -34,7 +34,7 @@
               </p>
             <% end %>
 
-            <%= link_to parsed_attraction.google_maps_url,
+            <%= link_to display_attraction.google_maps_url.presence || parsed_attraction.google_maps_url,
                         target: "_blank",
                         rel: "noopener noreferrer",
                         class: "mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline" do %>
@@ -43,7 +43,11 @@
             <% end %>
           </div>
 
-          <% if unavailable %>
+          <% if already_linked %>
+            <div class="rounded-lg border border-border bg-muted/30 p-4 text-sm text-foreground">
+              This attraction is already linked to your hotel.
+            </div>
+          <% elsif unavailable %>
             <div class="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
               This attraction is not available. Contact an administrator if you think that its status is incorrect.
             </div>
@@ -53,30 +57,43 @@
             </div>
           <% end %>
 
-          <%= form_with url: hotel_nearby_attractions_path(@hotel),
-                        scope: :attraction,
-                        id: "nearby-attraction-create-form" do |form| %>
-            <%= form.hidden_field :google_maps_url, value: parsed_attraction.google_maps_url %>
+          <% unless already_linked %>
+            <%= form_with url: hotel_nearby_attractions_path(@hotel),
+                          scope: :attraction,
+                          id: "nearby-attraction-create-form" do |form| %>
+              <%= form.hidden_field :google_maps_url, value: parsed_attraction.google_maps_url %>
+            <% end %>
           <% end %>
         </div>
       <% end %>
 
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(
-              href: new_hotel_nearby_attraction_path(@hotel),
-              variant: :secondary,
-              size: :sm,
-              data: { turbo_frame: "nearby_attraction_form" }) do %>
-          Back
-        <% end %>
-        <%= render PanelsUI::Button.new(
-              as: :button,
-              type: :submit,
-              form: "nearby-attraction-create-form",
-              variant: :primary,
-              size: :sm,
-              disabled: unavailable) do %>
-          <%= duplicate_attraction ? "Add to hotel" : "Create and add" %>
+        <% if already_linked %>
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :button,
+                variant: :secondary,
+                size: :sm,
+                data: { action: "click->ui--sheet#close" }) do %>
+            Close
+          <% end %>
+        <% else %>
+          <%= render PanelsUI::Button.new(
+                href: new_hotel_nearby_attraction_path(@hotel),
+                variant: :secondary,
+                size: :sm,
+                data: { turbo_frame: "nearby_attraction_form" }) do %>
+            Back
+          <% end %>
+          <%= render PanelsUI::Button.new(
+                as: :button,
+                type: :submit,
+                form: "nearby-attraction-create-form",
+                variant: :primary,
+                size: :sm,
+                disabled: unavailable) do %>
+            <%= duplicate_attraction ? "Add to hotel" : "Create and add" %>
+          <% end %>
         <% end %>
       <% end %>
     <% end %>

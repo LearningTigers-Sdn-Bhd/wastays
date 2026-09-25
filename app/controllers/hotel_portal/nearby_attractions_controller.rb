@@ -28,8 +28,14 @@ module HotelPortal
 
       if result.success?
         @parsed_attraction = result.parsed
-        @duplicate_attraction = Attractions::FindDuplicate.call(fingerprint: result.parsed.fingerprint)
-        @estimated_distance_km = preview_distance(result.parsed)
+        duplicate = Attractions::FindDuplicate.call(
+          fingerprint: result.parsed.fingerprint,
+          google_maps_url: result.parsed.google_maps_url
+        )
+        @duplicate_attraction = duplicate&.merged_into || duplicate
+        @display_attraction = @duplicate_attraction || result.parsed
+        @already_linked = @duplicate_attraction && @hotel.hotel_nearby_attractions.exists?(attraction: @duplicate_attraction)
+        @estimated_distance_km = preview_distance(@display_attraction)
         render :preview, layout: false
       else
         @attraction.errors.add(:google_maps_url, result.error)
@@ -41,18 +47,20 @@ module HotelPortal
       result = Attractions::FindOrCreateAndLink.call(
         hotel: @hotel,
         google_maps_url: attraction_params[:google_maps_url],
+        attraction_id: attraction_params[:id],
         submitted_by: current_user
       )
 
       if result.success?
-        message = "Attraction added to your hotel."
+        message = result.hotel_nearby_attraction.previously_new_record? ?
+          "Attraction added to your hotel." : "This attraction is already linked to your hotel."
         respond_to do |format|
           format.turbo_stream { render_saved_stream(message) }
           format.html { redirect_to hotel_nearby_attractions_path(@hotel), notice: message }
         end
       else
-        @attraction = result.attraction || Attraction.new(google_maps_url: attraction_params[:google_maps_url])
-        @attraction.errors.add(:google_maps_url, result.error)
+        @attraction = Attraction.new(google_maps_url: attraction_params[:google_maps_url])
+        @attraction.errors.add(attraction_params[:id].present? ? :base : :google_maps_url, result.error)
         render :new, layout: false, status: :unprocessable_content
       end
     end
@@ -122,7 +130,7 @@ module HotelPortal
     end
 
     def attraction_params
-      params.require(:attraction).permit(:google_maps_url)
+      params.require(:attraction).permit(:google_maps_url, :id)
     end
 
     def hotel_nearby_attraction_params
@@ -148,6 +156,7 @@ module HotelPortal
 
     def preview_distance(parsed_attraction)
       return if @hotel.latitude.blank? || @hotel.longitude.blank?
+      return if parsed_attraction.latitude.blank? || parsed_attraction.longitude.blank?
 
       Attractions::Distance.kilometers(
         @hotel.latitude,
