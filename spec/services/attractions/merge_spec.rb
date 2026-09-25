@@ -31,4 +31,15 @@ RSpec.describe Attractions::Merge do
 
     expect(result).not_to be_success
   end
+
+  it "rejects a target that was already merged" do
+    kept = create(:attraction)
+    target.update!(merged_into: kept)
+
+    result = described_class.call(source: source, target: target)
+
+    expect(result).not_to be_success
+    expect(result.error).to eq("The target attraction was already merged.")
+    expect(source.reload).to be_status_pending
+  end
 end

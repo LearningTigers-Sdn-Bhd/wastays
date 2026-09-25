@@ -56,6 +56,68 @@ RSpec.describe "Public::Hotels", type: :request do
       expect(response).to have_http_status(:success)
     end
 
+    it "shows linked active attractions in a card below Location" do
+      hotel.update!(google_map_link: "https://www.google.com/maps/place/Hotel/@5.98000,116.07000,15z")
+      farther = create(:attraction, name: "Farther Place", latitude: 6.05, longitude: 116.07)
+      nearest = create(:attraction, :pending, name: "Nearby Place", latitude: 5.985, longitude: 116.07)
+      rejected = create(:attraction, :rejected, name: "Rejected Place")
+      archived = create(:attraction, :archived, name: "Archived Place")
+      create(:hotel_nearby_attraction, hotel: hotel, attraction: farther)
+      create(:hotel_nearby_attraction, hotel: hotel, attraction: nearest, description: "Walk there for sunset.")
+      create(:hotel_nearby_attraction, hotel: hotel, attraction: rejected)
+      create(:hotel_nearby_attraction, hotel: hotel, attraction: archived)
+
+      get hotel_path(hotel.unique_id, hotel.public_id)
+
+      document = response.parsed_body
+      card = document.at_css("section[aria-labelledby='nearby-attractions-heading']")
+      expect(card).to be_present
+      expect(card.css("li").map { |item| item.at_css("a.font-semibold").text.squish }).to eq([ "Nearby Place", "Farther Place" ])
+      expect(card.text).to include("Walk there for sunset.", "km")
+      expect(card.text).not_to include("Rejected Place", "Archived Place", "Pending")
+      expect(card.at_css("a[href='#{nearest.google_maps_url}']").text).to eq("Nearby Place")
+      expect(card.at_css("a[href='#{nearest.google_maps_url}'][class*='underline']")).to be_present
+      expect(card.text).not_to include("View on Google Maps")
+      expect(card.at_css("button")).to be_nil
+    end
+
+    it "shows three attractions first and expands to reveal the rest" do
+      hotel.update!(google_map_link: "https://www.google.com/maps/place/Hotel/@5.98000,116.07000,15z")
+      4.times do |index|
+        attraction = create(:attraction, name: "Place #{index + 1}",
+          latitude: 5.981 + index * 0.001, longitude: 116.07)
+        create(:hotel_nearby_attraction, hotel: hotel, attraction: attraction)
+      end
+
+      get hotel_path(hotel.unique_id, hotel.public_id)
+
+      card = response.parsed_body.at_css("section[aria-labelledby='nearby-attractions-heading']")
+      expect(card.xpath("./ul/li").size).to eq(3)
+      more = card.at_css("button[data-nearby-attractions-target='more']")
+      more_footer = card.at_css("div[data-nearby-attractions-target='moreFooter']")
+      remaining = card.at_css("ul#nearby-attractions-more")
+      fewer = card.at_css("button[data-nearby-attractions-target='fewer']")
+      fewer_footer = card.at_css("div[data-nearby-attractions-target='fewerFooter']")
+      expect(more.text.squish).to eq("Show 1 more")
+      expect(more["aria-expanded"]).to eq("false")
+      expect(more_footer["class"]).to include("-mx-6", "border-t")
+      expect(more["class"]).to include("w-full", "text-center")
+      expect(remaining["class"]).to include("hidden")
+      expect(remaining.css("li").map { |item| item.at_css("a.font-semibold").text.squish }).to eq([ "Place 4" ])
+      expect(fewer.text.squish).to eq("Show fewer")
+      expect(fewer_footer["class"]).to include("hidden", "-mx-6", "border-t")
+      expect(fewer["class"]).to include("w-full", "text-center")
+      expect(fewer_footer.previous_element).to eq(remaining)
+    end
+
+    it "hides the nearby attractions card when the hotel has no visible links" do
+      create(:hotel_nearby_attraction, hotel: hotel, attraction: create(:attraction, :archived))
+
+      get hotel_path(hotel.unique_id, hotel.public_id)
+
+      expect(response.parsed_body.at_css("#nearby-attractions-heading")).to be_nil
+    end
+
     it "shows the search bar header with date pill" do
       get "/hotels/#{hotel.unique_id}/#{hotel.public_id}", params: {
         check_in: Date.current.to_s,
