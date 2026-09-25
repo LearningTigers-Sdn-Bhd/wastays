@@ -3,6 +3,8 @@ import { Turbo } from "@hotwired/turbo-rails"
 import { syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
 import { serializeForm } from "controllers/panels_ui/support/form_state"
 
+const INTERACTION_EVENTS = ["pointerdown", "keydown", "focusin"]
+
 // The rate plan page: one form split across tabs.
 // - Leaving with unsaved changes (Back, sidebar, switching room category,
 //   closing the tab) asks first.
@@ -15,7 +17,7 @@ export default class extends Controller {
   static values = { pageUrl: String }
 
   connect() {
-    this.pristine = this.hasFormTarget ? serializeForm(this.formTarget) : null
+    this.pristine = null
     this.pending = null
     this.leaving = false
     this.roomSelect = this.element.querySelector('[name="rate_plan[room_type_id]"]')
@@ -27,13 +29,17 @@ export default class extends Controller {
     this.onSubmitEnd = (event) => { if (!event.detail.success) this.leaving = false }
     this.onTabChange = this.tabChanged.bind(this)
     this.onInvalid = this.invalid.bind(this)
+    this.onFirstInteraction = this.snapshotPristine.bind(this)
 
     document.addEventListener("turbo:before-visit", this.onBeforeVisit)
     window.addEventListener("beforeunload", this.onBeforeUnload)
     document.addEventListener("turbo:submit-start", this.onSubmitStart)
     document.addEventListener("turbo:submit-end", this.onSubmitEnd)
     window.addEventListener("panels-ui--tabs:change", this.onTabChange)
-    if (this.hasFormTarget) this.formTarget.addEventListener("invalid", this.onInvalid, true)
+    if (this.hasFormTarget) {
+      this.formTarget.addEventListener("invalid", this.onInvalid, true)
+      INTERACTION_EVENTS.forEach((type) => this.formTarget.addEventListener(type, this.onFirstInteraction, true))
+    }
 
     this.showFirstError()
   }
@@ -44,11 +50,33 @@ export default class extends Controller {
     document.removeEventListener("turbo:submit-start", this.onSubmitStart)
     document.removeEventListener("turbo:submit-end", this.onSubmitEnd)
     window.removeEventListener("panels-ui--tabs:change", this.onTabChange)
-    if (this.hasFormTarget) this.formTarget.removeEventListener("invalid", this.onInvalid, true)
+    if (this.hasFormTarget) {
+      this.formTarget.removeEventListener("invalid", this.onInvalid, true)
+      INTERACTION_EVENTS.forEach((type) => this.formTarget.removeEventListener(type, this.onFirstInteraction, true))
+    }
+  }
+
+  // Taken on the first interaction, not in connect(): sibling controllers
+  // (e.g. value-reveal disabling hidden fields) adjust the form after this one
+  // connects, and a connect-time snapshot would read that as unsaved work.
+  snapshotPristine() {
+    if (this.pristine !== null) return
+
+    this.pristine = serializeForm(this.formTarget, this.dirtyExclusions)
+    INTERACTION_EVENTS.forEach((type) => this.formTarget.removeEventListener(type, this.onFirstInteraction, true))
+  }
+
+  // Switching room category fires its own Turbo visit (see selectRoom) rather
+  // than editing data in place, so the field it changes must not itself count
+  // as an unsaved edit — otherwise every category switch would trip the
+  // discard-confirm dialog even with nothing else touched on the page.
+  get dirtyExclusions() {
+    return ["rate_plan[room_type_id]"]
   }
 
   get dirty() {
-    return this.hasFormTarget && serializeForm(this.formTarget) !== this.pristine
+    return this.hasFormTarget && this.pristine !== null &&
+      serializeForm(this.formTarget, this.dirtyExclusions) !== this.pristine
   }
 
   beforeVisit(event) {

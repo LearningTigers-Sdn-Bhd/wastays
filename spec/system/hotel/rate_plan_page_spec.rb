@@ -120,6 +120,33 @@ RSpec.describe "Rate plan page", type: :system, js: true do
     expect(full_board.reload.name).to eq("Full Board")
   end
 
+  it "switches room category without asking at a per-guest property" do
+    # Sell mode is fixed at creation; the hidden child-fee fields this page
+    # disables on load only render at a per-guest property.
+    hotel.update_column(:sell_mode, "per_person")
+    create(:room_type_rate_plan, rate_plan: full_board, room_type: suite, pricing_value: 300)
+    open_plan(tab: "pricing")
+
+    find(".panel-select-menu__trigger", text: "Villa").click
+    find("[role='option']", text: "Suite", visible: true).click
+
+    expect(page).to have_current_path(/room_type_id=#{suite.id}/, wait: 10)
+    expect(discard_dialog).not_to be_visible
+  end
+
+  it "still asks before switching room category with unsaved changes at a per-guest property" do
+    hotel.update_column(:sell_mode, "per_person")
+    create(:room_type_rate_plan, rate_plan: full_board, room_type: suite, pricing_value: 300)
+    open_plan
+    fill_in "Rate plan name", with: "Unsaved name"
+    open_tab "Pricing"
+
+    find(".panel-select-menu__trigger", text: "Villa").click
+    find("[role='option']", text: "Suite", visible: true).click
+
+    expect(discard_dialog).to be_visible
+  end
+
   it "leaves without asking when nothing changed" do
     open_plan
     open_tab "Pricing"
