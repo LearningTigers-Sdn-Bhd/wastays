@@ -59,6 +59,8 @@ class Public::HotelsController < ApplicationController
                                       hotel_sort_order.index(category) || hotel_sort_order.size
                                     }
 
+    @nearby_attractions = Attractions::PublicHotelLinks.call(hotel: @hotel)
+
     # Decorate for view and sort restricted rooms to the bottom
     @hotel = Public::HotelPresenter.new(@hotel, view_context)
     @allocation_options = @allocation_options.map { |opt| Public::AllocationOptionPresenter.new(opt, view_context) }
