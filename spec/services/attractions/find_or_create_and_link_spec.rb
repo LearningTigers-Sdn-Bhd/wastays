@@ -30,6 +30,79 @@ RSpec.describe Attractions::FindOrCreateAndLink do
     expect(HotelNearbyAttraction.where(hotel: hotel, attraction: attraction).count).to eq(1)
   end
 
+  it "reuses an approved attraction with the same URL and a different stored name" do
+    attraction = create(:attraction, name: "Imago Mall", google_maps_url: url,
+      latitude: 5.99211, longitude: 116.08122)
+
+    result = described_class.call(hotel: hotel, google_maps_url: url, submitted_by: user)
+
+    expect(result).to be_success
+    expect(result.attraction).to eq(attraction)
+    expect(result).to be_reused
+    expect(HotelNearbyAttraction.where(hotel: hotel, attraction: attraction).count).to eq(1)
+  end
+
+  it "links the selected attraction without parsing its outdated Google Maps URL" do
+    attraction = create(:attraction, name: "Maybank Gaya Street", google_maps_url: url)
+
+    first = described_class.call(hotel: hotel, attraction_id: attraction.id, submitted_by: user)
+    second = described_class.call(hotel: hotel, attraction_id: attraction.id, submitted_by: user)
+
+    expect(first).to be_success
+    expect(second).to be_success
+    expect(first.attraction).to eq(attraction)
+    expect(second.hotel_nearby_attraction).to eq(first.hotel_nearby_attraction)
+    expect(HotelNearbyAttraction.where(hotel: hotel, attraction: attraction).count).to eq(1)
+    expect(Attraction.where(name: "Signal Hill")).to be_empty
+  end
+
+  it "rejects a selected attraction that is not active" do
+    attraction = create(:attraction, :archived)
+
+    result = described_class.call(hotel: hotel, attraction_id: attraction.id, submitted_by: user)
+
+    expect(result).not_to be_success
+    expect(hotel.hotel_nearby_attractions).to be_empty
+  end
+
+  it "links the kept attraction when the pasted URL matches a merged record" do
+    parsed = Attractions::GoogleMapsUrlParser.call(url).parsed
+    target = create(:attraction, name: "Signal Hill Observatory")
+    create(:attraction, :archived, name: parsed.name, latitude: parsed.latitude,
+      longitude: parsed.longitude, merged_into: target)
+
+    result = described_class.call(hotel: hotel, google_maps_url: url, submitted_by: user)
+
+    expect(result).to be_success
+    expect(result.attraction).to eq(target)
+    expect(result.hotel_nearby_attraction.attraction).to eq(target)
+  end
+
+  it "does not link a merged record that was incorrectly approved" do
+    parsed = Attractions::GoogleMapsUrlParser.call(url).parsed
+    target = create(:attraction, name: "Signal Hill Observatory")
+    create(:attraction, name: parsed.name, latitude: parsed.latitude,
+      longitude: parsed.longitude, merged_into: target)
+
+    result = described_class.call(hotel: hotel, google_maps_url: url, submitted_by: user)
+
+    expect(result).to be_success
+    expect(result.attraction).to eq(target)
+    expect(hotel.hotel_nearby_attractions.sole.attraction).to eq(target)
+  end
+
+  it "rejects a pasted URL when its merged target is unavailable" do
+    parsed = Attractions::GoogleMapsUrlParser.call(url).parsed
+    target = create(:attraction, :archived)
+    create(:attraction, :archived, name: parsed.name, latitude: parsed.latitude,
+      longitude: parsed.longitude, merged_into: target)
+
+    result = described_class.call(hotel: hotel, google_maps_url: url, submitted_by: user)
+
+    expect(result).not_to be_success
+    expect(hotel.hotel_nearby_attractions).to be_empty
+  end
+
   it "does not create a second link for the same hotel" do
     first = described_class.call(hotel: hotel, google_maps_url: url, submitted_by: user)
     second = described_class.call(hotel: hotel, google_maps_url: url, submitted_by: user)

@@ -6,7 +6,7 @@ module Admin
     FILTER_STATUSES = %w[pending approved archived].freeze
 
     before_action :set_attraction, only: %i[edit update approve reject archive restore merge]
-    before_action :load_review_context, only: %i[edit update reject merge]
+    before_action :load_review_context, only: %i[edit update approve reject restore merge]
 
     def index
       @active_status = normalized_status
@@ -28,7 +28,7 @@ module Admin
 
       if result.success?
         @parsed = result.parsed
-        @duplicate = Attractions::FindDuplicate.call(fingerprint: @parsed.fingerprint)
+        @duplicate = Attractions::FindDuplicate.call(fingerprint: @parsed.fingerprint, google_maps_url: @parsed.google_maps_url)
         render :new
       else
         @parser_error = result.error
@@ -46,7 +46,7 @@ module Admin
       end
 
       @parsed = result.parsed
-      @duplicate = Attractions::FindDuplicate.call(fingerprint: @parsed.fingerprint)
+      @duplicate = Attractions::FindDuplicate.call(fingerprint: @parsed.fingerprint, google_maps_url: @parsed.google_maps_url)
       @attraction = create_or_approve_attraction!
       complete_sheet(notice: "Attraction approved and added to the registry.")
     rescue ActiveRecord::RecordInvalid => error
@@ -65,6 +65,8 @@ module Admin
     end
 
     def approve
+      return merged_source_failure if @attraction.merged_into_id.present?
+
       @attraction.update!(
         status: :approved,
         reviewed_by: current_user,
@@ -76,6 +78,8 @@ module Admin
     end
 
     def reject
+      return merged_source_failure if @attraction.merged_into_id.present?
+
       note = params.dig(:attraction, :review_note).to_s.strip
       if note.blank?
         @attraction.errors.add(:review_note, "is required when you reject an attraction")
@@ -105,6 +109,8 @@ module Admin
     end
 
     def restore
+      return merged_source_failure if @attraction.merged_into_id.present?
+
       restored_status = @attraction.archived_from_status.presence_in(Attraction.statuses.keys - [ "archived" ]) || "approved"
       @attraction.update!(
         status: restored_status,
@@ -168,7 +174,8 @@ module Admin
 
     def load_review_context
       @possible_duplicates = possible_duplicates
-      @merge_targets = @possible_duplicates.presence || Attraction.where(status: %i[pending approved]).where.not(id: @attraction.id).order(:name).limit(100)
+      @merge_targets = @possible_duplicates.where(merged_into_id: nil).where(status: %i[pending approved]).presence ||
+        Attraction.where(status: %i[pending approved], merged_into_id: nil).where.not(id: @attraction.id).order(:name).limit(100)
     end
 
     def possible_duplicates
@@ -229,6 +236,11 @@ module Admin
 
     def attraction_params
       params.require(:attraction).permit(:name, :shared_summary, :address, :city, :country)
+    end
+
+    def merged_source_failure
+      @attraction.errors.add(:base, "This attraction was already merged and cannot be made active again.")
+      render :edit, status: :unprocessable_content
     end
 
     def complete_sheet(notice:)

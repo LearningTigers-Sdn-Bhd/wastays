@@ -66,7 +66,7 @@ module HotelPortal
       scope = current_hotel.bookings
       scope = scope.includes(
           { booking_rooms: [ :room_type, :rate_plan ] },
-          { booking_guests: :guest },
+          { booking_guests: [ :guest, :guest_registration_card ] },
           :hotel,
           { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } },
           :payment_transactions,

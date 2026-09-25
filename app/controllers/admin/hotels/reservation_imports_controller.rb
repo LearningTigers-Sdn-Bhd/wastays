@@ -19,7 +19,7 @@ module Admin
       before_action :set_import, only: %i[show rows commit]
 
       def index
-        @imports = @hotel.reservation_imports.recent_first.includes(:user)
+        @imports = @hotel.reservation_imports.recent_first.includes(:user, :file_attachment)
       end
 
       def new

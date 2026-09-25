@@ -49,7 +49,7 @@
                 <p class="mt-0.5 text-xs text-muted-foreground"><%= attraction_distance_label(suggestion.distance_km) %></p>
               </div>
               <%= form_with url: hotel_nearby_attractions_path(@hotel), scope: :attraction, class: "shrink-0" do |form| %>
-                <%= form.hidden_field :google_maps_url, value: attraction.google_maps_url %>
+                <%= form.hidden_field :id, value: attraction.id %>
                 <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, size: :sm) do %>
                   Add
                 <% end %>
