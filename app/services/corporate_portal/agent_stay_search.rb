@@ -100,11 +100,11 @@ module CorporatePortal
     def business_date = @hotel.current_business_date || @hotel.business_date_for
 
     def too_small
-      @hotel.room_types.reject { |room_type| room_type.fits?(adults: @adults, children: @children) }
+      room_types.reject { |room_type| room_type.fits?(adults: @adults, children: @children) }
     end
 
     def options_for_room_types
-      @hotel.room_types.flat_map do |room_type|
+      room_types.flat_map do |room_type|
         next [] unless room_type.fits?(adults: @adults, children: @children)
 
         capacity = nil
@@ -162,10 +162,17 @@ module CorporatePortal
         .sort_by { |rate_plan| [ rate_plan.id == primary_id ? 0 : 1, rate_plan.name.downcase, rate_plan.id ] }
     end
 
+    # Each category resolves its standard, primary and restriction plans while
+    # it is priced, so load their plans with them rather than once per category.
+    def room_types
+      @room_types ||= @hotel.room_types
+        .includes(:rate_plans, room_type_rate_plans: %i[occupancy_prices age_band_prices]).to_a
+    end
+
     # Resolved once per search, not once per room category.
     def offered_plans
       @offered_plans ||= @hotel.rate_plans.offered_to_agency(@relationship)
-        .includes(:room_type_rate_plans, :rate_plan_stay_discounts).order(:name, :id).to_a
+        .includes(:room_type_rate_plans, :rate_plan_stay_discounts, :rate_plan_age_bands).order(:name, :id).to_a
     end
 
     # Rooms the category has, less the stays already holding one over these
