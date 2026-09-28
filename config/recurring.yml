@@ -49,6 +49,9 @@ production:
   close_stale_conversations:
     class: Concierge::CloseStaleConversationsJob
     schedule: every hour at minute 24
+  recover_stale_knowledge_indexing:
+    class: HotelKnowledges::RecoverStaleIndexingJob
+    schedule: every 15 minutes
 
 demo:
   release_expired_holds:
@@ -87,3 +90,6 @@ demo:
   close_stale_conversations:
     class: Concierge::CloseStaleConversationsJob
     schedule: every hour at minute 24
+  recover_stale_knowledge_indexing:
+    class: HotelKnowledges::RecoverStaleIndexingJob
+    schedule: every 15 minutes

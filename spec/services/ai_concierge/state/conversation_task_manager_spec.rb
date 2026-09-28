@@ -56,7 +56,7 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
 
       expect(manager.booking_purpose).to eq("booking")
       expect(manager).not_to be_price_exploration
-      expect(manager.payload["state_version"]).to eq(3)
+      expect(manager.payload["state_version"]).to eq(4)
     end
 
     it "keeps price exploration through booking updates and clears it on reset" do
@@ -90,7 +90,7 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
     it "adds the sales task without changing the state version" do
       manager = described_class.new(slots_payload: {})
 
-      expect(manager.payload["state_version"]).to eq(3)
+      expect(manager.payload["state_version"]).to eq(4)
       expect(manager.sales_task).to eq(
         "last_optional_action" => nil,
         "suppress_next_optional_offer" => false,
@@ -107,7 +107,7 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
 
       expect(first.dig("sales_task", "closing_copy_index")).to eq(1)
       expect(second.dig("sales_task", "closing_copy_index")).to eq(2)
-      expect(second["state_version"]).to eq(3)
+      expect(second["state_version"]).to eq(4)
     end
 
     it "records and declines an optional offer without changing booking or information state" do
@@ -202,7 +202,7 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
 
     payload = described_class.new(slots_payload: { "active" => branch, "paused_flows" => [] }).payload
 
-    expect(payload["state_version"]).to eq(3)
+    expect(payload["state_version"]).to eq(4)
     expect(payload["booking_task"]["branch"]["target_month"]).to eq(8)
     expect(payload).not_to have_key("active")
     expect(payload).not_to have_key("paused_flows")
@@ -261,6 +261,73 @@ RSpec.describe AiConcierge::State::ConversationTaskManager do
     )
 
     expect(described_class.new(slots_payload: suspended, now: Time.current)).not_to be_suspended_booking_resumable
+  end
+
+  describe "knowledge failure state" do
+    let(:now) { Time.zone.parse("2026-09-28 10:00:00") }
+
+    def update(payload, outcome, topics: [])
+      described_class.new(slots_payload: payload, now: now).update_information_task(
+        intent: "hotel_information",
+        topic: "hotel_questions",
+        question: "Guest question",
+        outcome: outcome,
+        failure_topics: topics
+      )
+    end
+
+    it "counts partial and unavailable replies once each" do
+      partial = update({}, "partial", topics: [ "parking" ])
+      unavailable = update(partial, "unavailable", topics: [ "pool", "pool" ])
+
+      expect(partial["information_task"]).to include(
+        "consecutive_failure_count" => 1,
+        "last_failure_at" => now.iso8601,
+        "last_failure_topics" => [ "parking" ]
+      )
+      expect(unavailable["information_task"]).to include(
+        "consecutive_failure_count" => 2,
+        "last_failure_at" => now.iso8601,
+        "last_failure_topics" => [ "pool" ]
+      )
+    end
+
+    it "does not count clarification and resets only after a fully answered reply" do
+      unavailable = update({}, "unavailable", topics: [ "parking" ])
+      clarification = update(unavailable, "clarification")
+      answered = update(clarification, "answered")
+
+      expect(clarification["information_task"]).to include(
+        "consecutive_failure_count" => 1,
+        "last_failure_at" => now.iso8601,
+        "last_failure_topics" => [ "parking" ]
+      )
+      expect(answered["information_task"]).to include(
+        "consecutive_failure_count" => 0,
+        "last_failure_at" => nil,
+        "last_failure_topics" => []
+      )
+    end
+
+    it "lazily upgrades version 3 payloads without losing their tasks" do
+      payload = described_class.new(slots_payload: {
+        "state_version" => 3,
+        "information_task" => {
+          "status" => "completed",
+          "topic" => "hotel_questions",
+          "last_question" => "Is parking available?"
+        }
+      }).payload
+
+      expect(payload["state_version"]).to eq(4)
+      expect(payload["information_task"]).to include(
+        "status" => "completed",
+        "topic" => "hotel_questions",
+        "last_question" => "Is parking available?",
+        "consecutive_failure_count" => 0,
+        "last_failure_topics" => []
+      )
+    end
   end
 
   # Expiry used to be a fact about the greeting and not about the dates: the

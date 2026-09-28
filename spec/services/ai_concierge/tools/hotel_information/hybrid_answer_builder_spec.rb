@@ -148,6 +148,39 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
     expect(result.answer_mode).to eq("structured")
   end
 
+  it "returns a structured Guest Content fact without running retrieval" do
+    search_service = class_double(HotelKnowledges::SearchService)
+    expect(search_service).not_to receive(:new)
+
+    result = described_class.new(
+      hotel: hotel,
+      query: "停车方便吗?",
+      intent: "hotel_information",
+      topic: "general_hotel_info",
+      categories: [ "general_info" ],
+      source: "general_hotel_info",
+      structured_facts: { "parking" => "The hotel does not provide guest parking." },
+      structured_metadata: {
+        "parking" => {
+          "source" => "transport_details",
+          "fields" => [ "hotel_transport_details.parking_availability" ]
+        }
+      },
+      hints: AiConcierge::Retrieval::QueryHints.new(fact: "parking"),
+      search_service: search_service,
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to have_attributes(
+      answer_mode: "structured",
+      structured_fact_key: "parking",
+      structured_source: "transport_details",
+      structured_fields: [ "hotel_transport_details.parking_availability" ]
+    )
+    expect(result.facts.first.text).to eq("The hotel does not provide guest parking.")
+    expect(result.knowledge_matches).to be_empty
+  end
+
   it "ignores a named fact the hotel has not filled in" do
     result = described_class.new(
       hotel: hotel,
@@ -251,6 +284,57 @@ RSpec.describe AiConcierge::Tools::HotelInformation::HybridAnswerBuilder do
     ).call
 
     expect(result).to have_attributes(success: false, answer_mode: "unavailable")
+  end
+
+  it "does not dump fallback corpus text for a specific nonblank question" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "do you have a helipad?",
+      intent: "hotel_information",
+      topic: "hotel_faq",
+      categories: [ "faq" ],
+      source: "hotel_faq",
+      fallback_text: "Breakfast is at 7 AM. The pool closes at 10 PM.",
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to have_attributes(shape: "unavailable", success: false, answer_mode: "unavailable")
+    expect(result.facts).to be_empty
+  end
+
+  it "retains fallback corpus text for an internal call without a query" do
+    result = described_class.new(
+      hotel: hotel,
+      query: nil,
+      intent: "hotel_information",
+      topic: "hotel_faq",
+      categories: [ "faq" ],
+      source: "hotel_faq",
+      fallback_text: "Breakfast is at 7 AM.",
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to have_attributes(success: true, answer_mode: "fallback")
+    expect(result.facts.map(&:text)).to eq([ "Breakfast is at 7 AM." ])
+  end
+
+  it "retains fallback corpus text for an explicitly broad FAQ request" do
+    result = described_class.new(
+      hotel: hotel,
+      query: "Do you have an FAQ?",
+      intent: "hotel_information",
+      topic: "hotel_faq",
+      categories: [ "faq" ],
+      source: "hotel_faq",
+      fallback_text: "Breakfast is at 7 AM.",
+      search_service: search_service_returning([]),
+      answer_agent: answer_agent_returning("unused")
+    ).call
+
+    expect(result).to have_attributes(success: true, answer_mode: "fallback")
+    expect(result.facts.map(&:text)).to eq([ "Breakfast is at 7 AM." ])
   end
 
   # A thin first pass searches a second time over the fallback categories.

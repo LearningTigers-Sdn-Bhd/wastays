@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1862,6 +1862,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
     t.integer "airport_travel_minutes"
     t.integer "city_centre_distance_km"
     t.integer "city_centre_travel_minutes"
+    t.jsonb "configured_sections", default: [], null: false
     t.datetime "created_at", null: false
     t.text "directions"
     t.bigint "hotel_id", null: false

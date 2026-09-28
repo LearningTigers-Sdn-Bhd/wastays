@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe AiConcierge::State::StatePatchBuilder do
-  it "normalizes slots payload into v2 task state" do
+  it "normalizes slots payload into the current task state" do
     patch = described_class.new(
       conversation_state: nil,
       slots_payload: { "active" => { "branch_id" => "1" } },
@@ -10,7 +10,7 @@ RSpec.describe AiConcierge::State::StatePatchBuilder do
       pending_question: "guest_count"
     ).call
 
-    expect(patch[:slots_payload]["state_version"]).to eq(3)
+    expect(patch[:slots_payload]["state_version"]).to eq(4)
     expect(patch[:slots_payload]["booking_task"]).to be_present
     expect(patch[:slots_payload]["information_task"]).to be_present
     expect(patch[:slots_payload]["completed_booking_branches"]).to eq([])

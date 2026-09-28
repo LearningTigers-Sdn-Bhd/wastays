@@ -33,6 +33,17 @@ RSpec.describe AiConcierge::Orchestration::HotelKnowledge::ToolRouter do
     expect(result[:active_topic]).to eq("general_hotel_info")
   end
 
+  it "routes a recognized operational fact to structured Guest Content even when classified as FAQ" do
+    stub_tool(AiConcierge::Tools::HotelInformation::GetGeneralHotelInfoTool,
+      "success" => true, "answer" => "Parking answer")
+    expect(AiConcierge::Tools::HotelInformation::GetHotelFaqTool).not_to receive(:new)
+
+    result = route(intent: "hotel_information", topic: "hotel_faq", message: "Is parking available?")
+
+    expect(result[:reply_type]).to eq(:general_hotel_info)
+    expect(result[:result]["answer"]).to eq("Parking answer")
+  end
+
   it "routes nearby attractions to the attractions tool" do
     stub_tool(AiConcierge::Tools::HotelInformation::GetNearbyAttractionsTool, "success" => true, "attractions" => [])
 

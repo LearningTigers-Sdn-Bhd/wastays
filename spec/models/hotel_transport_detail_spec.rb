@@ -73,5 +73,28 @@ RSpec.describe HotelTransportDetail, type: :model do
       expect(described_class::SECTIONS).to eq(%w[directions transportation parking])
       expect(columns).to eq(columns.uniq)
     end
+
+    it "tracks an explicitly saved section, including a negative answer" do
+      detail = build(:hotel_transport_detail,
+        configured_sections: [],
+        airport_distance_km: nil,
+        airport_travel_minutes: nil,
+        directions: nil,
+        parking_availability: "none")
+
+      expect(detail.section_configured?("parking")).to be(false)
+
+      detail.mark_section_configured("parking")
+
+      expect(detail.section_configured?("parking")).to be(true)
+      expect(detail.configured_sections).to eq([ "parking" ])
+    end
+
+    it "rejects unknown configured sections" do
+      detail = build(:hotel_transport_detail, configured_sections: [ "helicopter" ])
+
+      expect(detail).not_to be_valid
+      expect(detail.errors[:configured_sections]).to be_present
+    end
   end
 end
