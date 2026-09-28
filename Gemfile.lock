@@ -316,7 +316,7 @@ GEM
       racc (~> 1.4)
     openssl (4.0.2)
     ostruct (0.6.3)
-    pagy (43.6.2)
+    pagy (43.6.3)
       json
       uri
       yaml
@@ -640,7 +640,7 @@ DEPENDENCIES
   neighbor (~> 1.2)
   nokogiri (>= 1.19.3)
   openssl (~> 4.0)
-  pagy (~> 43.6.2)
+  pagy (~> 43.6.3)
   parallel_tests
   pdf-reader (~> 2.12)
   pg (~> 1.1)
