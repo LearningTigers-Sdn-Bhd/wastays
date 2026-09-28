@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
-import { syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
-import { serializeForm } from "controllers/panels_ui/support/form_state"
+import { syncSelectMenu } from "controllers/ui/select_menu_sync"
+import { serializeForm } from "controllers/ui/support/form_state"
 
 const INTERACTION_EVENTS = ["pointerdown", "keydown", "focusin"]
 
@@ -35,7 +35,7 @@ export default class extends Controller {
     window.addEventListener("beforeunload", this.onBeforeUnload)
     document.addEventListener("turbo:submit-start", this.onSubmitStart)
     document.addEventListener("turbo:submit-end", this.onSubmitEnd)
-    window.addEventListener("panels-ui--tabs:change", this.onTabChange)
+    window.addEventListener("ui--tabs:change", this.onTabChange)
     if (this.hasFormTarget) {
       this.formTarget.addEventListener("invalid", this.onInvalid, true)
       INTERACTION_EVENTS.forEach((type) => this.formTarget.addEventListener(type, this.onFirstInteraction, true))
@@ -49,7 +49,7 @@ export default class extends Controller {
     window.removeEventListener("beforeunload", this.onBeforeUnload)
     document.removeEventListener("turbo:submit-start", this.onSubmitStart)
     document.removeEventListener("turbo:submit-end", this.onSubmitEnd)
-    window.removeEventListener("panels-ui--tabs:change", this.onTabChange)
+    window.removeEventListener("ui--tabs:change", this.onTabChange)
     if (this.hasFormTarget) {
       this.formTarget.removeEventListener("invalid", this.onInvalid, true)
       INTERACTION_EVENTS.forEach((type) => this.formTarget.removeEventListener(type, this.onFirstInteraction, true))

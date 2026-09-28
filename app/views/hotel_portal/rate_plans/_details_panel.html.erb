@@ -17,7 +17,7 @@
         <% field.with_autocomplete(
              endpoint: autocomplete_hotel_rate_plan_attachments_path(current_hotel),
              placeholder: "Non-refundable",
-             data: { action: "input->rate-plan-editor#clearRatePlanSelection panels-ui:autocomplete-select->rate-plan-editor#selectRatePlan" }) %>
+             data: { action: "input->rate-plan-editor#clearRatePlanSelection ui:autocomplete-select->rate-plan-editor#selectRatePlan" }) %>
       <% end %>
     <% else %>
       <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true,

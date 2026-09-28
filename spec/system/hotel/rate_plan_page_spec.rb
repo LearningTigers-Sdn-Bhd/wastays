@@ -267,7 +267,7 @@ RSpec.describe "Rate plan page", type: :system, js: true do
 
     # Regression: the multi-select used to initialise disabled (its panel
     # starts hidden) and stay permanently unusable even once revealed.
-    multi_select = panel.find("[data-controller~='panels-ui--multi-select']")
+    multi_select = panel.find("[data-controller~='ui--multi-select']")
     multi_select.find(".ts-control").click
     expect(multi_select).to have_css(".ts-wrapper.dropdown-active")
     multi_select.find(".ts-dropdown .option", text: agency.corporate_account.name).click
