@@ -62,6 +62,18 @@ class RoomType < ApplicationRecord
     max_adults.to_i + max_children.to_i
   end
 
+  # Whether one room of this category can hold the party, by its separate adult
+  # and child limits -- the same test the public booking engine applies.
+  def fits?(adults:, children: 0)
+    adults.to_i <= max_adults.to_i && children.to_i <= max_children.to_i
+  end
+
+  # Says what the category holds, for a party it cannot.
+  def occupancy_limit_message
+    "#{name} holds up to #{ActionController::Base.helpers.pluralize(max_adults.to_i, 'adult')} " \
+      "and #{ActionController::Base.helpers.pluralize(max_children.to_i, 'child')}."
+  end
+
   # The plan that anchors this category's pricing: the one EnsureSystemPlans
   # creates alongside the category, the row the pricing rules write to, and the
   # plan every booking path falls back to when no rate was picked.
@@ -79,6 +91,20 @@ class RoomType < ApplicationRecord
     return @standard_rate_plan if defined?(@standard_rate_plan)
 
     @standard_rate_plan = system_rate_plan("standard") || active_rate_plans.first
+  end
+
+  # The plan the property chose to lead with -- listed first and quoted as the
+  # "from" price to guests and agents. A display choice only: pricing,
+  # derivation and restrictions still anchor on standard_rate_plan. Nil until
+  # a plan is picked (or once the picked plan is archived), in which case every
+  # surface keeps its old behaviour -- the booking site quoting the best price.
+  def primary_rate_plan
+    flagged = room_type_rate_plans.find(&:primary_plan?)&.rate_plan_id
+    active_rate_plans.find { |plan| plan.id == flagged } if flagged
+  end
+
+  def primary_rate_plan?(rate_plan)
+    rate_plan.present? && primary_rate_plan&.id == rate_plan.id
   end
 
   def walk_in_rate_plan

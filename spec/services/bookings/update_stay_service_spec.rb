@@ -205,4 +205,20 @@ RSpec.describe Bookings::UpdateStayService do
       expect(result.success?).to be(true)
     end
   end
+  describe "long-stay discounts" do
+    it "re-prices the whole stay when an extension reaches a discount" do
+      room_type.update!(base_price: 100)
+      rate_plan = room_type.standard_rate_plan
+      rate_plan.rate_plan_stay_discounts.create!(min_nights: 3, discount_type: "percent", value: 20)
+      booking.update!(check_in: Date.current + 5.days, check_out: Date.current + 7.days)
+      booking_room.update!(rate_plan: rate_plan)
+
+      result = described_class.new(booking: booking, params: { check_out: Date.current + 8.days }).call
+
+      expect(result.success?).to be true
+      prices = booking_room.reload.nightly_rate_snapshot.values.map { |night| night["price"].to_d }
+      expect(prices).to eq([ 80, 80, 80 ].map(&:to_d))
+      expect(booking_room.subtotal).to eq(240.to_d)
+    end
+  end
 end

@@ -27,6 +27,8 @@ module CorporatePortal
   # No money is taken: they are created unpaid and settle by the relationship --
   # direct bill is invoiced, standard settles at checkout.
   class CreateAgentBooking
+    include AgentGuestIdentity
+
     class Failed < StandardError; end
 
     Result = Struct.new(:bookings, :group_booking, :errors, keyword_init: true) do
@@ -41,12 +43,19 @@ module CorporatePortal
       @hotel = relationship.hotel
       @params = params.to_h.symbolize_keys
       @user = user
+      @boat_times = AgentBoatTimes.new(hotel: @hotel, params: @params)
     end
 
     def call
       room_type = @hotel.room_types.find_by(id: @params[:room_type_id])
       return failure("Choose a room category.") if room_type.blank?
+      return failure(room_type.occupancy_limit_message) unless room_type.fits?(adults: @params[:adults], children: @params[:children])
+
+      @rate_plan = resolve_rate_plan(room_type)
+      return failure("Choose a rate plan.") if @rate_plan.blank?
       return failure("Name the lead guest for each room.") if rooms.empty?
+      return failure(unnamed_rooms_message) if unnamed_rooms.any?
+      return failure(*@boat_times.errors) if @boat_times.errors.any?
 
       availability = check_availability(room_type)
       return failure(availability) if availability.is_a?(String)
@@ -58,7 +67,30 @@ module CorporatePortal
 
     private
 
-    def rooms_requested = [ @params[:rooms].to_i, rooms.size, 1 ].max
+    def rooms_requested = [ @params[:rooms].to_i, room_blocks.size, 1 ].max
+
+    # Positions (1-based) of rooms asked for but left without a lead guest.
+    # Booking the named ones alone would hand the agent fewer rooms than they
+    # asked for without a word, so the whole request is sent back instead.
+    def unnamed_rooms
+      @unnamed_rooms ||= (0...rooms_requested).select { |index| room_blocks[index].nil? }.map { |index| index + 1 }
+    end
+
+    def unnamed_rooms_message
+      "Name the lead guest for #{unnamed_rooms.one? ? 'room' : 'rooms'} #{unnamed_rooms.to_sentence}."
+    end
+
+    # The plan comes from the form, so it is re-checked against what this agency
+    # may book -- a hidden plan's id typed into the request is refused like any
+    # other. A form that names no plan (a page rendered before plans were
+    # selectable) still books when the category offers exactly one.
+    def resolve_rate_plan(room_type)
+      offered = @hotel.rate_plans.offered_to_agency(@relationship)
+        .joins(:room_type_rate_plans).where(room_type_rate_plans: { room_type_id: room_type.id })
+      return offered.find_by(id: @params[:rate_plan_id]) if @params[:rate_plan_id].present?
+
+      offered.one? ? offered.first : nil
+    end
 
     # CreateManualBooking only checks availability when a room number is given,
     # and an agent sells a category -- so without this the confirm step would
@@ -67,12 +99,16 @@ module CorporatePortal
     def check_availability(room_type)
       result = AgentStaySearch.call(
         hotel: @hotel, check_in: @params[:check_in], check_out: @params[:check_out],
-        adults: @params[:adults], children: @params[:children], rooms: rooms_requested
+        adults: @params[:adults], children: @params[:children], child_ages: @params[:child_ages], rooms: rooms_requested,
+        relationship: @relationship
       )
       return result.error unless result.success?
 
-      option = result.options.find { |candidate| candidate.room_type.id == room_type.id }
+      option = result.options.find do |candidate|
+        candidate.room_type.id == room_type.id && candidate.rate_plan.id == @rate_plan.id
+      end
       return nil if option&.available?
+      return "#{@rate_plan.name} can't be booked for these dates: #{option.restriction}." if option&.restricted?
 
       "#{room_type.name} no longer has #{ActionController::Base.helpers.pluralize(rooms_requested, 'room')} " \
         "free for these dates."
@@ -99,6 +135,8 @@ module CorporatePortal
       raise Failed, Array(result.errors).to_sentence unless result.success?
 
       add_companions(result.booking, guests)
+      # Every room in the party takes the same boats, landing on its own stay dates.
+      ::Boats::AssignTimes.call(booking: result.booking, params: @boat_times.params)
       stamp_payment_deadline(result.booking)
       result.booking
     end
@@ -138,11 +176,20 @@ module CorporatePortal
         check_out: @params[:check_out],
         adults: [ @params[:adults].to_i, 1 ].max,
         children: @params[:children].to_i,
+        # Every room shares one occupancy, ages included, so each is priced
+        # exactly as the search quoted it.
+        child_ages: @params[:child_ages],
         room_type_id: room_type.id,
-        rate_plan_id: (room_type.corporate_rate_plan || room_type.standard_rate_plan)&.id,
+        rate_plan_id: @rate_plan.id,
         # The agent sells the category, not a numbered room. The desk assigns one
         # at arrival, as it does for any unassigned reservation.
         require_room_number: false,
+        # Re-checked at creation too, so no path books a night the property
+        # closed -- the search above already refused it, but it is cheap to
+        # make the booking itself agree.
+        apply_stop_sell_restriction: true,
+        apply_arrival_departure_restrictions: true,
+        apply_stay_length_restrictions: true,
         source: "travel_agent",
         hotel_corporate_account_id: @relationship.id,
         # Which agency is already known from the relationship; these say which
@@ -151,6 +198,7 @@ module CorporatePortal
         corporate_booked_by_id: @user&.id,
         corporate_booked_at: Time.current,
         special_requests: @params[:special_requests].presence,
+        agent_reference: @params[:agent_reference].to_s.strip.first(100).presence,
         internal_notes: "Booked through the corporate portal by " \
                         "#{@relationship.corporate_account&.name}#{" (room #{index + 1} of #{rooms.size})" if rooms.many?}."
       }.compact
@@ -177,41 +225,6 @@ module CorporatePortal
       end
     end
 
-    # Routes the one "IC / Passport" field the agent actually sees into
-    # whichever column Guest validates against. A Malaysian's IC drives
-    # document_type and, from there, lets Guest derive date of birth straight
-    # from the number (see Guest#populate_date_of_birth_from_malaysian_ic) --
-    # a passport number carries no such date, so nothing is inferred from it.
-    def identity_attributes(country:, id_number:)
-      id_number = id_number.presence
-      return {} if id_number.blank? || country.blank?
-
-      if country.to_s.casecmp?("Malaysia")
-        malaysian_ic_attributes(id_number)
-      else
-        # The field allows headroom (20 characters) for spaces, hyphens or a
-        # check digit an agent might type or paste in -- none of them are part
-        # of the number itself, so they are stripped here rather than kept as
-        # noise in what gets filed against the guest.
-        { document_type: "passport", passport_number: id_number.gsub(/[\s-]/, "") }
-      end
-    end
-
-    # The form's own script blocks a malformed IC before it can be submitted
-    # (agent_guest_identity_controller.js), but that is a client the request
-    # does not have to go through -- so this is the one place a stray letter
-    # actually stops it. Filed as-is under government_id either way (it is
-    # still a Malaysian identity number field), but document_type is only set
-    # to "malaysian_nric" for something that looks like a real one: setting it
-    # for "9902031z26661zz" would let Guest derive a date of birth off digits
-    # a letter had silently fallen out of (see
-    # Guests::MalaysianIcDateOfBirthParser, which reads the same way).
-    def malaysian_ic_attributes(id_number)
-      return { government_id: id_number } unless id_number.match?(/\A[\d\s-]+\z/)
-
-      { document_type: "malaysian_nric", government_id: id_number }
-    end
-
     def group_for(bookings)
       return nil unless bookings.many?
 
@@ -230,10 +243,16 @@ module CorporatePortal
       nil
     end
 
-    # Guest blocks arrive keyed by position, nested under the room they belong
-    # to. A room with no named lead is not a room anyone asked for.
+    # The rooms that will be booked: every requested room, once each has a lead.
     def rooms
-      @rooms ||= ordered(@params[:rooms_detail]).filter_map do |room|
+      @rooms ||= room_blocks.compact
+    end
+
+    # Guest blocks arrive keyed by position, nested under the room they belong
+    # to. A room with no named lead stays in its place as nil, so it can be
+    # reported rather than quietly left out.
+    def room_blocks
+      @room_blocks ||= ordered(@params[:rooms_detail]).map do |room|
         guests = ordered(room.is_a?(Hash) ? room.symbolize_keys[:guests] : nil)
                  .map { |attrs| attrs.to_h.symbolize_keys.slice(:name, :email, :phone, :country, :government_id, :date_of_birth) }
                  .reject { |attrs| attrs.except(:country, :government_id, :date_of_birth).values.all?(&:blank?) }

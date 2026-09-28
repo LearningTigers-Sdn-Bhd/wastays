@@ -1,0 +1,135 @@
+<%# locals: (currency:, per_person:, example_price:) %>
+<%# Guided, one-question-at-a-time flow for a *new* discount only — editing an
+    existing one keeps the compact row above. Every field here is unbound (not
+    rate_plan[...]); step 3 lets the user simulate a different stay length than
+    the "starts from" answer, so the example here is computed independently
+    (lib/stay_discount_example, shared with the row's own example controller)
+    rather than reusing that controller directly. On the final step it fills in
+    a freshly cloned real row (via nested-rows#add) and dispatches input events
+    so that row's own stay-discount-example controller takes over from there. %>
+<div class="hidden rounded-md border border-border-interactive bg-muted/30 p-4 space-y-4"
+     data-stay-discount-wizard-target="card">
+  <div class="flex items-center justify-between">
+    <p class="text-sm font-medium text-foreground">Add a long-stay discount</p>
+    <p class="text-xs font-medium text-muted-foreground" data-stay-discount-wizard-target="stepLabel"></p>
+  </div>
+
+  <div data-stay-discount-wizard-target="step" data-wizard-step="1">
+    <p class="mb-2 text-sm text-muted-foreground">After how many nights should this discount start? Guests who stay this many nights or more will get the discount.</p>
+    <div class="max-w-xs">
+      <div class="flex rounded-md border border-border bg-card focus-within:border-border-interactive">
+        <input type="number" min="2" step="1" inputmode="numeric" placeholder="3"
+               class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-0"
+               data-stay-discount-wizard-target="minNights"
+               data-action="input->stay-discount-wizard#updateExample">
+        <span class="px-3 py-2 text-sm text-muted-foreground">nights</span>
+      </div>
+    </div>
+  </div>
+
+  <div data-stay-discount-wizard-target="step" data-wizard-step="2" class="hidden">
+    <p class="mb-2 text-sm text-muted-foreground">How should the discount be given?</p>
+    <div class="grid gap-2 sm:grid-cols-2">
+      <label class="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3 hover:border-border-interactive has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
+        <input type="radio" name="stay_discount_wizard_type" value="percent" checked
+               class="mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0"
+               data-stay-discount-wizard-target="discountType"
+               data-action="change->stay-discount-wizard#selectDiscountType">
+        <span>
+          <span class="block text-sm font-medium text-foreground">A percentage off</span>
+          <span class="block text-xs text-muted-foreground">e.g. 15% off each discounted night.</span>
+        </span>
+      </label>
+      <label class="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3 hover:border-border-interactive has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
+        <input type="radio" name="stay_discount_wizard_type" value="amount"
+               class="mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0"
+               data-stay-discount-wizard-target="discountType"
+               data-action="change->stay-discount-wizard#selectDiscountType">
+        <span>
+          <span class="block text-sm font-medium text-foreground">A fixed amount off</span>
+          <span class="block text-xs text-muted-foreground">e.g. <%= currency %> 20 off each discounted night<%= per_person ? ", per guest" : "" %>.</span>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <div data-stay-discount-wizard-target="step" data-wizard-step="3" class="hidden">
+    <p class="mb-2 text-sm text-muted-foreground">How much?</p>
+    <div class="max-w-xs">
+      <div class="flex rounded-md border border-border bg-card focus-within:border-border-interactive">
+        <input type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="15"
+               class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-0"
+               data-stay-discount-wizard-target="value"
+               data-action="input->stay-discount-wizard#updateExample">
+        <span class="px-3 py-2 text-sm text-muted-foreground" data-stay-discount-wizard-target="unit">%</span>
+      </div>
+    </div>
+    <p class="mt-3 text-sm text-muted-foreground">Try it: simulate a stay of
+      <input type="number" min="2" step="1" inputmode="numeric"
+             class="mx-1 w-14 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground"
+             data-stay-discount-wizard-target="simulateNights"
+             data-action="input->stay-discount-wizard#simulate">
+      nights.
+    </p>
+  </div>
+
+  <div data-stay-discount-wizard-target="step" data-wizard-step="4" class="hidden">
+    <p class="mb-2 text-sm text-muted-foreground">Which nights does the discount apply to?</p>
+    <div class="space-y-2">
+      <label class="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3 hover:border-border-interactive has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
+        <input type="radio" name="stay_discount_wizard_from" value="every" checked
+               class="mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0"
+               data-stay-discount-wizard-target="fromNightMode"
+               data-action="change->stay-discount-wizard#selectFromNightMode">
+        <span class="block text-sm font-medium text-foreground">Every night of the stay</span>
+      </label>
+      <label class="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3 hover:border-border-interactive has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
+        <input type="radio" name="stay_discount_wizard_from" value="from"
+               class="mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0"
+               data-stay-discount-wizard-target="fromNightMode"
+               data-action="change->stay-discount-wizard#selectFromNightMode">
+        <span class="flex items-center gap-2 text-sm font-medium text-foreground">
+          Only from night
+          <input type="number" min="1" step="1" inputmode="numeric"
+                 class="w-16 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground"
+                 data-stay-discount-wizard-target="fromNightValue"
+                 data-action="input->stay-discount-wizard#updateExample">
+          onward — earlier nights stay full price.
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <div data-stay-discount-wizard-target="step" data-wizard-step="5" class="hidden">
+    <p class="mb-2 text-sm font-medium text-foreground" data-stay-discount-wizard-target="reviewText"></p>
+  </div>
+
+  <div class="rounded-md bg-card px-3 py-2.5 text-xs text-muted-foreground" aria-live="polite">
+    <p class="font-medium text-foreground" data-stay-discount-wizard-target="heading">Example</p>
+    <div data-stay-discount-wizard-target="body">
+      <p class="mt-1">Enter the nights and the discount to see an example.</p>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between pt-1">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :xs,
+          data: { action: "click->stay-discount-wizard#cancel" }) do %>Cancel<% end %>
+    <div class="flex gap-2">
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :xs,
+            data: { stay_discount_wizard_target: "back", action: "click->stay-discount-wizard#back" }) do %>
+        Back
+      <% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :primary, size: :xs,
+            data: { stay_discount_wizard_target: "continueButton", action: "click->stay-discount-wizard#continue" }) do %>
+        Continue
+        <%= cached_icon "chevron-right", class: "size-3.5", aria: { hidden: true } %>
+      <% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :primary, size: :xs,
+            class: "hidden",
+            data: { stay_discount_wizard_target: "confirmButton",
+                    action: "click->nested-rows#add click->stay-discount-wizard#applyAnswers" }) do %>
+        Add this discount
+      <% end %>
+    </div>
+  </div>
+</div>

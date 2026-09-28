@@ -1,6 +1,9 @@
 <%# The meal-times form and each slot form are siblings, never nested: a form
     inside a form is invalid HTML and the inner one silently never submits. %>
-<div class="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2">
+<div class="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-2"
+     data-controller="boat-slots-bulk"
+     data-boat-slots-bulk-url-value="<%= hotel_boat_schedule_slots_bulk_update_path(@hotel) %>"
+     data-action="input->boat-slots-bulk#refresh change->boat-slots-bulk#refresh click->boat-slots-bulk#refresh">
   <% if @presenter.settings_errors.any? && params[:form_id] == "boat_settings" %>
     <div class="lg:col-span-2">
       <%= render PanelsUI::Alert.new(
@@ -20,7 +23,7 @@
     <div>
       <h2 id="meal-times-heading" class="text-base font-semibold text-foreground">Meal Service Times</h2>
       <p class="mt-2 text-sm text-muted-foreground">
-        Used to pre-tick the meals on a new boat slot. Each slot keeps its own meals once saved, so changing these never alters existing slots or past reports.
+        Used to pre-tick the meals on a new boat slot. Leave a meal blank if it is not served. Each slot keeps its own meals once saved, so changing these never alters existing slots or past reports.
       </p>
     </div>
 
@@ -31,8 +34,10 @@
                   class: "mt-4" do |f| %>
       <%= hidden_field_tag :form_id, "boat_settings" %>
       <%= f.fields_for :hotel_boat_setting, @presenter.boat_setting do |boat_form| %>
-        <div class="grid items-start gap-4 sm:grid-cols-3">
-          <% { breakfast_time: "Breakfast", lunch_time: "Lunch", dinner_time: "Dinner" }.each do |attribute, label| %>
+        <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <% HotelBoatSetting::MEALS.each do |meal| %>
+            <% attribute = :"#{meal}_time" %>
+            <% label = HotelBoatSetting.meal_label(meal) %>
             <%= render PanelsUI::FormField.new(form: boat_form, attribute: attribute, label: label) do |field| %>
               <% field.with_time_picker(value: @presenter.boat_setting.public_send(attribute)&.strftime("%H:%M").to_s, minute_step: 5) %>
             <% end %>
@@ -75,4 +80,22 @@
       <% end %>
     </section>
   <% end %>
+
+  <%# Off by default; the controller shows it once a slot row differs from
+      what it loaded with, and hides it again once nothing is left dirty.
+      Saving posts every changed row in one request instead of the old
+      save-each-row-separately flow. %>
+  <div class="sticky bottom-4 z-10 lg:col-span-2" hidden data-boat-slots-bulk-target="bar">
+    <div class="flex items-center justify-between gap-4 rounded-lg border border-border bg-background p-3 shadow-lg">
+      <p class="text-sm text-foreground" data-boat-slots-bulk-target="count"></p>
+      <div class="flex gap-2">
+        <%= render PanelsUI::Button.new(
+              as: :button, type: :button, variant: :neutral, size: :sm,
+              data: { action: "boat-slots-bulk#discardAll" }) do %>Discard all<% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button, type: :button, variant: :primary, size: :sm,
+              data: { action: "boat-slots-bulk#save" }) do %>Save changes<% end %>
+      </div>
+    </div>
+  </div>
 </div>

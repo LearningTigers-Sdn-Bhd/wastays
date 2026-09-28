@@ -8,7 +8,7 @@ import { Controller } from "@hotwired/stimulus"
 // that produces before committing to them. The server stays the authority — this
 // only ever writes to a <p>.
 export default class extends Controller {
-  static targets = ["mode", "manualPanel", "derivedPanel", "autoPanel", "ladderPanel", "preview"]
+  static targets = ["mode", "manualPanel", "derivedPanel", "autoPanel", "preview", "rungTemplate"]
   static values = { anchor: Number, maxAdults: Number, currency: String, perPerson: Boolean }
 
   connect() {
@@ -20,7 +20,6 @@ export default class extends Controller {
     this.toggle(this.manualPanelTargets, mode === "manual")
     this.toggle(this.derivedPanelTargets, mode === "derived")
     this.toggle(this.autoPanelTargets, mode === "auto")
-    this.toggle(this.ladderPanelTargets, mode === "derived" || mode === "auto")
     this.renderPreview(mode)
   }
 
@@ -36,12 +35,14 @@ export default class extends Controller {
   renderPreview(mode) {
     if (!this.hasPreviewTarget) return
     if (mode !== "derived" && mode !== "auto") {
-      this.previewTarget.textContent = ""
+      this.resetPreviewClass()
+      this.previewTarget.replaceChildren()
       return
     }
 
     const anchor = mode === "auto" ? this.field("default_rate") : this.derivedAnchor()
     if (anchor === null || Number.isNaN(anchor)) {
+      this.resetPreviewClass()
       this.previewTarget.textContent = this.perPersonValue
         ? "Enter a rate to preview the ladder."
         : "Enter an adjustment to preview the nightly price."
@@ -52,6 +53,7 @@ export default class extends Controller {
     // would print the same figure max_adults times and imply an occupancy
     // matrix this plan does not have.
     if (!this.perPersonValue) {
+      this.resetPreviewClass()
       this.previewTarget.textContent = `${this.currencyValue} ${this.money(Math.max(anchor, 0))} per night`
       return
     }
@@ -66,10 +68,38 @@ export default class extends Controller {
       let price = anchor
       if (steps > 0) price = anchor + increase * steps
       if (steps < 0) price = anchor - decrease * Math.abs(steps)
-      rungs.push(`${adults}p ${this.money(Math.max(price, 0))}`)
+      rungs.push({ adults, price: Math.max(price, 0) })
     }
 
-    this.previewTarget.textContent = `${this.currencyValue} ${rungs.join(" · ")}`
+    this.renderRungs(rungs)
+  }
+
+  // Mirrors HotelPortal::RatePlansHelper#occupancy_price_ladder's guest-count
+  // tags (Room Inventory) instead of a plain "1p 200.00 · 2p 200.00" string.
+  renderRungs(rungs) {
+    if (!this.hasRungTemplateTarget) {
+      this.previewTarget.textContent = `${this.currencyValue} ${rungs.map((rung) => `${rung.adults}p ${this.money(rung.price)}`).join(" · ")}`
+      return
+    }
+
+    const nodes = rungs.map((rung) => {
+      const node = this.rungTemplateTarget.content.firstElementChild.cloneNode(true)
+      node.title = `${rung.adults} ${rung.adults === 1 ? "guest" : "guests"}: ${this.currencyValue} ${this.money(rung.price)}`
+      node.querySelector('[data-role="count"]').textContent = rung.adults
+      node.querySelector('[data-role="price"]').textContent = this.money(rung.price)
+      return node
+    })
+
+    const label = document.createElement("span")
+    label.className = "me-0.5 text-xs text-muted-foreground"
+    label.textContent = this.currencyValue
+
+    this.previewTarget.className = "inline-flex flex-wrap items-center gap-1.5"
+    this.previewTarget.replaceChildren(label, ...nodes)
+  }
+
+  resetPreviewClass() {
+    this.previewTarget.className = "text-sm text-muted-foreground"
   }
 
   derivedAnchor() {

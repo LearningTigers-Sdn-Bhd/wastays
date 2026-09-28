@@ -33,6 +33,18 @@ module Bookings
       !restricted?(rate_plan)
     end
 
+    # Why the enabled restrictions refuse this plan for these dates, in words a
+    # booker can act on, or nil when none do.
+    def restriction_reason(rate_plan)
+      restriction_plan = @room_type.restriction_plan_for(rate_plan)
+      rates = rates_for(restriction_plan)
+
+      (@apply_stop_sell && stop_sell_reason(rates)) ||
+        (@apply_arrival_departure && arrival_departure_reason(rates, restriction_plan)) ||
+        (@apply_stay_length && stay_length_reason(rates)) ||
+        nil
+    end
+
     private
 
     def occupancy
@@ -63,32 +75,36 @@ module Bookings
     end
 
     def restricted?(rate_plan)
-      restriction_plan = @room_type.restriction_plan_for(rate_plan)
-      rates = rates_for(restriction_plan)
-      return true if @apply_stop_sell && rates.any?(&:stop_sell?)
-      return true if @apply_arrival_departure && arrival_departure_restricted?(rates, restriction_plan)
-      return true if @apply_stay_length && stay_length_restricted?(rates)
-
-      false
+      restriction_reason(rate_plan).present?
     end
 
     def rates_for(rate_plan)
       @room_type.room_rates.where(rate_plan: rate_plan, date: stay_dates).to_a
     end
 
-    def arrival_departure_restricted?(rates, rate_plan)
-      return true if rates.find { |rate| rate.date == @check_in }&.closed_to_arrival?
+    def stop_sell_reason(rates)
+      closed = rates.select(&:stop_sell?).map(&:date).sort
+      "Closed for sale on #{closed.map { |date| format_date(date) }.to_sentence}" if closed.any?
+    end
+
+    def arrival_departure_reason(rates, rate_plan)
+      return "No arrivals on #{format_date(@check_in)}" if rates.find { |rate| rate.date == @check_in }&.closed_to_arrival?
 
       checkout_rate = @room_type.room_rates.find_by(rate_plan: rate_plan, date: @check_out)
-      return true if checkout_rate&.closed_to_departure?
+      return "No departures on #{format_date(@check_out)}" if checkout_rate&.closed_to_departure?
 
-      rates.find { |rate| rate.date == stay_dates.last }&.closed_to_departure?
+      "No departures on #{format_date(@check_out)}" if rates.find { |rate| rate.date == stay_dates.last }&.closed_to_departure?
     end
 
-    def stay_length_restricted?(rates)
-      rates.any? { |rate| rate.min_stay.present? && nights < rate.min_stay } ||
-        rates.any? { |rate| rate.max_stay.present? && nights > rate.max_stay }
+    def stay_length_reason(rates)
+      min_stay = rates.filter_map(&:min_stay).select { |value| nights < value }.max
+      return "Minimum stay #{min_stay} nights" if min_stay
+
+      max_stay = rates.filter_map(&:max_stay).select { |value| nights > value }.min
+      "Maximum stay #{max_stay} #{'night'.pluralize(max_stay)}" if max_stay
     end
+
+    def format_date(date) = date.strftime("%-d %b")
 
     def stay_dates
       @stay_dates ||= (@check_in...@check_out).to_a

@@ -62,6 +62,14 @@ RSpec.describe RatePlan, type: :model do
       expect(plan.archivable?).to be true
       expect(plan.bookable_by?(:public)).to be true
     end
+
+    it 'keeps a hidden plan bookable by staff and corporate, but not the public' do
+      plan = create(:rate_plan, hotel: hotel, hidden_from_public: true)
+
+      expect(plan.bookable_by?(:public)).to be false
+      expect(plan.bookable_by?(:staff)).to be true
+      expect(plan.bookable_by?(:corporate)).to be true
+    end
   end
 
   describe '#inherit_sell_mode_from_hotel' do
@@ -208,6 +216,14 @@ RSpec.describe RatePlan, type: :model do
 
     it 'adds walk-in for the front desk' do
       expect(hotel.rate_plans.for_audience(:staff)).to match_array([ standard, custom, walk_in, corporate ])
+    end
+
+    it 'drops a plan hidden from the public booking site, but keeps it for staff and corporate' do
+      standard.update!(hidden_from_public: true)
+
+      expect(hotel.rate_plans.for_audience(:public)).to match_array([ custom ])
+      expect(hotel.rate_plans.for_audience(:staff)).to match_array([ standard, custom, walk_in, corporate ])
+      expect(hotel.rate_plans.for_audience(:corporate)).to match_array([ standard, custom, corporate ])
     end
 
     # ota is distribution-only — it is carried to the channel manager but is not

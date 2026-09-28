@@ -1,91 +1,147 @@
 <% modes = rate_plan_rate_mode_options(pricing) %>
 <% per_person = pricing.per_person? %>
 
-<fieldset class="space-y-3">
-  <legend class="text-sm font-medium text-foreground">How should this room be priced?</legend>
-  <div class="grid gap-2 <%= modes.size > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
-    <% modes.each do |value, mode| %>
-      <label class="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3 hover:border-border-interactive has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
-        <%= f.radio_button :rate_mode, value,
-              class: "mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0",
-              data: { rate_plan_room_pricing_target: "mode", action: "change->rate-plan-room-pricing#refresh" } %>
-        <span>
-          <span class="block text-sm font-medium text-foreground"><%= mode[:label] %></span>
-          <span class="block text-xs text-muted-foreground"><%= mode[:hint] %></span>
-        </span>
-      </label>
-    <% end %>
-  </div>
-</fieldset>
+<%# A short, guided flow rather than every field at once: pick a mode, then
+    answer its questions one at a time. rate-plan-pricing-wizard only handles
+    step sequencing; rate-plan-room-pricing (on the ancestor element) still owns
+    which mode's panel is shown and the live preview math — the two coexist,
+    the wizard just subdivides whichever panel is currently visible. Each
+    step's data-wizard-title feeds the numbered progress list at the top. %>
+<div class="rounded-md border border-border bg-muted/20 p-4"
+     data-controller="rate-plan-pricing-wizard"
+     data-rate-plan-pricing-wizard-mode-value="<%= pricing.rate_mode %>">
 
-<div data-rate-plan-room-pricing-target="manualPanel" class="space-y-4">
-  <% if per_person %>
-    <fieldset class="grid gap-3 sm:grid-cols-2">
-      <legend class="mb-1 text-sm font-medium text-foreground">Price per number of adults</legend>
-      <% pricing.adult_counts.each do |adults| %>
-        <div>
-          <label for="<%= "#{form_prefix}_prices_#{adults}" %>" class="mb-1 block text-sm font-medium text-foreground">
-            <%= pluralize(adults, "adult") %>
-          </label>
-          <div class="flex rounded-md border border-border bg-background focus-within:border-border-interactive">
-            <span class="px-3 py-2 text-sm text-muted-foreground"><%= currency %></span>
-            <%= number_field_tag "room_pricing[prices][#{adults}]", pricing.price_for(adults),
-                  id: "#{form_prefix}_prices_#{adults}", min: 0, step: 0.01, inputmode: "decimal",
-                  class: "min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-0" %>
+  <ol class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-3"
+      aria-label="Pricing steps"
+      data-rate-plan-pricing-wizard-target="progress"></ol>
+
+  <fieldset class="space-y-3" data-rate-plan-pricing-wizard-target="step" data-wizard-step="1" data-wizard-title="Pricing method">
+    <legend class="text-sm font-medium text-foreground">How should this room be priced?</legend>
+    <div class="grid gap-2 <%= modes.size > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2' %>">
+      <% modes.each do |value, mode| %>
+        <label class="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3 hover:border-border-interactive has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
+          <%= f.radio_button :rate_mode, value,
+                class: "mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0",
+                data: { rate_plan_room_pricing_target: "mode", wizard_mode_label: mode[:label],
+                        action: "change->rate-plan-room-pricing#refresh click->rate-plan-pricing-wizard#selectMode" } %>
+          <span>
+            <span class="block text-sm font-medium text-foreground"><%= mode[:label] %></span>
+            <span class="block text-xs text-muted-foreground"><%= mode[:hint] %></span>
+          </span>
+        </label>
+      <% end %>
+    </div>
+    <p class="text-xs text-muted-foreground">Pick a method to continue — you'll then enter the prices one step at a time.</p>
+  </fieldset>
+
+  <div data-rate-plan-room-pricing-target="manualPanel" class="space-y-4">
+    <% if per_person %>
+      <fieldset class="grid gap-3 sm:grid-cols-2" data-rate-plan-pricing-wizard-target="step" data-wizard-mode="manual" data-wizard-step="2" data-wizard-title="Prices">
+        <legend class="mb-1 text-sm font-medium text-foreground">Price per number of adults</legend>
+        <% pricing.adult_counts.each do |adults| %>
+          <div>
+            <label for="<%= "#{form_prefix}_prices_#{adults}" %>" class="mb-1 block text-sm font-medium text-foreground">
+              <%= pluralize(adults, "adult") %>
+            </label>
+            <div class="flex rounded-md border border-border bg-card focus-within:border-border-interactive">
+              <span class="px-3 py-2 text-sm text-muted-foreground"><%= currency %></span>
+              <%= number_field_tag "room_pricing[prices][#{adults}]", pricing.price_for(adults),
+                    id: "#{form_prefix}_prices_#{adults}", min: 0, step: 0.01, inputmode: "decimal",
+                    class: "min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-0" %>
+            </div>
           </div>
-        </div>
-      <% end %>
-    </fieldset>
-  <% else %>
-    <div class="max-w-sm">
-      <%= render PanelsUI::FormField.new(form: f, attribute: :default_rate, label: "Nightly room price", hint: "Applies to any date without an override.") do |field| %>
-        <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-        <% field.with_addon(align: :inline_start) { currency } %>
-      <% end %>
-    </div>
-  <% end %>
-</div>
-
-<div data-rate-plan-room-pricing-target="derivedPanel" class="grid items-start gap-4 sm:grid-cols-2">
-  <%= render PanelsUI::FormField.new(form: f, attribute: :derive_mode, label: "Relationship to Standard Rate") do |field| %>
-    <% field.with_select_menu(rate_plan_derive_choices, selected: pricing.derive_mode) %>
-  <% end %>
-  <%= render PanelsUI::FormField.new(form: f, attribute: :derive_value, label: "Adjustment", hint: "Negative to discount, positive to add.") do |field| %>
-    <% field.with_input(type: :number, step: 0.01, inputmode: "decimal") %>
-  <% end %>
-</div>
-
-<% unless per_person %>
-  <p class="text-sm text-muted-foreground" data-rate-plan-room-pricing-target="preview" aria-live="polite"></p>
-<% end %>
-
-<% if per_person %>
-  <div data-rate-plan-room-pricing-target="autoPanel" class="grid items-start gap-4 sm:grid-cols-3">
-    <%= render PanelsUI::FormField.new(form: f, attribute: :default_rate, label: "Rate at primary occupancy") do |field| %>
-      <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-      <% field.with_addon(align: :inline_start) { currency } %>
-    <% end %>
-    <%= render PanelsUI::FormField.new(form: f, attribute: :increase_unit, label: "Increase unit") do |field| %>
-      <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.increase_unit) %>
-    <% end %>
-    <%= render PanelsUI::FormField.new(form: f, attribute: :decrease_unit, label: "Decrease unit") do |field| %>
-      <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.decrease_unit) %>
+        <% end %>
+      </fieldset>
+    <% else %>
+      <div class="max-w-sm" data-rate-plan-pricing-wizard-target="step" data-wizard-mode="manual" data-wizard-step="2" data-wizard-title="Price">
+        <%= render PanelsUI::FormField.new(form: f, attribute: :default_rate, label: "Nightly room price", hint: "Applies to any date without an override.") do |field| %>
+          <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+          <% field.with_addon(align: :inline_start) { currency } %>
+        <% end %>
+      </div>
     <% end %>
   </div>
 
-  <div data-rate-plan-room-pricing-target="ladderPanel" class="space-y-4">
-    <p class="text-sm text-muted-foreground">Use these controls to fill the direct occupancy prices above. The generated amounts become editable starting prices when saved.</p>
-    <div class="grid items-start gap-4 sm:grid-cols-3">
-      <%= render PanelsUI::FormField.new(form: f, attribute: :primary_occupancy, label: "Primary occupancy", hint: "The adult count the rate above refers to.") do |field| %>
-        <% field.with_input(type: :number, min: 1, max: pricing.max_adults, step: 1, inputmode: "numeric") %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form: f, attribute: :increase_by, label: "Increase by", hint: "Per adult above primary.") do |field| %>
-        <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
-      <% end %>
-      <%= render PanelsUI::FormField.new(form: f, attribute: :decrease_by, label: "Decrease by", hint: "Per adult below primary.") do |field| %>
-        <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+  <div data-rate-plan-room-pricing-target="derivedPanel" class="space-y-4">
+    <div data-rate-plan-pricing-wizard-target="step" data-wizard-mode="derived" data-wizard-step="2" data-wizard-title="Direction">
+      <p class="mb-3 text-sm text-muted-foreground">Should this room cost more or less than the Standard Rate, and by how much or by what percentage?</p>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :derive_mode, label: "Relationship to Standard Rate", class: "max-w-sm") do |field| %>
+        <% field.with_select_menu(rate_plan_derive_choices, selected: pricing.derive_mode) %>
       <% end %>
     </div>
-    <p class="text-sm text-muted-foreground" data-rate-plan-room-pricing-target="preview" aria-live="polite"></p>
+    <div data-rate-plan-pricing-wizard-target="step" data-wizard-mode="derived" data-wizard-step="3" data-wizard-title="Amount">
+      <p class="mb-3 text-sm text-muted-foreground">How much? Use a negative number to discount, a positive number to add.</p>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :derive_value, label: "Adjustment", hint: "Negative to discount, positive to add.", class: "max-w-sm") do |field| %>
+        <% field.with_input(type: :number, step: 0.01, inputmode: "decimal") %>
+      <% end %>
+    </div>
+    <% unless per_person %>
+      <p class="text-sm text-muted-foreground" data-rate-plan-room-pricing-target="preview" aria-live="polite"></p>
+    <% end %>
   </div>
-<% end %>
+
+  <% if per_person %>
+    <div data-rate-plan-room-pricing-target="autoPanel" class="space-y-4">
+      <div data-rate-plan-pricing-wizard-target="step" data-wizard-mode="auto" data-wizard-step="2" data-wizard-title="Primary occupancy">
+        <p class="mb-3 text-sm text-muted-foreground">Which adult count is this room's usual, "primary" occupancy? The price you set next is for this many adults.</p>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :primary_occupancy, label: "Primary occupancy", hint: "The adult count the price below is set for.", class: "max-w-sm") do |field| %>
+          <% field.with_input(type: :number, min: 1, max: pricing.max_adults, step: 1, inputmode: "numeric") %>
+        <% end %>
+      </div>
+      <div data-rate-plan-pricing-wizard-target="step" data-wizard-mode="auto" data-wizard-step="3" data-wizard-title="Starting rate">
+        <p class="mb-3 text-sm text-muted-foreground">What should the room cost at that primary occupancy?</p>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :default_rate, label: "Rate at primary occupancy", class: "max-w-sm") do |field| %>
+          <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+          <% field.with_addon(align: :inline_start) { currency } %>
+        <% end %>
+      </div>
+      <div class="grid items-start gap-4 sm:grid-cols-2" data-rate-plan-pricing-wizard-target="step" data-wizard-mode="auto" data-wizard-step="4" data-wizard-title="More adults">
+        <p class="col-span-full text-sm text-muted-foreground">How much more should each adult above the primary occupancy add to the price?</p>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :increase_by, label: "Increase by", hint: "How much more per adult above the primary occupancy.") do |field| %>
+          <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :increase_unit, label: "Increase unit") do |field| %>
+          <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.increase_unit) %>
+        <% end %>
+      </div>
+      <div class="grid items-start gap-4 sm:grid-cols-2" data-rate-plan-pricing-wizard-target="step" data-wizard-mode="auto" data-wizard-step="5" data-wizard-title="Fewer adults">
+        <p class="col-span-full text-sm text-muted-foreground">How much less should each adult below the primary occupancy take off the price?</p>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :decrease_by, label: "Decrease by", hint: "How much less per adult below the primary occupancy.") do |field| %>
+          <% field.with_input(type: :number, min: 0, step: 0.01, inputmode: "decimal") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :decrease_unit, label: "Decrease unit") do |field| %>
+          <% field.with_select_menu(rate_plan_step_unit_choices(currency), selected: pricing.decrease_unit) %>
+        <% end %>
+      </div>
+      <p class="text-sm text-muted-foreground" data-rate-plan-room-pricing-target="preview" aria-live="polite"></p>
+    </div>
+  <% end %>
+
+  <div class="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :sm,
+          data: { rate_plan_pricing_wizard_target: "back", action: "click->rate-plan-pricing-wizard#back" }) do %>
+      <%= cached_icon "chevron-left", class: "size-4", aria: { hidden: true } %>
+      Back
+    <% end %>
+    <p class="hidden text-xs text-muted-foreground" data-rate-plan-pricing-wizard-target="doneHint">
+      All set — save the rate plan below to keep these prices.
+    </p>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :primary, size: :sm,
+          data: { rate_plan_pricing_wizard_target: "continueButton", action: "click->rate-plan-pricing-wizard#continue" }) do %>
+      Continue
+      <%= cached_icon "chevron-right", class: "size-4", aria: { hidden: true } %>
+    <% end %>
+  </div>
+</div>
+
+<%# Cloned per rung by rate_plan_room_pricing_controller#renderPreview to match the
+    per-guest tags used on Room Inventory (HotelPortal::RatePlansHelper#occupancy_price_ladder). %>
+<template data-rate-plan-room-pricing-target="rungTemplate">
+  <span class="inline-flex items-stretch overflow-hidden rounded-md border border-border text-xs">
+    <span class="inline-flex items-center gap-0.5 bg-muted px-1.5 py-0.5 text-muted-foreground" aria-hidden="true">
+      <%= cached_icon("adult", library: "guest", class: "size-3 fill-current", aria: { hidden: "true" }, focusable: "false") %>
+      <span data-role="count"></span>
+    </span>
+    <span class="px-1.5 py-0.5 font-medium tabular-nums text-foreground" data-role="price"></span>
+  </span>
+</template>

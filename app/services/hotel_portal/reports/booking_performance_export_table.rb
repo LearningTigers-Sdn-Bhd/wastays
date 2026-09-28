@@ -27,6 +27,8 @@ module HotelPortal
         when "check_in" then pdf ? date(row.check_in) : row.check_in
         when "check_out" then pdf ? date(row.check_out) : row.check_out
         when "source" then row.source_label
+        when "rate_plan" then row.rate_plan_label
+        when "room_nights" then row.room_nights
         when "fund_collector" then row.fund_collector_label
         when "status" then row.status_label
         when "payment_status" then row.payment_status_label

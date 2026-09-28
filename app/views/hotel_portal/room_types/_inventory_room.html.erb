@@ -1,4 +1,5 @@
-<% assignments = room_type.room_type_rate_plans.sort_by { |assignment| [ assignment.rate_plan.standard_rate? ? 0 : 1, assignment.rate_plan.name.downcase, assignment.id ] } %>
+<% primary_plan_id = room_type.primary_rate_plan&.id %>
+<% assignments = room_type.room_type_rate_plans.sort_by { |assignment| [ assignment.rate_plan_id == primary_plan_id ? 0 : 1, assignment.rate_plan.standard_rate? ? 0 : 1, assignment.rate_plan.name.downcase, assignment.id ] } %>
 <% pricing_issue_count = assignments.count { |assignment| !room_pricing_complete?(assignment, room_type) } %>
 
 <% accordion.with_item(
@@ -67,7 +68,7 @@
               href: new_hotel_rate_plan_path(current_hotel, room_type_id: room_type.id),
               variant: :ghost,
               size: :xs,
-              data: { turbo_frame: "settings_action_sheet" }) do %>
+              data: { turbo_frame: "_top" }) do %>
           <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
           New rate
         <% end %>

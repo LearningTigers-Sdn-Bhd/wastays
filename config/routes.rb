@@ -272,6 +272,7 @@ Rails.application.routes.draw do
     # deleted, it becomes cancelled history and the rooms go back on sale.
     resources :bookings, only: [ :index, :new, :create, :show ] do
       resource :cancellation, only: [ :new, :create ], controller: "booking_cancellations"
+      resource :guests, only: [ :edit, :update ], controller: "booking_guests"
     end
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
     resources :ar_statements, only: [ :index, :show ], path: "statements" do
@@ -812,6 +813,7 @@ Rails.application.routes.draw do
       get "general/boat", to: "settings#index", as: :boat_settings, defaults: { settings_page: "boat" }
       patch "general/boat", to: "settings#update", defaults: { settings_page: "boat" }
       post "general/boat/slots", to: "boat_schedules#create", as: :boat_schedule_slots
+      patch "general/boat/slots/bulk_update", to: "boat_schedules#bulk_update", as: :boat_schedule_slots_bulk_update
       patch "general/boat/slots/:id", to: "boat_schedules#update", as: :boat_schedule_slot
       delete "general/boat/slots/:id", to: "boat_schedules#destroy"
       patch "general/boat/slots/:id/restore", to: "boat_schedules#restore", as: :boat_schedule_slot_restore
@@ -843,6 +845,7 @@ Rails.application.routes.draw do
             patch "photos/feature", action: :set_featured_photo, as: :photo_feature
             patch "photos/reorder", action: :reorder_photos, as: :reorder_photos
           end
+          resource :primary_rate_plan, only: :update, controller: "room_type_primary_rate_plans"
         end
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do
           get :autocomplete, on: :collection

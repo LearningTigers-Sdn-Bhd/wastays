@@ -105,6 +105,7 @@ module Bookings
           "source" => resolved.source.to_s
         ).compact
       end.transform_keys(&:iso8601)
+      snapshot = apply_stay_discount(snapshot)
 
       total = stay_dates.sum { |date| snapshot.dig(date.iso8601, "price").to_d * @quantity }
 
@@ -113,6 +114,17 @@ module Bookings
         total_amount: total,
         nightly_rate_snapshot: snapshot
       }
+    end
+
+    # Long-stay discounts are for the property's own channels. An OTA booking
+    # was priced by the OTA and must keep that price when staff change it.
+    def apply_stay_discount(snapshot)
+      return snapshot if @booking&.ota_booking?
+
+      Rates::ApplyStayDiscount.snapshot(
+        rate_plan: @rate_plan, snapshot: snapshot,
+        guests: Rates::ApplyStayDiscount.guests_for(@rate_plan, adults: @adults, children: @children)
+      )
     end
 
     def build_manual_override_room_item

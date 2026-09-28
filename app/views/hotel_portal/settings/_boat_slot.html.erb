@@ -16,10 +16,16 @@
                   scope: :hotel_boat_schedule,
                   local: true,
                   class: "contents",
-                  data: { boat_slot_target: "form" } do |f| %>
+                  data: { boat_slot_target: "form" }.merge(new_record ? {} : { slot_id: slot.id }) do |f| %>
       <%= f.hidden_field :kind, value: kind %>
       <div class="w-32" data-boat-slots-target="<%= "time" if new_record %>">
-        <%= render PanelsUI::FormField.new(form: f, attribute: :time, label: "Time", label_hidden: true) do |field| %>
+        <%# Every row shares the same form scope (:hotel_boat_schedule), so the
+            default id from the attribute name alone would collide across every
+            slot on the page -- an id-based lookup (a label's `for`, a popover's
+            outlet selector) would then always resolve to the first row's time
+            picker instead of its own. An explicit id, unique per row, keeps
+            each row's picker (and its Discard/reset) wired to itself. %>
+        <%= render PanelsUI::FormField.new(form: f, attribute: :time, label: "Time", label_hidden: true, id: "#{form_id}-time") do |field| %>
           <% field.with_time_picker(value: slot.time_of_day.to_s, minute_step: 5, disabled: slot.archived?) %>
         <% end %>
       </div>
@@ -29,7 +35,7 @@
           <%= render PanelsUI::Checkbox.new(
                 form: f,
                 attribute: :"has_#{meal}",
-                label: meal.to_s.titleize,
+                label: HotelBoatSetting.meal_label(meal),
                 checked: slot.public_send(:"has_#{meal}"),
                 disabled: slot.archived?) %>
         <% end %>
@@ -61,17 +67,10 @@
             <%= app_icon "x", class: "size-4", aria: { hidden: "true" } %>
           <% end %>
         <% else %>
-          <%# Hidden on the buttons themselves, not on a wrapper: a wrapper is
-              not a group child, so the joined-corner selectors would skip it. %>
-          <%= render PanelsUI::Button.new(
-                as: :button, type: :submit, form: form_id, variant: :primary, size: :icon_sm,
-                hidden: true,
-                aria_label: "Save slot #{slot.time_of_day}",
-                data: { boat_slot_target: "save" }) do %>
-            <%= app_icon "check", class: "size-4", aria: { hidden: "true" } %>
-          <% end %>
-          <%# Reaches its form by id like the others, but resets it rather than
-              submitting -- type: reset would only work from inside the form. %>
+          <%# Hidden on the button itself, not on a wrapper: a wrapper is not a
+              group child, so the joined-corner selectors would skip it.
+              Saving happens for every changed row at once from the page-level
+              "Save changes" bar -- this only reverts this one row. %>
           <%= render PanelsUI::Button.new(
                 as: :button, type: :button, variant: :neutral, size: :icon_sm,
                 hidden: true,
@@ -79,6 +78,7 @@
                 data: { boat_slot_target: "discard", action: "boat-slot#discard" }) do %>
             <%= app_icon "x", class: "size-4", aria: { hidden: "true" } %>
           <% end %>
+          <%# Retire and restore reach their own form by id, further below. %>
           <%= render PanelsUI::Button.new(
                 as: :button, type: :submit, form: "#{form_id}-state",
                 variant: :neutral, size: :icon_sm,

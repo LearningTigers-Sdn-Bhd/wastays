@@ -12,6 +12,7 @@ class HotelCorporateAccount < ApplicationRecord
   has_many :deposits, dependent: :restrict_with_error
   has_many :booking_billing_parties, dependent: :restrict_with_error
   has_many :bookings, dependent: :nullify
+  has_many :rate_plan_agency_rules, dependent: :destroy
   has_many :booking_quotes, dependent: :nullify
 
   ACCOUNT_TYPES = %w[company government travel_agent airline salesperson].freeze

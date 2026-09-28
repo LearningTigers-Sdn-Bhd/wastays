@@ -26,10 +26,17 @@ export default class extends Controller {
     })
     this.control.setValue(this.inputTarget.value)
     this.renderDisplay(this.inputTarget.value)
-    this.onFormReset = () => requestAnimationFrame(() => {
-      this.control.setValue(this.inputTarget.value)
-      this.renderDisplay(this.inputTarget.value)
-    })
+    // A hidden input has no separate default: setting .value rewrites its value
+    // attribute, which is what form.reset() restores to. Keep the loaded value
+    // and put it back ourselves -- "reset" fires before the browser resets.
+    this.initialValue = this.inputTarget.value
+    this.onFormReset = () => {
+      this.inputTarget.value = this.initialValue
+      requestAnimationFrame(() => {
+        this.control.setValue(this.inputTarget.value)
+        this.renderDisplay(this.inputTarget.value)
+      })
+    }
     this.inputTarget.form?.addEventListener("reset", this.onFormReset)
     this.onPopoverOpen = () => requestAnimationFrame(() => this.control.scrollSelected())
     this.element.addEventListener("ui:popover-open", this.onPopoverOpen)

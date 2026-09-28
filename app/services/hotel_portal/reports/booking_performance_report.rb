@@ -5,11 +5,12 @@ require "set"
 module HotelPortal
   module Reports
     class BookingPerformanceReport
-      GROUPINGS = %w[booking_date source fund_collector status currency].freeze
+      GROUPINGS = %w[booking_date source rate_plan fund_collector status currency].freeze
       DEFAULT_GROUPING = "booking_date"
       GROUPING_LABELS = {
         "booking_date" => [ "Booking date", "calendar-days" ],
         "source" => [ "Source", "radio" ],
+        "rate_plan" => [ "Rate plan", "tags" ],
         "fund_collector" => [ "Collected by", "wallet" ],
         "status" => [ "Status", "list-checks" ],
         "currency" => [ "Currency", "coins" ]
@@ -22,10 +23,14 @@ module HotelPortal
         :booking_id, :booked_on, :booking_number, :confirmation_code, :guest_name,
         :status, :status_label, :payment_status, :payment_status_label,
         :check_in, :check_out, :source, :source_label,
+        :rate_plan_key, :rate_plan_label, :room_nights,
         :fund_collector, :fund_collector_label,
         :gross, :taxes, :commission, :net, :currency
       )
-      Group = Data.define(:key, :label, :rows, :count, :currency_totals)
+      Group = Data.define(:key, :label, :rows, :count, :currency_totals) do
+        def room_nights = rows.sum(&:room_nights)
+      end
+      NO_RATE_PLAN_KEY = "none"
 
       attr_reader :group_by, :filter_options, :rows, :start_date, :end_date
 
@@ -134,6 +139,7 @@ module HotelPortal
         bookings.map do |booking|
           source = booking.source.to_s.presence || "unknown"
           collector = collector_key(booking.fund_collector, source)
+          rate_plans = booking.booking_rooms.filter_map(&:rate_plan).uniq.sort_by(&:id)
           currency = booking.currency.to_s.presence || @hotel.default_currency.presence || "MYR"
           Row.new(
             booking_id: booking.id,
@@ -149,6 +155,9 @@ module HotelPortal
             check_out: booking.check_out.to_date,
             source:,
             source_label: source_label(source),
+            rate_plan_key: rate_plans.map(&:id).join("-").presence || NO_RATE_PLAN_KEY,
+            rate_plan_label: rate_plans.map(&:name).to_sentence.presence || "No rate plan",
+            room_nights: booking.booking_rooms.size * booking.duration_in_nights,
             fund_collector: collector,
             fund_collector_label: collector_label(collector),
             gross: booking.total_amount.to_d,
@@ -163,6 +172,7 @@ module HotelPortal
       def group_key(row)
         case group_by
         when "source" then row.source
+        when "rate_plan" then row.rate_plan_key
         when "fund_collector" then row.fund_collector
         when "status" then row.status
         when "currency" then row.currency
@@ -173,6 +183,7 @@ module HotelPortal
       def group_label(row)
         case group_by
         when "source" then row.source_label
+        when "rate_plan" then row.rate_plan_label
         when "fund_collector" then row.fund_collector_label
         when "status" then row.status_label
         when "currency" then row.currency

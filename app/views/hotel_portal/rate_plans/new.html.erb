@@ -1,1 +1,6 @@
-<%= render "form_sheet", rate_plan: @rate_plan, title: "New rate plan", submit_label: "Create rate plan" %>
+<%= render "hotel_portal/rate_plans/editor_page",
+      rate_plan: @rate_plan,
+      new_plan: true,
+      room_types: @room_types,
+      selected_room_type: @selected_room_type,
+      room_pricing: @room_pricing %>

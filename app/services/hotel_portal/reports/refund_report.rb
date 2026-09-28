@@ -38,7 +38,6 @@ module HotelPortal
       def transaction_row(transaction)
         booking = transaction.booking_folio.booking
         refund_request = booking.refund_request
-        metadata = transaction.metadata.to_h
 
         {
           date: transaction.posting_date.to_date,
@@ -46,7 +45,7 @@ module HotelPortal
           guest_name: booking.guest_name,
           room: room_label(booking),
           refund_method: refund_method_label(transaction, refund_request),
-          reference: refund_reference(metadata, refund_request),
+          reference: refund_reference(transaction, refund_request),
           status: refund_request&.status&.humanize || "Recorded",
           reason: refund_request&.reason.presence || transaction.description,
           refund_amount: transaction.amount.to_d.abs.round(2)
@@ -67,9 +66,8 @@ module HotelPortal
         "Refund"
       end
 
-      def refund_reference(metadata, refund_request)
-        metadata["reference"].presence ||
-          metadata["payment_reference"].presence ||
+      def refund_reference(transaction, refund_request)
+        ::Folios::PaymentReference.value(transaction).presence ||
           (refund_request.present? ? "Request ##{refund_request.id}" : "—")
       end
     end

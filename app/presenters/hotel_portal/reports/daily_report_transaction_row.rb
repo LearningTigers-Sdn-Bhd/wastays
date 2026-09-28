@@ -17,8 +17,10 @@ module HotelPortal
       delegate :posting_date, :posted_at, :transaction_type, :category, :description,
         :currency, to: :transaction
 
-      def initialize(transaction, settlement_mode: nil, section: nil, origin: nil, handling: nil, received_by_key: nil)
+      def initialize(transaction, settlement_mode: nil, section: nil, origin: nil, handling: nil, received_by_key: nil,
+                     payment_reference: :unresolved)
         @transaction = transaction
+        @payment_reference = payment_reference
         @settlement_mode = settlement_mode
         @section = section
         @origin = origin
@@ -117,6 +119,13 @@ module HotelPortal
 
       def payment_method
         metadata["payment_source"].presence || metadata["refund_source"].presence
+      end
+
+      # Callers holding a whole report pass the batch-resolved value; a lone row
+      # resolves its own.
+      def payment_reference
+        @payment_reference = ::Folios::PaymentReference.value(transaction) if @payment_reference == :unresolved
+        @payment_reference.presence || "—"
       end
 
       def posting_source

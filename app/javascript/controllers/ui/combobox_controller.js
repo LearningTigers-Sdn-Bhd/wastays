@@ -36,9 +36,30 @@ export default class extends Controller {
 
     this.decorateFocusableControl()
     this.startMenuPositioning()
+    this.startDisabledSync()
     this.form = this.nativeTarget.form
     this.form?.addEventListener("reset", this.onFormReset)
     this.element.dataset.enhanced = "true"
+  }
+
+  // Tom Select reads the native <select>'s `disabled` only once, at
+  // construction, and never again — it does not watch for attribute changes.
+  // A field revealed later (e.g. by value_reveal_controller, which flips
+  // `disabled` on the raw <select> when its panel un-hides) would otherwise
+  // stay permanently unusable even after the native element is re-enabled.
+  startDisabledSync() {
+    this.disabledObserver = new MutationObserver(() => this.syncDisabledState())
+    this.syncDisabledState()
+  }
+
+  // Tom Select's disable()/enable() write `disabled` back onto the observed
+  // <select>, and the browser queues a mutation even when the value is
+  // unchanged — observing our own write loops forever and freezes the tab.
+  syncDisabledState() {
+    this.disabledObserver.disconnect()
+    if (this.nativeTarget.disabled) this.control.disable()
+    else this.control.enable()
+    this.disabledObserver.observe(this.nativeTarget, { attributes: true, attributeFilter: [ "disabled" ] })
   }
 
   // ── Menu positioning (floating-ui) ──────────────────────────────────────────
@@ -147,6 +168,8 @@ export default class extends Controller {
 
   disconnect() {
     this.stopMenuPositioning()
+    this.disabledObserver?.disconnect()
+    this.disabledObserver = null
     this.form?.removeEventListener("reset", this.onFormReset)
     this.control?.destroy()
     this.control = null
