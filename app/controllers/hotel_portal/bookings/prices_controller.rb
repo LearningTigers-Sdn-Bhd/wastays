@@ -20,13 +20,14 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
         adults: params[:adults].presence, children: params[:children].presence,
         target_total: target_total
       ).call
-      render_price(snapshot, manual_rate_override: snapshot.room_total)
+      render_price(snapshot, room_type:, manual_rate_override: snapshot.room_total)
     else
       snapshot = Bookings::BuildFinancialSnapshot.new(
         hotel: current_hotel, room_type:, rate_plan:, check_in:, check_out:, guest_country:,
-        adults: params[:adults].presence, children: params[:children].presence
+        adults: params[:adults].presence, children: params[:children].presence,
+        child_ages: Bookings::ChildAges.normalize(params[:child_ages], params[:children])
       ).call
-      render_price(snapshot)
+      render_price(snapshot, room_type:)
     end
   rescue ArgumentError => e
     render json: { error: e.message, total_amount: 0 }, status: :unprocessable_content
@@ -53,7 +54,7 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
 
   private
 
-  def render_price(snapshot, manual_rate_override: nil)
+  def render_price(snapshot, room_type:, manual_rate_override: nil)
     tourism_tax_total = Booking.tourism_tax_total_for(snapshot.tax_lines)
     payable_tax_total = Booking.non_tourism_tax_total_for(snapshot.tax_lines)
 
@@ -64,8 +65,18 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
       tourism_tax_total: tourism_tax_total,
       tax_lines: snapshot.tax_lines,
       nightly_rate_snapshot: snapshot.nightly_rate_snapshot,
-      manual_rate_override: manual_rate_override
+      manual_rate_override: manual_rate_override,
+      occupancy_warning: occupancy_warning(room_type)
     }.compact
+  end
+
+  # The desk may seat a party the category is not meant to hold (a cot, a
+  # family squeezing in), so an over-full room is flagged, not refused.
+  def occupancy_warning(room_type)
+    adults = (params[:adults].presence || 1).to_i
+    return if room_type.fits?(adults:, children: params[:children].to_i)
+
+    room_type.occupancy_limit_message
   end
 
   # Editing the final total is a pricing decision, same as the net-based

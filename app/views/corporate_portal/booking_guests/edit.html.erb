@@ -1,0 +1,75 @@
+<div class="mx-auto w-full max-w-2xl space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Edit guests",
+        description: "#{@booking.formatted_reservation_number} · #{@booking.hotel.name} · arriving #{@booking.check_in.to_date.strftime('%d %b %Y')}") %>
+
+  <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <p class="text-xs text-muted-foreground">
+      Changes are sent to the hotel straight away and recorded against the booking.
+      For your guests' privacy, a saved IC or passport number is never shown in full; leave it blank to keep it.
+    </p>
+
+    <%= form_with url: corporate_booking_guests_path(@booking), method: :patch, class: "mt-5 space-y-5" do |form| %>
+      <% slots = @guests.map { |booking_guest| [ booking_guest.id.to_s, booking_guest ] } %>
+      <% [ @booking.adults.to_i - @guests.size, 0 ].max.times { |index| slots << [ "new#{index}", nil ] } %>
+
+      <% slots.each_with_index do |(key, booking_guest), position| %>
+        <% saved_id = booking_guest && (booking_guest.passport_number_snapshot.presence || booking_guest.government_id_snapshot.presence) %>
+        <fieldset class="<%= "border-t border-border pt-5" unless position.zero? %>" data-controller="agent-guest-identity">
+          <legend class="mb-2.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            <%= booking_guest&.primary? ? "Lead guest" : (booking_guest ? "Guest #{position + 1}" : "Add guest #{position + 1}") %>
+          </legend>
+          <div class="grid grid-cols-2 gap-3">
+            <%= render PanelsUI::FormField.new(form:, attribute: :name, id: "guest-#{key}-name", label: "Full name", class: "col-span-2") do |field| %>
+              <% field.with_input(name: "guests[#{key}][name]", value: booking_guest&.name_snapshot, required: booking_guest.present?, autocomplete: "off") %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :phone, id: "guest-#{key}-phone", label: "Phone") do |field| %>
+              <% field.with_input(type: :tel, name: "guests[#{key}][phone]", value: booking_guest&.phone_snapshot) %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :email, id: "guest-#{key}-email", label: "Email") do |field| %>
+              <% field.with_input(type: :email, name: "guests[#{key}][email]", value: booking_guest&.email_snapshot) %>
+            <% end %>
+            <%# The top-level helper, not the form builder: this form has no scope,
+                and a nested builder would name the field "[guests][id][country]". %>
+            <%= fields_for("guests[#{key}]") do |guest_form| %>
+              <%= render PanelsUI::FormField.new(form: guest_form, attribute: :country, id: "guest-#{key}-country", label: "Nationality") do |field| %>
+                <% field.with_combobox(COUNTRY_OPTIONS, selected: booking_guest&.country_snapshot.presence || "Malaysia",
+                     prompt: "Select nationality", allow_empty_option: true) %>
+              <% end %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :government_id, id: "guest-#{key}-government-id", label: "IC",
+                  hint: (saved_id.present? ? "Saved: •••• #{saved_id.last(3)}" : nil)) do |field| %>
+              <% field.with_input(name: "guests[#{key}][government_id]", value: nil, maxlength: 20,
+                   placeholder: saved_id.present? ? "Leave blank to keep" : "IC number") %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth, id: "guest-#{key}-dob", label: "Date of birth", class: "col-span-2") do |field| %>
+              <% field.with_input(type: :date, max: Date.yesterday, name: "guests[#{key}][date_of_birth]", value: booking_guest&.date_of_birth_snapshot) %>
+            <% end %>
+          </div>
+        </fieldset>
+      <% end %>
+
+      <% boat_schedule = Boats::Schedule.new(@booking.hotel) %>
+      <% if boat_schedule.enabled? %>
+        <% lead = @guests.find(&:primary?) || @guests.first %>
+        <% hotel = @booking.hotel %>
+        <fieldset class="space-y-3 border-t border-border pt-5">
+          <legend class="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Boat transfer</legend>
+          <p class="text-sm text-muted-foreground">This hotel is reached by boat. Pick the boats the guests will take, or leave as "No boat transfer" if not known yet.</p>
+          <%= render "hotel_portal/bookings/boat_transfer_fields",
+                form: form, schedule: boat_schedule,
+                boat_in: params[:boat_in_time] || Boats::Schedule.time_of_day(hotel: hotel, timestamp: lead&.boat_in_at),
+                boat_out: params[:boat_out_time] || Boats::Schedule.time_of_day(hotel: hotel, timestamp: lead&.boat_out_at),
+                boat_in_date: @booking.check_in.in_time_zone(hotel.hotel_time_zone).to_date.strftime("%d %b %Y"),
+                boat_out_date: @booking.check_out.in_time_zone(hotel.hotel_time_zone).to_date.strftime("%d %b %Y") %>
+        </fieldset>
+      <% end %>
+
+      <div class="flex flex-wrap gap-3">
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>Save guests<% end %>
+        <%= link_to "Cancel", corporate_booking_path(@booking),
+              class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
+      </div>
+    <% end %>
+  </section>
+</div>

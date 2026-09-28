@@ -519,7 +519,7 @@ class Booking < ApplicationRecord
 
   def self.for_financial_breakdown(hotel, start_date, end_date, query)
     hotel.bookings.revenue_generating
-         .includes(booking_folio: :folio_transactions)
+         .includes({ booking_folio: :folio_transactions }, { booking_rooms: :rate_plan })
          .created_between(start_date, end_date)
          .search(query)
          .order(created_at: :desc, id: :desc)
@@ -750,6 +750,13 @@ class Booking < ApplicationRecord
 
   def duration_in_nights
     (check_out.to_date - check_in.to_date).to_i
+  end
+
+  # The children's ages the room was booked with, so a stay re-priced later
+  # (extended, shortened, moved to another plan) keeps its age-band prices.
+  # Every channel keeps them on the room's occupancy snapshot.
+  def child_ages
+    Bookings::ChildAges.normalize(booking_rooms.first&.occupancy_snapshot.to_h["child_ages"], children)
   end
 
   def eligible_for_refund?(refund_policy)

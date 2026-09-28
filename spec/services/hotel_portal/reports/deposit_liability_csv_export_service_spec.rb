@@ -38,17 +38,17 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityCsvExportService do
       csv_content = subject.generate
       rows = CSV.parse(csv_content.delete_prefix("\uFEFF"))
 
-      expect(rows[0]).to eq([ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Deposit Received", "Earned", "Refunds", "Remaining Liability", "Latest Deposit Date" ])
+      expect(rows[0]).to eq([ "Guest Name", "Booking Ref", "Stay", "Status", "Rooms", "Folio", "Payment Reference", "Deposit Received", "Earned", "Refunds", "Remaining Liability", "Latest Deposit Date" ])
 
       data_row = rows[1]
       expect(data_row[0]).to eq("John Doe")
       expect(data_row[1]).to eq("ABC-123")
-      expect(data_row[6]).to eq("300.00")
-      expect(data_row[9]).to eq("200.00")
+      expect(data_row[7]).to eq("300.00")
+      expect(data_row[10]).to eq("200.00")
 
       total_row = rows[2]
       expect(total_row[0]).to eq("TOTAL")
-      expect(total_row[9]).to eq("200.00")
+      expect(total_row[10]).to eq("200.00")
 
       expect(rows[4]).to eq([ "Note", HotelPortal::Reports::DepositLiabilityReport::SCOPE_NOTE ])
     end

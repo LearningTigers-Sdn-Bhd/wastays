@@ -55,11 +55,21 @@
   <div class="min-w-0">
     <div class="flex flex-wrap items-center gap-2">
       <p class="truncate text-sm font-medium text-foreground"><%= rate_plan.name %></p>
+      <% primary = room_type.primary_rate_plan?(rate_plan) %>
+      <% if primary %>
+        <%= render PanelsUI::Badge.new(label: "Primary", variant: :primary, size: :sm,
+              title: "Listed first and used for the “from” price on the booking site and travel agent portal.") %>
+      <% end %>
       <% if rate_plan.standard_rate? %>
-        <%= render PanelsUI::Badge.new(label: "Default", variant: :outline, size: :sm) %>
+        <%= render PanelsUI::Badge.new(label: "Base rate", variant: :outline, size: :sm,
+              title: "Other plans in this room category price and read restrictions from this one.") %>
       <% end %>
       <% if rate_plan.archived? %>
         <%= render PanelsUI::Badge.new(label: "Archived", variant: :neutral, size: :sm) %>
+      <% end %>
+      <% if rate_plan.ta_access != "hidden" && rate_plan.kind.in?(RatePlan.kinds_for(:corporate)) %>
+        <%= render PanelsUI::Badge.new(label: rate_plan.ta_access == "all" ? "TA portal" : "TA portal · selected",
+              variant: :info, size: :sm, title: rate_plan.ta_access_label) %>
       <% end %>
     </div>
   </div>
@@ -92,9 +102,18 @@
       <% end %>
       <% menu.with_item(
            href: edit_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: room_type.id),
-           data: { turbo_frame: "settings_action_sheet" }) do %>
+           data: { turbo_frame: "_top" }) do %>
         <%= app_icon "pencil", class: "size-4", aria: { hidden: true } %>
         <span>Edit rate</span>
+      <% end %>
+      <% if !primary && !rate_plan.archived? && rate_plan.bookable_by?(:public) %>
+        <% menu.with_item(
+             href: hotel_room_type_primary_rate_plan_path(current_hotel, room_type, rate_plan_id: rate_plan.id),
+             method: :patch,
+             data: { turbo_frame: "_top" }) do %>
+          <%= cached_icon "star", class: "size-4", aria: { hidden: true } %>
+          <span>Make primary</span>
+        <% end %>
       <% end %>
       <% if rate_plan.kind == "custom" %>
         <% menu.with_separator %>

@@ -27,7 +27,7 @@ module HotelPortal
         :transactions, :at_desk_totals, :non_desk_totals, :all_totals,
         :handling_by_transaction_id, :received_by_key_by_transaction_id,
         :handling_totals, :filter_options, :all_mode_summary_rows, :all_mode_totals,
-        :all_currency_summary_rows, :all_grand_total,
+        :all_currency_summary_rows, :all_grand_total, :payment_reference_by_transaction_id,
         keyword_init: true
       )
 
@@ -83,7 +83,8 @@ module HotelPortal
           all_mode_summary_rows: mode_summary_for(transactions, include_handling: true),
           all_mode_totals: mode_totals_for(transactions, include_handling: true),
           all_currency_summary_rows: currency_summary_for(transactions, include_handling: true),
-          all_grand_total: grand_total_for(transactions)
+          all_grand_total: grand_total_for(transactions),
+          payment_reference_by_transaction_id: ::Folios::PaymentReference.by_transaction_id(transactions)
         )
       end
 

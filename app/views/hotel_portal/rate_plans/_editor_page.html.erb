@@ -1,0 +1,146 @@
+<%# locals: (rate_plan:, new_plan:, room_types:, selected_room_type:, room_pricing:) %>
+<%# One form across every tab: switching tabs only changes what is visible, so
+    Save always sends the whole plan. The active tab rides on the form's action
+    URL (not a field), so switching tabs never counts as an unsaved change. %>
+<% form_id = new_plan ? "new-rate-plan-form" : "edit-rate-plan-#{rate_plan.id}-form" %>
+<% back_path = hotel_room_types_path(current_hotel, open: selected_room_type&.id) %>
+<% page_url = new_plan ? new_hotel_rate_plan_path(current_hotel) : edit_hotel_rate_plan_path(current_hotel, rate_plan) %>
+<% form_url = new_plan ? hotel_rate_plans_path(current_hotel) : hotel_rate_plan_path(current_hotel, rate_plan) %>
+<% errors = (rate_plan.errors.full_messages + Array(room_pricing&.errors&.full_messages)).uniq %>
+<% show_discounts = rate_plan.kind != "ota" %>
+<%# RatePlan::AUDIENCE_KINDS: every public-eligible kind (standard/custom) is
+    also corporate-eligible, so this tab always carries the Corporate/TA Portal
+    section whenever it's shown at all — a plain "Availability" label undersold
+    that. %>
+<% show_availability = rate_plan.kind.in?(RatePlan.kinds_for(:public)) || rate_plan.kind.in?(RatePlan.kinds_for(:corporate)) %>
+<% tab_names = [ "details", "pricing", ("discounts" if show_discounts), ("availability" if show_availability) ].compact %>
+<% active_tab = tab_names.include?(params[:tab]) ? params[:tab] : "details" %>
+
+<div class="w-full space-y-3"
+     data-controller="rate-plan-editor"
+     data-rate-plan-editor-page-url-value="<%= page_url %>">
+  <div class="space-y-3">
+    <%= link_to back_path, aria: { label: "Back to Room Inventory" }, class: "inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" do %>
+      <%= cached_icon "chevron-left", class: "size-4", aria: { hidden: "true" } %>
+      Room Inventory
+    <% end %>
+
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="truncate text-lg font-semibold text-foreground"><%= new_plan ? "New rate plan" : rate_plan.name %></h1>
+          <% unless new_plan %>
+            <%= render PanelsUI::Badge.new(label: rate_plan.archived? ? "Archived" : "Active", variant: rate_plan.archived? ? :warning : :success, size: :sm) %>
+            <%= render PanelsUI::Badge.new(label: "Base rate", variant: :outline, size: :sm) if rate_plan.standard_rate? %>
+          <% end %>
+        </div>
+      </div>
+      <% unless new_plan %>
+        <div class="flex shrink-0 items-start gap-3">
+          <%# The room category is fixed once a plan is on exactly one — nothing
+              here to edit, so it rides the title row instead of taking a whole
+              field's worth of space in Pricing, freeing that tab for "How
+              should this room be priced?". With more than one room category,
+              Pricing keeps its own switcher, so it isn't repeated here. %>
+          <% if room_types.one? && selected_room_type %>
+            <p class="pt-1 text-right text-sm text-muted-foreground">
+              <%= selected_room_type.name %> · <%= pluralize(selected_room_type.max_adults, "adult") %>
+            </p>
+          <% end %>
+          <% if rate_plan.deletable? %>
+            <%= render PanelsUI::DropdownMenu.new(id: "rate-plan-editor-actions", placement: :bottom_end, class: "w-48") do |menu| %>
+              <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "More actions for #{rate_plan.name}") do %>
+                <%= cached_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+              <% end %>
+              <% menu.with_item(href: hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: selected_room_type&.id),
+                     method: :delete, variant: :danger,
+                     data: { turbo_method: :delete,
+                             turbo_confirm: "Delete '#{rate_plan.name}'? This permanently removes the rate plan.",
+                             turbo_confirm_title: "Delete rate plan", turbo_confirm_color: "red" }) do %>
+                <%= cached_icon "trash-2", class: "size-4", aria: { hidden: true } %>
+                <span>Delete plan</span>
+              <% end %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <% if errors.any? %>
+    <div tabindex="-1" data-rate-plan-editor-error-summary>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Rate plan could not be saved", role: :alert) do |alert| %>
+        <% alert.with_description { errors.to_sentence } %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%= form_with model: rate_plan, url: "#{form_url}?tab=#{active_tab}", method: new_plan ? :post : :patch, id: form_id,
+        data: { rate_plan_editor_target: "form" } do |f| %>
+    <%= render PanelsUI::Tabs.new(id: "rate-plan-tabs", active: active_tab, url: { param: "tab" }, aria_label: "Rate plan sections") do |tabs| %>
+      <% tabs.with_tab(name: "details", label: "Details") %>
+      <% tabs.with_tab(name: "pricing", label: "Pricing") %>
+      <% tabs.with_tab(name: "discounts", label: "Discounts") if show_discounts %>
+      <% tabs.with_tab(name: "availability", label: "Corporate/TA Portal") if show_availability %>
+
+      <% tabs.with_panel(name: "details", class: "space-y-8 pt-2") do %>
+        <%= render "hotel_portal/rate_plans/details_panel", f:, rate_plan:, new_plan: %>
+      <% end %>
+      <% tabs.with_panel(name: "pricing", class: "pt-2") do %>
+        <%= render "hotel_portal/rate_plans/pricing_panel", f:, rate_plan:, new_plan:, room_types:, selected_room_type:, room_pricing: %>
+      <% end %>
+      <% if show_discounts %>
+        <% tabs.with_panel(name: "discounts", class: "max-w-4xl pt-2") do %>
+          <%= render "hotel_portal/rate_plans/stay_discounts", f:, rate_plan:,
+                example_price: room_pricing&.default_rate.presence || selected_room_type&.base_price %>
+        <% end %>
+      <% end %>
+      <% if show_availability %>
+        <% tabs.with_panel(name: "availability", class: "space-y-8 pt-2") do %>
+          <%= render "hotel_portal/rate_plans/availability_panel", f:, rate_plan: %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%# Archive/Restore sit next to Cancel as their own forms — outside the plan
+      form, so they never submit (or count as) unsaved edits. %>
+  <div id="rate-plan-editor-footer" class="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+    <% if !new_plan && rate_plan.archived? %>
+      <%= form_with url: unarchive_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: selected_room_type&.id, return_to: page_url),
+            method: :patch, class: "contents" do %>
+        <%= render PanelsUI::Button.new(type: :submit, variant: :secondary, size: :sm) do %>
+          <%= cached_icon "archive-restore", class: "size-4", aria: { hidden: true } %>
+          Restore plan
+        <% end %>
+      <% end %>
+    <% elsif !new_plan && rate_plan.archivable? %>
+      <%= form_with url: archive_hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: selected_room_type&.id, return_to: page_url),
+            method: :patch, class: "contents",
+            data: { turbo_confirm: "Archive '#{rate_plan.name}'? It won't be offered for new bookings." } do %>
+        <%= render PanelsUI::Button.new(type: :submit, variant: :secondary, size: :sm) do %>
+          <%= cached_icon "archive", class: "size-4", aria: { hidden: true } %>
+          Archive plan
+        <% end %>
+      <% end %>
+    <% end %>
+    <%= render PanelsUI::Button.new(href: back_path, variant: :secondary, size: :sm) do %>Cancel<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm,
+          disabled: selected_room_type.blank?, data: { turbo_submits_with: "Saving…" }) do %>
+      <%= new_plan ? "Create rate plan" : "Save rate plan" %>
+    <% end %>
+  </div>
+
+  <%# Worded so it can never read as "your save will be undone" — this only
+      ever guards edits made since the last save (or page load), which
+      "Save rate plan" has already put somewhere Leave page can't touch. %>
+  <%= render PanelsUI::AlertDialog.new(
+        id: "rate-plan-editor-discard-alert",
+        title: "Leave this page?",
+        description: "You have changes here that haven't been saved yet. Anything you've already saved is kept either way.",
+        tone: :warning) do |alert| %>
+    <% alert.with_icon { cached_icon "triangle-alert", class: "size-5", aria: { hidden: true } } %>
+    <% alert.with_cancel(label: "Keep editing", data: { action: "rate-plan-editor#keepEditing" }) %>
+    <% alert.with_action(label: "Leave page", data: { action: "rate-plan-editor#discardChanges" }) %>
+  <% end %>
+</div>

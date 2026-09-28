@@ -33,6 +33,15 @@ module HotelPortal
       [ { label: currency, value: "amount" }, { label: "%", value: "percent" } ]
     end
 
+    # A small info-icon tooltip for background copy that would otherwise sit as a
+    # paragraph under every section heading, crowding the page (client feedback:
+    # too much text shown at once).
+    def section_info_tip(text)
+      render(PanelsUI::Tooltip.new(text: text, placement: :top_start)) do
+        cached_icon "info", class: "size-4 text-muted-foreground", aria: { hidden: true }
+      end
+    end
+
     def rate_plan_money(amount, currency)
       "#{currency} #{number_with_precision(amount, precision: 2, delimiter: ',')}"
     end
@@ -45,7 +54,7 @@ module HotelPortal
       return false unless assignment
       return assignment.pricing_value.present? unless per_person
 
-      assignment.occupancy_prices.map(&:adults).sort == (1..room_type.max_adults).to_a
+      occupancy_rungs(assignment, room_type).map(&:adults).sort == (1..room_type.max_adults).to_a
     end
 
     def room_pricing_summary(assignment, room_type, currency, per_person: current_hotel.sells_per_person?)
@@ -53,15 +62,56 @@ module HotelPortal
       return "Not priced" unless assignment
 
       if per_person
-        rungs = assignment.occupancy_prices.sort_by(&:adults)
+        rungs = occupancy_rungs(assignment, room_type).sort_by(&:adults)
         return "Not priced" if rungs.empty?
+        return occupancy_price_ladder(rungs, currency) unless assignment.derives_price?
 
-        "#{currency} #{rungs.map { |rung| "#{rung.adults}p #{number_with_precision(rung.price, precision: 0, delimiter: ',')}" }.join(' · ')}"
+        safe_join([ tag.span("Adjusts Standard Rate", class: "me-1.5 text-xs text-muted-foreground"), occupancy_price_ladder(rungs, currency) ])
       else
         return "Not priced" if assignment.pricing_value.blank?
         return "Adjusts Standard Rate" if assignment.derives_price?
 
         money_summary(assignment.pricing_value, currency)
+      end
+    end
+
+    OccupancyRung = Data.define(:adults, :price)
+
+    # A per-guest plan's price for each adult count. A derived plan stores none
+    # of its own -- it follows Standard's list -- so its rungs are worked out
+    # from Standard's as they stand today.
+    def occupancy_rungs(assignment, room_type)
+      return assignment.occupancy_prices.to_a unless assignment.derives_price?
+
+      standard = room_type.room_type_rate_plans.find { |candidate| candidate.rate_plan&.standard_rate? }
+      return [] if standard.nil? || standard == assignment
+
+      standard.occupancy_prices.map do |rung|
+        OccupancyRung.new(adults: rung.adults, price: assignment.derive_price(rung.price).round(2))
+      end
+    end
+
+    # One tag per guest count: a shaded guest-icon-and-count segment, then the
+    # price. The segment boundary keeps "1" and "1,000" from reading as one
+    # number, which a plain "icon 1 1,000" run did.
+    def occupancy_price_ladder(rungs, currency)
+      tag.span(class: "inline-flex flex-wrap items-center gap-1.5") do
+        safe_join([ tag.span(currency, class: "me-0.5 text-xs text-muted-foreground") ] + rungs.map do |rung|
+          price = number_with_precision(rung.price, precision: 0, delimiter: ",")
+          label = "#{pluralize(rung.adults, 'guest')}: #{currency} #{price}"
+          tag.span(class: "inline-flex items-stretch overflow-hidden rounded-md border border-border text-xs", title: label) do
+            safe_join([
+              tag.span(class: "inline-flex items-center gap-0.5 bg-muted px-1.5 py-0.5 text-muted-foreground", aria: { hidden: "true" }) do
+                safe_join([
+                  cached_icon("adult", library: "guest", class: "size-3 fill-current", aria: { hidden: "true" }, focusable: "false"),
+                  rung.adults.to_s
+                ])
+              end,
+              tag.span("#{pluralize(rung.adults, 'guest')}: ", class: "sr-only"),
+              tag.span(price, class: "px-1.5 py-0.5 font-medium tabular-nums text-foreground")
+            ])
+          end
+        end)
       end
     end
 

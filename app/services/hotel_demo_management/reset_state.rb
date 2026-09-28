@@ -333,7 +333,9 @@ module HotelDemoManagement
     # type the first one's plan and link them together, letting a rate edit on
     # one bleed into the other.
     def ensure_rate_plan(room_type, name, kind: "custom")
-      existing = room_type.rate_plans.find_by(name: name)
+      # A system plan may have been renamed, so it is found by kind; only
+      # custom plans are identified by name.
+      existing = kind == "custom" ? room_type.rate_plans.find_by(name: name) : room_type.rate_plans.find_by(kind: kind)
       return existing if existing
 
       rate_plan = @hotel.rate_plans.create!(

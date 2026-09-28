@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class HotelPortal::RatePlansController < HotelPortal::BaseController
+class HotelPortal::RatePlansController < HotelPortal::SettingsBaseController
   include SheetActionCompletion
   include RatePlanEditorLoading
 
@@ -11,12 +11,10 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     @rate_plan = current_hotel.rate_plans.build
     @rate_plan.currency = current_hotel.default_currency || "MYR"
     load_new_rate_plan_form(room_type_id: params[:room_type_id])
-    render layout: false
   end
 
   def edit
     load_rate_plan_editor(room_type_id: params[:room_type_id])
-    render layout: false
   end
 
   def create
@@ -67,10 +65,10 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
 
     if result&.success? && pricing_result&.success?
       ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: [ @selected_room_type.id ])
-      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' created successfully.")
+      redirect_to_rate_plan_editor("Rate plan '#{@rate_plan.name}' created.", room_type_id: @selected_room_type.id)
     else
       load_new_rate_plan_form(room_type_id: room_type_id, preserve_pricing: true)
-      render :new, layout: false, status: :unprocessable_content
+      render :new, status: :unprocessable_content
     end
   end
 
@@ -78,7 +76,6 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     attrs = rate_plan_params
     room_type_id = attrs.delete(:room_type_id)
     attrs.delete(:rate_plan_id)
-    attrs = attrs.except(:name, :description) if @rate_plan.standard_rate?
     @selected_room_type = @rate_plan.room_types.find_by(id: room_type_id)
     @room_pricing = if @selected_room_type
       HotelPortal::RatePlanRoomPricing.from_h(
@@ -120,19 +117,20 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
       # Plan-level fields (including flattened Channex child fees) apply to
       # every assignment, so one batched reconciliation covers them all.
       ChannelManagers::SyncRatePlanAri.call(rate_plan: @rate_plan, room_type_ids: @rate_plan.room_type_ids)
-      render_editor_success("Rate plan saved.", room_type_id: @selected_room_type.id)
+      redirect_to_rate_plan_editor("Rate plan '#{@rate_plan.name}' saved.", room_type_id: @selected_room_type.id)
     else
       render_editor_errors(room_type_id: room_type_id)
     end
   end
 
   def destroy
-    return finish_sheet(alert: "This rate plan cannot be deleted.") unless @rate_plan.deletable?
+    destination = room_inventory_path
+    return redirect_to(destination, alert: "This rate plan cannot be deleted.", status: :see_other) unless @rate_plan.deletable?
 
     if @rate_plan.destroy
-      finish_sheet(notice: "Rate plan '#{@rate_plan.name}' deleted successfully.")
+      redirect_to destination, notice: "Rate plan '#{@rate_plan.name}' deleted.", status: :see_other
     else
-      finish_sheet(alert: "Failed to delete rate plan.")
+      redirect_to destination, alert: "Failed to delete rate plan.", status: :see_other
     end
   end
 
@@ -157,7 +155,12 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
   private
 
   def respond_to_status_change(message, success: true)
-    destination = hotel_room_types_path(current_hotel)
+    if params[:return_to].present?
+      destination = sheet_action_return_to(fallback: room_inventory_path)
+      return redirect_to(destination, notice: (message if success), alert: (message unless success), status: :see_other)
+    end
+
+    destination = room_inventory_path
     assignment = @rate_plan.room_type_rate_plans
       .includes(:channel_mapping, :occupancy_prices, :rate_plan, :room_type)
       .find_by(room_type_id: params[:room_type_id])
@@ -184,24 +187,9 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
     end
   end
 
-  # Closes the sheet and returns to Room Inventory. This mirrors
-  # SheetActionCompletion#complete_sheet_action while also carrying alerts for
-  # archive/delete guards.
-  def finish_sheet(notice: nil, alert: nil)
-    destination = hotel_room_types_path(current_hotel)
-
-    respond_to do |format|
-      format.turbo_stream do
-        flash[:notice] = notice if notice
-        flash[:alert] = alert if alert
-        render_sheet_action_completion(destination, frame: sheet_frame)
-      end
-      format.html { redirect_to destination, notice: notice, alert: alert, status: :see_other }
-    end
-  end
-
-  def sheet_frame
-    turbo_frame_request_id.presence || EDITOR_FRAME
+  # Room Inventory with the room category the plan was opened from expanded.
+  def room_inventory_path
+    hotel_room_types_path(current_hotel, open: params[:room_type_id].presence)
   end
 
   def set_rate_plan
@@ -222,7 +210,11 @@ class HotelPortal::RatePlansController < HotelPortal::BaseController
       :child_price_multiplier,
       :channex_children_fee,
       :channex_infant_fee,
-      rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ]
+      :ta_access,
+      :hidden_from_public,
+      agency_account_ids: [],
+      rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ],
+      rate_plan_stay_discounts_attributes: [ :id, :min_nights, :discount_type, :value, :from_night, :_destroy ]
     )
   end
 

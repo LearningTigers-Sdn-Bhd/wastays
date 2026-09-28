@@ -144,7 +144,7 @@ module HotelPortal
             :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
             :guarantee_method, :booking_type, :backdate_reason,
             :hotel_corporate_account_id, :bill_tourism_tax_to_company,
-            rooms: [ :room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override ],
+            rooms: [ :room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override, { child_ages: [] } ],
             booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ],
             security_deposit: [ :amount, :external_reference ]
           )

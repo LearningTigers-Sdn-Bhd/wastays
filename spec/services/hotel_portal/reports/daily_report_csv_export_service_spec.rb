@@ -119,7 +119,7 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     csv = generate("cashier")
 
     expect(csv).to include("Payment Activity", "Activity By Payment Mode", "Currency Summary")
-    expect(csv).to include("Payment Mode,Stage,Received By")
+    expect(csv).to include("Payment Mode,Payment Reference,Stage,Received By")
     expect(csv).to include("Cash Guest", "At desk", "Cash Payment", "MYR,100.00")
     expect(csv).not_to include("Front desk cash")
     expect(csv).not_to include("Daily Breakdown", "Revenue Register")

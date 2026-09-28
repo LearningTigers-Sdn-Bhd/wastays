@@ -77,7 +77,7 @@ module Bookings
     def child_params(row)
       params = @common_params.merge(
         room_type_id: row[:room_type_id], room_number: row[:room_number], rate_plan_id: row[:rate_plan_id],
-        adults: row[:adults].presence || 1, children: row[:children].presence || 0,
+        adults: row[:adults].presence || 1, children: row[:children].presence || 0, child_ages: row[:child_ages],
         manual_rate_override: row[:manual_rate_override], posting_date: @posting_date,
         source: @booking_type == "reservation" ? @common_params[:source] : "walk_in",
         require_room_number: @booking_type != "reservation"

@@ -6,7 +6,7 @@ module HotelPortal
     # slot their boat is on. Each slot carries its own entitlements, set per
     # property in Settings, so nothing here assumes a service time.
     class MealPrepReport
-      MEALS = %w[breakfast lunch dinner].freeze
+      MEALS = HotelBoatSetting::MEALS.map(&:to_s).freeze
 
       Result = Struct.new(
         :start_date,
@@ -24,7 +24,7 @@ module HotelPortal
 
           filtered = records
             .select { |row| serves?(row, meal) }
-            .map { |row| row.merge(meal_type: meal.to_s.titleize) }
+            .map { |row| row.merge(meal_type: HotelBoatSetting.meal_label(meal)) }
 
           Result.new(
             start_date: start_date,
@@ -45,7 +45,7 @@ module HotelPortal
         def sections
           (meal_type.presence ? [ meal_type ] : MEALS).map do |meal|
             rows = rows_for(meal)
-            { title: meal.to_s.titleize, meal: meal.to_s, rows: rows, total_pax: rows.sum { |row| row[:pax] } }
+            { title: HotelBoatSetting.meal_label(meal), meal: meal.to_s, rows: rows, total_pax: rows.sum { |row| row[:pax] } }
           end
         end
 
@@ -56,7 +56,7 @@ module HotelPortal
         private
 
         def serves?(row, meal)
-          row[:meals].any? { |served| served.casecmp?(meal.to_s) }
+          row[:meals].include?(HotelBoatSetting.meal_label(meal))
         end
       end
 
@@ -118,7 +118,7 @@ module HotelPortal
       # too, so retiring one never rewrites what was already served.
       def meals_for(time, transfer_type)
         kind = transfer_type == "Boat-in" ? "boat_in" : "boat_out"
-        schedule.meals_for(time, kind).map { |meal| meal.to_s.titleize }
+        schedule.meals_for(time, kind).map { |meal| HotelBoatSetting.meal_label(meal) }
       end
 
       def build_row(bg, time, transfer_type)

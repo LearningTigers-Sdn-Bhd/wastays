@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -551,6 +551,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
 
   create_table "bookings", force: :cascade do |t|
     t.integer "adults", null: false
+    t.string "agent_reference"
     t.bigint "booking_quote_id"
     t.text "cancellation_policy_snapshot"
     t.jsonb "cancellation_policy_snapshot_data", default: {}, null: false
@@ -634,6 +635,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.index ["group_booking_id", "group_position"], name: "idx_bookings_group_position", unique: true, where: "(group_booking_id IS NOT NULL)"
     t.index ["group_booking_id"], name: "index_bookings_on_group_booking_id"
     t.index ["hotel_corporate_account_id"], name: "index_bookings_on_hotel_corporate_account_id"
+    t.index ["hotel_id", "agent_reference"], name: "idx_bookings_on_hotel_agent_reference", where: "(agent_reference IS NOT NULL)"
     t.index ["hotel_id", "folio_account_reference"], name: "idx_bookings_on_hotel_folio_account_reference", unique: true, where: "(folio_account_reference IS NOT NULL)"
     t.index ["hotel_id", "guest_registration_reference"], name: "index_bookings_on_hotel_id_and_guest_registration_reference", unique: true, where: "(guest_registration_reference IS NOT NULL)"
     t.index ["hotel_id", "guest_registration_year", "guest_registration_number"], name: "idx_bookings_guest_registration_year_number", unique: true, where: "(guest_registration_number IS NOT NULL)"
@@ -1413,6 +1415,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.datetime "created_at", null: false
     t.boolean "has_breakfast", default: false, null: false
     t.boolean "has_dinner", default: false, null: false
+    t.boolean "has_hi_tea", default: false, null: false
     t.boolean "has_lunch", default: false, null: false
     t.bigint "hotel_id", null: false
     t.string "kind", null: false
@@ -1428,6 +1431,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.time "breakfast_time"
     t.datetime "created_at", null: false
     t.time "dinner_time"
+    t.time "hi_tea_time"
     t.bigint "hotel_id", null: false
     t.time "lunch_time"
     t.datetime "updated_at", null: false
@@ -2696,6 +2700,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.index ["rate_plan_id"], name: "index_rate_plan_age_bands_on_rate_plan_id"
   end
 
+  create_table "rate_plan_agency_rules", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "hotel_corporate_account_id", null: false
+    t.bigint "rate_plan_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_corporate_account_id"], name: "index_rate_plan_agency_rules_on_hotel_corporate_account_id"
+    t.index ["rate_plan_id", "hotel_corporate_account_id"], name: "idx_rate_plan_agency_rules_unique", unique: true
+  end
+  create_table "rate_plan_stay_discounts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "discount_type", default: "percent", null: false
+    t.integer "from_night", default: 1, null: false
+    t.integer "min_nights", null: false
+    t.bigint "rate_plan_id", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "value", precision: 10, scale: 2, null: false
+    t.index ["rate_plan_id", "min_nights"], name: "idx_rate_plan_stay_discounts_unique", unique: true
+    t.check_constraint "discount_type::text = ANY (ARRAY['percent'::character varying, 'amount'::character varying]::text[])", name: "rate_plan_stay_discounts_type_check"
+    t.check_constraint "from_night >= 1 AND from_night <= min_nights", name: "rate_plan_stay_discounts_from_night_check"
+    t.check_constraint "min_nights >= 2", name: "rate_plan_stay_discounts_min_nights_check"
+    t.check_constraint "value > 0::numeric AND (discount_type::text <> 'percent'::text OR value <= 100::numeric)", name: "rate_plan_stay_discounts_value_check"
+  end
   create_table "rate_plans", force: :cascade do |t|
     t.datetime "archived_at"
     t.integer "base_occupancy", default: 2, null: false
@@ -2706,14 +2732,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.string "currency", default: "MYR", null: false
     t.text "description"
     t.decimal "extra_pax_charge", precision: 10, scale: 2, default: "0.0", null: false
+    t.boolean "hidden_from_public", default: false, null: false
     t.bigint "hotel_id", null: false
     t.string "kind", default: "custom", null: false
     t.string "name", null: false
     t.string "sell_mode", default: "per_room", null: false
     t.decimal "single_supplement", precision: 10, scale: 2, default: "0.0", null: false
+    t.string "ta_access", default: "hidden", null: false
     t.datetime "updated_at", null: false
     t.index ["archived_at"], name: "index_rate_plans_on_archived_at"
     t.index ["hotel_id"], name: "index_rate_plans_on_hotel_id"
+    t.check_constraint "ta_access::text = ANY (ARRAY['hidden'::character varying, 'all'::character varying, 'except'::character varying, 'only'::character varying]::text[])", name: "rate_plans_ta_access_check"
   end
 
   create_table "receipts", force: :cascade do |t|
@@ -3016,14 +3045,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
     t.integer "base_occupancy"
     t.datetime "created_at", null: false
     t.decimal "extra_pax_charge", precision: 10, scale: 2
+    t.jsonb "occupancy_ladder"
     t.string "pricing_mode", default: "fixed", null: false
     t.decimal "pricing_value", precision: 10, scale: 2
+    t.boolean "primary_plan", default: false, null: false
     t.bigint "rate_plan_id", null: false
     t.bigint "room_type_id", null: false
     t.decimal "single_supplement", precision: 10, scale: 2
     t.datetime "updated_at", null: false
     t.index ["rate_plan_id"], name: "index_room_type_rate_plans_on_rate_plan_id"
     t.index ["room_type_id", "rate_plan_id"], name: "idx_room_type_rate_plans_unique_assignment", unique: true
+    t.index ["room_type_id"], name: "idx_room_type_rate_plans_one_primary", unique: true, where: "primary_plan"
     t.index ["room_type_id"], name: "index_room_type_rate_plans_on_room_type_id"
   end
 
@@ -3502,6 +3534,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_010000) do
   add_foreign_key "prospects", "guests"
   add_foreign_key "prospects", "hotels"
   add_foreign_key "rate_plan_age_bands", "rate_plans"
+  add_foreign_key "rate_plan_agency_rules", "hotel_corporate_accounts"
+  add_foreign_key "rate_plan_agency_rules", "rate_plans"
+  add_foreign_key "rate_plan_stay_discounts", "rate_plans"
   add_foreign_key "rate_plans", "hotels"
   add_foreign_key "receipts", "ar_payments"
   add_foreign_key "receipts", "deposits"

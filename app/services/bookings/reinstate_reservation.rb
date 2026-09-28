@@ -176,7 +176,8 @@ module Bookings
         check_in: @booking.check_in,
         check_out: @booking.check_out,
         adults: @booking.adults,
-        children: @booking.children
+        children: @booking.children,
+        child_ages: @booking.child_ages
       ).call
 
       # Reinstating re-prices the stay at today's rates. If a night no longer

@@ -502,6 +502,10 @@ export default class extends Controller {
     const children = this.readValue(this.roleEl(row, "children"))
     if (adults) params.set("adults", adults)
     if (children) params.set("children", children)
+    params.delete("child_ages[]")
+    row.querySelectorAll("[data-role='child-ages'] select").forEach((select) => {
+      params.append("child_ages[]", select.value)
+    })
   }
 
   // The [data-role] wrapper for a row cell.
@@ -644,6 +648,7 @@ export default class extends Controller {
   }
 
   resetPriceBreakdown(row) {
+    this.showOccupancyWarning(row, null)
     const status = this.breakdownEl(row, "breakdown-status")
     const details = this.breakdownEl(row, "breakdown-details")
     if (status) {
@@ -663,7 +668,18 @@ export default class extends Controller {
     details?.classList.add("hidden")
   }
 
+  // A party bigger than the category is meant to hold is the desk's call to
+  // make, so it is flagged under the row rather than blocked.
+  showOccupancyWarning(row, message) {
+    const warning = this.roleEl(row, "occupancy-warning")
+    if (!warning) return
+
+    warning.textContent = message || ""
+    warning.classList.toggle("hidden", !message)
+  }
+
   populatePriceBreakdown(row, data) {
+    this.showOccupancyWarning(row, data.occupancy_warning)
     const status = this.breakdownEl(row, "breakdown-status")
     const details = this.breakdownEl(row, "breakdown-details")
     const nightly = this.breakdownEl(row, "nightly-breakdown")

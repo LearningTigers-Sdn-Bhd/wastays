@@ -19,6 +19,12 @@
         <dt class="text-muted-foreground">Reservation</dt>
         <dd class="font-bold"><%= @booking.formatted_reservation_number %></dd>
       </div>
+      <% if @booking.agent_reference.present? %>
+        <div>
+          <dt class="text-muted-foreground">Your reference</dt>
+          <dd class="font-bold"><%= @booking.agent_reference %></dd>
+        </div>
+      <% end %>
       <div>
         <dt class="text-muted-foreground">Status</dt>
         <dd class="font-bold"><%= @booking.status.humanize %></dd>
@@ -43,6 +49,13 @@
         </dd>
       </div>
     </dl>
+
+    <% if @booking.corporate_booked_at.present? %>
+      <p class="mt-4 text-xs text-muted-foreground">
+        Booked <%= @booking.corporate_booked_at.in_time_zone(@booking.hotel.hotel_time_zone).strftime("%d %b %Y, %H:%M") %>
+        <% if @booking.corporate_booked_by.present? %>by <%= @booking.corporate_booked_by.name %><% end %>
+      </p>
+    <% end %>
 
     <%# The total above is one number; a TA billing a client on top of it needs
         to know what is tax rather than room revenue. Grouped by name and
@@ -115,29 +128,9 @@
     </section>
   <% end %>
 
-  <% if @bookings.size > 1 %>
-    <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div class="border-b border-border px-6 py-4">
-        <h2 class="text-sm font-bold text-foreground">Rooms in this stay</h2>
-      </div>
-      <ul class="divide-y divide-border">
-        <% @bookings.each_with_index do |booking, index| %>
-          <li class="flex flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm">
-            <div>
-              <p class="font-bold text-foreground">Room <%= index + 1 %> · <%= booking.guest_name %></p>
-              <p class="mt-0.5 text-xs text-muted-foreground">
-                <%= booking.formatted_reservation_number %> ·
-                <%= booking.guests.map(&:name).to_sentence %>
-              </p>
-            </div>
-            <span class="font-bold tabular-nums text-foreground">
-              <%= booking.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %>
-            </span>
-          </li>
-        <% end %>
-      </ul>
-    </section>
-  <% end %>
+  <%= render partial: "corporate_portal/bookings/room_detail",
+        collection: @bookings.map { |booking| CorporatePortal::BookingDetailPresenter.new(booking) },
+        as: :room, locals: { room_count: @bookings.size } %>
 
   <div class="flex flex-wrap gap-3">
     <% if may_book_anywhere? %>

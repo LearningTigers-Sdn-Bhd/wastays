@@ -6,8 +6,15 @@
 <% allow_deferred_room = local_assigns.fetch(:allow_deferred_room, true) %>
 <% room_type_choices = @room_types.map { |room_type| [ room_type.name, room_type.id ] }.presence || [ [ "No room types available", "" ] ] %>
 <% popover_index = index.to_s.parameterize(separator: "-").presence || "0" %>
+<% asks_child_ages = current_hotel.sells_per_person? %>
 <div class="grid grid-cols-[1.4fr_1.5fr_1fr_.55fr_.55fr_1fr_36px] items-center gap-1.5 border-b border-border px-3 py-3 last:border-b-0"
      data-booking-room-rows-target="row"
+     <% if asks_child_ages %>
+       data-controller="child-ages"
+       data-child-ages-name-value="booking[rooms][<%= index %>][child_ages][]"
+       data-child-ages-ages-value="<%= Bookings::ChildAges.normalize(values[:child_ages], values[:children]).to_json %>"
+       data-child-ages-select-action-value="change->booking-room-rows#occupancyChanged"
+     <% end %>
      data-preserved-room-type="<%= values[:room_type_id] %>"
      data-preserved-rate-plan="<%= values[:rate_plan_id] %>"
      data-preserved-room-number="<%= values[:room_number] %>">
@@ -48,10 +55,11 @@
                             data: { action: "change->booking-room-rows#occupancyChanged" }) %>
       <% end %>
     </div>
-    <div class="min-w-0" data-role="children">
+    <%# child-ages#sync runs first so the re-quote already sees a picker per child. %>
+    <div class="min-w-0" data-role="children" <% if asks_child_ages %>data-child-ages-target="count"<% end %>>
       <%= render PanelsUI::FormField.new(form: rf, attribute: :children, label: "Children", label_hidden: true, required: true, class: "min-w-0") do |field| %>
         <% field.with_input(type: :number, value: values[:children] || 0, min: 0,
-                            data: { action: "change->booking-room-rows#occupancyChanged" }) %>
+                            data: { action: [ ("change->child-ages#sync" if asks_child_ages), "change->booking-room-rows#occupancyChanged" ].compact.join(" ") }) %>
       <% end %>
     </div>
   <% end %>
@@ -109,4 +117,13 @@
     <% end %>
   </div>
   <button type="button" class="rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:invisible" aria-label="Remove room" data-role="remove" data-action="booking-room-rows#remove"><%= cached_icon("x", class: "size-4 mx-auto") %></button>
+  <p class="col-span-full hidden pt-1 text-xs font-medium text-warning-foreground" data-role="occupancy-warning" role="status"></p>
+  <%# Children are priced by age at a per-guest property, one picker per child. %>
+  <% if asks_child_ages %>
+    <div class="col-span-full flex flex-wrap items-center gap-2 pt-1 <%= 'hidden' if values[:children].to_i.zero? %>"
+         data-child-ages-target="wrapper" data-role="child-ages">
+      <span class="text-xs text-muted-foreground">Children's ages</span>
+      <div class="flex flex-wrap gap-2" data-child-ages-target="list"></div>
+    </div>
+  <% end %>
 </div>

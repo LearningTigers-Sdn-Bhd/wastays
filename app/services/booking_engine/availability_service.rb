@@ -179,7 +179,7 @@ module BookingEngine
 
             grouped.each do |(r_adults, r_children, r_child_ages), list|
               quantity = list.size
-              pricing = lowest_pricing_option_for(data[:room_type], adults: r_adults, children: r_children, room_count: 1, child_ages: r_child_ages)
+              pricing = default_pricing_option_for(data[:room_type], adults: r_adults, children: r_children, room_count: 1, child_ages: r_child_ages)
               next if pricing.blank?
 
               currency ||= pricing.currency
@@ -211,7 +211,7 @@ module BookingEngine
 
       # 3. Simple Greedy Mixed-Type Allocation
       sorted_data = room_type_data.map do |d|
-        pricing = lowest_pricing_option_for(d[:room_type], adults: d[:max_capacity], children: 0, room_count: 1)
+        pricing = default_pricing_option_for(d[:room_type], adults: d[:max_capacity], children: 0, room_count: 1)
         next nil if pricing.blank?
         d.merge(pricing: pricing)
       end.compact.sort_by { |d| [ -d[:max_capacity], d[:pricing].total_price ] }
@@ -223,7 +223,7 @@ module BookingEngine
     end
 
     def pricing_summary_for(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
-      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages) : lowest_pricing_option_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
+      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages) : default_pricing_option_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
       return {} if option.blank?
 
       display_name = option.rate_plan&.name
@@ -243,7 +243,7 @@ module BookingEngine
     end
 
     def calculate_total_price(room_type, rate_plan: nil, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
-      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages) : lowest_pricing_option_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
+      option = rate_plan.present? ? pricing_option_for(room_type, rate_plan, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages) : default_pricing_option_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages)
       option&.total_price || 0.to_d
     end
 
@@ -306,7 +306,7 @@ module BookingEngine
 
       ActiveRecord::Associations::Preloader.new(
         records: room_types,
-        associations: { rate_plans: :rate_plan_age_bands }
+        associations: { rate_plans: %i[rate_plan_age_bands rate_plan_stay_discounts] }
       ).call
 
       ActiveRecord::Associations::Preloader.new(
@@ -403,15 +403,22 @@ module BookingEngine
       end
     end
 
-    def lowest_pricing_option_for(room_type, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
+    # What a room category is quoted at when the guest has not picked a plan:
+    # the property's primary plan whenever it can sell this stay, otherwise the
+    # best-priced option, exactly as before a primary plan existed.
+    def default_pricing_option_for(room_type, pax: nil, adults: nil, children: nil, room_count: nil, child_ages: nil)
+      primary_id = room_type.primary_rate_plan&.id
       pricing_options_for(room_type, pax: pax, adults: adults, children: children, room_count: room_count, child_ages: child_ages).sort_by { |opt|
-        [ -RULE_PRIORITY.fetch(opt.winning_rule, 0), opt.total_price ]
+        [ opt.rate_plan&.id == primary_id ? 0 : 1, -RULE_PRIORITY.fetch(opt.winning_rule, 0), opt.total_price ]
       }.first
     end
 
+    # Primary plan first, so every list of plans a guest sees leads with it.
     def candidate_rate_plans_for(room_type)
-      kinds = RatePlan.kinds_for(@corporate_rate ? :corporate : :public)
-      room_type.rate_plans.select { |plan| plan.archived_at.nil? && plan.kind.in?(kinds) }
+      audience = @corporate_rate ? :corporate : :public
+      primary_id = room_type.primary_rate_plan&.id
+      room_type.rate_plans.select { |plan| plan.bookable_by?(audience) }
+        .each_with_index.sort_by { |plan, index| [ plan.id == primary_id ? 0 : 1, index ] }.map(&:first)
     end
 
     def greedy_allocate(total_pax, room_type_data)
@@ -463,7 +470,7 @@ module BookingEngine
       allocated_items = []
       grouped.each do |(room_type, r_adults, r_children, r_child_ages), list|
         quantity = list.size
-        pricing = lowest_pricing_option_for(room_type, adults: r_adults, children: r_children, room_count: 1, child_ages: r_child_ages)
+        pricing = default_pricing_option_for(room_type, adults: r_adults, children: r_children, room_count: 1, child_ages: r_child_ages)
         next if pricing.blank?
 
         total_price += pricing.total_price * quantity
@@ -595,6 +602,15 @@ module BookingEngine
           winning_rule = rule_type
         end
       end
+
+      # Long-stay discount on the whole stay, once every night is priced.
+      discounted = Rates::ApplyStayDiscount.snapshot(
+        rate_plan: rate_plan,
+        snapshot: complete_rates_by_date.transform_keys { |date| date.to_date.iso8601 },
+        guests: Rates::ApplyStayDiscount.guests_for(rate_plan, adults: r_adults, children: r_children)
+      )
+      complete_rates_by_date = complete_rates_by_date.to_h { |date, night| [ date, discounted.fetch(date.to_date.iso8601, night) ] }
+      nightly_total = complete_rates_by_date.values.sum { |night| night["price"].to_d }
 
       PricingOption.new(
         rate_plan: rate_plan,
