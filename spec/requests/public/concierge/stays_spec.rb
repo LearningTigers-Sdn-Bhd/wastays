@@ -101,7 +101,7 @@ RSpec.describe "Public::Concierge::Stays", type: :request do
       get stay_url
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Your Stay")
+      expect(response.parsed_body.at_css(".guest-stay-overview")).to be_present
     end
 
     it "does not ask for the code again while the session is valid" do
@@ -177,7 +177,7 @@ RSpec.describe "Public::Concierge::Stays", type: :request do
       get stay_url
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Your Stay")
+      expect(response.parsed_body.at_css(".guest-stay-overview")).to be_present
     end
   end
 
@@ -241,7 +241,7 @@ RSpec.describe "Public::Concierge::Stays", type: :request do
 
       get stay_url
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Your Stay")
+      expect(response.parsed_body.at_css(".guest-stay-overview")).to be_present
     end
 
     it "gives the second browser the stay page too" do
@@ -252,7 +252,7 @@ RSpec.describe "Public::Concierge::Stays", type: :request do
       second.get stay_url
 
       expect(second.response).to have_http_status(:ok)
-      expect(second.response.body).to include("Your Stay")
+      expect(second.response.parsed_body.at_css(".guest-stay-overview")).to be_present
     end
   end
 end
