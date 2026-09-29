@@ -10,6 +10,7 @@
     so a phone and a screen reader read the same order as the eye. %>
 <% two_columns = local_assigns[:two_columns] %>
 <% hours = @policy.present? && (@policy.check_in_time.present? || @policy.check_out_time.present?) %>
+<% chat_path = @hotel.concierge_chat_available? ? local_assigns[:chat_path] : nil %>
 
 <%# One card for time: is the desk open now, then the property hours. The
     headline says open or closed in words; the icon only repeats it. %>
@@ -49,9 +50,13 @@
   <% end %>
 <% end %>
 
-<% if urgent_phone.present? || @phone.present? || @whatsapp_link.present? || @email.present? || @maps_link.present? %>
+<% if chat_path.present? || urgent_phone.present? || @phone.present? || @whatsapp_link.present? || @email.present? || @maps_link.present? %>
   <%= render GuestUI::Card.new(title: "Contact us",
                                class: ("md:col-start-2 md:row-start-1 md:row-span-2" if two_columns)) do |card| %>
+    <% if chat_path.present? %>
+      <% card.with_row(label: "Interact with Chatbot", hint: "Instant answers, any time", icon: "message-circle",
+                       href: chat_path) %>
+    <% end %>
     <% if urgent_phone.present? %>
       <% card.with_row(label: "Duty Manager (Urgent Only)", hint: urgent_phone, icon: "triangle-alert",
                        href: "tel:#{urgent_phone.delete(' ')}") %>

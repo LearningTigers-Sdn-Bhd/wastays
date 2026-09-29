@@ -11,5 +11,7 @@
              wide: true,
              subtitle: concierge_contact_address(@hotel).presence || "We are here to help with anything you need."
            } do %>
-  <%= render "public/concierge/contact/details", two_columns: true %>
+  <%= render "public/concierge/contact/details",
+             two_columns: true,
+             chat_path: concierge_chat_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath) %>
 <% end %>

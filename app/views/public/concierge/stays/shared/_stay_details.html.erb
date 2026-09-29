@@ -5,42 +5,80 @@
     room, how long", so the room number leads and the references, which a guest
     reads only at the front desk, sit last in small type. %>
 <%= render GuestUI::Card.new(class: "guest-stay-summary") do %>
-  <div class="flex items-center justify-between gap-3">
-    <h2 class="guest-card__title">Your Stay</h2>
-    <span class="guest-stay-summary__status" data-state="<%= presenter.in_house? ? "in-house" : "closed" %>">
-      <%= presenter.status_label %>
-    </span>
-  </div>
-
-  <dl class="mt-4 space-y-4">
-    <div>
-      <dt class="text-xs font-medium text-muted-foreground">Room</dt>
-      <dd class="guest-stay-summary__room font-guest-display"><%= presenter.room_label %></dd>
+  <% if local_assigns[:overview] %>
+    <div class="guest-stay-summary__code">
+      <span class="text-xs font-medium text-muted-foreground">Booking number</span>
+      <span class="font-mono text-sm font-semibold text-foreground">
+        <%= presenter.confirmation_code %>
+      </span>
     </div>
 
-    <div>
-      <dt class="sr-only">Dates</dt>
-      <dd class="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
-        <span><%= presenter.check_in_label %></span>
-        <%= app_icon "arrow-right", class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: "true" } %>
-        <span><%= presenter.check_out_label %></span>
-      </dd>
-      <dd class="mt-1 text-xs font-medium text-muted-foreground">
-        <%= presenter.stay_progress_label || pluralize(presenter.nights, "night") %>
-      </dd>
-    </div>
-  </dl>
+    <dl class="guest-stay-summary__overview-facts">
+      <div class="shrink-0">
+        <dt class="text-xs font-medium text-muted-foreground">Room</dt>
+        <dd class="guest-stay-summary__room font-guest-display"><%= presenter.room_label %></dd>
+      </div>
 
-  <dl class="guest-stay-summary__refs">
-    <div class="flex items-baseline gap-1.5">
-      <dt><span aria-hidden="true">Ref</span><span class="sr-only">Booking reference number</span></dt>
-      <dd class="font-mono text-foreground"><%= presenter.booking_reference_number %></dd>
+      <div class="min-w-0">
+        <dt class="text-xs font-medium text-muted-foreground">Stay dates</dt>
+        <dd class="flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-foreground">
+          <span><%= presenter.check_in_label %></span>
+          <%= app_icon "arrow-right", class: "size-3.5 shrink-0 text-muted-foreground", aria: { hidden: "true" } %>
+          <span><%= presenter.check_out_label %></span>
+        </dd>
+      </div>
+
+      <div class="shrink-0">
+        <dt class="sr-only">Stay progress</dt>
+        <dd class="whitespace-nowrap text-xs font-medium text-muted-foreground">
+          <%= presenter.stay_progress_label || pluralize(presenter.nights, "night") %>
+        </dd>
+      </div>
+    </dl>
+
+    <div class="guest-stay-summary__overview-status">
+      <span class="guest-stay-summary__status" data-state="<%= presenter.in_house? ? "in-house" : "closed" %>">
+        <%= presenter.status_label %>
+      </span>
     </div>
-    <div class="flex items-baseline gap-1.5">
-      <dt><span aria-hidden="true">Code</span><span class="sr-only">Booking confirmation code</span></dt>
-      <dd class="font-mono text-foreground"><%= presenter.confirmation_code %></dd>
+  <% else %>
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="guest-card__title">Your Stay</h2>
+      <span class="guest-stay-summary__status" data-state="<%= presenter.in_house? ? "in-house" : "closed" %>">
+        <%= presenter.status_label %>
+      </span>
     </div>
-  </dl>
+
+    <dl class="guest-stay-summary__facts">
+      <div>
+        <dt class="text-xs font-medium text-muted-foreground">Room</dt>
+        <dd class="guest-stay-summary__room font-guest-display"><%= presenter.room_label %></dd>
+      </div>
+
+      <div>
+        <dt class="sr-only">Dates</dt>
+        <dd class="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+          <span><%= presenter.check_in_label %></span>
+          <%= app_icon "arrow-right", class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: "true" } %>
+          <span><%= presenter.check_out_label %></span>
+        </dd>
+        <dd class="mt-1 text-xs font-medium text-muted-foreground">
+          <%= presenter.stay_progress_label || pluralize(presenter.nights, "night") %>
+        </dd>
+      </div>
+    </dl>
+
+    <dl class="guest-stay-summary__refs">
+      <div class="flex items-baseline gap-1.5">
+        <dt><span aria-hidden="true">Ref</span><span class="sr-only">Booking reference number</span></dt>
+        <dd class="font-mono text-foreground"><%= presenter.booking_reference_number %></dd>
+      </div>
+      <div class="flex items-baseline gap-1.5">
+        <dt><span aria-hidden="true">Code</span><span class="sr-only">Booking confirmation code</span></dt>
+        <dd class="font-mono text-foreground"><%= presenter.confirmation_code %></dd>
+      </div>
+    </dl>
+  <% end %>
 
   <% if presenter.checked_out? && presenter.grace_period_ends_at %>
     <p class="mt-4 border-t border-border/60 pt-4 text-xs font-medium leading-relaxed text-muted-foreground">

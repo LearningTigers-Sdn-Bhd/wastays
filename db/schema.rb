@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_28_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1920,6 +1920,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_010000) do
     t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
     t.string "city"
     t.boolean "concierge_enabled", default: true, null: false
+    t.string "concierge_menu_style", default: "interactive", null: false
+    t.boolean "concierge_refund_requests_enabled", default: false, null: false
     t.string "contact_email"
     t.string "contact_phone"
     t.string "country"

@@ -918,6 +918,8 @@ Rails.application.routes.draw do
         # Who a guest reaches when the concierge cannot answer, and when.
         resource :guest_contact, path: "contact-and-escalation",
           controller: "contacts", only: %i[show update]
+        get "concierge", to: "concierge#show", as: :concierge_settings
+        patch "concierge", to: "concierge#update"
         get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
         patch "ai-concierge", to: "ai_concierge#update"
         resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :show, :update ]

@@ -21,6 +21,11 @@ class Hotel < ApplicationRecord
     cheerful: "cheerful"
   }, prefix: true, validate: true
 
+  enum :concierge_menu_style, {
+    interactive: "interactive",
+    fancy: "fancy"
+  }, prefix: true, validate: true
+
   AI_CONCIERGE_MODEL_NAMES = {
     "openai" => "gpt-4.1-mini",
     "claude" => "claude-haiku-4-5",

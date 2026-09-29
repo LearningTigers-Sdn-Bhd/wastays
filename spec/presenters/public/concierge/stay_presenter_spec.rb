@@ -106,7 +106,13 @@ RSpec.describe Public::Concierge::StayPresenter do
       expect(described_class.new(stay_access: stay_access.reload).invoice_available?).to be true
     end
 
-    it "offers a refund until one is open" do
+    it "hides refund requests by default" do
+      expect(presenter.can_request_refund?).to be false
+    end
+
+    it "offers a refund when the hotel enables it until one is open" do
+      hotel.update!(concierge_refund_requests_enabled: true)
+
       expect(presenter.can_request_refund?).to be true
 
       create(:refund_request, booking: booking, status: "pending", refund_amount: 100.0)
@@ -115,6 +121,7 @@ RSpec.describe Public::Concierge::StayPresenter do
     end
 
     it "offers a refund again after staff rejects one" do
+      hotel.update!(concierge_refund_requests_enabled: true)
       create(:refund_request, booking: booking, status: "rejected", refund_amount: 100.0)
 
       expect(described_class.new(stay_access: stay_access).can_request_refund?).to be true

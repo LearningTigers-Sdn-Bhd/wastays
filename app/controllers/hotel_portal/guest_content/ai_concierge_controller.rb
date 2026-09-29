@@ -19,7 +19,7 @@ module HotelPortal
 
       def ai_settings_params
         params.require(:hotel).permit(
-          :guest_chat_enabled, :ai_provider_enabled, :ai_concierge_tone,
+          :ai_provider_enabled, :ai_concierge_tone,
           :ai_provider_name, :ai_provider_key
         )
       end
