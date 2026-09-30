@@ -157,20 +157,4 @@ RSpec.describe CorporatePortal::CreateAgentBooking do
     expect(result).not_to be_success
     expect(result.errors).to include("Name the lead guest for each room.")
   end
-  it "allows Charter and Own Boat without hotel schedule slots" do
-    hotel.update!(allow_boat_information: true)
-    result = call([ [ { name: "Ada Lim", phone: "+60123456789" } ] ],
-      { boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own" })
-    expect(result).to be_success
-    lead = result.booking.booking_guests.find(&:primary?)
-    expect(lead).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
-  end
-
-  it "creates no bookings when Charter has no time" do
-    hotel.update!(allow_boat_information: true)
-    result = nil
-    expect { result = call([ [ { name: "Ada Lim", phone: "+60123456789" } ] ], { boat_in_time: "charter" }) }
-      .not_to change(Booking, :count)
-    expect(result.errors).to include("Enter a boat-in time for Charter Boat.")
-  end
 end

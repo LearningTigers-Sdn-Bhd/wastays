@@ -37,7 +37,7 @@ module Bookings
 
       transitioned.each { |booking| dispatch_checked_in(booking) }
       success
-    rescue CheckInError, ArgumentError, Date::Error, ActiveRecord::RecordInvalid => e
+    rescue CheckInError, ArgumentError, Date::Error => e
       failure(e.message)
     ensure
       release_room_locks if committed

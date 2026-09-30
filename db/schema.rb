@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -403,9 +403,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_010000) do
   create_table "booking_guests", force: :cascade do |t|
     t.string "address_country_snapshot"
     t.datetime "boat_in_at"
-    t.string "boat_in_type"
     t.datetime "boat_out_at"
-    t.string "boat_out_type"
     t.bigint "booking_id", null: false
     t.string "city_snapshot"
     t.string "country_snapshot"
@@ -432,8 +430,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_010000) do
     t.index ["booking_id"], name: "idx_booking_guests_one_primary_per_booking", unique: true, where: "((role)::text = 'primary'::text)"
     t.index ["booking_id"], name: "index_booking_guests_on_booking_id"
     t.index ["guest_id"], name: "index_booking_guests_on_guest_id"
-    t.check_constraint "boat_in_type::text = ANY (ARRAY['provided'::character varying, 'charter'::character varying, 'own'::character varying]::text[])", name: "booking_guests_boat_in_type_check"
-    t.check_constraint "boat_out_type::text = ANY (ARRAY['provided'::character varying, 'charter'::character varying, 'own'::character varying]::text[])", name: "booking_guests_boat_out_type_check"
     t.check_constraint "role::text = ANY (ARRAY['primary'::character varying, 'additional'::character varying]::text[])", name: "booking_guests_role_allowed"
   end
 

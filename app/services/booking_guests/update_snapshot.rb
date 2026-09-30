@@ -13,7 +13,7 @@ module BookingGuests
     # profile.
     PROFILE_ATTRIBUTES = %i[tin].freeze
     EDITABLE_ATTRIBUTES = (SNAPSHOT_ATTRIBUTES + PROFILE_ATTRIBUTES).freeze
-    BIBO_ATTRIBUTES = %i[boat_in_at boat_out_at boat_in_type boat_out_type].freeze
+    BIBO_ATTRIBUTES = %i[boat_in_at boat_out_at].freeze
 
     def self.call(booking_guest:, attributes:, actor:, update_profile: false, bibo_attributes: {}, source: nil)
       new(booking_guest:, attributes:, actor:, update_profile:, bibo_attributes:, source:).call

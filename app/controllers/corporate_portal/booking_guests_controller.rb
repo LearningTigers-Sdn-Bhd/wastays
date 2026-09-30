@@ -39,7 +39,7 @@ module CorporatePortal
 
     # Only the fields the form sent: an absent one leaves the stored time alone.
     def boat_params
-      params.permit(:boat_in_time, :boat_out_time, :boat_in_custom_time, :boat_out_custom_time).to_h
+      params.slice(:boat_in_time, :boat_out_time).permit(:boat_in_time, :boat_out_time).to_h
     end
 
     # Keyed by booking guest id, or "newN" for a companion added here.

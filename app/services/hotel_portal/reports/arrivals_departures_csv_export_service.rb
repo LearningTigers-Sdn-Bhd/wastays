@@ -3,7 +3,7 @@
 module HotelPortal
   module Reports
     class ArrivalsDeparturesCsvExportService
-      BIBO_HEADERS = [ "Guest Name", "Room Number", "Arrival Date", "Departure Date", "Arrival Time", "Arrival Boat", "Departure Time", "Departure Boat" ].freeze
+      BIBO_HEADERS = [ "Guest Name", "Room Number", "Arrival Date", "Departure Date", "Arrival Time", "Departure Time" ].freeze
 
       # The sectioned surfaces (screen tables, sheets, PDF pages) split by meal, so
       # the flat CSV names each row's entitlements in a column instead.
@@ -60,12 +60,12 @@ module HotelPortal
         @bibo_leg ||= @report.sections.first
       end
 
-      def bibo_leg_headers = [ "Guest Name", "Room Number", bibo_leg[:date_header], bibo_leg[:time_header], bibo_leg[:label_header] ]
+      def bibo_leg_headers = [ "Guest Name", "Room Number", bibo_leg[:date_header], bibo_leg[:time_header] ]
 
       private
 
       def bibo_leg_rows
-        bibo_leg[:rows].map { |row| [ row[:guest_name], row[:room_number], row[bibo_leg[:date_key]], row[:boat_time], row[:boat_label] ] }
+        bibo_leg[:rows].map { |row| [ row[:guest_name], row[:room_number], row[bibo_leg[:date_key]], row[:boat_time] ] }
       end
 
       # The report lists each direction on its own; the flat exports pair the two
@@ -74,16 +74,15 @@ module HotelPortal
         paired = {}
 
         @report.boat_ins.each do |row|
-          paired[row[:booking_guest_id]] = bibo_row_stem(row) + [ row[:boat_time], row[:boat_label], "—", "—" ]
+          paired[row[:booking_guest_id]] = bibo_row_stem(row) + [ row[:boat_time], "—" ]
         end
 
         @report.boat_outs.each do |row|
           existing = paired[row[:booking_guest_id]]
           if existing
             existing[BIBO_HEADERS.index("Departure Time")] = row[:boat_time]
-            existing[BIBO_HEADERS.index("Departure Boat")] = row[:boat_label]
           else
-            paired[row[:booking_guest_id]] = bibo_row_stem(row) + [ "—", "—", row[:boat_time], row[:boat_label] ]
+            paired[row[:booking_guest_id]] = bibo_row_stem(row) + [ "—", row[:boat_time] ]
           end
         end
 
@@ -126,8 +125,11 @@ module HotelPortal
         }.fetch(@tab, "Arrival")
       end
 
-      def format_boat_time(timestamp, tz, type)
-        ::Boats::Schedule.display(timestamp: timestamp, type: type, zone: tz, format: "%d %b %Y %-I:%M %p")
+      def format_boat_time(timestamp, tz)
+        return "—" if timestamp.blank?
+
+        boat_time = timestamp.in_time_zone(tz)
+        "#{boat_time.strftime('%d %b %Y')} #{boat_time.strftime('%I:%M %p')}"
       end
 
       def values_for_active_tab(row)
@@ -147,7 +149,7 @@ module HotelPortal
             row[:deposit_status],
             nil
           ]
-          cols << format_boat_time(row[:boat_arrival], tz, row[:boat_arrival_type]) if allow_boat
+          cols << format_boat_time(row[:boat_arrival], tz) if allow_boat
           cols << row[:latest_note]
           cols
         else
@@ -160,7 +162,7 @@ module HotelPortal
             row[:stay_dates],
             row[:departure_status]
           ]
-          cols << format_boat_time(row[:boat_departure], tz, row[:boat_departure_type]) if allow_boat
+          cols << format_boat_time(row[:boat_departure], tz) if allow_boat
           cols << row[:latest_note]
           cols
         end

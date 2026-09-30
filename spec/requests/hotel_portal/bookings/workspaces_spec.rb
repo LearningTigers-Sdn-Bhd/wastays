@@ -390,8 +390,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(row).to eq([
         booking.formatted_reservation_number,
         "Boat Guest",
-        "#{booking.check_in.in_time_zone(zone).strftime('%d %b %Y')} 09:30 · Provided Boat",
-        "#{booking.check_out.in_time_zone(zone).strftime('%d %b %Y')} 16:45 · Provided Boat"
+        "#{booking.check_in.in_time_zone(zone).strftime('%d %b %Y')} 09:30",
+        "#{booking.check_out.in_time_zone(zone).strftime('%d %b %Y')} 16:45"
       ])
     end
 
@@ -1686,29 +1686,6 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(guest.reload).to have_attributes(name: "Original Guest", email: "original@example.com")
     end
 
-    it "saves custom types without schedule slots and restores submitted values on error" do
-      hotel.update!(allow_boat_information: true)
-      lead = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
-      path = hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: lead.id)
-      patch path, params: {
-        guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
-        booking_guest: { boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own" }
-      }
-      expect(response).to have_http_status(:see_other)
-      expect(lead.reload).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
-      log = BookingAuditLog.where(auditable: booking, action_type: "guest_updated").last
-      expect(log.new_value).to include("boat_in_type" => "charter", "boat_out_type" => "own")
-
-      patch path, params: {
-        guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
-        booking_guest: { boat_in_time: "charter", boat_in_custom_time: "", boat_out_time: "own", boat_out_custom_time: "17:12" }
-      }
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body.at_css("select[name='booking_guest[boat_in_time]'] option[selected]")["value"]).to eq("charter")
-      expect(response.parsed_body.at_css("input[name='booking_guest[boat_out_custom_time]']")["value"]).to eq("17:12")
-      expect(lead.reload.boat_out_at).to be_nil
-    end
-
     it "shows the stay date read-only beside each boat slot" do
       hotel.update!(allow_boat_information: true)
       create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
@@ -1746,7 +1723,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         .to eq("#{booking.check_out.in_time_zone(zone).strftime('%Y-%m-%d')} 16:45")
     end
 
-    it "rejects a submitted choice that is not on the property's timetable" do
+    it "ignores a submitted time that is not on the property's timetable" do
       hotel.update!(allow_boat_information: true)
       create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
       booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Charter Guest"), is_primary: true)
@@ -1756,8 +1733,6 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         booking_guest: { boat_in_time: "custom" }
       }
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Choose a boat-in option")
       expect(booking_guest.reload.boat_in_at).to be_nil
     end
 
@@ -1787,7 +1762,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       document = Nokogiri::HTML(response.body)
       options = document.css("select[name='booking_guest[boat_in_time]'] option").map { |option| option["value"] }
-      expect(options).to contain_exactly("", "06:15", "09:30", "charter", "own")
+      expect(options).to contain_exactly("", "06:15", "09:30")
       expect(document.at_css("select[name='booking_guest[boat_in_time]'] option[selected]")["value"]).to eq("06:15")
     end
 

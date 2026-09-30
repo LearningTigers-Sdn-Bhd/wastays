@@ -114,22 +114,4 @@ RSpec.describe Bookings::ProcessCheckIn, frozen_time: :business_day do
     expect(result.error).to match(/Assign every room/)
     expect(booking.reload.status).to eq("confirmed")
   end
-  it "rolls back room assignment and status when Charter has no time" do
-    hotel.update!(allow_boat_information: true)
-    create(:booking_guest, booking: booking, is_primary: true)
-    result = described_class.new(bookings: [ booking ], details: details.merge(boat_in_time: "charter"), user: user).call
-    expect(result.success?).to be(false)
-    expect(result.error).to include("Enter a boat-in time for Charter Boat.")
-    expect(booking.reload.status).to eq("confirmed")
-    expect(booking.booking_rooms.first.reload.room_number).to be_nil
-  end
-
-  it "records Charter-in and untimed Own-out during check-in" do
-    hotel.update!(allow_boat_information: true)
-    lead = create(:booking_guest, booking: booking, is_primary: true)
-    result = described_class.new(bookings: [ booking ], user: user,
-      details: details.merge(boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own")).call
-    expect(result.success?).to be(true)
-    expect(lead.reload).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
-  end
 end

@@ -264,9 +264,7 @@ end %>
                           form: f,
                           schedule: @boat_schedule,
                           boat_in: params.dig(:booking, :boat_in_time),
-                          boat_out: params.dig(:booking, :boat_out_time),
-                          boat_in_custom_time: params.dig(:booking, :boat_in_custom_time),
-                          boat_out_custom_time: params.dig(:booking, :boat_out_custom_time) %>
+                          boat_out: params.dig(:booking, :boat_out_time) %>
                   </section>
                 <% end %>
 

@@ -97,12 +97,13 @@ module HotelPortal::ReportsHelper
     !%w[registration_cards police_report bibo meal_prep].include?(active_tab)
   end
 
-  def format_report_boat_time(timestamp, hotel, boat_type: nil)
-    return nil if timestamp.blank? && boat_type.blank?
+  def format_report_boat_time(boat_departure, hotel)
+    return nil if boat_departure.blank?
 
+    boat_time = boat_departure.in_time_zone(hotel.hotel_time_zone)
     {
-      date: timestamp&.in_time_zone(hotel.hotel_time_zone)&.strftime("%d %b %Y"),
-      time: Boats::Schedule.display(timestamp: timestamp, type: boat_type, zone: hotel.hotel_time_zone)
+      date: boat_time.strftime("%d %b %Y"),
+      time: boat_time.strftime("%I:%M %p")
     }
   end
 
@@ -187,8 +188,10 @@ module HotelPortal::ReportsHelper
   end
 
   def arrivals_departures_boat_time(row, type, hotel)
-    key = type == :arrival ? :boat_arrival : :boat_departure
-    format_report_boat_time(row[key], hotel, boat_type: row[:"#{key}_type"])
+    boat_val = (type == :arrival ? row[:boat_arrival] : row[:boat_departure])
+    return nil if boat_val.blank?
+
+    format_report_boat_time(boat_val, hotel)
   end
 
   def display_latest_note(note)

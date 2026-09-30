@@ -151,13 +151,11 @@ module HotelPortal
     end
 
     def boat_in_display
-      ::Boats::Schedule.display(timestamp: active_booking_guest&.boat_in_at,
-        type: active_booking_guest&.boat_in_type, zone: hotel.hotel_time_zone, format: "%d %b %Y, %I:%M %p", empty: "-")
+      format_boat_time(active_booking_guest&.boat_in_at)
     end
 
     def boat_out_display
-      ::Boats::Schedule.display(timestamp: active_booking_guest&.boat_out_at,
-        type: active_booking_guest&.boat_out_type, zone: hotel.hotel_time_zone, format: "%d %b %Y, %I:%M %p", empty: "-")
+      format_boat_time(active_booking_guest&.boat_out_at)
     end
 
     def check_in_display
@@ -198,6 +196,12 @@ module HotelPortal
       return nil if booking_guest_id.blank?
 
       @booking.booking_guests.find { |bg| bg.id.to_s == booking_guest_id.to_s }
+    end
+
+    def format_boat_time(time)
+      return "-" if time.blank?
+
+      time.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p")
     end
 
     def format_stay_datetime(date, time)

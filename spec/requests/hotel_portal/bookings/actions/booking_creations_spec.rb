@@ -312,7 +312,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       get hotel_booking_action_walk_in_check_in_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       options = Nokogiri::HTML(response.body).css('select[name="booking[boat_out_time]"] option').map { |option| option["value"] }
-      expect(options).to eq([ "", "15:30", "charter", "own" ])
+      expect(options).to eq([ "", "15:30" ])
 
       hotel.update!(allow_boat_information: false)
       get hotel_booking_action_walk_in_check_in_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
@@ -447,28 +447,6 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking))
       expect(booking.deposits.kind_prepayment).to be_empty
       expect(booking.payment_status).to eq("pending")
-    end
-
-    %w[new_booking walk_in_check_in].each do |action|
-      it "records custom transfers through #{action}" do
-        hotel.update!(allow_boat_information: true)
-        path = public_send("hotel_booking_action_#{action}_path", hotel)
-        post path, params: { booking: booking_params.merge(boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own") }
-        expect(response).to have_http_status(:redirect)
-        expect(Booking.last.booking_guests.find(&:primary?)).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
-      end
-    end
-
-    it "rejects Charter without a time and restores custom fields on creation failure" do
-      hotel.update!(allow_boat_information: true)
-      expect do
-        post hotel_booking_action_new_booking_path(hotel), params: {
-          booking: booking_params.merge(boat_in_time: "charter", boat_in_custom_time: "", boat_out_time: "own", boat_out_custom_time: "17:12")
-        }
-      end.not_to change(Booking, :count)
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body.at_css("select[name='booking[boat_in_time]'] option[selected]")["value"]).to eq("charter")
-      expect(response.parsed_body.at_css("input[name='booking[boat_out_custom_time]']")["value"]).to eq("17:12")
     end
 
     it "records the boat slots picked while creating a walk-in" do

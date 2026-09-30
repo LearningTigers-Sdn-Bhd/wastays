@@ -62,12 +62,10 @@ module HotelPortal::BookingsHelper
   def booking_boat_time(booking, kind, hotel)
     primary = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
     time = kind == :in ? primary&.boat_in_at : primary&.boat_out_at
-    type = kind == :in ? primary&.boat_in_type : primary&.boat_out_type
-    return if time.blank? && type.blank?
+    return if time.blank?
 
-    local = time&.in_time_zone(hotel.hotel_time_zone)
-    { time: Boats::Schedule.display(timestamp: time, type: type, zone: hotel.hotel_time_zone, format: "%H:%M"),
-      date: local&.strftime("%d %b") }
+    local = time.in_time_zone(hotel.hotel_time_zone)
+    { time: local.strftime("%H:%M"), date: local.strftime("%d %b") }
   end
 
   def show_boat_times?(hotel)

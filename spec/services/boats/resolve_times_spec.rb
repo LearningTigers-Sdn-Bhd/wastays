@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Boats::ResolveTimes do
-  let(:hotel) { create(:hotel, time_zone: "Kuala Lumpur", allow_boat_information: true) }
+  let(:hotel) { build(:hotel, time_zone: "Kuala Lumpur", allow_boat_information: true) }
   let(:check_in) { Time.utc(2026, 8, 1, 4, 0) }
   let(:check_out) { Time.utc(2026, 8, 4, 4, 0) }
 
@@ -22,14 +22,13 @@ RSpec.describe Boats::ResolveTimes do
     expect(local(result[:boat_out_at])).to eq("2026-08-04 16:45")
   end
 
-  it "rejects unknown choices and unscheduled times" do
-    %w[custom 25:00 08:45].each do |value|
-      expect { resolve(boat_in_time: value) }.to raise_error(Boats::ResolveTimes::InvalidSelection)
-    end
+  it "ignores a submitted value that is not a usable time" do
+    expect(resolve(boat_in_time: "custom")).to eq(boat_in_at: nil)
+    expect(resolve(boat_in_time: "25:00")).to eq(boat_in_at: nil)
   end
 
   it "clears a slot submitted blank" do
-    expect(resolve(boat_in_time: "")).to eq(boat_in_at: nil, boat_in_type: nil)
+    expect(resolve(boat_in_time: "")).to eq(boat_in_at: nil)
   end
 
   it "leaves a slot untouched when its field was not submitted" do
@@ -47,36 +46,5 @@ RSpec.describe Boats::ResolveTimes do
     params = ActionController::Parameters.new(boat_in_time: "09:30")
 
     expect(local(resolve(params)[:boat_in_at])).to eq("2026-08-01 09:30")
-  end
-  before do
-    create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
-    create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "16:45")
-  end
-
-  it "records independent types even when a custom time matches a schedule" do
-    result = resolve(boat_in_time: "charter", boat_in_custom_time: "09:30", boat_out_time: "own")
-    expect(result).to include(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
-    expect(local(result[:boat_in_at])).to eq("2026-08-01 09:30")
-  end
-
-  it "requires a Charter time and rejects malformed custom times" do
-    expect { resolve(boat_in_time: "charter") }.to raise_error(Boats::ResolveTimes::InvalidSelection, /Enter a boat-in time/)
-    expect { resolve(boat_out_time: "own", boat_out_custom_time: "25:00") }.to raise_error(Boats::ResolveTimes::InvalidSelection)
-  end
-
-  it "ignores hidden custom times for Provided Boat and no transfer" do
-    result = resolve(boat_in_time: "09:30", boat_in_custom_time: "bad", boat_out_time: "", boat_out_custom_time: "17:00")
-    expect(result).to include(boat_in_type: "provided", boat_out_type: nil, boat_out_at: nil)
-    expect(local(result[:boat_in_at])).to eq("2026-08-01 09:30")
-  end
-
-  it "allows staff to keep an archived Provided Boat slot" do
-    hotel.hotel_boat_schedules.boat_in.first.archive!
-    expect(resolve(boat_in_time: "09:30")[:boat_in_type]).to eq("provided")
-  end
-
-  it "resolves custom times in the hotel timezone regardless of the viewer zone" do
-    result = Time.use_zone("Hawaii") { resolve(boat_out_time: "own", boat_out_custom_time: "17:12") }
-    expect(local(result[:boat_out_at])).to eq("2026-08-04 17:12")
   end
 end

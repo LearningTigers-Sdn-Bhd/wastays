@@ -148,23 +148,6 @@ RSpec.describe "CorporatePortal booking guests", type: :request do
     def lead_of(booking) = booking.booking_guests.find_by!(is_primary: true)
     def local_time(booking, value) = Boats::Schedule.time_of_day(hotel: hotel, timestamp: value)
 
-    it "creates custom transfers, displays labels, and restores them when editing" do
-      book_with(boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own")
-      booking = Booking.order(:id).last
-      expect(lead_of(booking)).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
-      get corporate_booking_path(booking)
-      expect(response.body).to include("Charter Boat", "Own Boat")
-      expect(response.body).not_to include("not added yet")
-      get edit_corporate_booking_guests_path(booking)
-      expect(response.parsed_body.at_css("select[name='boat_in_time'] option[selected]")["value"]).to eq("charter")
-      expect(response.parsed_body.at_css("input[name='boat_in_custom_time']")["value"]).to eq("18:03")
-
-      patch corporate_booking_guests_path(booking), params: { guests: {}, boat_in_time: "charter", boat_in_custom_time: "", boat_out_time: "own", boat_out_custom_time: "17:12" }
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body.at_css("input[name='boat_out_custom_time']")["value"]).to eq("17:12")
-      expect(lead_of(booking).boat_out_at).to be_nil
-    end
-
     it "lets the agent pick boats when booking, landing on the stay's own dates" do
       book_with(boat_in_time: "14:00", boat_out_time: "10:00")
 

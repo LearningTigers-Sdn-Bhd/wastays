@@ -53,7 +53,7 @@ module HotelPortal
           when "today"
             return [ Date.current, Date.current ]
           when "all_time"
-            return [ Date.new(2024, 1, 1), Date.current + 1.year ]
+            return [ Date.new(2024, 1, 1), Date.current ]
           when "this_year"
             return [ Date.current.beginning_of_year, Date.current.end_of_year ]
           when "last_month"

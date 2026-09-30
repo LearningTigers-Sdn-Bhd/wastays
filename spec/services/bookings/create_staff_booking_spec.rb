@@ -244,32 +244,4 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     expect(result.errors).to include("Security deposit amount must be greater than zero.")
     expect(Booking.where(hotel: hotel)).to be_empty
   end
-  it "rolls back creation and payment when Charter has no time" do
-    hotel.update!(allow_boat_information: true)
-    payment = guest_advance_method
-    transaction_count = FolioTransaction.count
-    result = nil
-    expect do
-      result = described_class.new(hotel: hotel,
-        common_params: common_params.merge(collect_payment: "1", hotel_payment_method_id: payment.id, payment_amount: "200"),
-        room_rows: room_rows, user: nil, boat_params: { boat_in_time: "charter" }).call
-    end.not_to change(Booking, :count)
-    expect(result.success?).to be(false)
-    expect(result.errors.join).to include("Enter a boat-in time for Charter Boat.")
-    expect(FolioTransaction.count).to eq(transaction_count)
-  end
-
-  it "records custom transfers on every room in a group" do
-    hotel.update!(allow_boat_information: true)
-    rows = [ { room_type_id: room_type.id, room_number: "101" }, { room_type_id: room_type.id, room_number: "102" } ]
-    result = described_class.new(hotel: hotel, common_params: common_params, room_rows: rows, user: nil,
-      boat_params: { boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own" }).call
-    expect(result.errors).to be_empty
-    expect(result.bookings.size).to eq(2)
-    result.bookings.each do |record|
-      lead = record.booking_guests.find(&:primary?)
-      expect(lead).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
-      expect(lead.boat_in_at.in_time_zone(hotel.hotel_time_zone).strftime("%H:%M")).to eq("18:03")
-    end
-  end
 end

@@ -23,8 +23,6 @@ module StayView
       children = booking.children if capabilities.view_booking?
       boat_in_at = booking.boat_in_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
       boat_out_at = booking.boat_out_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
-      boat_in_type = booking.boat_in_type if capabilities.view_booking?
-      boat_out_type = booking.boat_out_type if capabilities.view_booking?
       check_in_at = booking.check_in_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
       check_out_at = booking.check_out_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
       actual_check_in_at = booking.actual_check_in_at&.in_time_zone(date_window.time_zone_name) if capabilities.view_booking?
@@ -43,12 +41,8 @@ module StayView
       accessible_parts << "check-out #{check_out_at.strftime('%H:%M')}" if check_out_at.present?
       accessible_parts << "checked in #{actual_check_in_at.strftime('%H:%M')}" if actual_check_in_at.present?
       accessible_parts << "checked out #{actual_check_out_at.strftime('%H:%M')}" if actual_check_out_at.present?
-      if boat_in_at.present? || boat_in_type.present?
-        accessible_parts << "boat-in #{Boats::Schedule.display(timestamp: boat_in_at, type: boat_in_type, zone: date_window.time_zone_name, format: '%H:%M')}"
-      end
-      if boat_out_at.present? || boat_out_type.present?
-        accessible_parts << "boat-out #{Boats::Schedule.display(timestamp: boat_out_at, type: boat_out_type, zone: date_window.time_zone_name, format: '%H:%M')}"
-      end
+      accessible_parts << "boat-in #{boat_in_at.to_fs(:time)}" if boat_in_at.present?
+      accessible_parts << "boat-out #{boat_out_at.to_fs(:time)}" if boat_out_at.present?
       guest_statuses = [ ("Blacklisted" if blacklisted), ("VIP" if vip), ("Repeat" if repeat) ].compact
       accessible_parts << "guest status #{guest_statuses.to_sentence}" if guest_statuses.any?
       accessible_parts.concat(financial_signals.map(&:label))
@@ -87,8 +81,6 @@ module StayView
         children:,
         boat_in_at:,
         boat_out_at:,
-        boat_in_type:,
-        boat_out_type:,
         vip:,
         blacklisted:,
         repeat:

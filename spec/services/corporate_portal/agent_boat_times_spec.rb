@@ -41,15 +41,4 @@ RSpec.describe CorporatePortal::AgentBoatTimes do
     expect(boat.params).to be_empty
     expect(boat.errors).to be_empty
   end
-  it "allows custom transfers without hotel schedule slots" do
-    hotel.hotel_boat_schedules.delete_all
-    boat = described_class.new(hotel: hotel, params: { boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own" })
-    expect(boat.params).to include(boat_in_custom_time: "18:03")
-    expect(boat.errors).to be_empty
-  end
-
-  it "validates custom times through the shared boat rules" do
-    boat = described_class.new(hotel: hotel, params: { boat_in_time: "charter", boat_out_time: "own", boat_out_custom_time: "25:00" })
-    expect(boat.errors).to contain_exactly("Enter a boat-in time for Charter Boat.", "Enter a valid boat-out time.")
-  end
 end

@@ -7,7 +7,7 @@ module CorporatePortal
   class BookingDetailPresenter
     Guest = Struct.new(:name, :lead, :nationality, :phone, :email, :masked_id, keyword_init: true)
     Night = Struct.new(:date, :amount, keyword_init: true)
-    Transfer = Struct.new(:label, :time, :meals, :display, keyword_init: true)
+    Transfer = Struct.new(:label, :time, :meals, keyword_init: true)
 
     attr_reader :booking
 
@@ -57,12 +57,10 @@ module CorporatePortal
       return [] if lead.blank? || !booking.hotel.allow_boat_information?
 
       [ [ "Boat-in", lead.boat_in_at, "boat_in" ], [ "Boat-out", lead.boat_out_at, "boat_out" ] ].filter_map do |label, time, kind|
-        type = lead.public_send("#{kind}_type")
-        next if time.blank? && type.blank?
+        next if time.blank?
 
-        meals = schedule.meals_for(time, kind, type: type).map { |meal| HotelBoatSetting.meal_label(meal) }
-        display = ::Boats::Schedule.display(timestamp: time, type: type, zone: booking.hotel.hotel_time_zone, format: "%d %b, %-I:%M %p")
-        Transfer.new(label: label, time: time&.in_time_zone(booking.hotel.hotel_time_zone), meals: meals, display: display)
+        meals = schedule.meals_for(time, kind).map { |meal| HotelBoatSetting.meal_label(meal) }
+        Transfer.new(label: label, time: time.in_time_zone(booking.hotel.hotel_time_zone), meals: meals)
       end
     end
 
@@ -72,7 +70,7 @@ module CorporatePortal
       return [] unless schedule.enabled?
 
       lead = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
-      { "Boat-in" => lead&.boat_in?, "Boat-out" => lead&.boat_out? }.reject { |_, present| present }.keys
+      { "Boat-in" => lead&.boat_in_at, "Boat-out" => lead&.boat_out_at }.select { |_, time| time.blank? }.keys
     end
 
     def nightly_rates

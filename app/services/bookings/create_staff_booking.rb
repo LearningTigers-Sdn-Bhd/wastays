@@ -6,7 +6,7 @@ module Bookings
   class CreateStaffBooking
     class CreationFailed < StandardError; end
 
-    def initialize(hotel:, common_params:, room_rows:, user:, booking_type: "reservation", posting_date: nil, boat_params: {})
+    def initialize(hotel:, common_params:, room_rows:, user:, booking_type: "reservation", posting_date: nil)
       @hotel = hotel
       @common_params = common_params.to_h.symbolize_keys
       @backdate_reason = @common_params.delete(:backdate_reason)
@@ -17,7 +17,6 @@ module Bookings
       @user = user
       @booking_type = booking_type.presence || "reservation"
       @posting_date = posting_date
-      @boat_params = boat_params
     end
 
     def call
@@ -44,7 +43,6 @@ module Bookings
           raise CreationFailed, Array(result.errors).to_sentence unless result.success?
 
           bookings << result.booking
-          Boats::AssignTimes.call(booking: result.booking, params: @boat_params)
         end
 
         if bookings.many?
@@ -69,7 +67,7 @@ module Bookings
       end
 
       OpenStruct.new(success?: true, booking: bookings.first, bookings: bookings, group_booking: group_booking, errors: [])
-    rescue CreationFailed, ActiveRecord::RecordInvalid, Boats::ResolveTimes::InvalidSelection => e
+    rescue CreationFailed, ActiveRecord::RecordInvalid => e
       Rails.logger.warn("Staff booking creation rolled back: #{e.message}")
       failure(e.message)
     end

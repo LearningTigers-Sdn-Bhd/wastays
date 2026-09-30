@@ -61,7 +61,7 @@ module CorporatePortal
       return failure(availability) if availability.is_a?(String)
 
       create_all(room_type)
-    rescue Failed, Boats::ResolveTimes::InvalidSelection, ActiveRecord::RecordInvalid => e
+    rescue Failed => e
       failure(e.message)
     end
 

@@ -55,8 +55,6 @@ module HotelPortal
             :collect_security_deposit,
             :boat_in_time,
             :boat_out_time,
-            :boat_in_custom_time,
-            :boat_out_custom_time,
             security_deposit: [ :amount, :hotel_payment_method_id, :payment_method_type, :external_reference ]
           ).to_h.deep_symbolize_keys
           details[:room_assignments] = normalize_room_assignments(source[:room_assignments])
@@ -129,24 +127,17 @@ module HotelPortal
             business_date_hint: @presenter.check_in_business_date_hint,
             checked_in_at_max: @presenter.checked_in_at_max_value,
             boat_in_time: submitted.fetch(:boat_in_time) { stored_boat_time(:boat_in_at) },
-            boat_out_time: submitted.fetch(:boat_out_time) { stored_boat_time(:boat_out_at) },
-            boat_in_custom_time: submitted.fetch(:boat_in_custom_time) { stored_boat_custom_time(:boat_in) },
-            boat_out_custom_time: submitted.fetch(:boat_out_custom_time) { stored_boat_custom_time(:boat_out) }
+            boat_out_time: submitted.fetch(:boat_out_time) { stored_boat_time(:boat_out_at) }
           }
         end
 
         # Falls back to what the guest already has booked, so reopening the sheet
         # (or a failed submit) shows their slot rather than clearing it.
         def stored_boat_time(column)
-          ::Boats::Schedule.selection(hotel: current_hotel, guest: primary_booking_guest, kind: column.to_s.delete_suffix("_at"))
-        end
+          primary = @booking.booking_guests.find(&:primary?) || @booking.booking_guests.first
+          return unless primary
 
-        def stored_boat_custom_time(kind)
-          ::Boats::Schedule.custom_time(hotel: current_hotel, guest: primary_booking_guest, kind: kind)
-        end
-
-        def primary_booking_guest
-          @booking.booking_guests.find(&:primary?) || @booking.booking_guests.first
+          ::Boats::Schedule.time_of_day(hotel: current_hotel, timestamp: primary.public_send(column))
         end
 
         def requires_override?

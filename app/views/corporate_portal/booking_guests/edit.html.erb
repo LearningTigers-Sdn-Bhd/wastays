@@ -58,10 +58,8 @@
           <p class="text-sm text-muted-foreground">This hotel is reached by boat. Pick the boats the guests will take, or leave as "No boat transfer" if not known yet.</p>
           <%= render "hotel_portal/bookings/boat_transfer_fields",
                 form: form, schedule: boat_schedule,
-                boat_in: params[:boat_in_time] || Boats::Schedule.selection(hotel: hotel, guest: lead, kind: :boat_in),
-                boat_out: params[:boat_out_time] || Boats::Schedule.selection(hotel: hotel, guest: lead, kind: :boat_out),
-                boat_in_custom_time: params[:boat_in_custom_time] || Boats::Schedule.time_of_day(hotel: hotel, timestamp: lead&.boat_in_at),
-                boat_out_custom_time: params[:boat_out_custom_time] || Boats::Schedule.time_of_day(hotel: hotel, timestamp: lead&.boat_out_at),
+                boat_in: params[:boat_in_time] || Boats::Schedule.time_of_day(hotel: hotel, timestamp: lead&.boat_in_at),
+                boat_out: params[:boat_out_time] || Boats::Schedule.time_of_day(hotel: hotel, timestamp: lead&.boat_out_at),
                 boat_in_date: @booking.check_in.in_time_zone(hotel.hotel_time_zone).to_date.strftime("%d %b %Y"),
                 boat_out_date: @booking.check_out.in_time_zone(hotel.hotel_time_zone).to_date.strftime("%d %b %Y") %>
         </fieldset>
