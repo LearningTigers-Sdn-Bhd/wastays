@@ -106,7 +106,7 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
           },
           "sections" => sections,
           "rooms" => [ { "name" => "Deluxe", "quantity" => 4 } ],
-          "rates" => { "coverage" => { "configured_percentage" => "100.0", "end_date" => "2027-08-12", "complete" => true } },
+          "rates" => { "coverage" => { "configured_percentage" => "100.0", "start_date" => "2026-08-13", "end_date" => "2027-08-12", "complete" => true } },
           "commercial" => {
             "extra_charges" => [], "discounts" => [],
             "payment_methods" => [ { "name" => "Cash" } ], "corporate_accounts" => []
@@ -185,7 +185,39 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       )
       expect(document.css('input[name="section_keys[]"]').size).to eq(12)
       expect(document.at_css('#request-onboarding-changes-sheet')).to be_present
-      expect(Rates::SetupCoverage).to have_received(:call).once
+      expect(Rates::SetupCoverage).to have_received(:call).with(hotel:).once
+      expect(Rates::SetupCoverage).to have_received(:call).with(hotel:, start_date: Date.new(2026, 8, 13), end_date: Date.new(2027, 8, 12)).once
+    end
+
+    it "keeps yesterday's setup comparison stable without writing inventory" do
+      travel_to(Time.zone.local(2026, 9, 20, 12)) do
+        room = create(:room_type, hotel:, quantity: 2)
+        Onboarding::InitializeProgress.new(hotel:).call
+        RoomInventory.insert_all!((Date.current..Date.current + 364.days).map do |date|
+          { room_type_id: room.id, date:, quantity: 2, status: "open", available_room_numbers: [] }
+        end)
+        snapshot = Onboarding::SubmissionSnapshot.call(hotel:)
+        submission = create(:onboarding_submission, hotel:, snapshot: snapshot.data, configuration_digest: snapshot.digest)
+        travel 1.day
+
+        expect { get onboarding_admin_hotel_path(hotel) }.not_to change(RoomInventory, :count)
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body).to include("The current setup matches this submission", "Approval will append missing availability through", "Review before launch")
+        expect(response.body).not_to include("The property setup changed after submission")
+        expect(submission.reload.snapshot).to eq(snapshot.data)
+        expect(hotel.inventory_audit_logs).to be_empty
+      end
+    end
+
+    it "explains invalid submission dates without writing inventory" do
+      create(:onboarding_submission, hotel:, snapshot: { "rates" => { "coverage" => {} } })
+
+      expect { get onboarding_admin_hotel_path(hotel) }.not_to change(RoomInventory, :count)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("missing or invalid availability dates", "Request a new submission")
+      expect(response.body).not_to include("The property setup changed after submission")
     end
 
     it "renders safe submitted-data fallbacks for an empty snapshot" do
