@@ -89,6 +89,31 @@ RSpec.describe Bookings::SettlePaymentInstalments do
     expect { described_class.call(booking: booking.reload) }.not_to change { booking.reload.payment_instalments.map(&:paid_at) }
   end
 
+  # The desk posts payments straight to the folio too. Without this the stage
+  # stayed pending and a booking the agent had paid could be released.
+  it "settles a stage when the desk posts the payment directly to the folio" do
+    Folios::Transactions::InsertTransaction.new(
+      booking_folio: folio, amount: 500, transaction_type: "payment", category: "booking_payment",
+      user: reviewer, description: "cash at desk", options: { system_posting: true, posting_source: "desk" }
+    ).call
+
+    expect(booking.reload.payment_instalments.map(&:status)).to eq(%w[paid pending])
+    expect(booking.payment_status).to eq("partial")
+    expect(booking.payment_due_at).to eq(booking.payment_instalments.last.due_at)
+  end
+
+  it "leaves a booking with no schedule alone when a payment is posted to its folio" do
+    plain = create(:booking, hotel: hotel, status: "confirmed", payment_status: "pending", total_amount: 300, currency: "MYR")
+    plain_folio = create(:booking_folio, booking: plain, hotel: hotel, currency: "MYR")
+
+    Folios::Transactions::InsertTransaction.new(
+      booking_folio: plain_folio, amount: 100, transaction_type: "payment", category: "booking_payment",
+      user: reviewer, description: "cash", options: { system_posting: true, posting_source: "desk" }
+    ).call
+
+    expect(plain.reload.payment_status).to eq("pending")
+  end
+
   # A deposit applied to the folio outside a slip used to leave the booking part
   # paid with its deposit stage pending, which the sweeper would then release.
   it "settles the deposit stage when a prepayment is applied to the folio" do

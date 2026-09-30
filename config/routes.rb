@@ -558,6 +558,9 @@ Rails.application.routes.draw do
         post :refund_deposit, controller: :workspace_actions
         post :reverse_deposit_application, controller: :workspace_actions
         post :reverse_deposit_allocation, controller: :workspace_actions
+        post :mark_agent_instalment_paid, controller: :workspace_actions
+        post :refund_agent_instalment, controller: :workspace_actions
+        post :reopen_agent_instalment, controller: :workspace_actions
         post :collect_security_deposit, controller: :workspace_actions
         post :release_security_deposits, controller: :workspace_actions
         post :complete_housekeeping_request, controller: :workspace_actions

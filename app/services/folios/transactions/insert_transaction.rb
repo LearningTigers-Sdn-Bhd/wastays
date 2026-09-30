@@ -61,6 +61,7 @@ module Folios
 
           if transaction.save
             record_financial_audit_event!(transaction)
+            sync_agent_payment_schedule(transaction)
             success(transaction)
           else
             failure(transaction.errors.full_messages.to_sentence)
@@ -71,6 +72,19 @@ module Folios
       end
 
       private
+
+      # An agent booking's payment stages follow the folio, whoever posted the
+      # money: a receptionist taking the deposit at the desk settles it just as an
+      # approved slip does. Only bookings with a schedule are touched, so every
+      # other booking's payment status is left to the paths that already own it.
+      def sync_agent_payment_schedule(transaction)
+        return unless transaction.transaction_type == "payment"
+
+        booking = @booking_folio.booking
+        return unless booking&.payment_instalments&.exists?
+
+        Deposits::SyncBookingPaymentStatus.call(booking, folio_transaction: transaction, user: @user)
+      end
 
       def validate_override_context
         return unless override_requested?

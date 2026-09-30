@@ -65,6 +65,12 @@ module Bookings
       end
     end
 
+    # What is still to be paid for this stage and every one before it, never more
+    # than the booking owes. Zero when the folio already covers it.
+    def outstanding_through(instalment)
+      [ [ required_through(instalment) - paid_total, owed_total ].min, 0 ].max
+    end
+
     # Whether what has been paid is kept if the booking is cancelled for missing
     # a payment: the hotel's own setting, read at the moment of cancellation.
     def retained_on_cancellation?
