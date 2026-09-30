@@ -50,22 +50,13 @@ module HotelPortal
           result = ::Bookings::CreateStaffBooking.new(
             hotel: current_hotel, common_params: staff_booking_common_params,
             room_rows: staff_room_rows, user: current_user,
-            booking_type: booking_type || booking_params[:booking_type], posting_date: params[:posting_date]
+            booking_type: booking_type || booking_params[:booking_type], posting_date: params[:posting_date], boat_params: boat_params
           ).call
-          assign_boat_times(result) if result.success?
           result
         end
 
-        # Guests book their transfer slot up front, so every creation flow can
-        # carry it. Each booking in a group resolves the slot against its own
-        # stay dates.
-        def assign_boat_times(result)
-          bookings = result.group_booking ? result.group_booking.bookings : [ result.booking ]
-          bookings.compact.each { |booking| ::Boats::AssignTimes.call(booking: booking, params: boat_params) }
-        end
-
         def boat_params
-          params.fetch(:booking, {}).permit(:boat_in_time, :boat_out_time)
+          params.fetch(:booking, {}).permit(:boat_in_time, :boat_out_time, :boat_in_custom_time, :boat_out_custom_time)
         end
 
         def complete_new_booking(booking, notice:)

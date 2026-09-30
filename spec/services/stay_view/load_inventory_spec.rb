@@ -380,6 +380,7 @@ RSpec.describe StayView::LoadInventory do
       :booking_guest,
       booking:,
       is_primary: true,
+      boat_in_type: "charter", boat_out_type: "own",
       boat_in_at: Time.zone.local(2026, 7, 16, 9),
       boat_out_at: Time.zone.local(2026, 7, 18, 7)
     )
@@ -391,7 +392,8 @@ RSpec.describe StayView::LoadInventory do
       adults: 3,
       children: 2,
       boat_in_at: primary.boat_in_at,
-      boat_out_at: primary.boat_out_at
+      boat_out_at: primary.boat_out_at,
+      boat_in_type: "charter", boat_out_type: "own"
     )
     booking_queries = sql.grep(/FROM "booking_rooms"/)
     expect(booking_queries.size).to eq(1)

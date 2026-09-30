@@ -151,13 +151,15 @@ module StayView
       children_column = capabilities.view_booking? ? "bookings.children" : Arel.sql("NULL")
       boat_in_column = load_boat_information? ? primary_guest_attribute_column(:boat_in_at) : Arel.sql("NULL")
       boat_out_column = load_boat_information? ? primary_guest_attribute_column(:boat_out_at) : Arel.sql("NULL")
+      boat_in_type_column = load_boat_information? ? primary_guest_attribute_column(:boat_in_type) : Arel.sql("NULL")
+      boat_out_type_column = load_boat_information? ? primary_guest_attribute_column(:boat_out_type) : Arel.sql("NULL")
       primary_guest_id = capabilities.view_booking? ? primary_guest_id_column : Arel.sql("NULL")
       columns = [
         "booking_rooms.id", "bookings.id", "booking_rooms.room_type_id", "booking_rooms.room_number",
         "bookings.status", guest_column, primary_guest_column, "bookings.check_in", "bookings.check_out",
         "bookings.checked_in_at", "bookings.checked_out_at", "bookings.group_booking_id",
         group_reference_column, group_name_column, "bookings.group_position", "bookings.source",
-        adults_column, children_column, boat_in_column, boat_out_column, primary_guest_id
+        adults_column, children_column, boat_in_column, boat_out_column, primary_guest_id, boat_in_type_column, boat_out_type_column
       ]
 
       scope = BookingRoom.joins(:booking)
@@ -180,7 +182,7 @@ module StayView
 
       rows.map do |booking_room_id, booking_id, room_type_id, room_number, status, guest_name, primary_guest_name, check_in, check_out,
                   checked_in_at, checked_out_at, group_booking_id, group_reservation_number, group_name, group_position, source,
-                  adults, children, boat_in_at, boat_out_at, primary_guest_id|
+                  adults, children, boat_in_at, boat_out_at, primary_guest_id, boat_in_type, boat_out_type|
           guest_context = guest_contexts[primary_guest_id]
           check_in_at = check_in.in_time_zone(date_window.time_zone_name)
           check_out_at = check_out.in_time_zone(date_window.time_zone_name)
@@ -211,6 +213,8 @@ module StayView
             children:,
             boat_in_at:,
             boat_out_at:,
+            boat_in_type:,
+            boat_out_type:,
             vip: guest_context&.fetch(:vip, false) || false,
             blacklisted: guest_context&.fetch(:blacklisted, false) || false,
             repeat: guest_context&.fetch(:completed_booking_count, 0).to_i > (status.to_sym == :completed ? 1 : 0)

@@ -2,9 +2,8 @@
 
 module HotelPortal
   module Reports
-    # Meal counts are derived, never recorded: what a guest eats follows from the
-    # slot their boat is on. Each slot carries its own entitlements, set per
-    # property in Settings, so nothing here assumes a service time.
+    # Provided Boat uses the slot's meal flags. Custom transfers use hotel meal times.
+    # Reports derive meal counts from those rules.
     class MealPrepReport
       MEALS = HotelBoatSetting::MEALS.map(&:to_s).freeze
 
@@ -114,16 +113,17 @@ module HotelPortal
         @schedule ||= ::Boats::Schedule.new(@hotel)
       end
 
-      # Straight off the slot the guest is booked on -- archived slots resolve
-      # too, so retiring one never rewrites what was already served.
-      def meals_for(time, transfer_type)
+      # Archived Provided Boat slots keep their meal flags.
+      def meals_for(time, transfer_type, type)
         kind = transfer_type == "Boat-in" ? "boat_in" : "boat_out"
-        schedule.meals_for(time, kind).map { |meal| HotelBoatSetting.meal_label(meal) }
+        schedule.meals_for(time, kind, type: type).map { |meal| HotelBoatSetting.meal_label(meal) }
       end
 
       def build_row(bg, time, transfer_type)
         booking = bg.booking
-        meals = meals_for(time, transfer_type)
+        kind = transfer_type == "Boat-in" ? "boat_in" : "boat_out"
+        type = bg.public_send("#{kind}_type")
+        meals = meals_for(time, transfer_type, type)
         {
           guest_name: bg.name_snapshot || bg.guest.name,
           confirmation_token: booking.confirmation_token,
@@ -133,7 +133,7 @@ module HotelPortal
           room_number: booking.booking_rooms.map(&:room_number).compact.join(", ").presence || "—",
           boat_time: time,
           transfer_date: format_transfer_date(time),
-          formatted_boat_time: format_boat_time(time),
+          formatted_boat_time: ::Boats::Schedule.display(timestamp: time, type: type, zone: @hotel.hotel_time_zone),
           meals: meals,
           meal_type: meals.join(", "),
           total_amount: booking.total_amount,
@@ -141,11 +141,6 @@ module HotelPortal
         }
       end
 
-      def format_boat_time(value)
-        return "—" if value.blank?
-
-        value.in_time_zone(@hotel.hotel_time_zone).strftime("%I:%M %p")
-      end
 
       def format_transfer_date(value)
         return "—" if value.blank?

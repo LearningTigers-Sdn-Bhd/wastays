@@ -712,11 +712,11 @@ module HotelPortal
     # property's local time-of-day so a stored time reads back as the slot it
     # was picked from.
     def guest_details_boat_in_time
-      boat_time_of_day(:boat_in_at)
+      boat_selection(:boat_in)
     end
 
     def guest_details_boat_out_time
-      boat_time_of_day(:boat_out_at)
+      boat_selection(:boat_out)
     end
 
     # The record validates the two columns against each other, so the boat-out
@@ -733,11 +733,23 @@ module HotelPortal
       @booking_guest_form || selected_booking_guest
     end
 
-    def boat_time_of_day(column)
-      record = guest_details_booking_guest_form
-      return unless record
+    def guest_details_boat_in_custom_time
+      submitted_boat_value(:boat_in_custom_time) { ::Boats::Schedule.custom_time(hotel: hotel, guest: guest_details_booking_guest_form, kind: :boat_in) }
+    end
 
-      ::Boats::Schedule.time_of_day(hotel: hotel, timestamp: record.public_send(column))
+    def guest_details_boat_out_custom_time
+      submitted_boat_value(:boat_out_custom_time) { ::Boats::Schedule.custom_time(hotel: hotel, guest: guest_details_booking_guest_form, kind: :boat_out) }
+    end
+
+    def boat_selection(kind)
+      submitted_boat_value(:"#{kind}_time") do
+        ::Boats::Schedule.selection(hotel: hotel, guest: guest_details_booking_guest_form, kind: kind)
+      end
+    end
+
+    def submitted_boat_value(field)
+      submitted = @params[:booking_guest] || {}
+      submitted.key?(field) ? submitted[field] : yield
     end
 
     def guest_details_errors
@@ -978,8 +990,7 @@ module HotelPortal
       money(group_context_enabled? ? group_total_balance : total_balance)
     end
 
-    # Reading stored slots does not need a timetable, unlike picking one, so this
-    # follows the property switch rather than Schedule#enabled?.
+    # Stored transfer details follow the property's boat-information switch.
     def boat_transfers?
       hotel.allow_boat_information?
     end
@@ -994,8 +1005,8 @@ module HotelPortal
           booking: child,
           booking_number: child_booking_number(child),
           guest: booking_guest&.name_snapshot.presence || booking_guest&.guest&.name.presence || child.guest_name,
-          boat_in: time_label(booking_guest&.boat_in_at),
-          boat_out: time_label(booking_guest&.boat_out_at)
+          boat_in: boat_display(booking_guest, :boat_in),
+          boat_out: boat_display(booking_guest, :boat_out)
         }
       end
     end
@@ -1004,11 +1015,11 @@ module HotelPortal
     # share that pair's format. A group collapses to the earliest boat-in and the
     # latest boat-out across its rooms, the way its arrival and departure already do.
     def summary_boat_in
-      format_summary_time(primary_guest_boat_times(:boat_in_at).min)
+      boat_summary(:boat_in)
     end
 
     def summary_boat_out
-      format_summary_time(primary_guest_boat_times(:boat_out_at).max)
+      boat_summary(:boat_out)
     end
 
     # One row per billing identity, not per folio and not per booking. Folios are resolved to
@@ -2030,13 +2041,27 @@ module HotelPortal
       booking.booking_guests.find(&:is_primary?)
     end
 
-    # Falls back to the first guest the same way boat_transfer_rows does, so a booking
-    # whose primary flag was never set still reports its slots.
-    def primary_guest_boat_times(column)
-      child_bookings.filter_map do |child|
-        booking_guest = child.booking_guests.find(&:primary?) || child.booking_guests.first
-        booking_guest&.public_send(column)
+    def boat_display(guest, kind)
+      ::Boats::Schedule.display(timestamp: guest&.public_send("#{kind}_at"),
+        type: guest&.public_send("#{kind}_type"), zone: hotel.hotel_time_zone, format: "%d %b %Y %H:%M")
+    end
+
+    def boat_summary(kind)
+      guests = child_bookings.filter_map { |child| child.booking_guests.find(&:primary?) || child.booking_guests.first }
+      groups = guests.select { |guest| guest.public_send("#{kind}?") }.group_by do |guest|
+        guest.public_send("#{kind}_type") || "provided"
       end
+      return "—" if groups.empty?
+
+      groups.map do |type, records|
+        times = records.filter_map { |guest| guest.public_send("#{kind}_at") }
+        time = kind == :boat_in ? times.min : times.max
+        display = ::Boats::Schedule.display(timestamp: time, type: type, zone: hotel.hotel_time_zone, format: "%Y/%m/%d %H:%M")
+        if time.present? && records.any? { |guest| guest.public_send("#{kind}_at").nil? }
+          display += " (some times unknown)"
+        end
+        display
+      end.join(" / ")
     end
 
     def group_summary_action(key, label, tone, offcanvas_variant, icon, eligible_statuses)

@@ -167,4 +167,14 @@ RSpec.describe HotelPortal::Reports::MealPrepReport do
       expect(hi_tea.total_pax).to eq(2)
     end
   end
+  it "uses custom meal rules and excludes untimed Own Boat from derived meals" do
+    create(:hotel_boat_setting, hotel: hotel, breakfast_time: "08:00", lunch_time: "12:00", hi_tea_time: nil, dinner_time: "19:00")
+    booking = create(:booking, hotel: hotel, adults: 2, children: 0)
+    create(:booking_guest, booking: booking, boat_in_type: "charter", boat_in_at: Time.utc(2026, 5, 10, 9), boat_out_type: "own")
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+    expect(report.records.size).to eq(1)
+    expect(report.records.first).to include(meals: [ "Lunch", "Dinner" ], formatted_boat_time: "9:00 AM · Charter Boat")
+    expect(report.pax_for("breakfast")).to eq(0)
+    expect(report.pax_for("lunch")).to eq(2)
+  end
 end

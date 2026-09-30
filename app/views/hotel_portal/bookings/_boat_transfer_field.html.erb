@@ -1,10 +1,14 @@
-<%# locals: (form:, attribute:, label:, hint:, choices:, current: nil, error: nil) %>
-<%# One boat slot, chosen from the property's timetable. There is no free-form
-    entry: every boat time is a schedule row, so the meals it carries are always
-    known.
+<%# locals: (form:, attribute:, label:, hint:, choices:, current: nil, custom_time: nil, error: nil) %>
 
-    The select is given an explicit value -- this is a virtual field no model
-    declares, so letting it fall back to reading the form object would raise. %>
-<%= render PanelsUI::FormField.new(form:, attribute:, label:, hint:, error:) do |field| %>
-  <% field.with_select_menu(choices, selected: current.to_s) %>
-<% end %>
+<div class="space-y-3" data-controller="boat-transfer" data-action="change->boat-transfer#update">
+  <%= render PanelsUI::FormField.new(form:, attribute:, label:, hint:, error:) do |field| %>
+    <% field.with_select_menu(choices, selected: current.to_s) %>
+  <% end %>
+  <%= tag.div(hidden: !current.to_s.in?(BookingGuest::CUSTOM_BOAT_TYPES), data: { boat_transfer_target: "custom" }) do %>
+    <%= render PanelsUI::FormField.new(
+          form: form, attribute: attribute.to_s.sub("_time", "_custom_time").to_sym,
+          label: "#{label} time", hint: "Required for Charter Boat. Optional for Own Boat.") do |field| %>
+      <% field.with_time_picker(value: custom_time.to_s, minute_step: 1) %>
+    <% end %>
+  <% end %>
+</div>
