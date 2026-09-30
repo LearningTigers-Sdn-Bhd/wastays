@@ -22,22 +22,30 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response.body).to include("Pre-check in")
       expect(response.body).to include("Book a Room")
       expect(response.body).to include("Recommendations")
-      expect(response.body).to include("Property Contacts")
-      expect(response.body).to include("Interact with Chatbot")
-      expect(response.body).to include('class="guest-tile-grid" data-columns="4"')
+      expect(response.body).to include("Contact Us")
+      expect(response.body).not_to include("Interact with Chatbot")
+
+      page = response.parsed_body
+      menu = page.at_css(".guest-tile-grid")
+      expect(menu["data-columns"]).to be_nil
+      expect(menu.css("a.guest-action-card").map { |card| card.text.squish }).to eq([
+        "Pre-check in Complete your details before arrival",
+        "Book a Room View available rooms",
+        "Contact Us Smart chatbot, phone, email and map",
+        "Recommendations Places and guest offers"
+      ])
     end
 
-    it "keeps the page but drops the chat tile when guest chat is off" do
+    it "keeps the overview menu unchanged when guest chat is off" do
       hotel.update!(guest_chat_enabled: false)
 
       get concierge_home_path(hotel.unique_id, hotel.public_id)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Property Contacts")
+      expect(response.body).to include("Contact Us")
       expect(response.body).not_to include("Interact with Chatbot")
       expect(response.body).not_to include(concierge_chat_path(hotel.unique_id, hotel.public_id))
-      # Three tiles: one row on a wide screen.
-      expect(response.body).to include('class="guest-tile-grid" data-columns="3"')
+      expect(response.parsed_body.css(".guest-tile-grid a.guest-action-card").size).to eq(4)
     end
 
     it "returns 404 for a suspended hotel" do
@@ -74,17 +82,15 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       expect(response).to have_http_status(:not_found)
     end
 
-    # The concierge is reached by scanning a QR code in the room, so a tile that
-    # only exists on one of the two home templates is a tile most guests never see.
-    it "offers the chat on every device" do
+    it "keeps the chatbot out of the overview on every device" do
       [
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
       ].each do |user_agent|
         get concierge_home_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => user_agent }
 
-        expect(response.body).to include(concierge_chat_path(hotel.unique_id, hotel.public_id))
-        expect(response.body).to include("Interact with Chatbot")
+        expect(response.body).not_to include(concierge_chat_path(hotel.unique_id, hotel.public_id))
+        expect(response.body).not_to include("Interact with Chatbot")
       end
     end
 
@@ -110,8 +116,7 @@ RSpec.describe "Public::Concierge::Home", type: :request do
         concierge_check_in_path(hotel.unique_id, hotel.public_id),
         concierge_book_path(hotel.unique_id, hotel.public_id),
         concierge_recommendations_path(hotel.unique_id, hotel.public_id),
-        concierge_contact_path(hotel.unique_id, hotel.public_id),
-        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id))
+        concierge_contact_path(hotel.unique_id, hotel.public_id)
       ]
 
       public_paths.each do |path|
@@ -136,10 +141,10 @@ RSpec.describe "Public::Concierge::Home", type: :request do
 
       document = response.parsed_body
       tones = {
+        concierge_check_in_path(hotel.unique_id, hotel.public_id) => "primary",
         concierge_book_path(hotel.unique_id, hotel.public_id) => "booking",
         concierge_recommendations_path(hotel.unique_id, hotel.public_id) => "discovery",
-        concierge_contact_path(hotel.unique_id, hotel.public_id) => "contact",
-        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id)) => "conversation"
+        concierge_contact_path(hotel.unique_id, hotel.public_id) => "contact"
       }
 
       tones.each do |path, tone|
@@ -149,9 +154,14 @@ RSpec.describe "Public::Concierge::Home", type: :request do
         expect(card["data-tone"]).to eq(tone)
         expect(card.at_css(".guest-service-surface__icon")).to be_present
       end
+    end
 
-      expect(document.at_css("a[href='#{concierge_check_in_path(hotel.unique_id, hotel.public_id)}']")["class"])
-        .not_to include("guest-service-surface")
+    it "exposes the selected Concierge menu style on the page root" do
+      hotel.update!(concierge_menu_style: "fancy")
+
+      get concierge_home_path(hotel.unique_id, hotel.public_id)
+
+      expect(response.parsed_body.at_css("[data-concierge-menu-style]")["data-concierge-menu-style"]).to eq("fancy")
     end
 
     it "has no public check-out or request routes" do
@@ -171,11 +181,11 @@ RSpec.describe "Public::Concierge::Home", type: :request do
       service_paths = [
         concierge_book_path(hotel.unique_id, hotel.public_id),
         concierge_recommendations_path(hotel.unique_id, hotel.public_id),
-        concierge_contact_path(hotel.unique_id, hotel.public_id),
-        concierge_chat_path(hotel.unique_id, hotel.public_id, return_to: concierge_home_path(hotel.unique_id, hotel.public_id))
+        concierge_contact_path(hotel.unique_id, hotel.public_id)
       ]
 
-      expect(check_in["class"]).to include("touch-manipulation", "rounded-xl")
+      expect(check_in["class"]).to include("guest-action-card", "guest-service-surface")
+      expect(check_in["data-tone"]).to eq("primary")
 
       # The services share GuestUI::ActionCard with the stay page, so both
       # pages draw one tile.

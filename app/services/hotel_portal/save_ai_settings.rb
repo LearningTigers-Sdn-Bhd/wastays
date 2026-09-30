@@ -3,7 +3,7 @@
 module HotelPortal
   class SaveAiSettings
     def self.call(hotel, permitted_params)
-      attrs = permitted_params.slice(:guest_chat_enabled, :ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key)
+      attrs = permitted_params.slice(:ai_provider_enabled, :ai_concierge_tone, :ai_provider_name, :ai_provider_key)
       was_enabled = hotel.ai_provider_enabled?
       attrs.delete(:ai_provider_key) if hotel.persisted? && attrs[:ai_provider_key].blank?
 

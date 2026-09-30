@@ -21,6 +21,30 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
       expect(response.body).to include("google.com/maps")
     end
 
+    it "puts the chatbot first in the contact methods" do
+      get concierge_contact_path(hotel.unique_id, hotel.public_id)
+
+      rows = response.parsed_body.css(".guest-card__row")
+      chat_path = concierge_chat_path(
+        hotel.unique_id,
+        hotel.public_id,
+        return_to: concierge_contact_path(hotel.unique_id, hotel.public_id)
+      )
+
+      expect(rows.first["href"]).to eq(chat_path)
+      expect(rows.first.text.squish).to include("Interact with Chatbot", "Instant answers, any time")
+    end
+
+    it "hides the chatbot when guest chat is off" do
+      hotel.update!(guest_chat_enabled: false)
+
+      get concierge_contact_path(hotel.unique_id, hotel.public_id)
+
+      rows = response.parsed_body.css(".guest-card__row")
+      expect(rows.map { |row| row.text.squish }).not_to include(a_string_including("Interact with Chatbot"))
+      expect(rows.map { |row| row["href"] }).not_to include(a_string_starting_with(concierge_chat_path(hotel.unique_id, hotel.public_id)))
+    end
+
     it "keeps the back link in the heading, as on the check-in code page" do
       get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
 

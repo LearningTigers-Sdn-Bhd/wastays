@@ -82,6 +82,9 @@ RSpec.describe "AI concierge tools the model can see" do
       expect(booking.dig("branch", "target_year")).to eq(2026)
       expect(booking.dig("branch", "adults")).to eq(2)
       expect(recorder.outcome.domain_result.dig(:extra_context, :message)).to start_with("Here is what I found:")
+      expect(recorder.outcome.domain_result.dig(:extra_context, :knowledge_outcome)).to eq("partial")
+      expect(recorder.outcome.domain_result.slots_payload.dig("information_task", "consecutive_failure_count")).to eq(1)
+      expect(recorder.outcome.domain_result.dig(:extra_context, :message)).to include("Parking — The hotel has not listed")
     end
 
     it "answers one hotel question before continuing the booking from the same message" do
@@ -171,6 +174,115 @@ RSpec.describe "AI concierge tools the model can see" do
         expect(result.dig(:extra_context, :message)).to include("Would you like to confirm your quotation")
         expect(result.slots_payload.dig("information_task", "pending_question")).to be_nil
       end
+    end
+  end
+
+  describe "knowledge outcomes and escalation" do
+    let(:message) { "Does the hotel have a helipad?" }
+    let(:question) do
+      {
+        evidence: message,
+        label: "Helipad",
+        kind: "hotel_information",
+        category: "faq",
+        search_terms: "helipad",
+        scope: "specific"
+      }
+    end
+
+    it "marks a single unavailable question unavailable and increments once" do
+      result = tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, message).execute(questions: [ question ])
+      domain_result = recorder.outcome.domain_result
+
+      expect(result).to eq(answered: false, question_count: 1)
+      expect(domain_result.extra_context).to include(
+        knowledge_outcome: "unavailable",
+        failure_count: 1,
+        failure_topics: [ "an FAQ answer" ],
+        human_requested: false
+      )
+      expect(domain_result.slots_payload.dig("information_task", "consecutive_failure_count")).to eq(1)
+    end
+
+    it "requests staff exactly when no-answer reaches the configured threshold" do
+      create(:hotel_guest_contact, hotel: hotel, escalation_triggers: [ "no_answer" ], escalation_attempts: 2)
+
+      tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, message).execute(questions: [ question ])
+      first = recorder.outcome.domain_result
+      conversation_state.update!(slots_payload: first.slots_payload)
+
+      expect(first.needs_human_support).to be(false)
+      expect(first.next_action.kind).to eq("none")
+
+      tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, message).execute(questions: [ question ])
+      second = recorder.outcome.domain_result
+
+      expect(second.needs_human_support).to be(true)
+      expect(second.extra_context).to include(
+        knowledge_outcome: "unavailable",
+        failure_count: 2,
+        escalation_trigger: "no_answer",
+        human_requested: true
+      )
+      expect(second.extra_context[:message]).to include("asked a team member")
+      expect(second.extra_context[:message]).not_to include("compare rooms")
+    end
+
+    it "never auto-hands off repeated no-answer when the trigger is disabled" do
+      create(:hotel_guest_contact, hotel: hotel, escalation_triggers: [], escalation_attempts: 1)
+
+      2.times do
+        tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, message).execute(questions: [ question ])
+        conversation_state.update!(slots_payload: recorder.outcome.domain_result.slots_payload)
+      end
+
+      expect(recorder.outcome.domain_result.needs_human_support).to be(false)
+      expect(recorder.outcome.domain_result.extra_context[:failure_count]).to eq(2)
+      expect(recorder.outcome.domain_result.extra_context[:escalation_trigger]).to be_nil
+    end
+
+    it "hands off an enabled complaint without appending a booking or sales offer" do
+      create(:hotel_guest_contact, hotel: hotel, escalation_triggers: [ "complaint" ])
+      complaint = "The room is filthy and I want to complain"
+
+      tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, complaint).execute(
+        support_requests: [ { evidence: complaint, trigger: "complaint" } ],
+        commercial: { intent: "booking", slots: { target_month: 10 } }
+      )
+      result = recorder.outcome.domain_result
+
+      expect(result.needs_human_support).to be(true)
+      expect(result.extra_context[:escalation_trigger]).to eq("complaint")
+      expect(result.extra_context[:message]).to include("asked a team member")
+      expect(result.extra_context[:message]).not_to include("room", "booking", "compare")
+      expect(result.slots_payload).not_to have_key("booking_task")
+    end
+
+    it "treats a general payment-policy signal as hotel knowledge rather than a payment escalation" do
+      create(:hotel_guest_contact, hotel: hotel, escalation_triggers: [ "payment_question" ])
+      policy_question = "What is your payment policy?"
+
+      tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, policy_question).execute(
+        support_requests: [ { evidence: policy_question, trigger: "payment_question" } ]
+      )
+      result = recorder.outcome.domain_result
+
+      expect(result.needs_human_support).to be(false)
+      expect(result.extra_context[:knowledge_outcome]).to eq("clarification")
+      expect(result.extra_context[:failure_count]).to eq(0)
+      expect(result.extra_context[:escalation_trigger]).to be_nil
+    end
+
+    it "hands off an enabled guest-specific charge issue" do
+      create(:hotel_guest_contact, hotel: hotel, escalation_triggers: [ "payment_question" ])
+      charge_issue = "I was charged twice for my booking"
+
+      tool(AiConcierge::Tools::Llm::HandleGuestTurnFunction, charge_issue).execute(
+        support_requests: [ { evidence: charge_issue, trigger: "payment_question" } ]
+      )
+
+      expect(recorder.outcome.domain_result.needs_human_support).to be(true)
+      expect(recorder.outcome.domain_result.extra_context[:escalation_trigger]).to eq("payment_question")
     end
   end
 

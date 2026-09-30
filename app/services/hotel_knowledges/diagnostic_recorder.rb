@@ -143,7 +143,14 @@ module HotelKnowledges
         "tool_source" => tool_result["source"],
         "matched_room_type_id" => tool_result["matched_room_type_id"],
         "room_type_name" => tool_result["room_type_name"],
-        "error" => tool_result["error"]
+        "error" => tool_result["error"],
+        "aggregate_outcome" => tool_result["aggregate_outcome"],
+        "escalation_attempt" => tool_result["escalation_attempt"],
+        "escalation_trigger" => tool_result["escalation_trigger"],
+        "human_requested" => tool_result["human_requested"],
+        "structured_fact_key" => tool_result["structured_fact_key"],
+        "structured_source" => tool_result["structured_source"],
+        "structured_fields" => tool_result["structured_fields"]
       }.compact
     end
   end

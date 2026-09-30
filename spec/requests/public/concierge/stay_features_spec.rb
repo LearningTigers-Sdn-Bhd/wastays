@@ -27,14 +27,38 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Ahmad")
       expect(response.body).to include("1201")
-      expect(response.body).to include("Booking reference number", booking.formatted_reservation_number)
-      expect(response.body).to include("Booking confirmation code")
       expect(response.body).to include(booking.confirmation_token.upcase)
       expect(response.body).to include("Housekeeping")
       expect(response.body).to include("Cleaning or supplies")
       expect(response.body).to include("Check Out")
       expect(response.body).to include("Tell the front desk")
       expect(response.body).to include("Booking receipt")
+      housekeeping = response.parsed_body.at_css(".guest-stay-overview__actions a.guest-service-surface[data-tone='primary']")
+      check_out = response.parsed_body.at_css(".guest-stay-overview__actions a.guest-stay-action--secondary")
+      expect(housekeeping.text.squish).to include("Housekeeping")
+      expect(check_out.text.squish).to include("Check Out")
+      expect(check_out["class"]).not_to include("border-border")
+    end
+
+    it "uses the compact three-row stay summary layout" do
+      get concierge_stay_path(*args)
+
+      summary = response.parsed_body.at_css(".guest-stay-overview__stay .guest-stay-summary")
+      rows = summary.element_children
+
+      expect(rows.map { |row| row["class"] }).to eq([
+        "guest-stay-summary__code",
+        "guest-stay-summary__overview-facts",
+        "guest-stay-summary__overview-status"
+      ])
+      expect(rows.first.text.squish).to eq("Booking number #{booking.confirmation_token.upcase}")
+      expect(rows[1].element_children.map { |column| column.text.squish }).to contain_exactly(
+        "Room 1201",
+        a_string_starting_with("Stay dates"),
+        a_string_matching(/\AStay progress Night \d+ of \d+\z/)
+      )
+      expect(rows[2].at_css(".guest-stay-summary__status").text.squish).to eq("Checked in")
+      expect(summary.text).not_to include(booking.formatted_reservation_number)
     end
 
     it "puts the stay summary before the stay actions and the hotel services" do
@@ -61,13 +85,33 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(services.css("a.guest-action-card").map { |card| card.text.strip }).to include(
         "Report an issue Tell us what is wrong",
         "Recommendations Places and guest offers",
-        "Property Contacts Phone, WhatsApp, email and map"
+        "Contact Us Smart chatbot, phone, email and map"
       )
+      expect(services.text).not_to include("Interact with Chatbot")
       expect(more_actions.at_css("summary").text).to include("More Actions")
       expect(more_actions.at_css("summary .guest-more-actions__icon[aria-hidden='true']")).to be_present
       expect(more_actions["open"]).to be_nil
       expect(more_actions.css("a.guest-card__row").map(&:text).join).to include("Booking receipt", "E-invoice")
       expect(page.css("[role='switch']")).to be_empty
+    end
+
+    it "hides the refund action by default and shows it when the hotel enables it" do
+      get concierge_stay_path(*args)
+      expect(response.body).not_to include("Ask for a refund")
+
+      hotel.update!(concierge_refund_requests_enabled: true)
+      get concierge_stay_path(*args)
+
+      expect(response.body).to include("Ask for a refund")
+    end
+
+    it "keeps an existing refund request visible when new requests are disabled" do
+      create(:refund_request, booking: booking, status: "pending", refund_amount: 100.0)
+
+      get concierge_stay_path(*args)
+
+      expect(response.body).to include("Your refund request", "Pending")
+      expect(response.body).not_to include("Ask for a refund")
     end
 
     it "hides the invoice while the guest is in house" do
@@ -206,6 +250,24 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       expect(compact.text).to include("Back to my stay", "Room 1201")
       expect(page.at_css("h2").text).to include("Get in touch")
       expect(page.at_css("a.guest-card__row[href='tel:+60312345678']").text).to include("Call us")
+
+      chat_path = concierge_chat_path(
+        hotel.unique_id,
+        hotel.public_id,
+        return_to: concierge_stay_contact_path(*args)
+      )
+      expect(page.css(".guest-card__row").first["href"]).to eq(chat_path)
+      expect(page.css(".guest-card__row").first.text.squish).to include("Interact with Chatbot")
+    end
+
+    it "hides the chatbot when guest chat is off" do
+      hotel.update!(guest_chat_enabled: false)
+
+      get concierge_stay_contact_path(*args)
+
+      rows = response.parsed_body.css(".guest-card__row")
+      expect(rows.map { |row| row.text.squish }).not_to include(a_string_including("Interact with Chatbot"))
+      expect(rows.map { |row| row["href"] }).not_to include(a_string_starting_with(concierge_chat_path(hotel.unique_id, hotel.public_id)))
     end
 
     it "asks for the stay code without a stay session" do
@@ -229,7 +291,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
       get concierge_stay_path(*args)
 
       expect(response.body).to include(concierge_stay_wifi_path(*args), "Network and password")
-      # Not blue: the Property Contacts tile beside it is blue.
+      # Not blue: the Contact Us tile beside it is blue.
       tile = Nokogiri::HTML(response.body).at_css("a.guest-action-card[href='#{concierge_stay_wifi_path(*args)}']")
       expect(tile["data-tone"]).to eq("booking")
     end
@@ -274,7 +336,10 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
 
       expect(response.body).to include("Property Guide", concierge_stay_info_section_path(*args, "faqs"))
       expect(response.body).not_to include(concierge_stay_info_section_path(*args, "amenities"))
-      expect(Nokogiri::HTML(response.body).at_css("#property-guide-title + .guest-tile-grid")["data-columns"]).to be_nil
+      guide = Nokogiri::HTML(response.body).at_css("#property-guide-title + .guest-guide-grid")
+      expect(guide).to be_present
+      expect(guide.css("a.guest-guide-tile").size).to eq(1)
+      expect(guide.at_css(".guest-action-card__hint")).to be_nil
 
       get concierge_stay_info_section_path(*args, "faqs")
 
@@ -466,6 +531,15 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
         include("guest-stay-overview__main"),
         include("guest-stay-overview__more")
       ])
+    end
+
+    it "exposes the selected Concierge menu style on the overview root" do
+      hotel.update!(concierge_menu_style: "fancy")
+
+      get concierge_stay_path(*args)
+
+      root = response.parsed_body.at_css(".guest-concierge-overview-page")
+      expect(root["data-concierge-menu-style"]).to eq("fancy")
     end
 
     it "leads a form page with the compact stay card as the way back" do

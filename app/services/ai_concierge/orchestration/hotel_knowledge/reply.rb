@@ -11,7 +11,8 @@ module AiConcierge
       class Reply < Struct.new(
         :shape, :answer_mode, :facts, :remaining_topics, :missing_topic,
         :source, :knowledge_matches, :searched_categories,
-        :fallback_categories, :success, keyword_init: true
+        :fallback_categories, :success, :structured_fact_key,
+        :structured_source, :structured_fields, keyword_init: true
       )
         SHAPES = %w[direct list unavailable clarification].freeze
         ANSWER_MODES = %w[structured deterministic synthesized fallback unavailable].freeze
@@ -33,7 +34,8 @@ module AiConcierge
 
         def initialize(shape:, answer_mode:, facts: [], remaining_topics: [], missing_topic: nil,
                        source: nil, knowledge_matches: [], searched_categories: [],
-                       fallback_categories: [], success: true)
+                       fallback_categories: [], success: true, structured_fact_key: nil,
+                       structured_source: nil, structured_fields: [])
           super(
             shape: shape.to_s,
             answer_mode: answer_mode.to_s,
@@ -44,7 +46,10 @@ module AiConcierge
             knowledge_matches: Array(knowledge_matches),
             searched_categories: Array(searched_categories),
             fallback_categories: Array(fallback_categories),
-            success: success
+            success: success,
+            structured_fact_key: structured_fact_key.to_s.presence,
+            structured_source: structured_source.to_s.presence,
+            structured_fields: Array(structured_fields).map(&:to_s).compact_blank.uniq
           )
         end
 
@@ -59,7 +64,10 @@ module AiConcierge
             "knowledge_matches" => knowledge_matches,
             "searched_categories" => searched_categories,
             "fallback_categories" => fallback_categories,
-            "success" => success
+            "success" => success,
+            "structured_fact_key" => structured_fact_key,
+            "structured_source" => structured_source,
+            "structured_fields" => structured_fields
           }
         end
 
@@ -75,7 +83,10 @@ module AiConcierge
             knowledge_matches: hash["knowledge_matches"],
             searched_categories: hash["searched_categories"],
             fallback_categories: hash["fallback_categories"],
-            success: hash.fetch("success", true)
+            success: hash.fetch("success", true),
+            structured_fact_key: hash["structured_fact_key"],
+            structured_source: hash["structured_source"],
+            structured_fields: hash["structured_fields"]
           )
         end
       end

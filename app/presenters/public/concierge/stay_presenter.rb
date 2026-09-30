@@ -79,7 +79,8 @@ module Public
       end
 
       def can_request_refund?
-        booking.refund_request.blank? || booking.refund_request.rejected?
+        hotel.concierge_refund_requests_enabled? &&
+          (booking.refund_request.blank? || booking.refund_request.rejected?)
       end
 
       def refund_request = booking.refund_request

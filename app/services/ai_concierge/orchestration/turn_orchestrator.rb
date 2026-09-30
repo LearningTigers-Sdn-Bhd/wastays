@@ -79,6 +79,21 @@ module AiConcierge
       # rather than after the model, so those turns no longer buy a round-trip
       # to answer a question a regex already answered.
       def run_agent_loop(session)
+        escalation = Turn::EscalationHandler.new(
+          hotel: hotel,
+          conversation: @conversation,
+          message: message
+        ).call(conversation_state: session.conversation_state)
+        if escalation
+          return Core::Result.success(
+            payload: response_persister.persist_domain_response(
+              prospect: session.prospect,
+              conversation_state: session.conversation_state,
+              domain_result: escalation
+            )
+          )
+        end
+
         existing_booking_support = Turn::ExistingBookingSupportHandler.new(
           message: message,
           conversation: @conversation

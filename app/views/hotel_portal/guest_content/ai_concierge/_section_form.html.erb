@@ -6,7 +6,7 @@
     The whole block stops short of its column on desktop, so the heading, the
     fields and the Save row all end on the same edge. %>
 <%= form_with model: hotel,
-              url: hotel_ai_concierge_settings_path(hotel),
+              url: local_assigns.fetch(:url, hotel_ai_concierge_settings_path(hotel)),
               method: :patch,
               local: true,
               data: {

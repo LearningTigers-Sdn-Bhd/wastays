@@ -62,6 +62,24 @@ RSpec.describe AiConcierge::Orchestration::Turn::ResponsePersister do
     expect(conversation.mode).to eq("bot")
   end
 
+  it "does not reset the original request time when escalation repeats" do
+    first_requested_at = Time.zone.parse("2026-09-28 10:00:00")
+    conversation.request_human!(at: first_requested_at)
+
+    described_class.new(hotel: hotel, conversation: conversation).persist_domain_response(
+      prospect: prospect,
+      conversation_state: conversation_state,
+      domain_result: AiConcierge::Orchestration::Core::DomainResponse.new(
+        slots_payload: {},
+        extra_context: { message: "Staff are already on the way." },
+        needs_human_support: true
+      )
+    )
+
+    expect(conversation.reload.human_requested_at).to eq(first_requested_at)
+    expect(conversation.mode).to eq("bot")
+  end
+
   it "leaves the thread alone when the reply does not need one" do
     described_class.new(hotel: hotel, conversation: conversation).persist_response(
       prospect: prospect,

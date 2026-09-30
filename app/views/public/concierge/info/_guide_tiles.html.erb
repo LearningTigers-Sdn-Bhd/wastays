@@ -1,14 +1,13 @@
 <%# The Property Guide tiles, on the Concierge home and on the stay page.
-    Locals: info, path, which takes a section and returns its URL, and the
-    optional columns on a wide screen. %>
+    Locals: info and path, which takes a section and returns its URL. %>
 <% if info.guide_sections.any? %>
-  <section class="space-y-3" aria-labelledby="property-guide-title">
+  <section class="space-y-2" aria-labelledby="property-guide-title">
     <h2 id="property-guide-title" class="guest-card__title guest-section-title">Property Guide</h2>
-    <div class="guest-tile-grid" <%= tag.attributes(data: { columns: local_assigns[:columns] }) %>>
+    <div class="guest-guide-grid">
       <% info.guide_sections.each do |section| %>
         <%= render GuestUI::ActionCard.new(label: (section == "property" ? "Property Info" : info.page(section)[:title]),
-                                           hint: info.hint(section),
                                            icon: info.page(section)[:icon], tone: :guide,
+                                           class: "guest-guide-tile",
                                            href: path.call(section)) %>
       <% end %>
     </div>

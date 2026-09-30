@@ -63,6 +63,25 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
+  describe "concierge menu style" do
+    it "defaults to interactive and accepts only the two menu styles" do
+      hotel = create(:hotel)
+
+      expect(hotel).to be_concierge_menu_style_interactive
+
+      hotel.concierge_menu_style = "fancy"
+      expect(hotel).to be_valid
+
+      hotel.concierge_menu_style = "plain"
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:concierge_menu_style]).to be_present
+    end
+  end
+
+  it "hides Concierge refund requests by default" do
+    expect(Hotel.new.concierge_refund_requests_enabled).to be(false)
+  end
+
   describe "prefix history" do
     it "keeps issued document references stable when the hotel prefix changes" do
       hotel = create(:hotel, hotel_prefix: "OLD")

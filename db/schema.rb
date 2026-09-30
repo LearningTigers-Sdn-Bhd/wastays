@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1862,6 +1862,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
     t.integer "airport_travel_minutes"
     t.integer "city_centre_distance_km"
     t.integer "city_centre_travel_minutes"
+    t.jsonb "configured_sections", default: [], null: false
     t.datetime "created_at", null: false
     t.text "directions"
     t.bigint "hotel_id", null: false
@@ -1919,6 +1920,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
     t.time "business_starts_at", default: "2000-01-01 08:00:00", null: false
     t.string "city"
     t.boolean "concierge_enabled", default: true, null: false
+    t.string "concierge_menu_style", default: "interactive", null: false
+    t.boolean "concierge_refund_requests_enabled", default: false, null: false
     t.string "contact_email"
     t.string "contact_phone"
     t.string "country"
@@ -2708,6 +2711,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
     t.index ["hotel_corporate_account_id"], name: "index_rate_plan_agency_rules_on_hotel_corporate_account_id"
     t.index ["rate_plan_id", "hotel_corporate_account_id"], name: "idx_rate_plan_agency_rules_unique", unique: true
   end
+
   create_table "rate_plan_stay_discounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "discount_type", default: "percent", null: false
@@ -2722,6 +2726,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_010000) do
     t.check_constraint "min_nights >= 2", name: "rate_plan_stay_discounts_min_nights_check"
     t.check_constraint "value > 0::numeric AND (discount_type::text <> 'percent'::text OR value <= 100::numeric)", name: "rate_plan_stay_discounts_value_check"
   end
+
   create_table "rate_plans", force: :cascade do |t|
     t.datetime "archived_at"
     t.integer "base_occupancy", default: 2, null: false
