@@ -132,7 +132,7 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
         Hotel, name: "Sample Hotel", allow_boat_information?: true,
         hotel_time_zone: ActiveSupport::TimeZone["Kuala Lumpur"]
       )
-      boat_ins = [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "07:00 AM", boat_label: "Provided Boat" } ]
+      boat_ins = [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "07:00 AM", boat_label: "Resort Boat" } ]
       boat_outs = [ { booking_guest_id: 1, guest_name: "Boat Guest", room_number: "103", arrival_date: "27 Jul 2026", departure_date: "28 Jul 2026", boat_time: "01:00 PM", boat_label: "Charter Boat" } ]
       report = HotelPortal::Reports::BiboReport::Result.new(
         start_date: Date.new(2026, 7, 27),
@@ -156,7 +156,7 @@ RSpec.describe HotelPortal::Reports::ArrivalsDeparturesPdfExportService do
       expect(sections.map { |section| section[:section_meta] }).to eq([ "1 transfer", "1 transfer" ])
       expect(sections.first[:headers]).to eq([ "Guest Name", "Room Number", "Arrival Date", "Arrival Time", "Arrival Boat" ])
       expect(sections.last[:headers]).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time", "Departure Boat" ])
-      expect(sections.first[:rows]).to eq([ [ "Boat Guest", "103", "27 Jul 2026", "07:00 AM", "Provided Boat" ] ])
+      expect(sections.first[:rows]).to eq([ [ "Boat Guest", "103", "27 Jul 2026", "07:00 AM", "Resort Boat" ] ])
       expect(sections.last[:rows]).to eq([ [ "Boat Guest", "103", "28 Jul 2026", "01:00 PM", "Charter Boat" ] ])
 
       # Both tables line up, and the guest name keeps the leftover page width.

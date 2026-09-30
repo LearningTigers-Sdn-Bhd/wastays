@@ -64,13 +64,13 @@ RSpec.describe Boats::ResolveTimes do
     expect { resolve(boat_out_time: "own", boat_out_custom_time: "25:00") }.to raise_error(Boats::ResolveTimes::InvalidSelection)
   end
 
-  it "ignores hidden custom times for Provided Boat and no transfer" do
+  it "ignores hidden custom times for Resort Boat and no transfer" do
     result = resolve(boat_in_time: "09:30", boat_in_custom_time: "bad", boat_out_time: "", boat_out_custom_time: "17:00")
     expect(result).to include(boat_in_type: "provided", boat_out_type: nil, boat_out_at: nil)
     expect(local(result[:boat_in_at])).to eq("2026-08-01 09:30")
   end
 
-  it "allows staff to keep an archived Provided Boat slot" do
+  it "allows staff to keep an archived Resort Boat slot" do
     hotel.hotel_boat_schedules.boat_in.first.archive!
     expect(resolve(boat_in_time: "09:30")[:boat_in_type]).to eq("provided")
   end

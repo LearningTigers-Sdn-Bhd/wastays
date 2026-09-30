@@ -144,7 +144,7 @@ RSpec.describe Boats::Schedule do
       end
     end
 
-    it "stays empty for a Provided Boat, so the time is not copied into the custom field" do
+    it "stays empty for a Resort Boat, so the time is not copied into the custom field" do
       guest = build(:booking_guest, boat_in_type: "provided", boat_in_at: timestamp)
 
       expect(described_class.custom_time(hotel: hotel, guest: guest, kind: :boat_in)).to be_nil

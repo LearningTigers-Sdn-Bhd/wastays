@@ -372,8 +372,8 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         [ "Guest name", "Room number", "Arrival Date", "Arrival Time", "Arrival Boat" ],
         [ "Guest name", "Room number", "Departure Date", "Departure Time", "Departure Boat" ]
       ])
-      expect(bibo_row_cells(tables.first)).to eq([ "Boat Guest", "103", start_date.strftime("%d %b %Y"), "7:00 AM", "Provided Boat" ])
-      expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "1:00 PM", "Provided Boat" ])
+      expect(bibo_row_cells(tables.first)).to eq([ "Boat Guest", "103", start_date.strftime("%d %b %Y"), "7:00 AM", "Resort Boat" ])
+      expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "1:00 PM", "Resort Boat" ])
     end
 
     it "gives boat transfers All, Boat-ins and Boat-outs tabs that narrow the sections" do
@@ -449,7 +449,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       rows = CSV.parse(response.body.delete_prefix("\xEF\xBB\xBF"), headers: true)
       expect(rows.headers).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time", "Departure Boat" ])
       expect(rows.count).to eq(1)
-      expect(rows[0].fields).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "1:00 PM", "Provided Boat" ])
+      expect(rows[0].fields).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "1:00 PM", "Resort Boat" ])
     end
 
     it "keeps the booking a guest belongs to behind a hover popover, not in a column" do
