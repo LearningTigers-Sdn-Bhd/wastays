@@ -5,7 +5,7 @@ module Boats
   # The stay supplies the date. The hotel supplies the timezone.
   class Schedule
     NONE_LABEL = "No boat transfer"
-    TYPE_LABELS = { "provided" => "Provided Boat", "charter" => "Charter Boat", "own" => "Own Boat" }.freeze
+    TYPE_LABELS = { "provided" => "Resort Boat", "charter" => "Charter Boat", "own" => "Own Boat" }.freeze
     TIME_FORMAT = /\A([01]\d|2[0-3]):[0-5]\d\z/
 
     class << self
@@ -38,7 +38,7 @@ module Boats
         time_of_day(hotel: hotel, timestamp: guest&.public_send("#{kind}_at"))
       end
 
-      # The time behind a Charter or Own boat. Provided Boat times live in the
+      # The time behind a Charter or Own boat. Resort Boat times live in the
       # select, so the custom field stays empty for them.
       def custom_time(hotel:, guest:, kind:)
         return unless guest&.public_send("#{kind}_type").in?(BookingGuest::CUSTOM_BOAT_TYPES)

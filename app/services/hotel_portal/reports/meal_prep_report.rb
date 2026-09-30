@@ -2,7 +2,7 @@
 
 module HotelPortal
   module Reports
-    # Provided Boat uses the slot's meal flags. Custom transfers use hotel meal times.
+    # Resort Boat uses the slot's meal flags. Custom transfers use hotel meal times.
     # Reports derive meal counts from those rules.
     class MealPrepReport
       MEALS = HotelBoatSetting::MEALS.map(&:to_s).freeze
@@ -113,7 +113,7 @@ module HotelPortal
         @schedule ||= ::Boats::Schedule.new(@hotel)
       end
 
-      # Archived Provided Boat slots keep their meal flags.
+      # Archived Resort Boat slots keep their meal flags.
       def meals_for(time, transfer_type, type)
         kind = transfer_type == "Boat-in" ? "boat_in" : "boat_out"
         schedule.meals_for(time, kind, type: type).map { |meal| HotelBoatSetting.meal_label(meal) }

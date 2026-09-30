@@ -390,8 +390,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(row).to eq([
         booking.formatted_reservation_number,
         "Boat Guest",
-        "#{booking.check_in.in_time_zone(zone).strftime('%d %b %Y')} 09:30 · Provided Boat",
-        "#{booking.check_out.in_time_zone(zone).strftime('%d %b %Y')} 16:45 · Provided Boat"
+        "#{booking.check_in.in_time_zone(zone).strftime('%d %b %Y')} 09:30 · Resort Boat",
+        "#{booking.check_out.in_time_zone(zone).strftime('%d %b %Y')} 16:45 · Resort Boat"
       ])
     end
 

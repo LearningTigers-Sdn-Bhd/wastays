@@ -42,7 +42,7 @@ RSpec.describe HotelPortal::Reports::BiboReport, type: :service do
       create(:booking_guest, booking: booking, guest: guest, is_primary: true, boat_in_at: Time.utc(2026, 5, 7, 10, 0))
 
       result = service.call
-      expect(result.boat_ins.first).to include(boat_time: "6:00 PM", boat_label: "Provided Boat")
+      expect(result.boat_ins.first).to include(boat_time: "6:00 PM", boat_label: "Resort Boat")
     end
   end
 
