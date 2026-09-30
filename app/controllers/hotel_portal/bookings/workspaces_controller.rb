@@ -52,6 +52,11 @@ module HotelPortal
         set_breadcrumbs(@booking, @presenter)
         render :show, status: :unprocessable_content
       end
+    rescue ::Boats::ResolveTimes::InvalidSelection => e
+      guest_form.errors.add(:base, e.message)
+      prepare_workspace(guest_form: guest_form, booking_guest_form: booking_guest_form)
+      set_breadcrumbs(@booking, @presenter)
+      render :show, status: :unprocessable_content
     end
 
     def audit_trail

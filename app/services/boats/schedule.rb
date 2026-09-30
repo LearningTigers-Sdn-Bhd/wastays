@@ -1,14 +1,11 @@
 # frozen_string_literal: true
 
 module Boats
-  # A hotel's boat timetable, and the rules for turning a slot into a timestamp
-  # and back. Every surface that offers, stores or reads a boat time goes
-  # through here.
-  #
-  # Staff only ever pick a slot: boat-in lands on the check-in date and boat-out
-  # leaves on the check-out date, so the day comes from the stay itself.
+  # Shared timetable, meal rules, and labels for boat transfers.
+  # The stay supplies the date. The hotel supplies the timezone.
   class Schedule
     NONE_LABEL = "No boat transfer"
+    TYPE_LABELS = { "provided" => "Provided Boat", "charter" => "Charter Boat", "own" => "Own Boat" }.freeze
     TIME_FORMAT = /\A([01]\d|2[0-3]):[0-5]\d\z/
 
     class << self
@@ -34,6 +31,28 @@ module Boats
         TIME_FORMAT.match?(value.to_s)
       end
 
+      def selection(hotel:, guest:, kind:)
+        type = guest&.public_send("#{kind}_type")
+        return type if type.in?(BookingGuest::CUSTOM_BOAT_TYPES)
+
+        time_of_day(hotel: hotel, timestamp: guest&.public_send("#{kind}_at"))
+      end
+
+      # The time behind a Charter or Own boat. Provided Boat times live in the
+      # select, so the custom field stays empty for them.
+      def custom_time(hotel:, guest:, kind:)
+        return unless guest&.public_send("#{kind}_type").in?(BookingGuest::CUSTOM_BOAT_TYPES)
+
+        time_of_day(hotel: hotel, timestamp: guest.public_send("#{kind}_at"))
+      end
+
+      def display(timestamp:, type:, zone:, format: "%-I:%M %p", empty: "—")
+        type ||= "provided" if timestamp.present?
+        return empty if type.blank?
+
+        [ timestamp&.in_time_zone(zone)&.strftime(format), TYPE_LABELS.fetch(type) ].compact.join(" · ")
+      end
+
       # Report windows have to open and close on the property's clock. Built from
       # Time.zone instead, a manager in another zone would pull a range shifted
       # by their own offset.
@@ -47,12 +66,8 @@ module Boats
       @hotel = hotel
     end
 
-    # A hotel with the feature on but no slots configured cannot record a boat
-    # time at all, so the input surfaces hide themselves rather than offer an
-    # empty control. Read-only surfaces gate on allow_boat_information? alone --
-    # stored times stay visible whatever the timetable looks like now.
     def enabled?
-      @hotel.allow_boat_information? && (in_times.any? || out_times.any?)
+      @hotel.allow_boat_information?
     end
 
     def in_times
@@ -73,7 +88,13 @@ module Boats
 
     # Which meals a guest on this boat is entitled to. Archived slots still
     # resolve, so retiring a slot never rewrites the history booked against it.
-    def meals_for(timestamp, kind)
+    def meals_for(timestamp, kind, type: "provided")
+      return [] if timestamp.blank?
+      if type.in?(BookingGuest::CUSTOM_BOAT_TYPES)
+        time = timestamp.in_time_zone(@hotel.hotel_time_zone)
+        return @hotel.hotel_boat_setting&.meals_for(time, kind)&.select { |_, served| served }&.keys || []
+      end
+
       slot_at(self.class.time_of_day(hotel: @hotel, timestamp: timestamp), kind)&.meals || []
     end
 
@@ -101,7 +122,8 @@ module Boats
       times = active_times(kind)
       times += [ current ] if current.present? && slot_at(current, kind) && times.exclude?(current)
 
-      [ [ NONE_LABEL, "" ] ] + times.sort.map { |time| [ label_for(time), time ] }
+      [ [ NONE_LABEL, "" ] ] + times.sort.map { |time| [ label_for(time), time ] } +
+        [ [ "Charter Boat", "charter" ], [ "Own Boat", "own" ] ]
     end
 
     def label_for(time)

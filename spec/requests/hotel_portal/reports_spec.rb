@@ -369,11 +369,11 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       tables = Nokogiri::HTML(response.body).css("table.panel-table")
       expect(tables.map { |table| table.css("thead th").map { |th| th.text.strip } }).to eq([
-        [ "Guest name", "Room number", "Arrival Date", "Arrival Time" ],
-        [ "Guest name", "Room number", "Departure Date", "Departure Time" ]
+        [ "Guest name", "Room number", "Arrival Date", "Arrival Time", "Arrival Boat" ],
+        [ "Guest name", "Room number", "Departure Date", "Departure Time", "Departure Boat" ]
       ])
-      expect(bibo_row_cells(tables.first)).to eq([ "Boat Guest", "103", start_date.strftime("%d %b %Y"), "07:00 AM" ])
-      expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
+      expect(bibo_row_cells(tables.first)).to eq([ "Boat Guest", "103", start_date.strftime("%d %b %Y"), "7:00 AM", "Provided Boat" ])
+      expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "1:00 PM", "Provided Boat" ])
     end
 
     it "gives boat transfers All, Boat-ins and Boat-outs tabs that narrow the sections" do
@@ -447,9 +447,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       expect(response.headers["Content-Disposition"]).to include("guest-reports-bibo-boat-outs")
       rows = CSV.parse(response.body.delete_prefix("\xEF\xBB\xBF"), headers: true)
-      expect(rows.headers).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time" ])
+      expect(rows.headers).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time", "Departure Boat" ])
       expect(rows.count).to eq(1)
-      expect(rows[0].fields).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
+      expect(rows[0].fields).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "1:00 PM", "Provided Boat" ])
     end
 
     it "keeps the booking a guest belongs to behind a hover popover, not in a column" do

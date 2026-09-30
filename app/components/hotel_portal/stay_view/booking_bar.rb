@@ -183,8 +183,8 @@ module HotelPortal
           ]
           # The bar itself stays uncluttered, so the boat slots surface here --
           # they are already in the segment and in the bar's accessible label.
-          rows << [ "Boat-in", boat_time(@segment.boat_in_at) ] if @segment.boat_in_at
-          rows << [ "Boat-out", boat_time(@segment.boat_out_at) ] if @segment.boat_out_at
+          rows << [ "Boat-in", boat_time(@segment.boat_in_at, @segment.boat_in_type) ] if @segment.boat_in_at || @segment.boat_in_type
+          rows << [ "Boat-out", boat_time(@segment.boat_out_at, @segment.boat_out_type) ] if @segment.boat_out_at || @segment.boat_out_type
           @segment.financial_signals.each { |signal| rows << [ "Payment", signal.label ] }
           rows << [ "Group", [ @segment.group_name, @segment.group_reference ].compact_blank.join(" · ") ] if @segment.group_reference.present?
           safe_join(rows.flat_map { |label, value| [ tag.dt(label, class: "text-muted-foreground"), tag.dd(value, class: "text-foreground") ] })
@@ -194,8 +194,8 @@ module HotelPortal
       # Segment times are already projected into the property's zone. Matches the
       # Stay row's date style rather than to_fs(:medium), which on a timestamp
       # spells out seconds and the UTC offset.
-      def boat_time(time)
-        time.strftime("%Y-%m-%d, %H:%M")
+      def boat_time(time, type)
+        Boats::Schedule.display(timestamp: time, type: type, zone: time&.time_zone || Time.zone, format: "%Y-%m-%d, %H:%M")
       end
 
       def guest_status_icon_options(presentation)

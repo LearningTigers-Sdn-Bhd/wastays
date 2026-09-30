@@ -42,7 +42,7 @@ RSpec.describe HotelPortal::Reports::BiboReport, type: :service do
       create(:booking_guest, booking: booking, guest: guest, is_primary: true, boat_in_at: Time.utc(2026, 5, 7, 10, 0))
 
       result = service.call
-      expect(result.boat_ins.first[:boat_time]).to eq("06:00 PM")
+      expect(result.boat_ins.first).to include(boat_time: "6:00 PM", boat_label: "Provided Boat")
     end
   end
 
@@ -79,5 +79,41 @@ RSpec.describe HotelPortal::Reports::BiboReport, type: :service do
       expect(result.count_for("boat_ins")).to eq(1)
       expect(result.count_for("boat_outs")).to eq(1)
     end
+  end
+  it "includes untimed Own Boat by stay date and sorts it after timed boats" do
+    hotel.update!(time_zone: "UTC")
+    untimed_booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 2.days)
+    untimed = create(:booking_guest, booking: untimed_booking, boat_in_type: "own")
+    timed_booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 2.days)
+    timed = create(:booking_guest, booking: timed_booking, boat_in_type: "charter", boat_in_at: start_date.beginning_of_day + 18.hours)
+    other_booking = create(:booking, hotel: other_hotel, check_in: start_date, check_out: start_date + 2.days)
+    create(:booking_guest, booking: other_booking, boat_in_type: "own")
+
+    result = service.call
+    expect(result.boat_ins.map { |row| row[:booking_guest_id] }).to eq([ timed.id, untimed.id ])
+    expect(result.boat_ins.last).to include(boat_time: "Time unknown", boat_label: "Own Boat", boat_at: nil)
+    expect(result.boat_in_count).to eq(2)
+  end
+
+  it "keeps custom labels in CSV, Excel, and PDF exports" do
+    require "zip"
+    require "pdf-reader"
+    hotel.update!(time_zone: "UTC")
+    booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 1.day)
+    create(:booking_guest, booking: booking, boat_in_type: "charter", boat_in_at: start_date.beginning_of_day + 18.hours)
+    own_booking = create(:booking, hotel: hotel, check_in: start_date, check_out: start_date + 1.day)
+    create(:booking_guest, booking: own_booking, boat_in_type: "own")
+    report = service.call
+    csv = HotelPortal::Reports::ArrivalsDeparturesCsvExportService.new(report: report, tab: "bibo").generate
+    expect(csv).to include("6:00 PM", "Charter Boat", "Time unknown", "Own Boat")
+    excel = HotelPortal::Reports::ArrivalsDeparturesExcelExportService.new(hotel: hotel, report: report, tab: "bibo").generate
+    xml = nil
+    Zip::File.open_buffer(StringIO.new(excel)) do |archive|
+      xml = archive.entries.select { |entry| entry.name.end_with?(".xml") }.map { |entry| entry.get_input_stream.read }.join
+    end
+    expect(xml).to include("Charter Boat", "Own Boat", "Time unknown")
+    pdf = HotelPortal::Reports::ArrivalsDeparturesPdfExportService.new(hotel: hotel, report: report, prepared_by: "Front Desk", tab: "bibo").generate
+    text = PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join(" ").gsub(/\s+/, " ")
+    expect(text).to include("Charter Boat", "Own Boat", "Time unknown")
   end
 end

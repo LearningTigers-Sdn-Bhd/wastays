@@ -1303,4 +1303,31 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(presenter).not_to be_agent_booking
     end
   end
+  describe "boat types" do
+    it "shows untimed Own Boat and groups mixed summary types separately" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      second = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      create(:booking_guest, booking: booking, is_primary: true, boat_in_type: "charter", boat_in_at: booking.check_in)
+      create(:booking_guest, booking: second, is_primary: true, boat_in_type: "own")
+      summary = described_class.new(booking, params: { scope: "group" }).summary_boat_in
+      expect(summary).to include("Charter Boat", " / Own Boat")
+      rows = described_class.new(booking, params: { scope: "group" }).boat_transfer_rows
+      expect(rows.map { |row| row[:boat_in] }).to include("Own Boat")
+    end
+  end
+
+  it "keeps earliest boat-in and latest boat-out summaries for uniform types" do
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    later = create(:booking, hotel: hotel, group_booking: group, group_position: 2,
+      check_in: booking.check_in + 2.days, check_out: booking.check_out + 2.days)
+    create(:booking_guest, booking: booking, is_primary: true, boat_in_type: "charter", boat_in_at: booking.check_in,
+      boat_out_type: "own", boat_out_at: booking.check_out)
+    create(:booking_guest, booking: later, is_primary: true, boat_in_type: "charter", boat_in_at: later.check_in,
+      boat_out_type: "own", boat_out_at: later.check_out)
+    summary = described_class.new(booking, params: { scope: "group" })
+    expect(summary.summary_boat_in).to eq("#{booking.check_in.in_time_zone(hotel.hotel_time_zone).strftime('%Y/%m/%d %H:%M')} · Charter Boat")
+    expect(summary.summary_boat_out).to eq("#{later.check_out.in_time_zone(hotel.hotel_time_zone).strftime('%Y/%m/%d %H:%M')} · Own Boat")
+  end
 end

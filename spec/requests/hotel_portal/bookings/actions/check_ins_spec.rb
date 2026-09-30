@@ -84,7 +84,7 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
       get hotel_booking_action_check_in_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       options = Nokogiri::HTML(response.body).css("select[name='check_in[boat_in_time]'] option").map { |option| option["value"] }
-      expect(options).to eq([ "", "08:00" ])
+      expect(options).to eq([ "", "08:00", "charter", "own" ])
 
       hotel.update!(allow_boat_information: false)
       get hotel_booking_action_check_in_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
@@ -139,6 +139,37 @@ RSpec.describe "HotelPortal::Bookings::Actions check-ins", frozen_time: :busines
       expect(response.body).to include('action="complete_sheet"', 'target="booking_action_sheet"')
       expect(booking.reload.status).to eq("checked_in")
       expect(flash[:notice]).to eq("Guest checked in successfully.")
+    end
+
+    it "keeps custom boat values on failed check-in and accepts them on retry" do
+      hotel.update!(allow_boat_information: true)
+      lead = create(:booking_guest, booking: booking, is_primary: true)
+      submitted = valid_params
+      submitted[:check_in].merge!(boat_in_time: "charter", boat_in_custom_time: "", boat_out_time: "own", boat_out_custom_time: "17:12")
+      post hotel_booking_action_check_in_path(hotel, booking), params: submitted
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(booking.reload.status).to eq("confirmed")
+      expect(response.parsed_body.at_css("select[name='check_in[boat_in_time]'] option[selected]")["value"]).to eq("charter")
+      expect(response.parsed_body.at_css("input[name='check_in[boat_out_custom_time]']")["value"]).to eq("17:12")
+      submitted[:check_in][:boat_in_custom_time] = "18:03"
+      post hotel_booking_action_check_in_path(hotel, booking), params: submitted
+      expect(booking.reload.status).to eq("checked_in")
+      expect(lead.reload).to have_attributes(boat_in_type: "charter", boat_out_type: "own")
+    end
+
+    it "prefills the custom time only for a Charter or Own boat" do
+      hotel.update!(allow_boat_information: true)
+      create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "08:00")
+      zone = hotel.hotel_time_zone
+      create(:booking_guest, booking: booking, is_primary: true,
+        boat_in_type: "provided", boat_in_at: zone.local(booking.check_in.year, booking.check_in.month, booking.check_in.day, 8, 0),
+        boat_out_type: "own", boat_out_at: zone.local(booking.check_out.year, booking.check_out.month, booking.check_out.day, 17, 12))
+
+      get hotel_booking_action_check_in_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      page = Nokogiri::HTML(response.body)
+      expect(page.at_css("input[name='check_in[boat_in_custom_time]']")["value"]).to be_blank
+      expect(page.at_css("input[name='check_in[boat_out_custom_time]']")["value"]).to eq("17:12")
     end
 
     it "records the boat slots picked at check-in against the stay dates" do
