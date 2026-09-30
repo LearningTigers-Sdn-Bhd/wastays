@@ -17,6 +17,59 @@ RSpec.describe CorporatePortal::BookingPaymentPresenter do
     expect(presenter).to be_awaiting_payment
   end
 
+  # `partial` used to read as paid, so a deposit made the balance vanish from the
+  # agent's portal.
+  it "is still awaiting payment when only part has been paid" do
+    booking.update!(payment_status: "partial")
+
+    expect(presenter).to be_awaiting_payment
+    expect(presenter.state).to eq(:due)
+  end
+
+  describe "with a payment schedule" do
+    let(:booking) do
+      create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed",
+                       payment_status: "pending", total_amount: 1000, currency: "MYR",
+                       check_in: 60.days.from_now, check_out: 62.days.from_now)
+    end
+
+    before { Bookings::CreatePaymentSchedule.call(booking: booking) }
+
+    it "names the stage and the amount due now" do
+      expect(presenter.stage_label).to eq("Deposit")
+      expect(presenter.amount_due_label).to eq("MYR 500.00")
+      expect(presenter.amount_label).to eq("MYR 1,000.00")
+    end
+
+    it "says what follows the deposit" do
+      expect(presenter.following_stage_note).to match(/\AThen MYR 500\.00 by \d{2} \w{3} \d{4}\.\z/)
+    end
+
+    it "moves on to the balance once the deposit is paid" do
+      folio = create(:booking_folio, booking: booking, hotel: hotel, currency: "MYR")
+      posted = Folios::Transactions::InsertTransaction.new(
+        booking_folio: folio, amount: 500, transaction_type: "payment", category: "booking_payment",
+        user: create(:user), description: "deposit", options: { system_posting: true, posting_source: "spec" }
+      ).call
+      raise posted.error unless posted.success?
+
+      Deposits::SyncBookingPaymentStatus.call(booking)
+      Bookings::SettlePaymentInstalments.call(booking: booking.reload)
+
+      fresh = described_class.new(booking.reload)
+      expect(fresh.stage_label).to eq("Balance")
+      expect(fresh.following_stage_note).to be_nil
+    end
+  end
+
+  describe "with no schedule" do
+    it "asks for everything owed and names no stage" do
+      expect(presenter.stage_label).to be_nil
+      expect(presenter.amount_due_label).to eq("MYR 1,234.50")
+      expect(presenter.following_stage_note).to be_nil
+    end
+  end
+
   it "is not awaiting payment once it has been paid" do
     booking.update!(payment_status: "captured")
 

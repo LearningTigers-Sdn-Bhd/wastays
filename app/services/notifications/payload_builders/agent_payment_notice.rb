@@ -37,6 +37,8 @@ module Notifications
           amount: @booking.total_amount.to_s,
           currency: @booking.currency,
           amount_label: payment.amount_label,
+          amount_due_label: payment.amount_due_label,
+          payment_stage: payment.stage_label,
           # Stated with its zone: the agent is often not in the hotel's.
           payment_due_at: @booking.payment_due_at&.iso8601,
           payment_due_label: payment.due_at_label,

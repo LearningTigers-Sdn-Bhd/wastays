@@ -44,16 +44,22 @@ module CorporatePortal
 
       relationship = @booking.hotel_corporate_account
       @ar_payment_submission = relationship.ar_payment_submissions.build(
-        submission_params.except(:ar_invoice_ids, :hotel_corporate_account_id, :amount, :lump_sum, :booking_id).merge(
+        submission_params.except(:ar_invoice_ids, :hotel_corporate_account_id, :lump_sum, :booking_id).merge(
           hotel: @booking.hotel,
           booking: @booking,
           submitted_by: current_user,
-          amount: @booking.total_amount,
+          amount: submission_params[:amount].presence || amount_due_now(@booking),
           currency: @booking.currency
         )
       )
 
-      if @ar_payment_submission.save
+      # Validated first so every problem is shown at once, then the amount is
+      # checked against what the booking asks for.
+      @ar_payment_submission.valid?
+      problem = ::Bookings::PaymentProgress.new(@booking).amount_problem(@ar_payment_submission.amount)
+      @ar_payment_submission.errors.add(:amount, problem) if problem
+
+      if @ar_payment_submission.errors.empty? && @ar_payment_submission.save
         # The agent's clock is now stopped, so the slip sitting unreviewed costs
         # the hotel the sale it is holding. The desk is told on the bell.
         ::Notifications::PublishAgentPaymentStaffNotification.call(
@@ -73,10 +79,17 @@ module CorporatePortal
 
       @ar_payment_submission ||= ArPaymentSubmission.new(
         currency: @booking.currency,
-        amount: @booking.total_amount,
+        amount: amount_due_now(@booking),
         payment_method: "bank_transfer",
         received_at: Date.current
       )
+    end
+
+    # The next stage's outstanding amount, or everything owed for a booking with
+    # no schedule. The agent can change it, but it is what the form starts from.
+    def amount_due_now(booking)
+      progress = ::Bookings::PaymentProgress.new(booking)
+      progress.amount_due_now || booking.total_amount
     end
 
     def corporate_bookings

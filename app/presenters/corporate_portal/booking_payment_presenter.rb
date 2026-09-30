@@ -14,6 +14,8 @@ module CorporatePortal
   # `submissions:` takes an already-loaded list for this booking. A list of 50
   # bookings would otherwise run two queries per row.
   class BookingPaymentPresenter
+    STAGE_LABELS = { "deposit" => "Deposit", "balance" => "Balance", "full" => "Full payment" }.freeze
+
     BADGE_VARIANTS = {
       paid: :success,
       under_review: :info,
@@ -48,8 +50,11 @@ module CorporatePortal
       awaiting_payment? && booking.status.in?(::Bookings::PaymentHoldScope::IN_HOUSE_STATUSES)
     end
 
+    # A part-paid booking still owes the rest, so `partial` counts: reading it
+    # as paid is how a deposit used to make the balance disappear from the
+    # agent's portal and from the reminders.
     def unpaid?
-      booking.payment_status.in?(%w[pending failed])
+      booking.payment_status.in?(::Bookings::PaymentHoldScope::UNPAID_PAYMENT_STATUSES)
     end
 
     # A slip is with the hotel and has not been looked at yet. While this is
@@ -121,7 +126,29 @@ module CorporatePortal
     def dimmed_class = ("opacity-55" if inactive?)
 
     def amount_label
-      "#{booking.currency} #{ActiveSupport::NumberHelper.number_to_rounded(booking.total_amount, precision: 2, delimiter: ',')}"
+      money_label(booking.total_amount)
+    end
+
+    # What to send now. For a scheduled booking that is the outstanding part of
+    # the next stage, otherwise everything still owed.
+    def amount_due_label
+      money_label(progress.amount_due_now || booking.total_amount)
+    end
+
+    def amount_due_now = progress.amount_due_now
+
+    # "Deposit", "Balance" or "Full payment"; nil for a booking with no schedule.
+    def stage_label
+      progress.next_instalment&.kind&.then { |kind| STAGE_LABELS.fetch(kind) }
+    end
+
+    # After a deposit: what follows and when, so the agent sees the whole plan.
+    def following_stage_note
+      current = progress.next_instalment
+      following = progress.instalments.find { |stage| stage.position > current.position && stage.status_pending? } if current
+      return if following.nil?
+
+      "Then #{money_label(following.amount)} by #{following.due_at.in_time_zone(time_zone).strftime('%d %b %Y')}."
     end
 
     # Spelled out with the zone, because the agent may not be in the hotel's.
@@ -228,6 +255,14 @@ module CorporatePortal
       else
         ArPaymentSubmission.for_booking(booking).to_a
       end
+    end
+
+    def progress
+      @progress ||= ::Bookings::PaymentProgress.new(booking)
+    end
+
+    def money_label(amount)
+      "#{booking.currency} #{ActiveSupport::NumberHelper.number_to_rounded(amount, precision: 2, delimiter: ',')}"
     end
 
     def pluralized(count, noun)

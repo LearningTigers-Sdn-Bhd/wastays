@@ -65,4 +65,26 @@ RSpec.describe ArPaymentSubmissions::Reject do
 
     expect(NotificationDelivery.where(notification_type: "agent_payment_rejected")).to be_empty
   end
+
+  context "on a booking with a payment schedule" do
+    let(:booking) do
+      create(:booking, hotel: hotel, hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                       status: "confirmed", payment_status: "pending", total_amount: 1000,
+                       check_in: 60.days.from_now, check_out: 62.days.from_now)
+    end
+
+    before { Bookings::CreatePaymentSchedule.call(booking: booking) }
+
+    it "extends the stage the slip was sent against and keeps the booking's deadline in step" do
+      deposit = booking.payment_instalments.first
+      original = deposit.due_at
+      submission.update_columns(created_at: 2.hours.ago)
+
+      reject
+
+      expect(deposit.reload.due_at).to be_within(1.minute).of(original + 2.hours)
+      expect(booking.reload.payment_due_at).to eq(deposit.due_at)
+      expect(booking.payment_instalments.last.due_at).to be > deposit.due_at
+    end
+  end
 end

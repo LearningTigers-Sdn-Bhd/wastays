@@ -2,7 +2,7 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::SettingsBaseController
-    SETTINGS_PAGES = %w[general ota_logins boat notifications banking e_invoice].freeze
+    SETTINGS_PAGES = %w[general ota_logins boat notifications corporate_ta_portal banking e_invoice].freeze
 
     before_action :set_account
     before_action :set_hotel
@@ -149,6 +149,7 @@ module HotelPortal
       when "hotel_settings" then "general"
       when "boat_settings" then "boat"
       when "notification_settings" then "notifications"
+      when "corporate_ta_portal_settings" then "corporate_ta_portal"
       when "e_invoice_settings" then "e_invoice"
       else "general"
       end
@@ -162,6 +163,7 @@ module HotelPortal
       # on it.
       when "ai" then hotel_ai_concierge_settings_path(@hotel)
       when "notifications" then hotel_notification_settings_path(@hotel)
+      when "corporate_ta_portal" then hotel_corporate_ta_portal_settings_path(@hotel)
       when "banking" then hotel_banking_details_settings_path(@hotel)
       when "e_invoice" then hotel_e_invoice_settings_path(@hotel)
       else hotel_general_settings_path(@hotel)

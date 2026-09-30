@@ -55,6 +55,63 @@ RSpec.describe ArPaymentSubmissions::Approve do
     expect(booking.reload.payment_status).to eq("partial")
   end
 
+  # A token payment used to clear the deadline for good, leaving the rooms held
+  # by a booking that had paid almost nothing. The deadline only goes once the
+  # booking is paid.
+  it "keeps the deadline when the slip covers only part of a booking with no schedule" do
+    submission.ar_payment_submission_allocations.destroy_all
+    submission.update!(amount: 1.0)
+    token_payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 1.0)
+
+    described_class.call(submission: submission, ar_payment: token_payment, reviewed_by: reviewer)
+
+    expect(booking.reload).to have_attributes(payment_status: "partial")
+    expect(booking.payment_due_at).to be_present
+  end
+
+  context "with a payment schedule" do
+    let(:booking) do
+      create(:booking, hotel: hotel, hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                       status: "confirmed", payment_status: "pending", total_amount: 1000.0, currency: "MYR",
+                       check_in: 60.days.from_now, check_out: 62.days.from_now)
+    end
+
+    before { Bookings::CreatePaymentSchedule.call(booking: booking) }
+
+    def approve(amount)
+      submission.ar_payment_submission_allocations.destroy_all
+      submission.update!(amount: amount)
+      payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: amount)
+      described_class.call(submission: submission, ar_payment: payment, reviewed_by: reviewer)
+    end
+
+    it "marks the deposit paid and moves the deadline to the balance" do
+      balance_due = booking.payment_instalments.last.due_at
+
+      approve(500.0)
+
+      expect(booking.reload.payment_instalments.map(&:status)).to eq(%w[paid pending])
+      expect(booking.payment_due_at).to eq(balance_due)
+      expect(booking.payment_status).to eq("partial")
+    end
+
+    it "clears the deadline when the slip pays everything" do
+      approve(1000.0)
+
+      expect(booking.reload.payment_instalments.map(&:status)).to eq(%w[paid paid])
+      expect(booking.payment_due_at).to be_nil
+      expect(booking.payment_status).to eq("captured")
+    end
+
+    it "records which folio payment settled the stage" do
+      approve(500.0)
+
+      deposit = booking.reload.payment_instalments.first
+      expect(deposit.payment_folio_transaction).to eq(folio.folio_transactions.payment.last)
+      expect(deposit.paid_by).to eq(reviewer)
+    end
+  end
+
   # A folio has to exist before money can be posted to it; a booking created
   # outside the normal flow without one must refuse cleanly rather than lose
   # the payment silently.

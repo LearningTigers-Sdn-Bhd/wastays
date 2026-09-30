@@ -285,7 +285,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[2].at_css("a")&.text&.squish).to eq("General")
       expect(breadcrumb_items[2].at_css("button[aria-label='Open General navigation']")).to be_present
       expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "General", "OTA Logins", "Notifications", "Plan & Billing" ]
+        [ "General", "OTA Logins", "Notifications", "Corporate/TA Portal", "Plan & Billing" ]
       )
     end
 
@@ -460,25 +460,47 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone address room_type check_in])
     end
 
-    it "saves the agent payment terms" do
-      patch hotel_general_settings_path(hotel), params: {
-        form_id: "hotel_settings",
-        hotel: { agent_deposit_percentage: "30", agent_full_payment_days_before_arrival: "14", agent_deposit_non_refundable: "1" }
+    it "saves the agent payment terms from the Corporate/TA Portal tab" do
+      patch hotel_corporate_ta_portal_settings_path(hotel), params: {
+        form_id: "corporate_ta_portal_settings",
+        hotel: {
+          agent_payment_hold_amount: "5", agent_payment_hold_unit: "days",
+          agent_deposit_percentage: "30", agent_full_payment_days_before_arrival: "14", agent_deposit_non_refundable: "1"
+        }
       }
 
-      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(response).to redirect_to(hotel_corporate_ta_portal_settings_path(hotel))
       expect(hotel.reload).to have_attributes(
-        agent_deposit_percentage: 30, agent_full_payment_days_before_arrival: 14, agent_deposit_non_refundable: true
+        agent_payment_hold_hours: 120, agent_deposit_percentage: 30,
+        agent_full_payment_days_before_arrival: 14, agent_deposit_non_refundable: true
       )
     end
 
-    it "shows the agent payment terms on the general settings page" do
-      get hotel_general_settings_path(hotel)
+    it "re-renders the Corporate/TA Portal tab with the error when the terms are invalid" do
+      patch hotel_corporate_ta_portal_settings_path(hotel), params: {
+        form_id: "corporate_ta_portal_settings", hotel: { agent_deposit_percentage: "150" }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Agent deposit percentage")
+      expect(hotel.reload.agent_deposit_percentage).to eq(50)
+    end
+
+    it "shows the agent payment terms on their own tab, not on General" do
+      get hotel_corporate_ta_portal_settings_path(hotel)
 
       doc = Nokogiri::HTML(response.body)
       expect(doc.at_css("input[name='hotel[agent_deposit_percentage]']")["value"]).to eq("50")
       expect(doc.at_css("input[name='hotel[agent_full_payment_days_before_arrival]']")["value"]).to eq("30")
       expect(doc.at_css("input[type='checkbox'][name='hotel[agent_deposit_non_refundable]']")).to be_present
+      expect(doc.at_css("input[name='hotel[agent_payment_hold_amount]']")["value"]).to eq("3")
+      expect(doc.at_css("[data-testid='settings-tabs']").text.squish).to include("Corporate/TA Portal")
+
+      get hotel_general_settings_path(hotel)
+
+      general = Nokogiri::HTML(response.body)
+      expect(general.at_css("input[name='hotel[agent_deposit_percentage]']")).to be_nil
+      expect(general.at_css("input[name='hotel[agent_payment_hold_amount]']")).to be_nil
     end
 
     it "updates the guest registration card terms and conditions" do
