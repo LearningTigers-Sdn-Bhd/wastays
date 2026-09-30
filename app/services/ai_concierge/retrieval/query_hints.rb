@@ -17,9 +17,32 @@ module AiConcierge
     # and that -- the fastest and most certain answer the concierge has -- used
     # to be reachable only by matching English words in the question.
     class QueryHints
-      FACTS = %w[check_in_time check_out_time cancellation_policy].freeze
+      GUEST_CONTENT_FACTS = %w[
+        arrival_instructions departure_instructions directions transportation parking
+        front_desk_contact front_desk_hours emergency_contact wifi_availability
+      ].freeze
+      FACTS = %w[check_in_time check_out_time cancellation_policy].concat(GUEST_CONTENT_FACTS).freeze
+      FACT_PATTERNS = {
+        "arrival_instructions" => /\b(?:arrival|arriv(?:e|ing))\b|\b(?:how|where)\b.*\bcheck[ -]?in\b/,
+        "departure_instructions" => /\b(?:departure|departing|leav(?:e|ing))\b|\b(?:how|where)\b.*\bcheck[ -]?out\b/,
+        "check_in_time" => /\bcheck[ -]?in\b/,
+        "check_out_time" => /\bcheck[ -]?out\b/,
+        "cancellation_policy" => /\bcancell?ation|cancel\b/,
+        "front_desk_hours" => /\b(?:front desk|reception)\b.*\b(?:hours?|open|close)\b|\b(?:hours?|open|close)\b.*\b(?:front desk|reception)\b/,
+        "front_desk_contact" => /\b(?:front desk|reception)\b.*\b(?:contact|phone|number|call|email|whats?app|extension)\b|\b(?:contact|phone|number|call|email|whats?app)\b.*\b(?:front desk|reception)\b/,
+        "emergency_contact" => /\b(?:emergency|ambulance|fire|police|security)\b/,
+        "wifi_availability" => /\bwi-?fi\b|\bwireless internet\b/,
+        "parking" => /\b(?:parking|car park|valet|ev charging)\b/,
+        "transportation" => /\b(?:airport transfer|shuttle|public transport|transit|pickup|transport(?:ation)?)\b/,
+        "directions" => /\b(?:directions?|how (?:do|can) i get|how to get|distance|far)\b/
+      }.freeze
 
       def self.none = new
+
+      def self.fact_for_query(query)
+        normalized = query.to_s.downcase
+        FACT_PATTERNS.find { |_fact, pattern| normalized.match?(pattern) }&.first
+      end
 
       def initialize(terms: [], fact: nil, preferred_language: nil)
         @terms = Array(terms).flat_map { |term| term.to_s.split }.reject(&:blank?).uniq

@@ -67,6 +67,7 @@ class HotelTransportDetail < ApplicationRecord
   validates :parking_availability, inclusion: { in: PARKING_AVAILABILITY }
   validates :parking_type, inclusion: { in: PARKING_TYPE_VALUES }, allow_blank: true
   validates :parking_price_unit, inclusion: { in: PRICE_UNIT_VALUES }, allow_blank: true
+  validate :configured_sections_are_known
 
   validates(*DISTANCE_COLUMNS,
     numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true)
@@ -94,6 +95,23 @@ class HotelTransportDetail < ApplicationRecord
       end
   end
 
+  def section_configured?(section)
+    section = section.to_s
+    return false unless section.in?(SECTIONS)
+    return true if configured_sections.include?(section)
+
+    case section
+    when "directions" then directions_present?
+    when "transportation" then transportation_present?
+    when "parking" then parking? || parking_details_present?
+    end
+  end
+
+  def mark_section_configured(section)
+    section = section.to_s
+    self.configured_sections = (configured_sections + [ section ]).uniq if section.in?(SECTIONS)
+  end
+
   def parking_label
     label_for(PARKING_AVAILABILITY_OPTIONS, parking_availability)
   end
@@ -107,6 +125,18 @@ class HotelTransportDetail < ApplicationRecord
   end
 
   private
+
+  def parking_details_present?
+    parking_ev_charging? || parking_booking_required? ||
+      (SECTION_ATTRIBUTES.fetch("parking") - %i[parking_availability parking_ev_charging parking_booking_required]).any? do |column|
+        public_send(column).present?
+      end
+  end
+
+  def configured_sections_are_known
+    invalid = configured_sections - SECTIONS
+    errors.add(:configured_sections, "contains an unknown section") if invalid.any?
+  end
 
   def label_for(options, value)
     options.find { |option| option[:value] == value }&.fetch(:label)

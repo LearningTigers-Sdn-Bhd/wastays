@@ -26,6 +26,7 @@ module HotelPortal
       end
 
       def update
+        @transport_detail.mark_section_configured(@section)
         if @transport_detail.update(section_params)
           complete_sheet_action(
             destination: hotel_guest_transport_details_path(@hotel),

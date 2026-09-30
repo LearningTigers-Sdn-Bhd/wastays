@@ -2,11 +2,12 @@ module AiConcierge
   module Tools
     module HotelInformation
       class GetGeneralHotelInfoTool
-        def initialize(hotel:, query: nil, scope: nil, hints: Retrieval::QueryHints.none)
+        def initialize(hotel:, query: nil, scope: nil, hints: Retrieval::QueryHints.none, fact_catalogue: nil)
           @hotel = hotel
           @query = query.to_s
           @hints = hints
           @scope = scope
+          @fact_catalogue = fact_catalogue
         end
 
         def call
@@ -18,6 +19,7 @@ module AiConcierge
             categories: [ "general_info" ],
             source: "general_hotel_info",
             structured_facts: structured_facts,
+            structured_metadata: structured_metadata,
             fallback_text: general_fallback_text,
             scope: scope,
             hints: hints
@@ -40,6 +42,14 @@ module AiConcierge
         private
 
         attr_reader :hotel, :query, :scope, :hints
+
+        def fact_catalogue
+          @fact_catalogue ||= GuestContent::FactCatalogue.new(hotel: hotel).call
+        end
+
+        def structured_metadata
+          fact_catalogue.transform_values { |entry| entry.except("text") }
+        end
 
         def summary_text
           parts = [ hotel.name ]
@@ -94,7 +104,7 @@ module AiConcierge
             "amenity_details" => amenity_details,
             "wifi_available" => guest_wifi_available?,
             "summary_text" => summary_text
-          }
+          }.merge(fact_catalogue.transform_values { |entry| entry["text"] })
         end
 
         def general_fallback_text

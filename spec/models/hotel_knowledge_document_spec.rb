@@ -72,9 +72,51 @@ RSpec.describe HotelKnowledgeDocument, type: :model do
       expect(doc.reload.embedding_status).to eq("indexing")
       expect(doc.metadata).not_to have_key("last_error")
     end
+
+    it "starts a fresh recovery cycle for a manual reindex" do
+      doc = create(
+        :hotel_knowledge_document,
+        hotel: hotel,
+        embedding_status: "failed",
+        metadata: {
+          "indexing_recovery_attempts" => 1,
+          "indexing_recovered_at" => 1.hour.ago.iso8601,
+          "last_error" => "Timed out"
+        }
+      )
+
+      doc.enqueue_embedding_generation!
+
+      expect(doc.reload.metadata).not_to include(
+        "indexing_recovery_attempts",
+        "indexing_recovered_at",
+        "last_error"
+      )
+    end
   end
 
   describe "automatic embedding generation" do
+    it "starts a fresh recovery cycle after a content edit" do
+      hotel = create(:hotel, :with_ai_concierge)
+      doc = create(:hotel_knowledge_document, hotel: hotel, content: "Old content")
+      clear_enqueued_jobs
+      doc.update_columns(
+        metadata: {
+          "indexing_recovery_attempts" => 1,
+          "indexing_recovered_at" => 1.hour.ago.iso8601,
+          "last_error" => "Timed out"
+        }
+      )
+
+      doc.update!(content: "New content")
+
+      expect(doc.reload.metadata).not_to include(
+        "indexing_recovery_attempts",
+        "indexing_recovered_at",
+        "last_error"
+      )
+    end
+
     it "does not enqueue another job when an attached PDF finishes indexing" do
       hotel = create(
         :hotel,

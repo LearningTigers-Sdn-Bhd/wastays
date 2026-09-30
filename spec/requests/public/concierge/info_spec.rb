@@ -34,14 +34,15 @@ RSpec.describe "Public::Concierge::Info", type: :request do
       create(:hotel_wifi_network, hotel: hotel, access_scope: "confirmed_guests", ssid: "LobbyGuest")
     end
 
-    it "shows the Property Guide tiles on the home page, with counts" do
+    it "shows the Property Guide as four-column app icons without descriptions" do
       get home_path
 
       expect(response.body).to include("Property Guide", info_path, section_path("amenities"),
-                                       section_path("policies"), section_path("faqs"),
-                                       "1 available", "1 policy", "1 question")
-      guide = Nokogiri::HTML(response.body).at_css("#property-guide-title + .guest-tile-grid")
-      expect(guide["data-columns"]).to eq("4")
+                                       section_path("policies"), section_path("faqs"))
+      guide = Nokogiri::HTML(response.body).at_css("#property-guide-title + .guest-guide-grid")
+      expect(guide.css("a.guest-guide-tile").size).to eq(4)
+      expect(guide.at_css(".guest-action-card__hint")).to be_nil
+      expect(guide.text).not_to include("1 available", "1 policy", "1 question")
       # One calm colour for the reading pages, apart from the service tiles.
       expect(guide.css("a.guest-action-card").map { |tile| tile["data-tone"] }.uniq).to eq([ "guide" ])
       expect(response.body).not_to include("LobbyGuest")

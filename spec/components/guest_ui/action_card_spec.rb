@@ -21,4 +21,11 @@ RSpec.describe GuestUI::ActionCard, type: :component do
     expect(page).to have_no_css(".guest-action-card__hint")
     expect(page).to have_css("a.guest-action-card[data-tone='contact']")
   end
+
+  it "supports a primary action in the shared menu" do
+    render_inline(described_class.new(label: "Pre-check in", hint: "Complete your details",
+                                      icon: "log-in", tone: :primary, href: "/check-in"))
+
+    expect(page).to have_css("a.guest-service-surface[data-tone='primary'][href='/check-in']")
+  end
 end

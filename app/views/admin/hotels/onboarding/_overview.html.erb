@@ -9,7 +9,10 @@
           title: (@readiness.ready && @configuration_unchanged ? "Ready to launch" : "Review before launch")) do |alert| %>
       <% alert.with_description do %>
         Submitted by <%= @submission.submitted_by.name %> on <%= l(@submission.submitted_at, format: :long) %>.
-        <%= @configuration_unchanged ? "The current setup matches this submission." : "The property setup changed after submission." %>
+        <%= @comparison_error || (@configuration_unchanged ? "The current setup matches this submission." : "The property setup changed after submission.") %>
+        <% if @availability_extension_needed && @hotel.status == "pending_review" %>
+          Approval will append missing availability through <%= l(Date.current + 364.days, format: :long) %>.
+        <% end %>
       <% end %>
     <% end %>
 

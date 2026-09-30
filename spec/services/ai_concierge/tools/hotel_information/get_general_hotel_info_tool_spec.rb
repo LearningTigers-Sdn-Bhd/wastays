@@ -61,4 +61,23 @@ RSpec.describe AiConcierge::Tools::HotelInformation::GetGeneralHotelInfoTool do
     expect(answer).to include("Guest Wi-Fi is available", "after check-in")
     expect(result.to_s).not_to include("SecretSSID", "secret-password", "Scan the lobby card")
   end
+
+  it "returns configured parking directly with its structured diagnostic metadata" do
+    hotel = create(:hotel)
+    create(:hotel_transport_detail, hotel: hotel,
+      configured_sections: [ "parking" ],
+      airport_distance_km: nil,
+      airport_travel_minutes: nil,
+      directions: nil,
+      parking_availability: "none")
+
+    result = described_class.new(hotel: hotel, query: "Is parking available?").call
+
+    expect(result.fetch("facts").first.fetch("text")).to eq("The hotel does not provide guest parking.")
+    expect(result).to include(
+      "structured_fact_key" => "parking",
+      "structured_source" => "transport_details",
+      "structured_fields" => [ "hotel_transport_details.parking_availability" ]
+    )
+  end
 end

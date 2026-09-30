@@ -1,27 +1,29 @@
 <% content_for :title, "Your stay | #{@hotel.name}" %>
 <% presenter = @presenter %>
 
-<%= render GuestUI::Page.new do |page| %>
+<%= render GuestUI::Page.new(class: "guest-concierge-overview-page",
+                             data: { concierge_menu_style: @hotel.concierge_menu_style }) do |page| %>
   <% page.with_hero do %>
     <%= render "public/concierge/shared/hero" %>
   <% end %>
   <div class="guest-stay-overview">
-    <section class="guest-stay-overview__greeting space-y-6">
+    <section class="guest-stay-overview__greeting space-y-4">
       <%= render "public/concierge/stays/shared/page_heading",
                  title: "Hello,",
                  title_accent: presenter.greeting_name,
-                 subtitle: "What do you need?" %>
+                 subtitle: "What do you need?",
+                 compact: true %>
 
       <%= render "public/concierge/stays/shared/flash" %>
     </section>
 
     <div class="guest-stay-overview__stay">
-      <%= render "public/concierge/stays/shared/stay_details", presenter: presenter %>
+      <%= render "public/concierge/stays/shared/stay_details", presenter: presenter, overview: true %>
     </div>
 
     <%# One area on both widths: under the stay on a phone, beside it on a wider
         screen. %>
-    <div class="guest-stay-overview__main space-y-6">
+    <div class="guest-stay-overview__main space-y-4">
       <% if presenter.in_house? %>
         <section class="guest-stay-overview__actions guest-tile-grid" aria-label="Stay actions">
           <% if presenter.can_send_request? %>
@@ -62,20 +64,14 @@
                                              hint: "Places and guest offers",
                                              icon: "sparkles", tone: :discovery,
                                              href: concierge_recommendations_path(@hotel.unique_id, @hotel.public_id)) %>
-          <%= render GuestUI::ActionCard.new(label: "Property Contacts",
-                                             hint: "Phone, WhatsApp, email and map",
+          <%= render GuestUI::ActionCard.new(label: "Contact Us",
+                                             hint: "Smart chatbot, phone, email and map",
                                              icon: "phone", tone: :contact,
                                              href: concierge_stay_contact_path(*stay_route_args)) %>
           <% if @info.section?(:wifi) %>
             <%= render GuestUI::ActionCard.new(label: "Wi-Fi", hint: @info.hint(:wifi),
                                                icon: "wifi", tone: :booking,
                                                href: concierge_stay_wifi_path(*stay_route_args)) %>
-          <% end %>
-          <% if presenter.chat_available? %>
-            <%= render GuestUI::ActionCard.new(label: "Interact with Chatbot",
-                                               hint: "Instant answers, any time",
-                                               icon: "message-circle", tone: :conversation,
-                                               href: concierge_chat_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath)) %>
           <% end %>
         </div>
       </section>

@@ -714,6 +714,69 @@
     --guest-service-ink: var(--guest-service-guide-ink);
   }
 
+  .guest-service-surface[data-tone="primary"] {
+    --guest-service-surface: var(--guest-service-conversation-surface);
+    --guest-service-ink: var(--guest-service-conversation-ink);
+  }
+
+  [data-concierge-menu-style="fancy"] .guest-service-surface:not([data-tone="guide"]) {
+    --guest-service-surface: var(--primary);
+    --guest-service-ink: var(--accent);
+    @apply border-transparent text-primary-foreground;
+  }
+
+  [data-concierge-menu-style="fancy"] .guest-service-surface:not([data-tone="guide"]):is(:hover, :active) {
+    background: var(--primary-hover);
+  }
+
+  [data-concierge-menu-style="fancy"] .guest-service-surface:not([data-tone="guide"]) .guest-action-card__hint {
+    @apply text-primary-foreground/75;
+  }
+
+  .guest-primary-action__label {
+    @apply text-foreground;
+  }
+
+  .guest-primary-action__hint {
+    @apply text-muted-foreground;
+  }
+
+  [data-concierge-menu-style="fancy"] .guest-primary-action__label {
+    @apply text-primary-foreground;
+  }
+
+  [data-concierge-menu-style="fancy"] .guest-primary-action__hint {
+    @apply text-primary-foreground/75;
+  }
+
+  .guest-stay-action--secondary {
+    @apply border border-border bg-card transition-colors;
+  }
+
+  .guest-stay-action--secondary:is(:hover, :active) {
+    @apply bg-muted;
+  }
+
+  [data-concierge-menu-style="fancy"] a.guest-stay-action:not([data-tone="primary"]) {
+    @apply border-primary/70;
+  }
+
+  [data-concierge-menu-style="fancy"] a.guest-stay-action[data-tone="primary"]:is(:hover, :active) {
+    background: var(--primary-hover);
+  }
+
+  [data-concierge-menu-style="fancy"] a.guest-stay-action[data-tone="primary"] .guest-stay-action__label {
+    @apply text-primary-foreground;
+  }
+
+  [data-concierge-menu-style="fancy"] a.guest-stay-action[data-tone="primary"] .guest-stay-action__hint {
+    @apply text-primary-foreground/75;
+  }
+
+  [data-concierge-menu-style="fancy"] a.guest-stay-action[data-tone="primary"] .guest-stay-action__icon {
+    @apply text-accent;
+  }
+
   .guest-action-card__label {
     @apply block text-sm font-semibold leading-tight;
   }
@@ -1185,6 +1248,10 @@
     @apply max-w-2xl;
   }
 
+  .guest-concierge-overview-page .guest-page__main {
+    @apply pb-10 pt-4 md:pb-14 md:pt-6;
+  }
+
   .guest-page__grid {
     @apply grid items-start gap-6 md:grid-cols-3 md:gap-8;
   }
@@ -1204,7 +1271,7 @@
   }
 
   .guest-stay-overview {
-    @apply grid items-start gap-6;
+    @apply grid items-start gap-4;
   }
 
   .guest-stay-overview__greeting { grid-area: greeting; }
@@ -1236,7 +1303,7 @@
          as the stay card. More Actions then sits one gap under the card. */
       grid-template-rows: auto auto 1fr;
       grid-template-areas: "greeting greeting" "stay main" "more main";
-      @apply gap-8;
+      @apply gap-6;
     }
   }
 
@@ -1322,6 +1389,40 @@
     @apply md:col-span-1;
   }
 
+  /* ─── Property Guide launcher ───
+     Four phone-sized app icons. An incomplete last row keeps its positions;
+     these are destinations, not action cards that need to fill the measure. */
+  .guest-guide-grid {
+    @apply grid grid-cols-4 gap-2 sm:gap-3;
+  }
+
+  .guest-guide-tile {
+    @apply min-h-20 items-center gap-2 rounded-lg bg-transparent p-1 text-center;
+  }
+
+  .guest-guide-tile:is(:hover, :active) {
+    @apply bg-primary/5;
+  }
+
+  .guest-guide-tile .guest-action-card__icon {
+    @apply size-11 rounded-xl p-2.5;
+    background: var(--guest-service-guide-surface);
+    color: var(--guest-service-guide-ink);
+  }
+
+  .guest-guide-tile .guest-action-card__label {
+    @apply text-xs leading-tight;
+  }
+
+  [data-concierge-menu-style="fancy"] .guest-guide-tile {
+    @apply border-0;
+    background: transparent;
+  }
+
+  [data-concierge-menu-style="fancy"] .guest-guide-tile .guest-action-card__icon {
+    @apply bg-muted text-primary;
+  }
+
   /* ─── Stay summary ───
      The one card on the stay page with a tint, because it is the one the
      guest comes back to. Two classes, so the tint wins over the flat card
@@ -1343,8 +1444,44 @@
     @apply break-words text-3xl font-semibold leading-tight text-foreground;
   }
 
+  .guest-stay-summary__facts {
+    @apply mt-4 space-y-4;
+  }
+
   .guest-stay-summary__refs {
     @apply mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-border/60 pt-3 text-xs text-muted-foreground;
+  }
+
+  .guest-stay-overview__stay .guest-card.guest-stay-summary {
+    @apply p-3;
+  }
+
+  .guest-stay-summary__code {
+    @apply flex items-baseline justify-between gap-3 border-b border-border/60 pb-2;
+  }
+
+  .guest-stay-summary__overview-facts {
+    @apply flex items-center justify-between gap-4 py-2;
+  }
+
+  .guest-stay-summary__overview-status {
+    @apply border-t border-border/60 pt-2;
+  }
+
+  .guest-stay-overview__stay .guest-stay-summary__room {
+    @apply text-xl;
+  }
+
+  .guest-stay-overview__stay .guest-stay-summary__facts {
+    @apply mt-3 space-y-3;
+  }
+
+  .guest-stay-overview__stay .guest-stay-summary__status {
+    @apply px-2 py-0;
+  }
+
+  .guest-stay-overview__stay .guest-stay-summary__refs {
+    @apply mt-3 pt-2;
   }
 
   /* ─── Footer ───

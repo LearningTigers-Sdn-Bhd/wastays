@@ -7,7 +7,7 @@ RSpec.describe "Onboarding review lifecycle" do
   let(:rates_coverage) { instance_double(Rates::SetupCoverage::Result) }
   let(:snapshot) do
     Onboarding::SubmissionSnapshot::Result.new(
-      data: { "version" => 1, "sections" => {} },
+      data: { "version" => 1, "sections" => {}, "rates" => { "coverage" => { "start_date" => Date.current.to_s, "end_date" => (Date.current + 364.days).to_s } } },
       digest: Digest::SHA256.hexdigest("stable")
     )
   end
@@ -18,6 +18,7 @@ RSpec.describe "Onboarding review lifecycle" do
     Onboarding::InitializeProgress.new(hotel:).call
     hotel.onboarding_sections.update_all(state: "complete", completed_at: Time.current, decision_metadata: {})
     allow(Rates::SetupCoverage).to receive(:call).with(hotel:).and_return(rates_coverage)
+    allow(Rates::SetupCoverage).to receive(:call).with(hotel:, start_date: anything, end_date: anything).and_return(rates_coverage)
     allow(Onboarding::Readiness).to receive(:new).with(hotel:).and_return(instance_double(Onboarding::Readiness, call: ready))
     allow(Onboarding::Readiness).to receive(:new).with(hotel:, rates_coverage:).and_return(instance_double(Onboarding::Readiness, call: ready))
     allow(Onboarding::SubmissionSnapshot).to receive(:call).with(hotel:).and_return(snapshot)
@@ -213,5 +214,136 @@ RSpec.describe "Onboarding review lifecycle" do
 
       expect(invitation_deliveries(submission)).to be_empty
     end
+  end
+end
+
+RSpec.describe "Onboarding review across days" do
+  let(:hotel) { create(:hotel, status: "setup", preferred_channel_manager: "channex") }
+  let(:actor) { create(:user, account: hotel.account) }
+  let(:reviewer) { create(:user, :superadmin) }
+  let(:room) { create(:room_type, hotel:, quantity: 3, base_price: 120) }
+  let(:submitted_end) { Date.new(2027, 9, 19) }
+  let(:submission) { Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "dated-review").submission }
+
+  around do |example|
+    travel_to(Time.zone.local(2026, 9, 20, 12)) { example.run }
+  end
+
+  before do
+    room
+    roles = Onboarding::RolePresets::PRESET_SLUGS.map do |slug|
+      hotel.account.roles.find_by(slug:) || create(:role, account: hotel.account, slug:)
+    end
+    create(:user_hotel_access, hotel:, user: actor, role: roles.first)
+    hotel.photos.attach(io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")), filename: "property.jpg", content_type: "image/jpeg")
+    hotel.update!(featured_photo_attachment_id: hotel.photos.attachments.sole.id)
+    create(:hotel_transaction_configuration, hotel:) unless hotel.hotel_transaction_configuration
+    create(:hotel_payment_method, hotel:)
+    Onboarding::InitializeProgress.new(hotel:).call
+    hotel.onboarding_sections.update_all(state: "complete", completed_at: Time.current, decision_metadata: {})
+    hotel.onboarding_sections.find_by!(section_key: "team_setup").update!(decision_metadata: {
+      source: "team_setup", permission_fingerprint: Onboarding::RolePresets.permission_fingerprint(roles)
+    })
+    hotel.onboarding_sections.find_by!(section_key: "taxes_fees").update!(decision_metadata: {
+      confirmed: true, custom_tax_count: hotel.hotel_taxes.count
+    })
+    hotel.onboarding_sections.find_by!(section_key: "room_revenue").update!(decision_metadata: {
+      tax_fingerprint: Onboarding::TaxFingerprint.call(hotel)
+    })
+    { extra_charges: "extra_charge_setup", discounts: "discount_setup", corporate_accounts: "corporate_account_setup", channel_manager: "channel_manager_setup" }.each do |key, source|
+      hotel.onboarding_sections.find_by!(section_key: key).update!(decision_metadata: { source: })
+    end
+    RoomInventory.insert_all!((Date.current..submitted_end).map do |date|
+      { room_type_id: room.id, date:, quantity: 2, status: "open", available_room_numbers: [] }
+    end)
+    allow(Onboarding::DispatchPendingDeliveriesJob).to receive(:perform_later)
+    allow(ChannelManagers::SyncJob).to receive(:perform_later)
+    expect(Onboarding::Readiness.new(hotel:).call).to have_attributes(ready: true)
+    expect(submission).to be_present
+  end
+
+  it "approves yesterday's submission and preserves submitted evidence" do
+    original = submission.attributes.slice("snapshot", "configuration_digest", "readiness_snapshot")
+    sections = hotel.onboarding_sections.pluck(:id, :decision_metadata)
+    travel 1.day
+
+    result = Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer)
+
+    expect(result).to be_success
+    expect(hotel.reload.status).to eq("ready_to_launch")
+    expect(room.room_inventories.count).to eq(366)
+    expect(room.room_inventories.find_by!(date: submitted_end + 1.day)).to have_attributes(quantity: 2, status: "open")
+    expect(room.room_rates).to be_empty
+    expect(submission.reload.attributes.slice(*original.keys)).to eq(original)
+    expect(hotel.onboarding_sections.pluck(:id, :decision_metadata)).to eq(sections)
+    expect { Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer) }.not_to change(RoomInventory, :count)
+  end
+
+  %w[keep reset].each do |decision|
+    it "extends availability for a later #{decision} launch" do
+      travel 3.days
+      expect(Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer)).to be_success
+      travel 2.days
+      if decision == "reset"
+        hotel.update!(training_reset_state: "queued")
+        result = Onboarding::ResetOperationalData.call(hotel:, actor:)
+      else
+        result = Onboarding::CompleteTraining.call(hotel:, actor:, decision:)
+      end
+
+      expect(result).to be_success
+      expect(hotel.reload).to have_attributes(status: "live", training_data_decision: decision)
+      expect(room.room_inventories.count).to eq(370)
+      expect(Rates::SetupCoverage.call(hotel:).complete?).to be(true)
+      expect { Onboarding::CompleteTraining.call(hotel:, actor:, decision:) }.not_to change(RoomInventory, :count)
+    end
+  end
+
+  it "rejects actual setup changes before appending availability" do
+    travel 1.day
+    hotel.update!(name: "Changed after submission")
+    expect {
+      result = Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer)
+      expect(result.error).to include("changed after submission")
+    }.not_to change(RoomInventory, :count)
+  end
+
+  it "rejects gaps inside the original window without repairing them" do
+    room.room_inventories.find_by!(date: Date.current + 5.days).destroy!
+    travel 1.day
+    expect {
+      expect(Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer)).not_to be_success
+    }.not_to change(RoomInventory, :count)
+    expect(hotel.inventory_audit_logs.reload).to be_empty
+  end
+
+  it "rolls availability back when the final approval transition fails" do
+    travel 1.day
+    transition = instance_double(Onboarding::TransitionLifecycle, call: Onboarding::TransitionLifecycle::Result.failure("Transition failed"))
+    allow(Onboarding::TransitionLifecycle).to receive(:new).and_return(transition)
+
+    expect {
+      expect(Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer).error).to eq("Transition failed")
+    }.not_to change(RoomInventory, :count)
+
+    expect(hotel.inventory_audit_logs.reload).to be_empty
+    expect(hotel.reload.status).to eq("pending_review")
+    expect(submission.reload.status).to eq("pending_review")
+    expect(ChannelManagers::SyncJob).not_to have_received(:perform_later)
+  end
+
+  it "rolls appended records and audit back when readiness fails" do
+    travel 2.days
+    RoomInventory.insert_all!([
+      { room_type_id: room.id, date: submitted_end + 1.day, quantity: 0, status: "open", available_room_numbers: [] }
+    ])
+
+    expect {
+      result = Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer)
+      expect(result.error).to include("no longer ready")
+    }.not_to change(RoomInventory, :count)
+    expect(hotel.inventory_audit_logs.reload).to be_empty
+    expect(hotel.reload.status).to eq("pending_review")
+    expect(ChannelManagers::SyncJob).not_to have_received(:perform_later)
   end
 end

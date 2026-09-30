@@ -6,17 +6,9 @@
     <%= render layout: "section_form", locals: {
           hotel: @hotel,
           section: "settings",
-          title: "Settings",
-          description: "Choose what the guest sees, and who answers the chat."
+          title: "Automatic Replies",
+          description: "Choose whether the configured AI provider answers guest chats."
         } do |form| %>
-      <%# Flat switches, not cards. The section already gives them a container,
-          and a card inside a card reads as two boxes. %>
-      <%= render PanelsUI::Switch.new(
-            form: form,
-            attribute: :guest_chat_enabled,
-            label: "Guest Chat",
-            description: "Let guests open a chat from the concierge page. Off hides only the chat tile, the Conversations inbox, and its sidebar tab. The rest of the concierge page stays up.") %>
-
       <%= render PanelsUI::Switch.new(
             form: form,
             attribute: :ai_provider_enabled,

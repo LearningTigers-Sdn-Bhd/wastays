@@ -64,6 +64,10 @@ module HotelPortal
       guest_content_page?("ai_concierge") || guest_content_page?("ai_healthchecks")
     end
 
+    def concierge_settings_page?
+      guest_content_page?("concierge")
+    end
+
     def hotel_information_page?
       guest_content_page?("knowledge_general_infos") || guest_content_page?("arrival_departures") ||
         guest_content_page?("transport_details")
@@ -238,6 +242,7 @@ module HotelPortal
           { key: "amenities", label: "Amenities", path: hotel_guest_amenities_path(current_hotel), icon: "sparkles", active: guest_content_page?("amenities") },
           { key: "wifi", label: "Wi-Fi", path: hotel_wifi_networks_path(current_hotel), icon: "wifi", active: guest_content_page?("wifi_networks") },
           { key: "contact", label: "Contact & Escalation", path: hotel_guest_contact_path(current_hotel), icon: "phone", active: guest_content_page?("contacts") },
+          feature_enabled_for_hotel?("ai_concierge_page", current_hotel) ? { key: "concierge", label: "Concierge", path: hotel_concierge_settings_path(current_hotel), icon: "concierge-bell", active: concierge_settings_page? } : nil,
           feature_enabled_for_hotel?("ai_concierge_page", current_hotel) ? { key: "ai-concierge", label: "AI Concierge", path: hotel_ai_concierge_settings_path(current_hotel), icon: "bot", active: ai_concierge_page? } : nil
         ].compact
       when :team
