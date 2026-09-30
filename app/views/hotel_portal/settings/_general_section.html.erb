@@ -222,6 +222,26 @@
               hint: "How long an agent's booking is held before the rooms are released for non-payment. The clock stops when the agent uploads a transfer slip, and a hold never runs past the arrival date. An individual agency can override this." %>
       </div>
 
+      <%# Two-stage payment for standard agents: the deposit is due within the
+          hold above, the rest before arrival. Direct-bill agencies are invoiced
+          after the stay and follow neither. %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :agent_deposit_percentage, label: "Agent deposit (%)",
+            hint: "Share of the booking total an agent pays within the payment hold.") do |field| %>
+        <% field.with_input(type: :number, min: 1, max: 100, step: 1, inputmode: "numeric") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :agent_full_payment_days_before_arrival, label: "Full payment before arrival (days)",
+            hint: "The balance is due this many days before arrival. A booking made closer than this is due in full within the payment hold.") do |field| %>
+        <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+      <% end %>
+      <div class="sm:col-span-2">
+        <%= render PanelsUI::Checkbox.new(
+              form: f,
+              attribute: :agent_deposit_non_refundable,
+              label: "Deposit is non-refundable",
+              description: "When a booking is cancelled for a missed payment, the hotel keeps what the agent has already paid. Otherwise it is left for staff to refund.",
+              checked: f.object.agent_deposit_non_refundable) %>
+      </div>
+
     </div>
   </section>
 

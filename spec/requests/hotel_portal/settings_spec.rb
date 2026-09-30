@@ -460,6 +460,27 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone address room_type check_in])
     end
 
+    it "saves the agent payment terms" do
+      patch hotel_general_settings_path(hotel), params: {
+        form_id: "hotel_settings",
+        hotel: { agent_deposit_percentage: "30", agent_full_payment_days_before_arrival: "14", agent_deposit_non_refundable: "1" }
+      }
+
+      expect(response).to redirect_to(hotel_general_settings_path(hotel))
+      expect(hotel.reload).to have_attributes(
+        agent_deposit_percentage: 30, agent_full_payment_days_before_arrival: 14, agent_deposit_non_refundable: true
+      )
+    end
+
+    it "shows the agent payment terms on the general settings page" do
+      get hotel_general_settings_path(hotel)
+
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css("input[name='hotel[agent_deposit_percentage]']")["value"]).to eq("50")
+      expect(doc.at_css("input[name='hotel[agent_full_payment_days_before_arrival]']")["value"]).to eq("30")
+      expect(doc.at_css("input[type='checkbox'][name='hotel[agent_deposit_non_refundable]']")).to be_present
+    end
+
     it "updates the guest registration card terms and conditions" do
       patch hotel_general_settings_path(hotel), params: {
         form_id: "hotel_settings",

@@ -448,6 +448,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_010000) do
     t.index ["user_id"], name: "index_booking_notes_on_user_id"
   end
 
+  create_table "booking_payment_instalments", force: :cascade do |t|
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.bigint "booking_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "due_at", null: false
+    t.string "kind", null: false
+    t.text "note"
+    t.datetime "paid_at"
+    t.bigint "paid_by_id"
+    t.bigint "payment_folio_transaction_id"
+    t.integer "position", null: false
+    t.bigint "refund_folio_transaction_id"
+    t.text "refund_reason"
+    t.datetime "refunded_at"
+    t.bigint "refunded_by_id"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_id", "position"], name: "index_booking_payment_instalments_on_booking_id_and_position", unique: true
+    t.index ["booking_id"], name: "index_booking_payment_instalments_on_booking_id"
+    t.index ["paid_by_id"], name: "index_booking_payment_instalments_on_paid_by_id"
+    t.index ["payment_folio_transaction_id"], name: "idx_bpi_payment_folio_transaction"
+    t.index ["refund_folio_transaction_id"], name: "idx_bpi_refund_folio_transaction"
+    t.index ["refunded_by_id"], name: "index_booking_payment_instalments_on_refunded_by_id"
+    t.check_constraint "amount > 0::numeric", name: "booking_payment_instalments_amount_positive"
+    t.check_constraint "kind::text = ANY (ARRAY['deposit'::character varying, 'balance'::character varying, 'full'::character varying]::text[])", name: "booking_payment_instalments_kind_allowed"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'paid'::character varying, 'refunded'::character varying, 'waived'::character varying]::text[])", name: "booking_payment_instalments_status_allowed"
+  end
+
   create_table "booking_quote_items", force: :cascade do |t|
     t.bigint "booking_quote_id", null: false
     t.datetime "created_at", null: false
@@ -1911,6 +1939,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_010000) do
   create_table "hotels", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "address"
+    t.boolean "agent_deposit_non_refundable", default: false, null: false
+    t.integer "agent_deposit_percentage", default: 50, null: false
+    t.integer "agent_full_payment_days_before_arrival", default: 30, null: false
     t.integer "agent_payment_hold_hours", default: 72, null: false
     t.string "ai_concierge_tone", default: "basic", null: false
     t.boolean "ai_provider_enabled", default: false
@@ -1984,6 +2015,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_010000) do
     t.index ["slug"], name: "index_hotels_on_slug", unique: true
     t.index ["training_completed_by_id"], name: "index_hotels_on_training_completed_by_id"
     t.index ["unique_id"], name: "index_hotels_on_unique_id", unique: true
+    t.check_constraint "agent_deposit_percentage >= 1 AND agent_deposit_percentage <= 100", name: "hotels_agent_deposit_percentage_range"
+    t.check_constraint "agent_full_payment_days_before_arrival > 0", name: "hotels_agent_full_payment_days_positive"
     t.check_constraint "agent_payment_hold_hours > 0", name: "hotels_agent_payment_hold_hours_positive"
   end
 
@@ -3315,6 +3348,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_010000) do
   add_foreign_key "booking_guests", "guests"
   add_foreign_key "booking_notes", "bookings"
   add_foreign_key "booking_notes", "users"
+  add_foreign_key "booking_payment_instalments", "bookings"
+  add_foreign_key "booking_payment_instalments", "folio_transactions", column: "payment_folio_transaction_id"
+  add_foreign_key "booking_payment_instalments", "folio_transactions", column: "refund_folio_transaction_id"
+  add_foreign_key "booking_payment_instalments", "users", column: "paid_by_id"
+  add_foreign_key "booking_payment_instalments", "users", column: "refunded_by_id"
   add_foreign_key "booking_quote_items", "booking_quotes"
   add_foreign_key "booking_quote_items", "room_types"
   add_foreign_key "booking_quotes", "hotel_corporate_accounts"
