@@ -7,6 +7,7 @@
 class BookingPaymentInstalment < ApplicationRecord
   KINDS = %w[deposit balance full].freeze
   STATUSES = %w[pending paid refunded waived].freeze
+  STAGE_LABELS = { "deposit" => "Deposit", "balance" => "Balance", "full" => "Full payment" }.freeze
 
   belongs_to :booking, inverse_of: :payment_instalments
   belongs_to :paid_by, class_name: "User", optional: true
@@ -22,4 +23,6 @@ class BookingPaymentInstalment < ApplicationRecord
   validates :due_at, presence: true
 
   scope :pending, -> { where(status: "pending") }
+
+  def stage_label = STAGE_LABELS.fetch(kind)
 end

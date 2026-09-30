@@ -51,8 +51,13 @@
                   </tr>
                   <tr>
                     <td style="padding:16px 24px;border-top:1px solid #e2e8f0;">
-                      <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;">Amount</p>
-                      <p style="margin:4px 0 0;font-size:18px;font-weight:800;color:#0f172a;"><%= @payload[:amount_label] %></p>
+                      <%# A payment request states what is due now and, when that is a
+                          stage rather than the whole, the total beside it. %>
+                      <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;"><%= local_assigns[:amount_heading] || "Amount" %></p>
+                      <p style="margin:4px 0 0;font-size:18px;font-weight:800;color:#0f172a;"><%= local_assigns[:amount_text] || @payload[:amount_label] %><% if local_assigns[:amount_stage].present? %> <span style="font-size:13px;font-weight:600;color:#475569;">(<%= amount_stage.downcase %>)</span><% end %></p>
+                      <% if local_assigns[:amount_text].present? && @payload[:amount_label].present? && @payload[:amount_label] != amount_text %>
+                        <p style="margin:4px 0 0;font-size:13px;color:#475569;">Booking total <%= @payload[:amount_label] %></p>
+                      <% end %>
                     </td>
                   </tr>
                   <%# Stated with its zone, because the agent is often not in the

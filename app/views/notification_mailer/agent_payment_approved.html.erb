@@ -1,7 +1,21 @@
-<%# Nothing is at risk any more, so there is nothing to click: no action is left
-    to take. %>
-<%= render "notification_mailer/agent_payment_notice",
-      accent: "#0f4a43",
-      eyebrow: "Payment confirmed",
-      headline: "Thank you — your payment has been received",
-      body: "#{@payload[:hotel_name]} has confirmed your transfer#{@payload[:reference_number].present? ? " (reference #{@payload[:reference_number]})" : ""}. This booking is now paid in full and the rooms are confirmed, with nothing further to do." %>
+<%# Nothing is at risk once the booking is paid in full, so there is nothing to
+    click. After a deposit there is still a balance to pay, so the mail says what
+    was received, what is left and by when, and offers the way to pay it. %>
+<% reference = @payload[:reference_number].present? ? " (reference #{@payload[:reference_number]})" : "" %>
+<% if @payload[:balance_remaining] %>
+  <%= render "notification_mailer/agent_payment_notice",
+        accent: "#0f4a43",
+        eyebrow: "Payment received",
+        headline: "Thank you — your payment has been received",
+        body: "#{@payload[:hotel_name]} has confirmed your transfer#{reference}. Your rooms stay reserved. #{@payload[:following_stage_note].presence || ''} The rest is due by the date below.".squish,
+        amount_heading: "Still to pay",
+        amount_text: @payload[:amount_due_label],
+        amount_stage: @payload[:payment_stage],
+        cta_label: "Send your transfer slip" %>
+<% else %>
+  <%= render "notification_mailer/agent_payment_notice",
+        accent: "#0f4a43",
+        eyebrow: "Payment confirmed",
+        headline: "Thank you — your payment has been received",
+        body: "#{@payload[:hotel_name]} has confirmed your transfer#{reference}. This booking is now paid in full and the rooms are confirmed, with nothing further to do." %>
+<% end %>

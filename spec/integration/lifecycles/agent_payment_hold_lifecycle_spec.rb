@@ -324,7 +324,7 @@ RSpec.describe "Agent payment hold lifecycle", type: :integration do
 
       log = BookingAuditLog.where(auditable: booking, action_type: "cancel").last
       expect(log.source).to eq(Bookings::ReleaseUnpaidAgentBookings::SOURCE)
-      expect(log.metadata["reason"]).to include("Payment not received by")
+      expect(log.metadata["reason"]).to include("Full payment not received by")
 
       released = deliveries_for(booking, "agent_booking_released").last
       expect(released.payload["recipient_email"]).to eq(agent_user.email)

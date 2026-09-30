@@ -14,8 +14,6 @@ module CorporatePortal
   # `submissions:` takes an already-loaded list for this booking. A list of 50
   # bookings would otherwise run two queries per row.
   class BookingPaymentPresenter
-    STAGE_LABELS = { "deposit" => "Deposit", "balance" => "Balance", "full" => "Full payment" }.freeze
-
     BADGE_VARIANTS = {
       paid: :success,
       under_review: :info,
@@ -129,6 +127,10 @@ module CorporatePortal
       money_label(booking.total_amount)
     end
 
+    def money_label(amount)
+      "#{booking.currency} #{ActiveSupport::NumberHelper.number_to_rounded(amount, precision: 2, delimiter: ',')}"
+    end
+
     # What to send now. For a scheduled booking that is the outstanding part of
     # the next stage, otherwise everything still owed.
     def amount_due_label
@@ -139,7 +141,7 @@ module CorporatePortal
 
     # "Deposit", "Balance" or "Full payment"; nil for a booking with no schedule.
     def stage_label
-      progress.next_instalment&.kind&.then { |kind| STAGE_LABELS.fetch(kind) }
+      progress.next_instalment&.stage_label
     end
 
     # After a deposit: what follows and when, so the agent sees the whole plan.
@@ -259,10 +261,6 @@ module CorporatePortal
 
     def progress
       @progress ||= ::Bookings::PaymentProgress.new(booking)
-    end
-
-    def money_label(amount)
-      "#{booking.currency} #{ActiveSupport::NumberHelper.number_to_rounded(amount, precision: 2, delimiter: ',')}"
     end
 
     def pluralized(count, noun)

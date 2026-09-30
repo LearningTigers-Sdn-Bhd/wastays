@@ -65,6 +65,28 @@ module Bookings
       end
     end
 
+    # Whether what has been paid is kept if the booking is cancelled for missing
+    # a payment: the hotel's own setting, read at the moment of cancellation.
+    def retained_on_cancellation?
+      paid_total.positive? && @booking.hotel.agent_deposit_non_refundable?
+    end
+
+    # One sentence about money already paid on a booking that is being cancelled,
+    # or nil when nothing was paid. Nothing is refunded automatically either way:
+    # a refund is money leaving the hotel, so a person decides it. This wording
+    # is shared by the audit log and the desk's notification so they cannot say
+    # different things about the same booking.
+    def cancellation_note
+      return unless paid_total.positive?
+
+      amount = "#{@booking.currency} #{format('%.2f', paid_total)}"
+      if retained_on_cancellation?
+        "#{amount} already paid is retained: the deposit is non-refundable."
+      else
+        "#{amount} already paid has not been refunded; a refund needs a decision."
+      end
+    end
+
     # True when the net paid covers every stage up to and including this one.
     def covers?(instalment)
       paid_total >= required_through(instalment)

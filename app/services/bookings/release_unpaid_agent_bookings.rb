@@ -66,14 +66,19 @@ module Bookings
         # may have released this booking, since the scope was read.
         return skip(booking) unless releasable?(booking)
 
+        # Read before the cancellation closes the stages, so the reason can name
+        # the one that was missed and what became of the money already paid.
+        reason = reason_for(booking)
         result = ::Bookings::TransitionStatus.new(
           booking: booking,
           status: "cancelled",
           user: nil,
-          options: { source: SOURCE, reason: reason_for(booking) }
+          options: { source: SOURCE, reason: reason }
         ).call
 
         return failure(booking, result) unless result.success?
+
+        ::Bookings::WaivePendingInstalments.call(booking)
 
         close_group_if_emptied(booking)
         notify(booking)
@@ -116,7 +121,11 @@ module Bookings
     end
 
     def reason_for(booking)
-      "Payment not received by #{booking.payment_due_at.in_time_zone(booking.hotel.hotel_time_zone).strftime('%d %b %Y %H:%M %Z')}."
+      progress = ::Bookings::PaymentProgress.new(booking)
+      stage = progress.next_instalment&.stage_label || "Payment"
+      deadline = booking.payment_due_at.in_time_zone(booking.hotel.hotel_time_zone).strftime("%d %b %Y %H:%M %Z")
+
+      [ "#{stage} not received by #{deadline}.", progress.cancellation_note ].compact.join(" ")
     end
 
     # The agent is told their rooms are gone, and the desk is told on the bell,

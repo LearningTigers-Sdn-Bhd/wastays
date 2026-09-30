@@ -55,6 +55,30 @@ RSpec.describe "Agent payment schedule lifecycle" do
     end
   end
 
+  describe "#cancellation_note" do
+    before { Bookings::CreatePaymentSchedule.call(booking: booking, from: now) }
+
+    it "is nil when nothing has been paid" do
+      expect(Bookings::PaymentProgress.new(booking).cancellation_note).to be_nil
+    end
+
+    it "says a refund needs a decision when the deposit is refundable" do
+      pay(500)
+
+      expect(Bookings::PaymentProgress.new(booking.reload).cancellation_note)
+        .to eq("MYR 500.00 already paid has not been refunded; a refund needs a decision.")
+    end
+
+    it "says the money is retained when the hotel's deposit is non-refundable" do
+      hotel.update!(agent_deposit_non_refundable: true)
+      pay(500)
+
+      progress = Bookings::PaymentProgress.new(booking.reload)
+      expect(progress).to be_retained_on_cancellation
+      expect(progress.cancellation_note).to eq("MYR 500.00 already paid is retained: the deposit is non-refundable.")
+    end
+  end
+
   describe "the token payment that used to hold rooms for ever" do
     it "keeps a booking with no schedule on its deadline after a partial payment, so the sweeper still releases it" do
       booking.update!(payment_due_at: 6.hours.from_now)
