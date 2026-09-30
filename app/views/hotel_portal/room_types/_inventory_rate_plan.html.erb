@@ -1,7 +1,7 @@
 <% rate_plan = assignment.rate_plan %>
 <% complete = room_pricing_complete?(assignment, room_type) %>
 
-<div id="room-inventory-rate-plan-<%= assignment.id %>" class="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,.8fr)_auto] sm:items-center sm:gap-4" role="listitem">
+<div id="room-inventory-rate-plan-<%= assignment.id %>" class="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,.8fr)_auto] sm:items-center sm:gap-4" role="listitem" <%= "data-archived hidden" if rate_plan.archived? %>>
   <%# Whether this plan is offered for new bookings. On is offered; off is
       archived. The switch carries state to assistive tech through aria-checked
       and the "Archived" badge beside it carries the same state to everyone else,
@@ -64,6 +64,9 @@
         <%= render PanelsUI::Badge.new(label: "Base rate", variant: :outline, size: :sm,
               title: "Other plans in this room category price and read restrictions from this one.") %>
       <% end %>
+      <% if rate_plan.kind_label %>
+        <%= render PanelsUI::Badge.new(label: rate_plan.kind_label, variant: :outline, size: :sm, title: rate_plan.kind_hint) %>
+      <% end %>
       <% if rate_plan.archived? %>
         <%= render PanelsUI::Badge.new(label: "Archived", variant: :neutral, size: :sm) %>
       <% end %>
@@ -105,6 +108,12 @@
            data: { turbo_frame: "_top" }) do %>
         <%= app_icon "pencil", class: "size-4", aria: { hidden: true } %>
         <span>Edit rate</span>
+      <% end %>
+      <% menu.with_item(
+           href: new_hotel_rate_plan_path(current_hotel, duplicate_from: rate_plan.id, room_type_id: room_type.id),
+           data: { turbo_frame: "_top" }) do %>
+        <%= cached_icon "copy", class: "size-4", aria: { hidden: true } %>
+        <span>Duplicate rate</span>
       <% end %>
       <% if !primary && !rate_plan.archived? && rate_plan.bookable_by?(:public) %>
         <% menu.with_item(

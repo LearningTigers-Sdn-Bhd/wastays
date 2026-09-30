@@ -294,6 +294,17 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(delete_action_labels(response.body)).to be_empty
     end
 
+    it "flags a renamed walk-in plan and explains why it has no travel agent access" do
+      walk_in = room_type.rate_plans.find_by!(kind: "walk_in")
+      walk_in.update!(name: "Malaysian Agent Rate")
+
+      get edit_hotel_rate_plan_path(hotel, walk_in)
+
+      text = Nokogiri::HTML(response.body).text.squish
+      expect(text).to include("Walk-in")
+      expect(text).to include("It can't be offered to travel agents, even if it has been renamed")
+    end
+
     it "allows Standard Rate occupancy and child pricing for a per-guest hotel", :per_person do
       room_type.update!(max_adults: 2)
       standard = room_type.standard_rate_plan
@@ -307,6 +318,32 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.at_css('[name="room_pricing[prices][1]"]')["value"]).to eq("180.0")
       expect(doc.at_css('[name="room_pricing[prices][2]"]')["value"]).to eq("300.0")
       expect(doc.text.squish).to include("Child pricing")
+    end
+  end
+
+  describe 'GET /hotel/:hotel_id/rate_plans/new?duplicate_from=' do
+    it "opens the new plan form prefilled from the source without saving anything" do
+      source = create(:rate_plan, :custom, hotel: hotel, name: "Early Bird", description: "Pay early", single_supplement: 25)
+      RoomTypeRatePlan.create!(room_type: room_type, rate_plan: source, pricing_mode: "fixed", pricing_value: 180)
+
+      expect {
+        get new_hotel_rate_plan_path(hotel, duplicate_from: source.id, room_type_id: room_type.id)
+      }.not_to change(RatePlan, :count)
+
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css('form#new-rate-plan-form')).to be_present
+      expect(doc.at_css('#rate_plan_name')["value"]).to eq("Copy of Early Bird")
+      expect(doc.at_css('#rate_plan_description').text).to include("Pay early")
+      expect(doc.at_css('[name="room_pricing[default_rate]"]')["value"]).to eq("180.0")
+    end
+
+    it "ignores a source from another hotel" do
+      other = create(:rate_plan, :custom, name: "Elsewhere")
+
+      get new_hotel_rate_plan_path(hotel, duplicate_from: other.id)
+
+      expect(response).to have_http_status(:ok)
+      expect(Nokogiri::HTML(response.body).at_css('#rate_plan_name')["value"]).to be_blank
     end
   end
 

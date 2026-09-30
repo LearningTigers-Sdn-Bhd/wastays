@@ -39,6 +39,7 @@
            data-rate-plan-room-pricing-max-adults-value="<%= room_pricing.max_adults %>"
            data-rate-plan-room-pricing-currency-value="<%= rate_plan.currency %>"
            data-rate-plan-room-pricing-per-person-value="<%= room_pricing.per_person? %>"
+           data-rate-plan-room-pricing-standard-prices-value="<%= room_pricing.standard_prices.to_json %>"
            data-action="input->rate-plan-room-pricing#refresh change->rate-plan-room-pricing#refresh">
         <p class="text-sm text-muted-foreground">
           <%= selected_room_type.name %>: up to <%= pluralize(selected_room_type.max_adults, "adult") %> and <%= pluralize(selected_room_type.max_children, "child") %> · Standard Rate <%= rate_plan_money(selected_room_type.base_price, rate_plan.currency) %>
