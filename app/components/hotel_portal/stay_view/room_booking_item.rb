@@ -205,10 +205,12 @@ module HotelPortal
 
       def boat_metadata
         time = @context == :arrival ? @segment.boat_in_at : @segment.boat_out_at
-        return unless time
+        type = @context == :arrival ? @segment.boat_in_type : @segment.boat_out_type
+        return if time.blank? && type.blank?
 
         label = @context == :arrival ? "Boat-in" : "Boat-out"
-        tag.p("#{label} #{format_time(time)}", class: "text-xs text-muted-foreground tabular-nums")
+        display = Boats::Schedule.display(timestamp: time, type: type, zone: time&.time_zone || Time.zone, format: "%H:%M")
+        tag.p("#{label} #{display}", class: "text-xs text-muted-foreground tabular-nums")
       end
 
       def with_time(label, time)

@@ -17,7 +17,7 @@ RSpec.describe Boats::Schedule do
       slot("boat_in", "08:00")
 
       expect(schedule.in_choices).to eq(
-        [ [ "No boat transfer", "" ], [ "8:00 AM", "08:00" ], [ "11:00 AM", "11:00" ] ]
+        [ [ "No boat transfer", "" ], [ "8:00 AM", "08:00" ], [ "11:00 AM", "11:00" ], [ "Charter Boat", "charter" ], [ "Own Boat", "own" ] ]
       )
     end
 
@@ -25,20 +25,20 @@ RSpec.describe Boats::Schedule do
       slot("boat_in", "08:00")
       slot("boat_in", "09:30").archive!
 
-      expect(schedule.in_choices.map(&:last)).to eq([ "", "08:00" ])
+      expect(schedule.in_choices.map(&:last)).to eq([ "", "08:00", "charter", "own" ])
     end
 
     it "still offers a retired slot to the guest already booked on it" do
       slot("boat_in", "08:00")
       slot("boat_in", "09:30").archive!
 
-      expect(schedule.in_choices(current: "09:30").map(&:last)).to eq([ "", "08:00", "09:30" ])
+      expect(schedule.in_choices(current: "09:30").map(&:last)).to eq([ "", "08:00", "09:30", "charter", "own" ])
     end
 
     it "does not invent an option for a time that was never a slot" do
       slot("boat_in", "08:00")
 
-      expect(schedule.in_choices(current: "06:15").map(&:last)).to eq([ "", "08:00" ])
+      expect(schedule.in_choices(current: "06:15").map(&:last)).to eq([ "", "08:00", "charter", "own" ])
     end
   end
 
@@ -56,14 +56,14 @@ RSpec.describe Boats::Schedule do
   end
 
   describe "#enabled?" do
-    it "is false until the property has a live slot" do
-      expect(schedule.enabled?).to be false
+    it "allows custom transfers without live slots" do
+      expect(schedule.enabled?).to be true
 
       live = slot("boat_in", "08:00")
       expect(described_class.new(hotel.reload).enabled?).to be true
 
       live.archive!
-      expect(described_class.new(hotel.reload).enabled?).to be false
+      expect(described_class.new(hotel.reload).enabled?).to be true
     end
 
     it "is false when the property has boat information switched off" do
@@ -131,6 +131,49 @@ RSpec.describe Boats::Schedule do
 
     it "returns nil when nothing is stored" do
       expect(described_class.time_of_day(hotel: hotel, timestamp: nil)).to be_nil
+    end
+  end
+  describe ".custom_time" do
+    let(:timestamp) { described_class.timestamp(hotel: hotel, date: Date.new(2026, 8, 1), time: "15:30") }
+
+    it "returns the time for Charter and Own boats" do
+      %w[charter own].each do |type|
+        guest = build(:booking_guest, boat_in_type: type, boat_in_at: timestamp)
+
+        expect(described_class.custom_time(hotel: hotel, guest: guest, kind: :boat_in)).to eq("15:30")
+      end
+    end
+
+    it "stays empty for a Resort Boat, so the time is not copied into the custom field" do
+      guest = build(:booking_guest, boat_in_type: "provided", boat_in_at: timestamp)
+
+      expect(described_class.custom_time(hotel: hotel, guest: guest, kind: :boat_in)).to be_nil
+    end
+
+    it "stays empty for an untimed Own Boat, a legacy time without a type, and no guest" do
+      untimed = build(:booking_guest, boat_in_type: "own", boat_in_at: nil)
+      legacy = build(:booking_guest, boat_in_type: nil, boat_in_at: timestamp)
+
+      expect(described_class.custom_time(hotel: hotel, guest: untimed, kind: :boat_in)).to be_nil
+      expect(described_class.custom_time(hotel: hotel, guest: legacy, kind: :boat_in)).to be_nil
+      expect(described_class.custom_time(hotel: hotel, guest: nil, kind: :boat_in)).to be_nil
+    end
+  end
+
+  describe "custom transfer meals" do
+    it "uses hotel meal times even when the custom time matches a schedule" do
+      create(:hotel_boat_setting, hotel: hotel, breakfast_time: "08:00", lunch_time: "12:00", hi_tea_time: "15:00", dinner_time: "19:00")
+      slot("boat_in", "12:00", has_lunch: false, has_dinner: false)
+      timestamp = described_class.timestamp(hotel: hotel, date: Date.new(2026, 8, 1), time: "12:00")
+      expect(schedule.meals_for(timestamp, "boat_in", type: "charter")).to eq(%i[lunch hi_tea dinner])
+      expect(schedule.meals_for(timestamp, "boat_out", type: "own")).to eq(%i[breakfast lunch])
+      expect(schedule.meals_for(timestamp, "boat_in", type: "provided")).to eq([])
+    end
+
+    it "returns no meals for missing settings or an untimed transfer" do
+      timestamp = described_class.timestamp(hotel: hotel, date: Date.new(2026, 8, 1), time: "12:00")
+      expect(schedule.meals_for(timestamp, "boat_in", type: "own")).to eq([])
+      expect(schedule.meals_for(nil, "boat_in", type: "own")).to eq([])
     end
   end
 end

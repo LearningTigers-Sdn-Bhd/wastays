@@ -46,14 +46,14 @@ module StayView
     :check_in_at, :check_out_at, :actual_check_in, :actual_check_out, :actual_check_in_at, :actual_check_out_at,
     :start_track, :end_track, :clipped_left, :clipped_right, :accessible_label, :capabilities,
     :group_booking_id, :group_reference, :group_name, :group_position, :group_rooms, :financial_signals, :source, :source_label,
-    :adults, :children, :boat_in_at, :boat_out_at, :vip, :blacklisted, :repeat
+    :adults, :children, :boat_in_at, :boat_out_at, :boat_in_type, :boat_out_type, :vip, :blacklisted, :repeat
   ) do
     alias_method :clipped_left?, :clipped_left
     alias_method :clipped_right?, :clipped_right
 
     def initialize(**attributes)
       %i[check_in_at check_out_at actual_check_in actual_check_out actual_check_in_at actual_check_out_at group_booking_id group_reference
-         group_name group_position source source_label adults children boat_in_at boat_out_at].each do |key|
+         group_name group_position source source_label adults children boat_in_at boat_out_at boat_in_type boat_out_type].each do |key|
         attributes[key] ||= nil
       end
       attributes[:financial_signals] ||= []

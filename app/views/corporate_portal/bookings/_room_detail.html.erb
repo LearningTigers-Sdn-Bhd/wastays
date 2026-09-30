@@ -65,7 +65,7 @@
           <% transfers.each do |transfer| %>
             <li>
               <span class="font-semibold"><%= transfer.label %></span>
-              <%= transfer.time.strftime("%d %b, %I:%M %p") %>
+              <%= transfer.display %>
               <% if transfer.meals.any? %>
                 <span class="text-xs text-muted-foreground">· Meals: <%= transfer.meals.to_sentence %></span>
               <% end %>

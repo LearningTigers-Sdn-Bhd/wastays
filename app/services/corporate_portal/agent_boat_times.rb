@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 module CorporatePortal
-  # The boat slots a travel agent picked for a stay. Staff are trusted to post
-  # any slot, retired ones included; an agent may only choose one the hotel
-  # still runs, and only when the hotel keeps a boat timetable at all.
+  # Agents can choose active scheduled boats or record custom transfers.
+  # Custom times use the same validation as staff transfers.
   #
   # #params is what Boats::AssignTimes / Boats::ResolveTimes read: only the
   # fields the form actually sent, so an absent field never clears a time the
@@ -14,7 +13,8 @@ module CorporatePortal
 
     def initialize(hotel:, params:)
       @schedule = ::Boats::Schedule.new(hotel)
-      @params = params.to_h.symbolize_keys.slice(*FIELDS.keys).transform_values(&:to_s)
+      @hotel = hotel
+      @params = params.to_h.symbolize_keys.slice(*FIELDS.keys, :boat_in_custom_time, :boat_out_custom_time).transform_values(&:to_s)
     end
 
     def params
@@ -22,10 +22,21 @@ module CorporatePortal
     end
 
     def errors
-      params.filter_map do |field, value|
-        next if value.blank? || @schedule.public_send(FIELDS.fetch(field)).include?(value)
+      FIELDS.filter_map do |field, times|
+        next unless params.key?(field)
 
-        "Choose a #{LABELS.fetch(field)} time from the hotel's boat timetable."
+        value = params[field]
+        unless value.blank? || value.in?(BookingGuest::CUSTOM_BOAT_TYPES) || @schedule.public_send(times).include?(value)
+          next "Choose a #{LABELS.fetch(field)} time from the hotel's boat timetable."
+        end
+
+        begin
+          custom_field = field.to_s.sub("_time", "_custom_time").to_sym
+          ::Boats::ResolveTimes.call(hotel: @hotel, check_in: nil, check_out: nil, params: params.slice(field, custom_field))
+          nil
+        rescue ::Boats::ResolveTimes::InvalidSelection => e
+          e.message
+        end
       end
     end
   end
