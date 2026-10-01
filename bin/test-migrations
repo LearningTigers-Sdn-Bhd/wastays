@@ -5,9 +5,11 @@ set -euo pipefail
 export RAILS_ENV="${RAILS_ENV:-test}"
 
 migration_specs=()
-while IFS= read -r spec_file; do
-  migration_specs+=("$spec_file")
-done < <(find spec/migrations -type f -name '*_spec.rb' -print | sort)
+if [[ -d spec/migrations ]]; then
+  while IFS= read -r spec_file; do
+    migration_specs+=("$spec_file")
+  done < <(find spec/migrations -type f -name '*_spec.rb' -print | sort)
+fi
 
 if (( ${#migration_specs[@]} == 0 )); then
   printf "No migration specs found.\n"

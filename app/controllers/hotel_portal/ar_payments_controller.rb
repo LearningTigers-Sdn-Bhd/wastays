@@ -85,6 +85,7 @@ module HotelPortal
 
     def apply_submission_context
       @hotel_corporate_account = @ar_payment_submission.hotel_corporate_account
+      @slip_amount_check = HotelPortal::AccountsReceivable::SlipAmountCheck.new(@ar_payment_submission)
       @source_allocations = @ar_payment_submission.ar_payment_submission_allocations.index_by(&:ar_invoice_id).transform_values(&:amount)
       # Only the invoices the agent picked when submitting — not the account's full open
       # invoice list — since this payment is already fixed to exactly those invoices.

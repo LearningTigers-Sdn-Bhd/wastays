@@ -8,11 +8,9 @@
 <% form_url = new_plan ? hotel_rate_plans_path(current_hotel) : hotel_rate_plan_path(current_hotel, rate_plan) %>
 <% errors = (rate_plan.errors.full_messages + Array(room_pricing&.errors&.full_messages)).uniq %>
 <% show_discounts = rate_plan.kind != "ota" %>
-<%# RatePlan::AUDIENCE_KINDS: every public-eligible kind (standard/custom) is
-    also corporate-eligible, so this tab always carries the Corporate/TA Portal
-    section whenever it's shown at all — a plain "Availability" label undersold
-    that. %>
-<% show_availability = rate_plan.kind.in?(RatePlan.kinds_for(:public)) || rate_plan.kind.in?(RatePlan.kinds_for(:corporate)) %>
+<%# Always shown: for kinds the corporate audience can't be sold (walk-in,
+    ota) the panel explains why, instead of the tab silently vanishing. %>
+<% show_availability = true %>
 <% tab_names = [ "details", "pricing", ("discounts" if show_discounts), ("availability" if show_availability) ].compact %>
 <% active_tab = tab_names.include?(params[:tab]) ? params[:tab] : "details" %>
 
@@ -32,6 +30,7 @@
           <% unless new_plan %>
             <%= render PanelsUI::Badge.new(label: rate_plan.archived? ? "Archived" : "Active", variant: rate_plan.archived? ? :warning : :success, size: :sm) %>
             <%= render PanelsUI::Badge.new(label: "Base rate", variant: :outline, size: :sm) if rate_plan.standard_rate? %>
+            <%= render PanelsUI::Badge.new(label: rate_plan.kind_label, variant: :outline, size: :sm, title: rate_plan.kind_hint) if rate_plan.kind_label %>
           <% end %>
         </div>
       </div>
@@ -47,11 +46,16 @@
               <%= selected_room_type.name %> · <%= pluralize(selected_room_type.max_adults, "adult") %>
             </p>
           <% end %>
-          <% if rate_plan.deletable? %>
-            <%= render PanelsUI::DropdownMenu.new(id: "rate-plan-editor-actions", placement: :bottom_end, class: "w-48") do |menu| %>
-              <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "More actions for #{rate_plan.name}") do %>
-                <%= cached_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
-              <% end %>
+          <%= render PanelsUI::DropdownMenu.new(id: "rate-plan-editor-actions", placement: :bottom_end, class: "w-48") do |menu| %>
+            <% menu.with_trigger(variant: :ghost, size: :icon_sm, aria_label: "More actions for #{rate_plan.name}") do %>
+              <%= cached_icon "ellipsis-vertical", class: "size-4", aria: { hidden: true } %>
+            <% end %>
+            <% menu.with_item(href: new_hotel_rate_plan_path(current_hotel, duplicate_from: rate_plan.id, room_type_id: selected_room_type&.id)) do %>
+              <%= cached_icon "copy", class: "size-4", aria: { hidden: true } %>
+              <span>Duplicate plan</span>
+            <% end %>
+            <% if rate_plan.deletable? %>
+              <% menu.with_separator %>
               <% menu.with_item(href: hotel_rate_plan_path(current_hotel, rate_plan, room_type_id: selected_room_type&.id),
                      method: :delete, variant: :danger,
                      data: { turbo_method: :delete,
@@ -92,7 +96,7 @@
       <% if show_discounts %>
         <% tabs.with_panel(name: "discounts", class: "max-w-4xl pt-2") do %>
           <%= render "hotel_portal/rate_plans/stay_discounts", f:, rate_plan:,
-                example_price: room_pricing&.default_rate.presence || selected_room_type&.base_price %>
+                example_price: room_pricing&.example_price || selected_room_type&.base_price %>
         <% end %>
       <% end %>
       <% if show_availability %>

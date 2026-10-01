@@ -100,8 +100,11 @@ module Notifications
         "#{agency} sent a transfer slip for #{@booking.formatted_reservation_number}. " \
           "Their payment deadline is paused until it is reviewed."
       else
-        "#{@booking.formatted_reservation_number} was cancelled and its rooms returned to sale: " \
-          "#{agency} did not pay by the deadline."
+        [
+          "#{@booking.formatted_reservation_number} was cancelled and its rooms returned to sale: " \
+            "#{agency} did not pay by the deadline.",
+          ::Bookings::PaymentProgress.new(@booking).cancellation_note
+        ].compact.join(" ")
       end
     end
 

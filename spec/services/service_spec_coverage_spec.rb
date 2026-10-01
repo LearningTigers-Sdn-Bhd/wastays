@@ -50,6 +50,9 @@ RSpec.describe "Service spec coverage" do
     # from the class it calls would assert the literal it was given.
     "hotel_portal/reports/booking_performance_columns" => "hotel_portal/reports/report_columns_spec.rb",
     "hotel_portal/reports/booking_performance_selection" => "hotel_portal/reports/record_selection_spec.rb",
+    # The folio posting the instalment services share is exercised through them:
+    # a spec for it apart from a payment or refund would assert its own mock.
+    "bookings/payment_instalments/folio_posting" => "bookings/payment_instalments/mark_paid_spec.rb",
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",

@@ -46,8 +46,8 @@ module ArPaymentSubmissions
 
     # Only a booking prepayment has a folio waiting on it -- an invoice
     # settlement is ordinary AR and is posted through the invoice, not a
-    # booking. `ar_payment_submission.approve!` already cleared the payment
-    # deadline; this is what makes the booking actually read as paid.
+    # booking. This is what makes the booking actually read as paid, and what moves
+    # its payment deadline on to the next stage still owed.
     def post_to_folio!
       booking = @submission.booking
       return if booking.blank?
@@ -66,7 +66,9 @@ module ArPaymentSubmissions
       ).call
       raise PostingFailed, result.error unless result.success?
 
-      ::Deposits::SyncBookingPaymentStatus.call(booking)
+      # Marks whichever stages the slip covers as paid, and leaves the rooms held
+      # against the next one still owed.
+      ::Deposits::SyncBookingPaymentStatus.call(booking, folio_transaction: result.transaction, user: @reviewed_by)
     end
 
     # A slip is usually approved well before checkout, but a review can lag

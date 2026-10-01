@@ -41,11 +41,7 @@ class ArPaymentSubmission < ApplicationRecord
   scope :for_booking, ->(booking) { where(booking: booking) }
 
   def approve!(ar_payment:, reviewed_by:)
-    transaction do
-      update!(status: "approved", ar_payment: ar_payment, reviewed_by: reviewed_by, reviewed_at: Time.current)
-      # The rooms are paid for, so nothing is left to release.
-      booking&.update!(payment_due_at: nil)
-    end
+    update!(status: "approved", ar_payment: ar_payment, reviewed_by: reviewed_by, reviewed_at: Time.current)
   end
 
   def reject!(reason:, reviewed_by:)
@@ -63,8 +59,14 @@ class ArPaymentSubmission < ApplicationRecord
     return if booking.blank? || booking.payment_due_at.blank?
 
     review_duration = reviewed_at - created_at
-    extended = [ booking.payment_due_at + review_duration, booking.check_in ].compact.min
-    booking.update!(payment_due_at: extended)
+    stage = booking.payment_instalments.pending.first
+    if stage
+      stage.update!(due_at: [ stage.due_at + review_duration, booking.check_in ].compact.min)
+      Bookings::SyncPaymentDeadline.call(booking)
+    else
+      extended = [ booking.payment_due_at + review_duration, booking.check_in ].compact.min
+      booking.update!(payment_due_at: extended)
+    end
   end
 
   private

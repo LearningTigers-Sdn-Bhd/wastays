@@ -1,0 +1,67 @@
+<%# Payment terms for standard travel agents. Direct-bill agencies are invoiced
+    after the stay and follow none of this. An agency can override the hold on
+    its own External Account. %>
+<%= form_with model: @hotel,
+              url: hotel_corporate_ta_portal_settings_path(@hotel),
+              method: :patch,
+              local: true,
+              class: "space-y-8" do |f| %>
+  <%= hidden_field_tag :form_id, "corporate_ta_portal_settings" %>
+
+  <% if @presenter.settings_errors.any? && params[:form_id] == "corporate_ta_portal_settings" %>
+    <%= render PanelsUI::Alert.new(
+          tone: :destructive,
+          title: pluralize(@presenter.settings_errors.count, "error") + " prevented these settings from being saved",
+          role: :alert) do |alert| %>
+      <% alert.with_description do %>
+        <ul class="list-disc space-y-1 ps-5">
+          <% @presenter.settings_errors.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <section aria-labelledby="ta-payment-terms-heading" class="max-w-3xl">
+    <div>
+      <h2 id="ta-payment-terms-heading" class="text-base font-semibold text-foreground">Travel agent payment terms</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        A standard travel agent pays a deposit soon after booking and the rest before arrival. Bookings that are not paid on time are released.
+      </p>
+    </div>
+
+    <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <%= render "hotel_portal/shared/agent_payment_hold_field",
+              form: f,
+              label: "Agent payment hold",
+              hint: "How long an agent's booking is held before the rooms are released for non-payment. The clock stops when the agent uploads a transfer slip, and a hold never runs past the arrival date. An individual agency can override this." %>
+      </div>
+
+      <%= render PanelsUI::FormField.new(form: f, attribute: :agent_deposit_percentage, label: "Agent deposit (%)",
+            hint: "Share of the booking total an agent pays within the payment hold.") do |field| %>
+        <% field.with_input(type: :number, min: 1, max: 100, step: 1, inputmode: "numeric") %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :agent_full_payment_days_before_arrival, label: "Full payment before arrival (days)",
+            hint: "The balance is due this many days before arrival. A booking made closer than this is due in full within the payment hold.") do |field| %>
+        <% field.with_input(type: :number, min: 1, step: 1, inputmode: "numeric") %>
+      <% end %>
+
+      <div class="sm:col-span-2">
+        <%= render PanelsUI::Checkbox.new(
+              form: f,
+              attribute: :agent_deposit_non_refundable,
+              label: "Deposit is non-refundable",
+              description: "When a booking is cancelled for a missed payment, the hotel keeps what the agent has already paid. Otherwise it is left for staff to refund.",
+              checked: f.object.agent_deposit_non_refundable) %>
+      </div>
+    </div>
+  </section>
+
+  <div class="flex max-w-3xl justify-end pt-1">
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :md) do %>
+      Save Settings
+    <% end %>
+  </div>
+<% end %>

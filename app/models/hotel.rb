@@ -36,6 +36,11 @@ class Hotel < ApplicationRecord
   # The property default for how long an agent booking is held before payment.
   # See Bookings::PaymentHold.
   validates :agent_payment_hold_hours, numericality: { only_integer: true, greater_than: 0 }
+  # The two-stage terms a standard agent's booking is scheduled against: this
+  # share of the total within the hold above, and everything paid this many days
+  # before arrival. See Bookings::PaymentSchedule.
+  validates :agent_deposit_percentage, numericality: { only_integer: true, in: 1..100 }
+  validates :agent_full_payment_days_before_arrival, numericality: { only_integer: true, greater_than: 0 }
   validates :ai_provider_key, presence: true, if: :ai_provider_enabled?
 
   has_one_attached :icon, dependent: :purge_later do |attachable|

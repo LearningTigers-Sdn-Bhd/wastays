@@ -19,6 +19,7 @@ class Booking < ApplicationRecord
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy
+  has_many :payment_instalments, -> { order(:position) }, class_name: "BookingPaymentInstalment", dependent: :destroy, inverse_of: :booking
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy

@@ -29,10 +29,10 @@ module CorporatePortal
       scope = scope.where(status: @index.selected_status) if @index.selected_status
       scope = scope.search(params[:q]) if params[:q].present?
 
-      # Submissions are preloaded: the payment chip asks about them for every
-      # row on the page.
+      # Submissions and payment stages are preloaded: the payment chip asks about
+      # both for every row on the page.
       @pagy, @bookings = pagy(:offset,
-        scope.includes(:hotel, :ar_payment_submissions, :hotel_corporate_account)
+        scope.includes(:hotel, :ar_payment_submissions, :payment_instalments, :hotel_corporate_account)
              .order(created_at: :desc, id: :desc),
         limit: page_size)
       @payment_presenters = payment_presenters_for(@bookings)

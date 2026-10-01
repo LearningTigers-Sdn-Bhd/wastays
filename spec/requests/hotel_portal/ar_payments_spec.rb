@@ -249,4 +249,40 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship)
     create(:ar_invoice, hotel: hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: amount, paid_amount: 0, outstanding_amount: amount, currency: hotel.default_currency)
   end
+
+  describe "reviewing a slip sent for a booking with a payment schedule" do
+    let(:relationship) { create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent") }
+    let(:booking) do
+      create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed", payment_status: "pending",
+                       total_amount: 1000, currency: "MYR", check_in: 60.days.from_now, check_out: 62.days.from_now)
+    end
+
+    before { Bookings::CreatePaymentSchedule.call(booking: booking) }
+
+    def review(amount)
+      submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, booking: booking, amount: amount)
+      get new_hotel_ar_payment_path(hotel, ar_payment_submission_id: submission.id)
+      Nokogiri::HTML(response.body)
+    end
+
+    it "shows what the slip says beside what is due now and the booking total" do
+      doc = review(500)
+
+      values = doc.css("[data-testid='slip-amount-check'] dd").map { |value| value.text.squish }
+      expect(values).to eq([ "MYR 500.00", "MYR 500.00 (deposit)", "MYR 1,000.00" ])
+      expect(doc.at_css("[role='alert']")).to be_nil
+    end
+
+    it "warns when the slip says less than the deposit" do
+      doc = review(100)
+
+      expect(doc.at_css("p[role='alert']").text).to include("This slip says MYR 100.00", "must be at least MYR 500.00")
+    end
+
+    it "warns when the slip says more than is owed" do
+      doc = review(1500)
+
+      expect(doc.at_css("p[role='alert']").text).to include("more than the MYR 1000.00 still owed")
+    end
+  end
 end

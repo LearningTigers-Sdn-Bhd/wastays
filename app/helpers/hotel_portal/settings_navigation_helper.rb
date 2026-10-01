@@ -202,6 +202,7 @@ module HotelPortal
           hotel_permission_granted?("manage_hotel_profile") ? { key: "ota-logins", label: "OTA Logins", path: hotel_ota_logins_settings_path(current_hotel), icon: "globe", active: controller_name == "settings" && settings_active_page == "ota_logins" } : nil,
           hotel_permission_granted?("manage_hotel_profile") && current_hotel.allow_boat_information? ? { key: "boat", label: "Boat Settings", path: hotel_boat_settings_path(current_hotel), icon: "ship", active: controller_name.in?(%w[settings boat_schedules]) && settings_active_page == "boat" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "notifications", label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "corporate-ta-portal", label: "Corporate/TA Portal", path: hotel_corporate_ta_portal_settings_path(current_hotel), icon: "briefcase", active: controller_name == "settings" && settings_active_page == "corporate_ta_portal" } : nil,
           { key: "plan", label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
         ].compact
       when :property

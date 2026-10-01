@@ -42,6 +42,8 @@ module HotelPortal
       Tab.new("audit_trails", "Audit Trail")
     ].freeze
     LEGACY_TABS = [ Tab.new("source_details", "Source Details") ].freeze
+    # Only for an agent booking that carries a payment schedule.
+    AGENT_PAYMENTS_TAB = Tab.new("agent_payments", "Agent payments")
     ALERT_ACTIONS = %w[change_rate].freeze
     ENTITY_TABS = %w[folio_operations billing_preferences guest_details room_and_rate].freeze
     DOCUMENT_SECTION_BY_TYPE = {
@@ -450,7 +452,23 @@ module HotelPortal
     end
 
     def tabs
-      hotel.feature_enabled?("full_audit_trail") ? TABS : TABS.reject { |tab| tab.key == "audit_trails" }
+      list = hotel.feature_enabled?("full_audit_trail") ? TABS : TABS.reject { |tab| tab.key == "audit_trails" }
+      return list unless agent_payments?
+
+      list.dup.insert(list.index { |tab| tab.key == "security_deposits" } + 1, AGENT_PAYMENTS_TAB)
+    end
+
+    # The bookings in view that are on a payment schedule, one presenter each.
+    def agent_payments_presenters
+      # One query for every child's stages, however the children were loaded.
+      ActiveRecord::Associations::Preloader.new(records: child_bookings, associations: :payment_instalments).call
+      @agent_payments_presenters ||= child_bookings
+        .select { |child| child.payment_instalments.any? }
+        .map { |child| AgentPaymentsPresenter.new(booking: child, user: @user, hotel: hotel) }
+    end
+
+    def agent_payments?
+      agent_payments_presenters.any?
     end
 
     def active_tab
@@ -2288,7 +2306,7 @@ module HotelPortal
     end
 
     def supported_tabs
-      @supported_tabs ||= TABS + LEGACY_TABS
+      @supported_tabs ||= TABS + LEGACY_TABS + [ AGENT_PAYMENTS_TAB ]
     end
 
     def booking_billing_parties

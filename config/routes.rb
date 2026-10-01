@@ -558,6 +558,9 @@ Rails.application.routes.draw do
         post :refund_deposit, controller: :workspace_actions
         post :reverse_deposit_application, controller: :workspace_actions
         post :reverse_deposit_allocation, controller: :workspace_actions
+        post :mark_agent_instalment_paid, controller: :workspace_actions
+        post :refund_agent_instalment, controller: :workspace_actions
+        post :reopen_agent_instalment, controller: :workspace_actions
         post :collect_security_deposit, controller: :workspace_actions
         post :release_security_deposits, controller: :workspace_actions
         post :complete_housekeeping_request, controller: :workspace_actions
@@ -820,6 +823,8 @@ Rails.application.routes.draw do
       get "general/rates", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory"), as: :rates_settings
       get "general/notifications", to: "settings#index", as: :notification_settings, defaults: { settings_page: "notifications" }
       patch "general/notifications", to: "settings#update", defaults: { settings_page: "notifications" }
+      get "general/corporate-ta-portal", to: "settings#index", as: :corporate_ta_portal_settings, defaults: { settings_page: "corporate_ta_portal" }
+      patch "general/corporate-ta-portal", to: "settings#update", defaults: { settings_page: "corporate_ta_portal" }
       get "general/plan-and-billing", to: "plans#show", as: :plan
 
       scope "property" do

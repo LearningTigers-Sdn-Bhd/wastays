@@ -19,6 +19,7 @@ module Bookings
       "charge_added" => "financial",
       "payment_recorded" => "financial",
       "refund_completed" => "financial",
+      "payment_reopened" => "financial",
       "payout_processing" => "financial",
       "note_added" => "notes",
       "note_updated" => "notes",

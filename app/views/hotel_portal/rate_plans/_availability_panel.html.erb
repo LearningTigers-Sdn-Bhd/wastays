@@ -44,3 +44,13 @@
     </div>
   </section>
 <% end %>
+
+<% unless rate_plan.kind.in?(RatePlan.kinds_for(:corporate)) %>
+  <section aria-labelledby="rate-plan-ta-unavailable-heading" class="space-y-2">
+    <h3 id="rate-plan-ta-unavailable-heading" class="text-base font-semibold text-foreground">Corporate/TA Portal</h3>
+    <p class="text-sm text-muted-foreground">
+      <%= rate_plan.kind_hint %> It can't be offered to travel agents, even if it has been renamed.
+      To give agents their own rate, create a Custom rate plan.
+    </p>
+  </section>
+<% end %>

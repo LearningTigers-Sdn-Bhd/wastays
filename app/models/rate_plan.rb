@@ -130,6 +130,28 @@ class RatePlan < ApplicationRecord
     @agency_account_ids = Array(ids).compact_blank.map(&:to_i).uniq
   end
 
+  # Plans made by the system keep their kind after a rename, so the name alone
+  # doesn't say who can book them. Standard and custom are self-evident.
+  KIND_LABELS = {
+    "walk_in" => "Walk-in",
+    "corporate" => "Corporate",
+    "ota" => "OTA"
+  }.freeze
+
+  KIND_HINTS = {
+    "walk_in" => "Walk-in plan: sold by front desk only.",
+    "corporate" => "Corporate plan: sold to corporate accounts and front desk.",
+    "ota" => "OTA plan: only sent to your channel manager."
+  }.freeze
+
+  def kind_label
+    KIND_LABELS[kind]
+  end
+
+  def kind_hint
+    KIND_HINTS[kind]
+  end
+
   def ta_access_label
     TA_ACCESS_LABELS.fetch(ta_access)
   end

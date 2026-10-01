@@ -89,6 +89,13 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       end
 
       assignment_row = document.at_css("#room-inventory-rate-plan-#{custom_assignment.id}")
+      # Archived rows start hidden, and only a room with one offers the toggle.
+      expect(assignment_row.key?("hidden")).to be(true)
+      expect(assignment_row.key?("data-archived")).to be(true)
+      room_with_archived = assignment_row.ancestors("[data-room-type-id]").first
+      expect(room_with_archived.at_css("[data-archived-toggle-target='control']").key?("hidden")).to be(false)
+      other_room = document.css("[data-room-type-id]").find { |room| room != room_with_archived }
+      expect(other_room.at_css("[data-archived-toggle-target='control']").key?("hidden")).to be(true)
       expect(assignment_row.text.squish).to include("Non-refundable", "Archived", "Adjusts Standard Rate", "Ready", "Edit rate", "Detach rate")
       # An archived plan reads as off, and restoring is not confirmed — the
       # confirm belongs on the direction that takes a plan out of use.
@@ -147,11 +154,11 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       first_header_cell = rate_header.element_children.first
       expect(first_header_cell.text.squish).to eq("Rate availability")
       expect(first_header_cell.at_css(".sr-only")).to be_present
-      expect(document.at_css("#room-inventory-#{grouped_room_type.id} h4").text.squish).to eq("Rate plans (5)")
+      expect(document.at_css("#room-inventory-#{grouped_room_type.id} h4").text.squish).to eq("Rate plans (4)")
 
       new_rate = document.css("#room-inventory-#{grouped_room_type.id} a").find { |link| link.text.squish == "New rate" }
       expect(new_rate["href"]).to eq(new_hotel_rate_plan_path(hotel, room_type_id: grouped_room_type.id))
-      expect(document.at_css("body").text).to include("Rooms", "Rate issues", "Rate plans (5)", "New rate")
+      expect(document.at_css("body").text).to include("Rooms", "Rate issues", "Rate plans (4)", "New rate")
       expect(document.at_css("body").text).not_to include("New Rate", "Standard Rate (MYR)")
       expect(document.at_css("body").text).to include("Assign room rate")
       expect(document.at_css("body").text).not_to include("Assign Room Group", room_group.name)

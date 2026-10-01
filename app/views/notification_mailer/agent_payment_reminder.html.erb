@@ -5,4 +5,7 @@
       eyebrow: "Payment reminder",
       headline: "Payment due in #{@payload[:time_left_label].to_s.sub(' left', '').presence || 'a short while'}",
       body: "The rooms below are held for you at #{@payload[:hotel_name]} until the deadline shown. Sending your transfer slip before then keeps them reserved. After the deadline the booking is released automatically and the rooms return to sale.",
+      amount_heading: "Amount due now",
+      amount_text: @payload[:amount_due_label],
+      amount_stage: @payload[:payment_stage],
       cta_label: "Send your transfer slip" %>

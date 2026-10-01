@@ -54,6 +54,37 @@ RSpec.describe Notifications::PublishAgentPaymentStaffNotification do
     end
   end
 
+  describe "rooms released after part of the money was paid" do
+    let(:booking) do
+      create(:booking, hotel: hotel, hotel_corporate_account: relationship, total_amount: 1000, currency: "MYR",
+                       status: "cancelled", payment_status: "partial")
+    end
+
+    before do
+      folio = create(:booking_folio, booking: booking, hotel: hotel, currency: "MYR")
+      Folios::Transactions::InsertTransaction.new(
+        booking_folio: folio, amount: 500, transaction_type: "payment", category: "booking_payment",
+        user: user, description: "deposit", options: { system_posting: true, posting_source: "spec" }
+      ).call
+    end
+
+    it "tells the desk the money needs a refund decision" do
+      described_class.call(booking: booking, event: :released)
+
+      message = StaffNotification.find_by(recipient: user, notification_type: "agent_booking_released").message
+      expect(message).to include("MYR 500.00 already paid has not been refunded; a refund needs a decision.")
+    end
+
+    it "tells the desk the deposit is retained when the hotel keeps deposits" do
+      hotel.update!(agent_deposit_non_refundable: true)
+
+      described_class.call(booking: booking, event: :released)
+
+      message = StaffNotification.find_by(recipient: user, notification_type: "agent_booking_released").message
+      expect(message).to include("MYR 500.00 already paid is retained: the deposit is non-refundable.")
+    end
+  end
+
   it "says nothing to staff who cannot manage AR payments" do
     other = create(:user)
     create(:user_hotel_access, user: other, hotel: hotel, role: create(:role, account: hotel.account))

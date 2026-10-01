@@ -16,14 +16,17 @@
     <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
       <% if payment.in_house? %>
         <%= cached_icon "bed", class: "size-3.5 shrink-0 text-muted-foreground", aria: { hidden: true } %>
-        <span class="font-bold text-foreground">Pay <%= payment.amount_label %></span>
+        <span class="font-bold text-foreground">Pay <%= payment.amount_due_label %></span>
         <span class="text-muted-foreground">guest checked in, still unpaid</span>
       <% elsif payment.under_review? %>
         <%= cached_icon "hourglass", class: "size-3.5 shrink-0 text-muted-foreground", aria: { hidden: true } %>
         <span class="font-bold text-foreground">Slip under review</span>
       <% else %>
         <%= cached_icon "clock", class: "size-3.5 shrink-0 text-muted-foreground", aria: { hidden: true } %>
-        <span class="font-bold text-foreground">Pay <%= payment.amount_label %></span>
+        <span class="font-bold text-foreground">Pay <%= payment.amount_due_label %></span>
+        <% if payment.stage_label %>
+          <span class="text-muted-foreground">(<%= payment.stage_label.downcase %>)</span>
+        <% end %>
         <span class="text-muted-foreground">by <%= payment.due_at_label %></span>
         <%# Rendered server-side so the line still says how long is left with
             JavaScript off; the controller replaces it with a live count. %>
@@ -32,7 +35,7 @@
     </div>
 
     <% unless compact %>
-      <p class="mt-1.5 text-xs text-muted-foreground"><%= payment.status_note %></p>
+      <p class="mt-1.5 text-xs text-muted-foreground"><%= payment.status_note %> <%= payment.following_stage_note %></p>
       <% if payment.rejected_submission&.rejection_reason.present? %>
         <p class="mt-1.5 text-xs font-semibold text-destructive">
           A previous slip was rejected: <%= payment.rejected_submission.rejection_reason %>

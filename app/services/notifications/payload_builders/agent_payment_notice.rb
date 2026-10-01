@@ -21,6 +21,7 @@ module Notifications
 
       def call
         payment = CorporatePortal::BookingPaymentPresenter.new(@booking)
+        progress = ::Bookings::PaymentProgress.new(@booking)
 
         {
           notification_type: @notification_type,
@@ -37,6 +38,14 @@ module Notifications
           amount: @booking.total_amount.to_s,
           currency: @booking.currency,
           amount_label: payment.amount_label,
+          amount_due_label: payment.amount_due_label,
+          payment_stage: payment.stage_label,
+          paid_amount_label: (payment.money_label(progress.paid_total) if progress.paid_total.positive?),
+          # Something has been paid and something is still owed: the only case
+          # where a "payment received" mail must not say the booking is settled.
+          balance_remaining: progress.paid_total.positive? && progress.amount_due_now.present?,
+          deposit_retained: progress.retained_on_cancellation?,
+          following_stage_note: payment.following_stage_note,
           # Stated with its zone: the agent is often not in the hotel's.
           payment_due_at: @booking.payment_due_at&.iso8601,
           payment_due_label: payment.due_at_label,

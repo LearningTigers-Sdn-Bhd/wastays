@@ -226,6 +226,28 @@ RSpec.describe "Rate plan page", type: :system, js: true do
     end
   end
 
+  it "keeps discount examples on the price being typed on the Pricing tab" do
+    open_plan(tab: "discounts")
+    add_discount_via_wizard(min_nights: 3, value: 10)
+    within("[data-role='stay-discount-row']") { expect(page).to have_text("a 3-night stay at MYR 400 a night") }
+
+    open_tab "Pricing"
+    choose "Set prices directly"
+    fill_in "Nightly room price", with: "500"
+    open_tab "Discounts"
+    within("[data-role='stay-discount-row']") { expect(page).to have_text("a 3-night stay at MYR 500 a night") }
+
+    # A row added afterwards starts from the edited price, not the saved one.
+    click_button "Add discount"
+    within("[data-stay-discount-wizard-target='card']") do
+      find("[data-stay-discount-wizard-target='minNights']").fill_in(with: "2")
+      click_button "Continue"
+      click_button "Continue"
+      find("[data-stay-discount-wizard-target='value']").fill_in(with: "20")
+      expect(page).to have_text("a 2-night stay at MYR 500 a night")
+    end
+  end
+
   it "groups a long stay's example into ranges instead of one row per night" do
     open_plan(tab: "discounts")
     click_button "Add discount"

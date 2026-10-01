@@ -23,7 +23,10 @@ module Bookings
     # Every status in which an agent booking still owes money.
     SETTLING_STATUSES = (HELD_STATUSES + IN_HOUSE_STATUSES).freeze
 
-    UNPAID_PAYMENT_STATUSES = %w[pending failed].freeze
+    # `partial` is here on purpose: a deposit leaves the balance owed, and a
+    # booking that has paid only some of what it owes is still held against the
+    # next deadline. Excluding it let a token payment hold rooms indefinitely.
+    UNPAID_PAYMENT_STATUSES = %w[pending failed partial].freeze
 
     module_function
 

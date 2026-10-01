@@ -7,6 +7,7 @@ module HotelPortal
       "ota_logins" => [ "OTA Logins", "Review the OTA login details provided during onboarding." ],
       "boat" => [ "Boat Settings", "Configure the daily boat timetable and the meals each transfer slot carries." ],
       "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
+      "corporate_ta_portal" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ],
       "e_invoice" => [ "E-Invoice", "Configure LHDN MyInvois submission details for this property." ]
     }.freeze

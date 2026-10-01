@@ -1,6 +1,7 @@
 <% primary_plan_id = room_type.primary_rate_plan&.id %>
 <% assignments = room_type.room_type_rate_plans.sort_by { |assignment| [ assignment.rate_plan_id == primary_plan_id ? 0 : 1, assignment.rate_plan.standard_rate? ? 0 : 1, assignment.rate_plan.name.downcase, assignment.id ] } %>
-<% pricing_issue_count = assignments.count { |assignment| !room_pricing_complete?(assignment, room_type) } %>
+<% archived_count = assignments.count { |assignment| assignment.rate_plan.archived? } %>
+<% pricing_issue_count = assignments.count { |assignment| !assignment.rate_plan.archived? && !room_pricing_complete?(assignment, room_type) } %>
 
 <% accordion.with_item(
      value: room_type.id,
@@ -61,9 +62,16 @@
   <% end %>
 
   <% item.with_body do %>
-    <section aria-labelledby="room-inventory-<%= room_type.id %>-rate-plans-heading">
+    <section aria-labelledby="room-inventory-<%= room_type.id %>-rate-plans-heading" data-controller="archived-toggle">
       <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
-        <h4 id="room-inventory-<%= room_type.id %>-rate-plans-heading" class="text-sm font-medium text-foreground">Rate plans (<%= assignments.size %>)</h4>
+        <h4 id="room-inventory-<%= room_type.id %>-rate-plans-heading" class="text-sm font-medium text-foreground">Rate plans (<span data-archived-toggle-target="count"><%= assignments.size - archived_count %></span>)</h4>
+        <div class="ml-auto" data-archived-toggle-target="control" <%= "hidden" if archived_count.zero? %>>
+          <%= render PanelsUI::Checkbox.new(
+                name: "show_archived_#{room_type.id}",
+                label: "Show archived",
+                checked: false,
+                data: { archived_toggle_target: "source", action: "change->archived-toggle#update" }) %>
+        </div>
         <%= render PanelsUI::Button.new(
               href: new_hotel_rate_plan_path(current_hotel, room_type_id: room_type.id),
               variant: :ghost,
@@ -84,7 +92,7 @@
             <span class="sr-only">Actions</span>
           </div>
 
-          <div class="divide-y divide-border/70" role="list" aria-label="Rate plans for <%= room_type.name %>">
+          <div class="divide-y divide-border/70" role="list" aria-label="Rate plans for <%= room_type.name %>" data-archived-toggle-target="list">
             <% assignments.each do |assignment| %>
               <%= render "hotel_portal/room_types/inventory_rate_plan", assignment: assignment, room_type: room_type %>
             <% end %>
