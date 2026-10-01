@@ -404,6 +404,73 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(invitation).to be_pending
   end
 
+  describe "copying an invitation link, for a contact the email does not reach" do
+    let!(:invitation) { create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, email: "agent@perfect.test") }
+
+    def revealed_url = response.body[%r{http[^<\s]*/corporate-invitations/[\w-]+}]
+
+    it "shows a fresh link that opens the acceptance page" do
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(response).to have_http_status(:ok)
+      expect(revealed_url).to be_present
+      expect(response.body).to include("external-invitation-link-row-")
+
+      get URI(revealed_url).path
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Connect your Corporate Account")
+    end
+
+    it "shows the link in the results frame when asked by the Copy link button (a Turbo request)" do
+      post link_hotel_corporate_invitation_path(hotel, invitation), headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(revealed_url).to be_present
+      expect(response.body).to include("external-invitation-link-row-#{invitation.id}", "clipboard#copy")
+    end
+
+    it "stops the previous link from working, because only the new one is known" do
+      old_digest = invitation.token_digest
+
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(invitation.reload.token_digest).not_to eq(old_digest)
+    end
+
+    it "does not email anyone, and leaves an unsent invitation unsent" do
+      invitation.update!(last_sent_at: nil)
+
+      expect {
+        post link_hotel_corporate_invitation_path(hotel, invitation)
+      }.not_to have_enqueued_mail(CorporateInvitationMailer, :invite)
+
+      expect(invitation.reload.last_sent_at).to be_nil
+    end
+
+    it "revives a lapsed invitation so the link can be used" do
+      invitation.update!(expires_at: 1.minute.ago)
+
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(invitation.reload).to be_pending
+    end
+
+    it "does not show a link on the ordinary list" do
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).not_to include("external-invitation-link-row-")
+      expect(response.body).to include("external-invitation-link-#{invitation.id}")
+    end
+
+    it "cannot reach another hotel's invitation" do
+      other = create(:corporate_invitation)
+
+      post link_hotel_corporate_invitation_path(hotel, other)
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   it "revokes an unaccepted invitation" do
     invitation = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user)
 
