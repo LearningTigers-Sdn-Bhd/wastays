@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html class="h-full">
+  <head>
+    <title><%= content_for(:title) || "Agent Portal | WAStays" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full overflow-hidden" data-theme="panel-light">
+    <div class="panel-shell flex flex-col bg-background">
+      <%= render PanelsUI::Navbar.new(key: "agent") do |navbar| %>
+        <% navbar.with_profile do %>
+          <%= render PanelsUI::ProfileMenu.new(
+                id: "agent-profile",
+                display_name: current_user.name,
+                secondary_text: current_user.email,
+                trigger_label: "Open agent account menu",
+                trigger_icon: "briefcase"
+              ) do |menu| %>
+            <% menu.with_item(label: "My account", href: edit_agent_profile_path, icon: "user") %>
+            <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
+            <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <div class="flex flex-1 overflow-hidden">
+        <%= render "shared/navigation/agent_sidebar" %>
+
+        <main class="flex-1 flex flex-col overflow-hidden">
+          <div class="flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
+            <div class="panel-page space-y-5">
+              <%= yield %>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <%= render "shared/turbo_confirm" %>
+    <%= render PanelsUI::ToastViewport.new %>
+    <%= render "shared/feedback/flash_toast_triggers", flash: flash %>
+  </body>
+</html>
