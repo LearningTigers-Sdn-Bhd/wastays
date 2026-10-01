@@ -16,6 +16,10 @@ class CorporateInvitation < Invitation
     :agent_booking_enabled,
     :agent_payment_hold_hours
 
+  # Set when the invitation claims an account that already exists (one the
+  # reservation importer created for a travel agent) instead of making a new one.
+  belongs_to :hotel_corporate_account, optional: true
+
   default_scope { corporate }
 
   before_validation { self.kind = "corporate" }
@@ -29,6 +33,9 @@ class CorporateInvitation < Invitation
   validates :credit_currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :account_type, inclusion: { in: HotelCorporateAccount::ACCOUNT_TYPES }
   validates :agent_payment_hold_hours, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validate :claimed_account_belongs_to_hotel
+
+  def claim? = hotel_corporate_account_id.present?
 
   def direct_bill_enabled
     ActiveModel::Type::Boolean.new.cast(super)
@@ -88,6 +95,12 @@ class CorporateInvitation < Invitation
   end
 
   private
+
+  def claimed_account_belongs_to_hotel
+    return if hotel_corporate_account.blank? || hotel_corporate_account.hotel_id == hotel_id
+
+    errors.add(:hotel_corporate_account, "must belong to this hotel")
+  end
 
   def default_credit_currency
     self.credit_currency ||= hotel&.default_currency

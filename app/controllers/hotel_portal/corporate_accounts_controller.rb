@@ -22,7 +22,8 @@ module HotelPortal
     def new
       @corporate_invitation = current_hotel.corporate_invitations.build(
         relationship_type: "standard",
-        credit_currency: current_hotel.default_currency
+        credit_currency: current_hotel.default_currency,
+        hotel_corporate_account: claimable_relationship
       )
       render :new, layout: false
     end
@@ -102,9 +103,16 @@ module HotelPortal
       @relationship = current_hotel.hotel_corporate_accounts.find(params[:id])
     end
 
+    # The account an invitation would claim, when the sheet was opened from one.
+    def claimable_relationship
+      id = params[:hotel_corporate_account_id].presence
+      current_hotel.hotel_corporate_accounts.find_by(id: id) if id
+    end
+
     def corporate_invitation_params
       params.require(:corporate_invitation).permit(
         :email,
+        :hotel_corporate_account_id,
         :account_type,
         :relationship_type,
         :credit_limit,

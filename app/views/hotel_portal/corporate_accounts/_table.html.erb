@@ -60,6 +60,18 @@
             <td><%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %></td>
             <td class="text-muted-foreground"><%= row.created_on_label %></td>
             <td class="text-right">
+              <%# An account the importer created has nobody able to sign in to it. %>
+              <% if row.relationship.unclaimed? %>
+                <%= render PanelsUI::Button.new(
+                  as: :a,
+                  href: new_hotel_corporate_account_path(current_hotel, hotel_corporate_account_id: row.relationship.id, return_to: request.fullpath),
+                  variant: :secondary,
+                  size: :sm,
+                  data: { testid: "external-account-invite-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
+                  <%= cached_icon "mail", class: "size-3.5", aria: { hidden: true } %>
+                  Invite contact
+                <% end %>
+              <% end %>
               <%= render PanelsUI::Button.new(
                 as: :a,
                 href: edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath),

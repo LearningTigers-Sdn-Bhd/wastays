@@ -14,6 +14,7 @@ class HotelCorporateAccount < ApplicationRecord
   has_many :bookings, dependent: :nullify
   has_many :rate_plan_agency_rules, dependent: :destroy
   has_many :booking_quotes, dependent: :nullify
+  has_many :claim_invitations, class_name: "CorporateInvitation", dependent: :destroy
 
   ACCOUNT_TYPES = %w[company government travel_agent airline salesperson].freeze
   UNAVAILABLE_ACCOUNT_TYPES = [].freeze
@@ -40,6 +41,14 @@ class HotelCorporateAccount < ApplicationRecord
   scope :active, -> { where(status: "active") }
   scope :suspended, -> { where(status: "suspended") }
   scope :booking_enabled, -> { where(agent_booking_enabled: true) }
+
+  # An account nobody can sign in to: the reservation importer creates one per
+  # travel agent, with their bookings already on it. Inviting a contact to claim
+  # it is how the agent gets in. Reads `users` so a list that preloads them does
+  # not ask per row.
+  def unclaimed?
+    corporate_account.users.empty?
+  end
 
   # Travel agents settle by bank transfer only: the hotel needs the remittance
   # slip against the invoice, and card fees on agent volume are not absorbed.

@@ -437,4 +437,40 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
 
     expect(response).to have_http_status(:not_found)
   end
+
+  describe "inviting a contact to an imported account" do
+    let(:agency_account) { create(:account, :corporate, name: "PERFECT VACATION SDN.BHD") }
+    let!(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: agency_account, account_type: "travel_agent")
+    end
+
+    it "offers the invite on an account nobody can sign in to, and not on one that has a login" do
+      get hotel_corporate_accounts_path(hotel)
+      expect(response.body).to include("Invite contact")
+
+      create(:user, :corporate, account: agency_account)
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).not_to include("external-account-invite-#{relationship.id}")
+    end
+
+    it "opens a short form for the account: its name, an email, and no billing terms to propose" do
+      get new_hotel_corporate_account_path(hotel, hotel_corporate_account_id: relationship.id)
+
+      expect(response.body).to include("Invite a contact", "PERFECT VACATION SDN.BHD")
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("input[name='corporate_invitation[hotel_corporate_account_id]']")["value"]).to eq(relationship.id.to_s)
+      expect(document.at_css("[data-controller='corporate-billing-terms']").has_attribute?("hidden")).to be(true)
+    end
+
+    it "sends the invitation to claim that account" do
+      expect {
+        post hotel_corporate_accounts_path(hotel), params: {
+          corporate_invitation: { email: "sabrina@perfect.test", hotel_corporate_account_id: relationship.id }
+        }
+      }.to change(CorporateInvitation, :count).by(1)
+
+      expect(CorporateInvitation.last).to have_attributes(email: "sabrina@perfect.test", hotel_corporate_account: relationship)
+    end
+  end
 end

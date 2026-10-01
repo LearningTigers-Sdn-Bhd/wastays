@@ -3,14 +3,15 @@
     id: "external-account-sheet",
     side: :right,
     size: :lg,
-    title: "Invite external account",
-    description: "The recipient chooses their account name when accepting.",
+    title: (@corporate_invitation.claim? ? "Invite a contact" : "Invite external account"),
+    description: (@corporate_invitation.claim? ? "They get a login to #{@corporate_invitation.hotel_corporate_account.corporate_account.name}. Its bookings and terms stay as they are." : "The recipient chooses their account name when accepting."),
     body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
       <%= form_with scope: :corporate_invitation,
         url: hotel_corporate_accounts_path(current_hotel),
         class: "flex h-full min-h-0 flex-col" do |form| %>
         <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+        <%= hidden_field_tag "corporate_invitation[hotel_corporate_account_id]", @corporate_invitation.hotel_corporate_account_id if @corporate_invitation.claim? %>
 
         <div class="min-h-0 flex-1 divide-y divide-border overflow-y-auto p-4 [&>*]:py-5 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
           <% if @corporate_invitation.errors.any? %>
@@ -28,14 +29,17 @@
                 placeholder: "billing@company.com") %>
             <% end %>
 
-            <%= render PanelsUI::FormField.new(form: form, attribute: :account_type, label: "Account type") do |field| %>
-              <% field.with_select_menu(
-                HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } },
-                selected: @corporate_invitation.account_type) %>
+            <% unless @corporate_invitation.claim? %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :account_type, label: "Account type") do |field| %>
+                <% field.with_select_menu(
+                  HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } },
+                  selected: @corporate_invitation.account_type) %>
+              <% end %>
             <% end %>
           </section>
 
-          <div data-controller="corporate-billing-terms"
+          <%# A claimed account keeps the terms it already has, so there is nothing to propose. %>
+          <div data-controller="corporate-billing-terms" <%= "hidden" if @corporate_invitation.claim? %>
                data-action="change->corporate-billing-terms#refresh">
             <%= render "hotel_portal/corporate_accounts/billing_terms_fields",
               form: form,

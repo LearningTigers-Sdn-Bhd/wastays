@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2091,6 +2091,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_010000) do
     t.datetime "created_at", null: false
     t.string "email", null: false
     t.datetime "expires_at", null: false
+    t.bigint "hotel_corporate_account_id"
     t.bigint "hotel_id", null: false
     t.bigint "invited_by_user_id", null: false
     t.string "kind", default: "staff", null: false
@@ -2103,6 +2104,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_010000) do
     t.index ["accepted_at"], name: "index_invitations_on_accepted_at"
     t.index ["account_id"], name: "index_invitations_on_account_id"
     t.index ["expires_at"], name: "index_invitations_on_expires_at"
+    t.index ["hotel_corporate_account_id"], name: "index_invitations_on_hotel_corporate_account_id"
     t.index ["hotel_id", "email"], name: "index_pending_staff_invites_on_hotel_and_email", unique: true, where: "(accepted_at IS NULL)"
     t.index ["hotel_id"], name: "index_invitations_on_hotel_id"
     t.index ["invited_by_user_id"], name: "index_invitations_on_invited_by_user_id"
@@ -3561,6 +3563,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_010000) do
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "invitations", "accounts"
+  add_foreign_key "invitations", "hotel_corporate_accounts"
   add_foreign_key "invitations", "hotels"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "invited_by_user_id"
