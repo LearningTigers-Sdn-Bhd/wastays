@@ -21,11 +21,11 @@ class MailLogQuery
   end
 
   def date_range
-    return @date_range if defined?(@date_range)
-
     start_date = parse_date(@params[:start_date])
     end_date = parse_date(@params[:end_date])
-    @date_range = start_date && end_date ? start_date.beginning_of_day..end_date.end_of_day : nil
+    return unless start_date || end_date
+
+    start_date&.beginning_of_day..end_date&.end_of_day
   end
 
   def parse_date(value)
