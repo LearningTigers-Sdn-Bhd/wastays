@@ -8,7 +8,7 @@ module HotelPortal
 
     def update
       @user = current_user
-      if Users::UpdateProfile.call(user: @user, params: user_params)
+      if @user.update(user_params)
         redirect_to edit_hotel_user_profile_path, notice: "Profile updated successfully."
       else
         render :edit, status: :unprocessable_content
@@ -25,7 +25,7 @@ module HotelPortal
     end
 
     def user_params
-      params.require(:user).permit(:name, :email, :time_zone, :password, :password_confirmation, :current_password)
+      params.require(:user).permit(:name, :email, :time_zone, :password, :password_confirmation)
     end
   end
 end

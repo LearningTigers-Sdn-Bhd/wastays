@@ -1,7 +1,5 @@
 class Public::RegistrationsController < ApplicationController
   layout "auth"
-  helper_method :invite_agent
-
   def new
     @user = User.new
     @account = Account.new
@@ -13,12 +11,10 @@ class Public::RegistrationsController < ApplicationController
     result = HotelOps::CreateHotel.new(
       account_params: account_params,
       user_params: user_params,
-      hotel_params: invited_hotel_params,
-      agent: invite_agent
+      hotel_params: hotel_params
     ).call
 
     if result[:success]
-      SuperAgentMailer.hotel_registered(result[:hotel]).deliver_later if invite_agent
       sign_in_user(result[:user])
       redirect_to hotel_dashboard_path(result[:hotel]), notice: "Welcome! Your hotel account has been created."
     else
@@ -33,22 +29,6 @@ class Public::RegistrationsController < ApplicationController
   end
 
   private
-
-  # A hotel that registers from a super agent invite link (?c=CODE) joins that
-  # agent: it gets the agent hotel defaults and the agent can open it. An
-  # unknown code is ignored, so the hotel still registers as normal.
-  def invite_agent
-    return @invite_agent if defined?(@invite_agent)
-
-    code = params[:c].to_s.strip.upcase
-    @invite_agent = (User.super_agents.find_by(agent_code: code) if code.present?)
-  end
-
-  def invited_hotel_params
-    return hotel_params unless invite_agent
-
-    hotel_params.to_h.symbolize_keys.merge(SuperAgents::HotelDefaults.call)
-  end
 
   def copy_invalid_errors(invalid_record)
     return unless invalid_record

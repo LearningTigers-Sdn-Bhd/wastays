@@ -42,7 +42,7 @@ module HotelPortal
     end
 
     def set_account
-      @account = current_hotel.account
+      @account = current_user.account
     end
 
     def set_hotel

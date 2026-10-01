@@ -292,12 +292,6 @@ Rails.application.routes.draw do
     resources :ar_payment_submissions, only: [ :show, :new, :create ], path: "payment-submissions"
   end
 
-  # A super agent creates hotels and opens the hotels they created.
-  scope "/agent", module: :agent_portal, as: :agent do
-    resources :hotels, only: [ :index, :new, :create ]
-    resource :profile, only: [ :edit, :update ]
-  end
-
   # Superadmin dashboard
   get "/admin/hotels/:id/edit", to: redirect("/admin/hotels/%{id}?tab=hotel_details"), as: :edit_admin_hotel
   namespace :admin do
@@ -312,7 +306,6 @@ Rails.application.routes.draw do
       member do
         patch :update_account, to: "hotels/settings#update_account"
         patch :update_salesperson, to: "hotels/settings#update_salesperson"
-        patch :update_super_agent, to: "hotels/settings#update_super_agent"
         post :send_owner_password_reset, to: "hotels/settings#send_owner_password_reset"
         patch :set_owner_password, to: "hotels/settings#set_owner_password"
       end
@@ -354,7 +347,6 @@ Rails.application.routes.draw do
       end
     end
     resources :salespersons, only: [ :index, :create, :update, :destroy ]
-    resources :super_agents, only: [ :index, :new, :create, :update, :destroy ], path: "super-agents"
     resources :reconciliations, only: [ :index, :show ] do
       member do
         post :retry
