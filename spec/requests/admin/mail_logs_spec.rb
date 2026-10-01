@@ -15,7 +15,7 @@ RSpec.describe "Admin::MailLogs", type: :request do
     get "/admin/mail_logs"
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Mail Log", "Subject #{token}", "guest-#{token}@example.com", "SMTP down")
+    expect(response.body).to include("Mail log", "Subject #{token}", "guest-#{token}@example.com", "SMTP down")
   end
 
   it "filters by status" do
@@ -31,6 +31,6 @@ RSpec.describe "Admin::MailLogs", type: :request do
   it "shows an empty state" do
     get "/admin/mail_logs", params: { q: "no-such-#{token}" }
 
-    expect(response.body).to include("No emails found.")
+    expect(response.body).to include("No emails found")
   end
 end

@@ -1,89 +1,100 @@
-<% input_class = "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
-<% filtered = %i[status q start_date end_date].any? { |key| params[key].present? } %>
-<div class="w-full space-y-8">
-  <%= render PanelsUI::PageHeader.new(
-        title: "Mail Log",
-        description: "Review every email that the platform sent, and which emails failed.") %>
+<% content_for :title, "Mail Log | WAStays Admin" %>
+<% active_status = MailEvent::STATUSES.include?(params[:status]) ? params[:status] : "all" %>
+<% filter_params = { q: params[:q].presence, start_date: params[:start_date].presence, end_date: params[:end_date].presence } %>
+<% tabs = [
+     { name: "all", label: "All", count: @status_counts.values.sum },
+     { name: "sent", label: "Sent", count: @status_counts.fetch("sent", 0) },
+     { name: "failed", label: "Failed", count: @status_counts.fetch("failed", 0) }
+   ] %>
 
-  <div class="grid gap-4 sm:grid-cols-2">
-    <%= render PanelsUI::MetricCard.new(label: "Sent, last 24 hours", value: @status_counts.fetch("sent", 0)) %>
-    <%= render PanelsUI::MetricCard.new(label: "Failed, last 24 hours", value: @status_counts.fetch("failed", 0)) %>
-  </div>
+<%= render PanelsUI::PageHeader.new(
+      title: "Mail log",
+      description: "Every email the platform sends, and which ones failed.") %>
 
-  <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-    <div class="border-b border-border bg-muted/70 px-6 py-4 sm:px-8">
-      <%= form_with url: admin_mail_logs_path, method: :get, class: "grid w-full gap-4 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto] xl:items-end" do |f| %>
-        <div>
-          <label for="q" class="mb-2 block text-sm font-medium text-muted-foreground">Recipient or subject</label>
-          <%= f.search_field :q, value: params[:q], placeholder: "Search", class: input_class %>
-        </div>
-        <div>
-          <label for="status" class="mb-2 block text-sm font-medium text-muted-foreground">Status</label>
-          <%= render PanelsUI::SelectMenu.new(
-                form: f, attribute: :status, include_blank: "All statuses", selected: params[:status],
-                choices: MailEvent::STATUSES.map { |status| [ status.titleize, status ] }) %>
-        </div>
-        <div>
-          <label for="start_date" class="mb-2 block text-sm font-medium text-muted-foreground">Start Date</label>
-          <%= f.date_field :start_date, value: params[:start_date], class: input_class %>
-        </div>
-        <div>
-          <label for="end_date" class="mb-2 block text-sm font-medium text-muted-foreground">End Date</label>
-          <%= f.date_field :end_date, value: params[:end_date], class: input_class %>
-        </div>
-        <div class="flex items-center gap-3 xl:justify-end">
-          <% if filtered %>
-            <%= link_to "Clear", admin_mail_logs_path, class: "text-sm font-semibold text-muted-foreground hover:text-foreground" %>
-          <% end %>
-          <%= f.submit "Apply Filters", class: "inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary-hover" %>
-        </div>
+<section aria-label="Emails" class="space-y-4">
+  <%= render PanelsUI::Tabs.new(id: "mail-status-tabs", active: active_status, variant: :line, aria_label: "Filter emails by status") do |nav| %>
+    <% tabs.each do |tab| %>
+      <% nav.with_tab(
+           name: tab[:name],
+           label: tab[:label],
+           count: tab[:count],
+           href: admin_mail_logs_path(filter_params.merge(status: (tab[:name] unless tab[:name] == "all"))),
+           data: { turbo_action: "advance" }) %>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: admin_mail_logs_path, method: :get, class: "flex flex-wrap items-end gap-4" do |form| %>
+    <%= form.hidden_field :status, value: active_status unless active_status == "all" %>
+    <div class="w-full sm:w-72">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search") do |field| %>
+        <% field.with_input(type: :search, value: params[:q], placeholder: "Recipient or subject") %>
       <% end %>
     </div>
+    <div class="w-full sm:w-44">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :start_date, label: "From") do |field| %>
+        <% field.with_date_picker(value: params[:start_date], linked_to: :end_date) %>
+      <% end %>
+    </div>
+    <div class="w-full sm:w-44">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :end_date, label: "To") do |field| %>
+        <% field.with_date_picker(value: params[:end_date], min: params[:start_date].presence) %>
+      <% end %>
+    </div>
+    <div class="flex items-center gap-2">
+      <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Apply<% end %>
+      <% if filter_params.values.any?(&:present?) %>
+        <%= render PanelsUI::Button.new(as: :a, href: admin_mail_logs_path(status: (active_status unless active_status == "all")), variant: :ghost) do %>Clear<% end %>
+      <% end %>
+    </div>
+  <% end %>
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-muted">
+  <% if @events.empty? %>
+    <%= render PanelsUI::EmptyState.new(
+          icon: "mail",
+          title: "No emails found",
+          description: "Change the filters, or wait for the platform to send an email.") %>
+  <% else %>
+    <%= render PanelsUI::Table.new(
+          caption: "Emails matching the current filters",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Sent</th>
+          <th scope="col">Email</th>
+          <th scope="col" class="hidden md:table-cell">Recipients</th>
+          <th scope="col">Subject</th>
+          <th scope="col">Status</th>
+        </tr>
+      <% end %>
+
+      <% table.with_body do %>
+        <% @events.each do |event| %>
           <tr>
-            <% %w[Time Email Recipients Subject Status].each do |heading| %>
-              <th scope="col" class="px-6 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"><%= heading %></th>
-            <% end %>
+            <td class="whitespace-nowrap text-muted-foreground"><%= l(event.sent_at, format: "%d %b %Y, %H:%M") %></td>
+            <td class="font-medium text-foreground">
+              <%= event.mailer.delete_suffix("Mailer").titleize %>
+              <% if event.mail_action.present? %>
+                <span class="mt-0.5 block text-xs font-normal text-muted-foreground"><%= event.mail_action.humanize %></span>
+              <% end %>
+            </td>
+            <td class="hidden break-all text-muted-foreground md:table-cell"><%= event.recipients.presence || "-" %></td>
+            <td>
+              <%= event.subject.presence || "-" %>
+              <% if event.error_message.present? %>
+                <span class="mt-0.5 block text-xs text-destructive"><%= event.error_message.truncate(120) %></span>
+              <% end %>
+            </td>
+            <td>
+              <%= render PanelsUI::Badge.new(label: event.status.titleize, variant: event.status == "failed" ? :destructive : :success, size: :sm, indicator: true) %>
+            </td>
           </tr>
-        </thead>
-        <tbody class="divide-y divide-border bg-card">
-          <% if @events.any? %>
-            <% @events.each do |event| %>
-              <tr class="transition-colors hover:bg-muted/80">
-                <td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-muted-foreground"><%= event.sent_at.strftime("%d %b %Y, %H:%M") %></td>
-                <td class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-foreground">
-                  <%= event.mailer.delete_suffix("Mailer").titleize %>
-                  <% if event.mail_action.present? %>
-                    <span class="block text-xs font-medium text-muted-foreground"><%= event.mail_action.humanize %></span>
-                  <% end %>
-                </td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= event.recipients.presence || "-" %></td>
-                <td class="px-6 py-4 text-sm text-foreground"><%= event.subject.presence || "-" %></td>
-                <td class="px-6 py-4 text-sm">
-                  <%= render PanelsUI::Badge.new(label: event.status.titleize, variant: event.status == "failed" ? :destructive : :success) %>
-                  <% if event.error_message.present? %>
-                    <p class="mt-1 max-w-xs text-xs text-muted-foreground"><%= event.error_message.truncate(120) %></p>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr>
-              <td colspan="5" class="px-6 py-12 text-center">
-                <p class="text-sm font-semibold text-foreground">No emails found.</p>
-                <p class="mt-2 text-sm text-muted-foreground">Change the filters to see more emails.</p>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+        <% end %>
+      <% end %>
+    <% end %>
 
-    <div class="flex justify-center border-t border-border bg-muted/50 px-6 py-5 sm:px-8">
-      <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
-    </div>
-  </div>
-</div>
+    <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
+  <% end %>
+</section>
