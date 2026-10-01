@@ -403,6 +403,7 @@ Rails.application.routes.draw do
     end
     resources :audit_logs, only: [ :index ]
     resources :mail_logs, only: [ :index ]
+    resources :notification_logs, only: [ :index ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end

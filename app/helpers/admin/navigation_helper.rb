@@ -19,6 +19,7 @@ module Admin::NavigationHelper
     payouts_active = controller_name == "payout_batches"
     audit_logs_active = controller_name == "audit_logs"
     mail_logs_active = controller_name == "mail_logs"
+    notification_logs_active = controller_name == "notification_logs"
     observation_deck_active = controller_name == "observation_deck"
     refund_policy_active = controller_name == "refund_policies"
     integrations_active = controller_name == "integrations"
@@ -69,7 +70,8 @@ module Admin::NavigationHelper
         label: "Logs",
         items: [
           PanelsUI::Navigation::Item.new(label: "Audit Logs", path: admin_audit_logs_path, search_text: "Audit Logs System Activity", active: audit_logs_active, icon: "file-text"),
-          PanelsUI::Navigation::Item.new(label: "Mail Log", path: admin_mail_logs_path, search_text: "Mail Log Email Sent Delivery Failed", active: mail_logs_active, icon: "mail")
+          PanelsUI::Navigation::Item.new(label: "Mail Log", path: admin_mail_logs_path, search_text: "Mail Log Email Sent Delivery Failed", active: mail_logs_active, icon: "mail"),
+          PanelsUI::Navigation::Item.new(label: "Notification Log", path: admin_notification_logs_path, search_text: "Notification Log WhatsApp Staff Alerts In-app", active: notification_logs_active, icon: "bell")
         ]
       ),
       PanelsUI::Navigation::Section.new(

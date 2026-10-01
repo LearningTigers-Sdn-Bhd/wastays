@@ -1,0 +1,47 @@
+<% variants = { "sent" => :success, "failed" => :destructive, "pending" => :warning, "skipped" => :neutral } %>
+<%= render PanelsUI::Table.new(
+      caption: "WhatsApp messages matching the current filters",
+      density: :compact,
+      header_style: :sentence,
+      hoverable: notifications.any?,
+      wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col">Time</th>
+      <th scope="col">Message</th>
+      <th scope="col" class="hidden md:table-cell">Hotel</th>
+      <th scope="col" class="hidden md:table-cell">Booking</th>
+      <th scope="col">Status</th>
+    </tr>
+  <% end %>
+
+  <% table.with_body do %>
+    <% if notifications.empty? %>
+      <tr>
+        <td colspan="5">
+          <%= render PanelsUI::EmptyState.new(
+                icon: "message-circle",
+                title: "No WhatsApp messages found",
+                description: "Change the filters, or wait for the platform to send a message.") %>
+        </td>
+      </tr>
+    <% end %>
+    <% notifications.each do |delivery| %>
+      <tr>
+        <td class="whitespace-nowrap text-muted-foreground"><%= l(delivery.sent_at || delivery.created_at, format: "%d %b %Y, %H:%M") %></td>
+        <td class="font-medium text-foreground">
+          <%= delivery.notification_type.humanize %>
+          <% if delivery.error_message.present? %>
+            <span class="mt-0.5 block text-xs font-normal text-destructive"><%= delivery.error_message.truncate(120) %></span>
+          <% end %>
+        </td>
+        <td class="hidden text-muted-foreground md:table-cell"><%= delivery.hotel.name %></td>
+        <td class="hidden md:table-cell">
+          <code class="font-mono text-xs"><%= delivery.booking.confirmation_token %></code>
+          <span class="mt-0.5 block text-xs text-muted-foreground"><%= delivery.booking.guest_name %></span>
+        </td>
+        <td><%= render PanelsUI::Badge.new(label: delivery.status.titleize, variant: variants.fetch(delivery.status, :neutral), size: :sm, indicator: true) %></td>
+      </tr>
+    <% end %>
+  <% end %>
+<% end %>
