@@ -2,102 +2,110 @@
   <%= render "admin/hotels/owner_credentials", credentials: credentials, reset_hint: false %>
 <% end %>
 
-<%= render PanelsUI::PageHeader.new(
-      title: "Hotels",
-      description: "Hotels you created or invited. Open a hotel to help the owner with setup.") do |header| %>
+<%= render PanelsUI::PageHeader.new(title: "Hotels") do |header| %>
+  <% header.with_caption do %>
+    Hotels you created or invited. Open a hotel to help the owner with setup.
+  <% end %>
   <% if current_user.can_create_hotels? %>
-  <% header.with_actions do %>
-    <%= render PanelsUI::Button.new(
-          as: :a,
-          href: new_agent_hotel_path,
-          data: { turbo_frame: "agent_hotel_action_sheet" }) do %>
-      <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
-      Add hotel
+    <% header.with_actions do %>
+      <%= render PanelsUI::Button.new(
+            as: :a,
+            href: new_agent_hotel_path,
+            data: { turbo_frame: "agent_hotel_action_sheet" }) do %>
+        <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+        Add hotel
+      <% end %>
     <% end %>
   <% end %>
-  <% end %>
 <% end %>
 
-<% invite_url = register_url(c: current_user.agent_code) %>
-<%= render PanelsUI::Card.new(as: :section, density: :compact, width: :expanded, data: { controller: "clipboard" }) do |card| %>
-  <% card.with_header(
-       title: "Invite a hotel",
-       description: "Send this link to a hotel owner. When they register with it, the hotel joins your list and you can open it.",
-       title_as: :h2) %>
-  <% card.with_card_content do %>
-    <dl class="grid gap-3 sm:grid-cols-3">
-      <div class="rounded-md border border-border px-4 py-3">
-        <dt class="text-sm font-medium text-muted-foreground">Your agent code</dt>
-        <dd class="mt-1 font-mono text-sm font-medium text-foreground"><%= current_user.agent_code %></dd>
+<div class="grid items-start gap-6 lg:grid-cols-3">
+  <% invite_url = register_url(c: current_user.agent_code) %>
+  <%= render PanelsUI::Card.new(as: :section, density: :compact, width: :full, data: { controller: "clipboard" }) do |card| %>
+    <% card.with_header(
+         title: "Invite a hotel",
+         description: "Send this link to a hotel owner. When they register, the hotel joins your list.",
+         title_as: :h2) %>
+    <% card.with_card_content do %>
+      <div class="space-y-3">
+        <%= fields scope: :invite do |form| %>
+          <%= render PanelsUI::ButtonGroup.new(class: "w-full", aria: { label: "Invite link" }) do %>
+            <%= render PanelsUI::Input.new(
+                  form: form,
+                  attribute: :link,
+                  type: :text,
+                  value: invite_url,
+                  readonly: true,
+                  class: "min-w-0 font-mono",
+                  aria: { label: "Invite link" }) %>
+            <%= render PanelsUI::Button.new(
+                  as: :button,
+                  type: :button,
+                  variant: :secondary,
+                  data: { action: "click->clipboard#copy", clipboard_text_value: invite_url }) do %>
+              <%= app_icon "copy", class: "size-4", aria: { hidden: true } %>
+              Copy
+            <% end %>
+          <% end %>
+        <% end %>
+        <p class="text-sm text-muted-foreground">
+          Agent code: <span class="font-mono font-medium text-foreground"><%= current_user.agent_code %></span>
+        </p>
+        <p class="text-sm text-muted-foreground" role="status" data-clipboard-target="status"></p>
       </div>
-      <div class="rounded-md border border-border px-4 py-3 sm:col-span-2">
-        <dt class="text-sm font-medium text-muted-foreground">Invite link</dt>
-        <dd class="mt-1 break-all font-mono text-sm font-medium text-foreground"><%= invite_url %></dd>
-      </div>
-    </dl>
-
-    <div class="mt-4 flex flex-wrap items-center gap-3">
-      <%= render PanelsUI::Button.new(
-            as: :button,
-            type: :button,
-            variant: :secondary,
-            size: :sm,
-            data: { action: "click->clipboard#copy", clipboard_text_value: invite_url }) do %>
-        <%= app_icon "copy", class: "size-4", aria: { hidden: true } %>
-        Copy invite link
-      <% end %>
-      <p class="text-sm text-muted-foreground" role="status" data-clipboard-target="status"></p>
-    </div>
+    <% end %>
   <% end %>
-<% end %>
 
-<section aria-labelledby="agent-hotels-heading" class="space-y-3">
-  <h2 id="agent-hotels-heading" class="sr-only">Your hotels</h2>
+  <section aria-labelledby="agent-hotels-heading" class="space-y-3 lg:col-span-2">
+    <h2 id="agent-hotels-heading" class="text-base font-semibold">Your hotels</h2>
 
-  <% if @hotels.empty? %>
-    <%= render PanelsUI::EmptyState.new(
-          icon: "building-2",
-          title: "No hotels yet",
-          description: "Share your invite link with a hotel owner. Hotels that register with it appear here.") %>
-  <% else %>
-    <%= render PanelsUI::Table.new(
-          caption: "Hotels you created",
-          density: :compact,
-          header_style: :sentence,
-          hoverable: true,
-          wrapper_class: "rounded-md border border-border bg-card") do |table| %>
-      <% table.with_header do %>
-        <tr>
-          <th scope="col">Hotel</th>
-          <th scope="col">Status</th>
-          <th scope="col" class="hidden md:table-cell">Created</th>
-          <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
-        </tr>
-      <% end %>
-
-      <% table.with_body do %>
-        <% @hotels.each do |hotel| %>
+    <% if @hotels.empty? %>
+      <%= render PanelsUI::EmptyState.new(
+            icon: "building-2",
+            title: "No hotels yet",
+            description: "Share your invite link with a hotel owner. Hotels that register with it appear here.") %>
+    <% else %>
+      <%= render PanelsUI::Table.new(
+            caption: "Hotels you created",
+            density: :compact,
+            header_style: :sentence,
+            hoverable: true,
+            wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+        <% table.with_header do %>
           <tr>
-            <td class="font-medium text-foreground"><%= hotel.name %></td>
-            <td><%= render PanelsUI::Badge.new(label: hotel.status.humanize, size: :sm) %></td>
-            <td class="hidden text-muted-foreground md:table-cell"><%= l(hotel.created_at.to_date, format: :long) %></td>
-            <td class="text-right">
-              <%= render PanelsUI::Button.new(
-                    as: :a,
-                    href: hotel_dashboard_path(hotel),
-                    variant: :secondary,
-                    size: :sm,
-                    target: "_blank",
-                    rel: "noopener") do %>
-                Open hotel<span class="sr-only"> <%= hotel.name %> (opens in a new tab)</span>
-                <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
-              <% end %>
-            </td>
+            <th scope="col">Hotel</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
           </tr>
+        <% end %>
+
+        <% table.with_body do %>
+          <% @hotels.each do |hotel| %>
+            <% status_label, status_variant, = Admin::Hotels::IndexPresenter::STATUS_PRESENTATION.fetch(hotel.status) %>
+            <tr>
+              <td>
+                <span class="block font-medium text-foreground"><%= hotel.name %></span>
+                <span class="block text-xs text-muted-foreground">Created <%= l(hotel.created_at.to_date, format: :long) %></span>
+              </td>
+              <td><%= render PanelsUI::Badge.new(label: status_label, variant: status_variant, size: :sm) %></td>
+              <td class="text-right">
+                <%= render PanelsUI::Button.new(
+                      as: :a,
+                      href: hotel_dashboard_path(hotel),
+                      variant: :secondary,
+                      size: :sm,
+                      target: "_blank",
+                      rel: "noopener") do %>
+                  Open hotel<span class="sr-only"> <%= hotel.name %> (opens in a new tab)</span>
+                  <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
         <% end %>
       <% end %>
     <% end %>
-  <% end %>
-</section>
+  </section>
+</div>
 
 <%= turbo_frame_tag "agent_hotel_action_sheet" %>
