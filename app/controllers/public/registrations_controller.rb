@@ -18,6 +18,7 @@ class Public::RegistrationsController < ApplicationController
     ).call
 
     if result[:success]
+      SuperAgentMailer.hotel_registered(result[:hotel]).deliver_later if invite_agent
       sign_in_user(result[:user])
       redirect_to hotel_dashboard_path(result[:hotel]), notice: "Welcome! Your hotel account has been created."
     else

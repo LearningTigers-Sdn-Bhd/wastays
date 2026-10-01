@@ -31,11 +31,18 @@ RSpec.describe "Public::Registrations", type: :request do
     expect(agent.user_hotel_accesses.find_by(hotel: hotel).role.slug).to eq("general_manager")
   end
 
+  it "emails the agent when a hotel registers with their code" do
+    expect {
+      post register_path, params: params.merge(c: agent.agent_code)
+    }.to have_enqueued_mail(SuperAgentMailer, :hotel_registered)
+  end
+
   it "registers as normal when the code is unknown" do
     post register_path, params: params.merge(c: "NOPE99")
 
     hotel = Hotel.order(:created_at).last
     expect(hotel.created_by_user).to be_nil
     expect(hotel.plan).to be_nil
+    expect(enqueued_jobs.map { |job| job["arguments"]&.first }).not_to include("SuperAgentMailer")
   end
 end

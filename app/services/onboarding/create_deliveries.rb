@@ -2,12 +2,22 @@
 
 module Onboarding
   class CreateDeliveries
+    # The agent linked to the hotel hears about every step the owner or admin
+    # hears about, in an email written for the agent.
+    AGENT_TYPES = {
+      "admin_submitted" => "agent_submitted",
+      "owner_changes_requested" => "agent_changes_requested",
+      "owner_launch_decision_required" => "agent_launch_decision_required",
+      "owner_approved" => "agent_approved"
+    }.freeze
+
     # Submitting only tells WAStays there is something to look at. Nobody outside
     # the property hears from us yet.
     def self.for_submission(submission)
       DeliveryRecipients.admins_for(submission.hotel).each do |email|
         create(submission, "admin_submitted", "User", nil, email:)
       end
+      for_agent(submission, AGENT_TYPES.fetch("admin_submitted"))
     end
 
     # Staff and corporate contacts are invited once the property is actually
@@ -28,6 +38,12 @@ module Onboarding
       DeliveryRecipients.owners_for(submission.hotel).each do |email|
         create(submission, type, "User", nil, email:)
       end
+      for_agent(submission, AGENT_TYPES.fetch(type))
+    end
+
+    def self.for_agent(submission, type)
+      email = DeliveryRecipients.agent_for(submission.hotel)
+      create(submission, type, "User", nil, email:) if email
     end
 
     def self.create(submission, type, source_type, source_id, email: nil)
