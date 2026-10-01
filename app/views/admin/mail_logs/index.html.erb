@@ -2,9 +2,9 @@
 <% active_status = MailEvent::STATUSES.include?(params[:status]) ? params[:status] : "all" %>
 <% filter_params = { q: params[:q].presence, start_date: params[:start_date].presence, end_date: params[:end_date].presence } %>
 <% tabs = [
-     { name: "all", label: "All", count: @status_counts.values.sum },
-     { name: "sent", label: "Sent", count: @status_counts.fetch("sent", 0) },
-     { name: "failed", label: "Failed", count: @status_counts.fetch("failed", 0) }
+     { name: "all", label: "All", icon: "mail", count: @status_counts.values.sum },
+     { name: "sent", label: "Sent", icon: "circle-check", count: @status_counts.fetch("sent", 0) },
+     { name: "failed", label: "Failed", icon: "circle-alert", count: @status_counts.fetch("failed", 0) }
    ] %>
 
 <%= render PanelsUI::PageHeader.new(
@@ -17,6 +17,7 @@
       <% nav.with_tab(
            name: tab[:name],
            label: tab[:label],
+           icon: tab[:icon],
            count: tab[:count],
            href: admin_mail_logs_path(filter_params.merge(status: (tab[:name] unless tab[:name] == "all"))),
            data: { turbo_action: "advance" }) %>
