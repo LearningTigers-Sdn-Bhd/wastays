@@ -1,0 +1,36 @@
+# frozen_string_literal: true
+
+class MailLogQuery
+  def initialize(params = {}, scope: MailEvent.all)
+    @params = params
+    @scope = scope
+  end
+
+  def call
+    events = @scope.recent_first
+    events = events.where(status: @params[:status]) if MailEvent::STATUSES.include?(@params[:status])
+    events = events.where(sent_at: date_range) if date_range
+    events = events.where("recipients ILIKE :q OR subject ILIKE :q", q: "%#{search}%") if search.present?
+    events
+  end
+
+  private
+
+  def search
+    @search ||= MailEvent.sanitize_sql_like(@params[:q].to_s.strip)
+  end
+
+  def date_range
+    return @date_range if defined?(@date_range)
+
+    start_date = parse_date(@params[:start_date])
+    end_date = parse_date(@params[:end_date])
+    @date_range = start_date && end_date ? start_date.beginning_of_day..end_date.end_of_day : nil
+  end
+
+  def parse_date(value)
+    Date.iso8601(value.to_s)
+  rescue ArgumentError
+    nil
+  end
+end

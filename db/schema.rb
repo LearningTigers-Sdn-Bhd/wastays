@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_040000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2190,6 +2190,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_030000) do
     t.index ["legacy_booking_id"], name: "idx_legacy_split_lineages_unique_anchor", unique: true, where: "(anchor = true)"
     t.index ["legacy_booking_id"], name: "index_legacy_booking_split_lineages_on_legacy_booking_id"
     t.check_constraint "review_status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[])", name: "legacy_split_lineages_review_status_allowed"
+  end
+
+  create_table "mail_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "error_message"
+    t.string "mail_action"
+    t.string "mailer", null: false
+    t.text "recipients"
+    t.datetime "sent_at", null: false
+    t.string "status", default: "sent", null: false
+    t.string "subject"
+    t.datetime "updated_at", null: false
+    t.index ["sent_at"], name: "index_mail_events_on_sent_at"
+    t.index ["status", "sent_at"], name: "index_mail_events_on_status_and_sent_at"
   end
 
   create_table "margin_rules", force: :cascade do |t|
