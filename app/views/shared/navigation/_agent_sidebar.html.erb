@@ -1,0 +1,12 @@
+<%= render PanelsUI::Sidebar.new(
+      key: "agent",
+      home_path: agent_hotels_path,
+      sections: agent_sidebar_sections,
+      collapsible: true,
+      searchable: false,
+      permanent: true
+    ) do |sidebar| %>
+  <% sidebar.with_header do %>
+    <%= render "shared/navigation/portal_label", label: "Agent Portal", icon: "briefcase", href: agent_hotels_path %>
+  <% end %>
+<% end %>

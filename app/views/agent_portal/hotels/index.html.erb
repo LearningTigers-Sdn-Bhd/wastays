@@ -1,0 +1,67 @@
+<% if (credentials = flash[:owner_credentials]).present? %>
+  <%= render "admin/hotels/owner_credentials", credentials: credentials, reset_hint: false %>
+<% end %>
+
+<%= render PanelsUI::PageHeader.new(
+      title: "Hotels",
+      description: "Hotels you created. Open a hotel to help the owner with setup.") do |header| %>
+  <% header.with_actions do %>
+    <%= render PanelsUI::Button.new(
+          as: :a,
+          href: new_agent_hotel_path,
+          data: { turbo_frame: "agent_hotel_action_sheet" }) do %>
+      <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+      Add hotel
+    <% end %>
+  <% end %>
+<% end %>
+
+<section aria-labelledby="agent-hotels-heading" class="space-y-3">
+  <h2 id="agent-hotels-heading" class="sr-only">Your hotels</h2>
+
+  <% if @hotels.empty? %>
+    <%= render PanelsUI::EmptyState.new(
+          icon: "building-2",
+          title: "No hotels yet",
+          description: "Add a hotel to create the owner account and get the sign-in details.") %>
+  <% else %>
+    <%= render PanelsUI::Table.new(
+          caption: "Hotels you created",
+          density: :compact,
+          header_style: :sentence,
+          hoverable: true,
+          wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+      <% table.with_header do %>
+        <tr>
+          <th scope="col">Hotel</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="hidden md:table-cell">Created</th>
+          <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+        </tr>
+      <% end %>
+
+      <% table.with_body do %>
+        <% @hotels.each do |hotel| %>
+          <tr>
+            <td class="font-medium text-foreground"><%= hotel.name %></td>
+            <td><%= render PanelsUI::Badge.new(label: hotel.status.humanize, size: :sm) %></td>
+            <td class="hidden text-muted-foreground md:table-cell"><%= l(hotel.created_at.to_date, format: :long) %></td>
+            <td class="text-right">
+              <%= render PanelsUI::Button.new(
+                    as: :a,
+                    href: hotel_dashboard_path(hotel),
+                    variant: :secondary,
+                    size: :sm,
+                    data: { turbo_frame: "_top" }) do %>
+                Open hotel
+                <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>
+
+<%= turbo_frame_tag "agent_hotel_action_sheet" %>

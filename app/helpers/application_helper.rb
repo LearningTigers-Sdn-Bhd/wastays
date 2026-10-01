@@ -15,7 +15,7 @@ module ApplicationHelper
 
   # Flash keys that carry structured payloads for a specific view to render,
   # rather than a message meant for the generic toast stack.
-  NON_TOAST_FLASH_KEYS = %i[toast owner_credentials].freeze
+  NON_TOAST_FLASH_KEYS = %i[toast owner_credentials agent_credentials].freeze
 
   def toast_flash_messages(flash)
     messages = []
