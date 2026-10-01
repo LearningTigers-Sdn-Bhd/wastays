@@ -14,6 +14,14 @@ RSpec.describe 'Public::Sessions', type: :request do
       expect(response.body).to include('Your account has been suspended. Please contact support.')
     end
 
+    it 'lands a super agent on the agent portal' do
+      agent = create(:user, :super_agent, account: account, password: 'password123')
+
+      post login_path, params: { email: agent.email, password: 'password123' }
+
+      expect(response).to redirect_to(agent_hotels_path)
+    end
+
     it 'lands setup-hotel staff without onboarding permission on the setup explainer' do
       hotel = create(:hotel, account:, status: 'setup')
       role = create(:role, account:)

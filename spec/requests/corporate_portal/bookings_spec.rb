@@ -372,13 +372,13 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
   end
 
   it "shows only this account's bookings" do
-    mine = create(:booking, hotel: hotel, hotel_corporate_account: relationship)
-    theirs = create(:booking, hotel: hotel)
+    create(:booking, hotel: hotel, hotel_corporate_account: relationship, guest_name: "Mina Corporate")
+    create(:booking, hotel: hotel, guest_name: "Theo Walkin")
 
     get corporate_bookings_path
 
-    expect(response.body).to include(mine.guest_name)
-    expect(response.body).not_to include(theirs.guest_name)
+    expect(response.body).to include("Mina Corporate")
+    expect(response.body).not_to include("Theo Walkin")
   end
 
   describe "the bookings list" do

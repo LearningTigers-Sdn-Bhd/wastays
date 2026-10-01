@@ -2,7 +2,7 @@ class User < ApplicationRecord
   include AccountScopable
 
   DEFAULT_TIME_ZONE = "Kuala Lumpur".freeze
-  ROLES = %w[superadmin admin hotel_staff salesperson corporate].freeze
+  ROLES = %w[superadmin super_agent admin hotel_staff salesperson corporate].freeze
 
   has_secure_password
   has_many :owner_password_resets, dependent: :delete_all
@@ -20,6 +20,9 @@ class User < ApplicationRecord
                                     inverse_of: :assigned_to
 
   has_many :assigned_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
+  scope :super_agents, -> { where(role: "super_agent") }
+
+  has_many :created_hotels, class_name: "Hotel", foreign_key: "created_by_user_id", dependent: :nullify, inverse_of: :created_by_user
 
   has_many :user_roles, dependent: :destroy
   has_many :roles, through: :user_roles
@@ -29,13 +32,27 @@ class User < ApplicationRecord
   validates :role, presence: true, inclusion: { in: ROLES }
   validates :time_zone, inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }
   validates :account_id, uniqueness: true, if: :corporate?
+  validates :agent_code, uniqueness: true, allow_nil: true
   validate :role_matches_account_kind
 
   before_validation :normalize_email
   before_validation :assign_default_time_zone
 
+  # Written at most once a minute for each user, so presence costs little.
+  LAST_SEEN_THROTTLE = 1.minute
+
+  def touch_last_seen!
+    return if last_seen_at.present? && last_seen_at > LAST_SEEN_THROTTLE.ago
+
+    update_column(:last_seen_at, Time.current)
+  end
+
   def superadmin?
     role == "superadmin"
+  end
+
+  def super_agent?
+    role == "super_agent"
   end
 
   def admin?

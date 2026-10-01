@@ -56,6 +56,7 @@ class Hotel < ApplicationRecord
   has_many :corporate_accounts, through: :hotel_corporate_accounts
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
+  belongs_to :created_by_user, class_name: "User", optional: true, inverse_of: :created_hotels
   belongs_to :training_completed_by, class_name: "User", optional: true
   belongs_to :plan, optional: true
   has_one :property_policy, dependent: :destroy

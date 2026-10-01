@@ -264,7 +264,7 @@ RSpec.describe "Onboarding review across days" do
 
   it "approves yesterday's submission and preserves submitted evidence" do
     original = submission.attributes.slice("snapshot", "configuration_digest", "readiness_snapshot")
-    sections = hotel.onboarding_sections.pluck(:id, :decision_metadata)
+    sections = hotel.onboarding_sections.order(:id).pluck(:id, :decision_metadata)
     travel 1.day
 
     result = Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer)
@@ -275,7 +275,7 @@ RSpec.describe "Onboarding review across days" do
     expect(room.room_inventories.find_by!(date: submitted_end + 1.day)).to have_attributes(quantity: 2, status: "open")
     expect(room.room_rates).to be_empty
     expect(submission.reload.attributes.slice(*original.keys)).to eq(original)
-    expect(hotel.onboarding_sections.pluck(:id, :decision_metadata)).to eq(sections)
+    expect(hotel.onboarding_sections.order(:id).pluck(:id, :decision_metadata)).to eq(sections)
     expect { Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer) }.not_to change(RoomInventory, :count)
   end
 

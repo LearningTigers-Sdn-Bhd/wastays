@@ -1,0 +1,13 @@
+<%= render "admin/logs/detail_sheet",
+      title: @row.event,
+      description: "#{@tab.titleize} activity",
+      fields: [
+        [ "Time", l(@row.time, format: "%d %b %Y, %H:%M") ],
+        [ "Hotel", @row.hotel ],
+        [ "Who", @row.who ],
+        [ "Details", @row.details ],
+        [ "Change", @row.summary ]
+      ],
+      text_label: "Recorded data",
+      text: JSON.pretty_generate(@row.detail),
+      empty_text: "No data was recorded." %>

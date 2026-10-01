@@ -8,6 +8,7 @@ module Admin::NavigationHelper
     hotels_active = controller_name == "hotels" || onboarding_active
     bookings_active = controller_name == "bookings"
     salespersons_active = controller_name == "salespersons"
+    super_agents_active = controller_name == "super_agents"
     margin_rules_active = controller_name == "margin_rules"
     setup_fee_rules_active = controller_name == "setup_fee_rules"
     exchange_rates_active = controller_name == "exchange_rates"
@@ -16,7 +17,9 @@ module Admin::NavigationHelper
     reconciliations_active = controller_name == "reconciliations"
     refund_requests_active = controller_name == "refund_requests"
     payouts_active = controller_name == "payout_batches"
-    audit_logs_active = controller_name == "audit_logs"
+    activity_logs_active = controller_name == "activity_logs"
+    mail_logs_active = controller_name == "mail_logs"
+    notification_logs_active = controller_name == "notification_logs"
     observation_deck_active = controller_name == "observation_deck"
     refund_policy_active = controller_name == "refund_policies"
     integrations_active = controller_name == "integrations"
@@ -38,7 +41,8 @@ module Admin::NavigationHelper
         items: [
           PanelsUI::Navigation::Item.new(label: "Hotels", path: admin_hotels_path, search_text: "Hotels Manage Hotels Onboarding Training Setup", active: hotels_active, icon: "building-2"),
           PanelsUI::Navigation::Item.new(label: "Bookings", path: admin_bookings_path, search_text: "Bookings Platform Bookings", active: bookings_active, icon: "calendar-days"),
-          PanelsUI::Navigation::Item.new(label: "Salespersons", path: admin_salespersons_path, search_text: "Salespersons Hotel Assignment", active: salespersons_active, icon: "users")
+          PanelsUI::Navigation::Item.new(label: "Salespersons", path: admin_salespersons_path, search_text: "Salespersons Hotel Assignment", active: salespersons_active, icon: "users"),
+          PanelsUI::Navigation::Item.new(label: "Super agents", path: admin_super_agents_path, search_text: "Super Agents Create Hotels Owner Sign-in", active: super_agents_active, icon: "briefcase")
         ]
       ),
       PanelsUI::Navigation::Section.new(
@@ -59,8 +63,15 @@ module Admin::NavigationHelper
           PanelsUI::Navigation::Item.new(label: "Plan Access", path: admin_plans_path, search_text: "Plan Access Plans Subscription Features Pricing Tiers Gating", active: plans_active, icon: "layers"),
           PanelsUI::Navigation::Item.new(label: "Booking Sources", path: admin_booking_sources_path, search_text: "Booking Sources OTA Logos Walk-in Channel Manager", active: booking_sources_active, icon: "tag"),
           PanelsUI::Navigation::Item.new(label: "Attraction Registry", path: admin_attractions_path, search_text: "Attractions Registry Places Tourism Nearby", active: attractions_active, icon: "map-pin"),
-          PanelsUI::Navigation::Item.new(label: "Audit Logs", path: admin_audit_logs_path, search_text: "Audit Logs System Activity", active: audit_logs_active, icon: "file-text"),
           PanelsUI::Navigation::Item.new(label: "Observation Deck", path: admin_observation_deck_index_path, search_text: "Observation Deck Telescope Debug Mission Control", active: observation_deck_active, icon: "eye", external: true)
+        ]
+      ),
+      PanelsUI::Navigation::Section.new(
+        label: "Logs",
+        items: [
+          PanelsUI::Navigation::Item.new(label: "Activity Log", path: admin_activity_logs_path, search_text: "Activity Log Audit Logs System Inventory Bookings Folios", active: activity_logs_active, icon: "file-text"),
+          PanelsUI::Navigation::Item.new(label: "Mail Log", path: admin_mail_logs_path, search_text: "Mail Log Email Sent Delivery Failed", active: mail_logs_active, icon: "mail"),
+          PanelsUI::Navigation::Item.new(label: "Notification Log", path: admin_notification_logs_path, search_text: "Notification Log WhatsApp Staff Alerts In-app", active: notification_logs_active, icon: "bell")
         ]
       ),
       PanelsUI::Navigation::Section.new(
