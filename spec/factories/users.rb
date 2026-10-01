@@ -19,6 +19,10 @@ FactoryBot.define do
       role { "salesperson" }
     end
 
+    trait :super_agent do
+      role { "super_agent" }
+    end
+
     trait :corporate do
       account { association :account, :corporate }
       role { "corporate" }

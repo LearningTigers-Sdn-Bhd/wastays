@@ -2,7 +2,7 @@ class User < ApplicationRecord
   include AccountScopable
 
   DEFAULT_TIME_ZONE = "Kuala Lumpur".freeze
-  ROLES = %w[superadmin admin hotel_staff salesperson corporate].freeze
+  ROLES = %w[superadmin super_agent admin hotel_staff salesperson corporate].freeze
 
   has_secure_password
   has_many :owner_password_resets, dependent: :delete_all
@@ -20,6 +20,7 @@ class User < ApplicationRecord
                                     inverse_of: :assigned_to
 
   has_many :assigned_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
+  has_many :created_hotels, class_name: "Hotel", foreign_key: "created_by_user_id", dependent: :nullify, inverse_of: :created_by_user
 
   has_many :user_roles, dependent: :destroy
   has_many :roles, through: :user_roles
@@ -36,6 +37,10 @@ class User < ApplicationRecord
 
   def superadmin?
     role == "superadmin"
+  end
+
+  def super_agent?
+    role == "super_agent"
   end
 
   def admin?
