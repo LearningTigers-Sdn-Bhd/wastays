@@ -50,6 +50,16 @@ RSpec.describe "AgentPortal::Hotels", type: :request do
       expect(response.body).to include("Mine #{token}")
       expect(response.body).not_to include("Other #{token}")
     end
+
+    it "opens each hotel in a new tab" do
+      hotel = create(:hotel, created_by_user: agent)
+
+      get agent_hotels_path
+
+      link = Nokogiri::HTML(response.body).at_css("a[href=\"#{hotel_dashboard_path(hotel)}\"]")
+      expect(link["target"]).to eq("_blank")
+      expect(link["rel"]).to eq("noopener")
+    end
   end
 
   describe "GET /agent/hotels/new" do

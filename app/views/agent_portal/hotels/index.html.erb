@@ -52,8 +52,9 @@
                     href: hotel_dashboard_path(hotel),
                     variant: :secondary,
                     size: :sm,
-                    data: { turbo_frame: "_top" }) do %>
-                Open hotel
+                    target: "_blank",
+                    rel: "noopener") do %>
+                Open hotel<span class="sr-only"> <%= hotel.name %> (opens in a new tab)</span>
                 <%= app_icon "external-link", class: "size-4", aria: { hidden: true } %>
               <% end %>
             </td>
