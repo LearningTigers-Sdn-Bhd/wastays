@@ -7,7 +7,8 @@ class Admin::HotelsController < Admin::BaseController
     "channel_manager" => "Channel manager",
     "account_information" => "Account information",
     "banking_details" => "Banking details",
-    "salesperson" => "Salesperson"
+    "salesperson" => "Salesperson",
+    "super_agent" => "Super agent"
   }.freeze
   TAB_ICONS = {
     "hotel_details" => "building-2",
@@ -15,7 +16,8 @@ class Admin::HotelsController < Admin::BaseController
     "channel_manager" => "radio",
     "account_information" => "users",
     "banking_details" => "credit-card",
-    "salesperson" => "user-round"
+    "salesperson" => "user-round",
+    "super_agent" => "briefcase"
   }.freeze
 
   before_action :set_hotel, only: [ :show, :update ]
@@ -58,6 +60,8 @@ class Admin::HotelsController < Admin::BaseController
       @banking_detail = @hotel.account.banking_detail
     when "salesperson"
       load_salespersons
+    when "super_agent"
+      @super_agents = current_user.account.users.super_agents.order(:name)
     end
   end
 

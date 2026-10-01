@@ -45,6 +45,9 @@
                 trigger_label: "Open account menu"
               ) do |menu| %>
             <% menu.with_item(label: "My account", href: edit_hotel_user_profile_path(current_hotel), icon: "user") %>
+            <% if current_user.super_agent? %>
+              <% menu.with_item(label: "Agent portal", href: agent_hotels_path, icon: "briefcase") %>
+            <% end %>
             <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
             <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
           <% end %>

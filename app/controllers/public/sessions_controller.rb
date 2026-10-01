@@ -39,6 +39,8 @@ class Public::SessionsController < ApplicationController
       redirect_to(redirect_path, notice: "Logged in successfully!")
     elsif user.superadmin?
       redirect_to admin_dashboard_path, notice: "Welcome, Superadmin!"
+    elsif user.super_agent?
+      redirect_to agent_hotels_path, notice: "Welcome, #{user.name}!"
     elsif user.corporate?
       redirect_to corporate_dashboard_path, notice: "Welcome, #{user.name}!"
     else
