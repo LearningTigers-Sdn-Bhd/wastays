@@ -5,14 +5,14 @@ class SuperAgentMailerPreview < ActionMailer::Preview
     SuperAgentMailer.hotel_registered(agent_hotel)
   end
 
-  def onboarding_update
+  def hotel_live
     submission = OnboardingSubmission.new(hotel: agent_hotel)
     delivery = OnboardingDelivery.new(
       onboarding_submission: submission,
-      delivery_type: "agent_submitted",
+      delivery_type: "agent_approved",
       recipient_email: agent_hotel.created_by_user.email
     )
-    SuperAgentMailer.onboarding_update(delivery)
+    SuperAgentMailer.hotel_live(delivery)
   end
 
   private
