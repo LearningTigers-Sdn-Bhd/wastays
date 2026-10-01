@@ -12,11 +12,14 @@ FactoryBot.define do
     transient do
       initialize_current_business_date { true }
       accounting_business_date { nil }
+      initialize_financial_defaults { true }
     end
 
     after(:create) do |hotel, evaluator|
-      Financials::EnsureDefaultGlMaps.call(hotel)
-      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      if evaluator.initialize_financial_defaults
+        Financials::EnsureDefaultGlMaps.call(hotel)
+        Financials::EnsureDefaultTransactionCodes.call(hotel)
+      end
 
       if evaluator.initialize_current_business_date
         date = evaluator.accounting_business_date.presence || hotel.business_date_for(Time.current)
@@ -30,6 +33,10 @@ FactoryBot.define do
     # it on the hotel and never on the plan.
     trait :per_person do
       sell_mode { "per_person" }
+    end
+
+    trait :without_financial_defaults do
+      initialize_financial_defaults { false }
     end
 
     trait :without_current_business_date do

@@ -113,7 +113,6 @@ domain_paths() {
         spec/views \
         spec/tasks \
         spec/seeds \
-        spec/migrations \
         spec/integration
       ;;
     bookings)
