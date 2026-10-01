@@ -16,7 +16,7 @@ RSpec.describe 'Admin layout shell', type: :system do
     expect(page).to have_link('Dashboard', href: admin_dashboard_path)
     expect(page).to have_link('Hotels', href: admin_hotels_path)
     expect(page).to have_link('Bookings', href: admin_bookings_path)
-    expect(page).to have_link('Audit Logs', href: admin_audit_logs_path)
+    expect(page).to have_link('Activity Log', href: admin_activity_logs_path)
     expect(page).to have_css("#admin-profile a[href='#{help_center_path}']", text: 'Help')
     expect(page).to have_no_css(".panel-navbar__actions a[href='#{help_center_path}']")
     expect(page).to have_css("#admin-sidebar .panel-sidebar__footer .panel-sidebar__legal a", text: 'Privacy Policy')
