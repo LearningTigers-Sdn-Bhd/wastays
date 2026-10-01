@@ -48,6 +48,34 @@ RSpec.describe "CorporatePortal::BookingCancellations", type: :request do
     end
   end
 
+  describe "cancelling one room of a stay" do
+    let(:group) { create(:group_booking, hotel: hotel) }
+    let!(:first) { agent_booking(group_booking: group, group_position: 1) }
+    let!(:second) { agent_booking(group_booking: group, group_position: 2) }
+
+    it "asks about that room only" do
+      get new_corporate_booking_cancellation_path(second, scope: "room")
+
+      expect(response.body).to include("Cancel this room?")
+      expect(response.body).to include(second.guest_name)
+      expect(response.body).not_to include(first.guest_name)
+    end
+
+    it "cancels only that room, and says one room was cancelled" do
+      post corporate_booking_cancellation_path(second), params: { scope: "room" }
+
+      expect(second.reload.status).to eq("cancelled")
+      expect(first.reload.status).to eq("confirmed")
+      expect(flash[:notice]).to include("1 room cancelled")
+    end
+
+    it "still cancels the whole stay when no room was chosen" do
+      post corporate_booking_cancellation_path(second)
+
+      expect([ first, second ].map { |booking| booking.reload.status }).to all(eq("cancelled"))
+    end
+  end
+
   describe "POST /corporate/bookings/:id/cancellation" do
     it "cancels the booking and says the rooms have gone back on sale" do
       booking = agent_booking

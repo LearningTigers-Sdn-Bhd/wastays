@@ -18,9 +18,12 @@ module CorporatePortal
   # happens to the money. Refusing is the safe answer; a refund an agent can
   # trigger themselves is not in scope.
   #
-  # A multi-room stay is several bookings under one group, so cancelling one row
-  # cancels the whole stay. Releasing three of four rooms would leave the guest
-  # with a reservation nobody meant to keep.
+  # A multi-room stay is several bookings under one group, and by default
+  # cancelling one row cancels the whole stay: releasing three of four rooms would
+  # leave the guest with a reservation nobody meant to keep. When the rooms are
+  # separate parties (an agent's block, each room with its own guests), the agent
+  # can cancel just the one room with `whole_stay: false`. The group's own status
+  # follows its rooms, so it is cancelled only once every room is.
   class CancelAgentBooking
     SOURCE = "corporate_portal"
     CANCELLABLE_STATUSES = %w[pending confirmed].freeze
@@ -32,10 +35,11 @@ module CorporatePortal
 
     def self.call(...) = new(...).call
 
-    def initialize(booking:, user:, now: Time.current)
+    def initialize(booking:, user:, now: Time.current, whole_stay: true)
       @booking = booking
       @user = user
       @now = now
+      @whole_stay = whole_stay
     end
 
     def call
@@ -62,9 +66,10 @@ module CorporatePortal
       nil
     end
 
-    # Every room of the stay, not just the one the agent clicked.
+    # The rooms this cancellation touches: the whole stay, or just the one the
+    # agent clicked. Every guard below is asked of exactly these.
     def group
-      @group ||= if @booking.group_booking_id.present?
+      @group ||= if @whole_stay && @booking.group_booking_id.present?
         Booking.where(
           hotel_corporate_account_id: @booking.hotel_corporate_account_id,
           group_booking_id: @booking.group_booking_id

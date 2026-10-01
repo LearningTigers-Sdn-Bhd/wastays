@@ -89,7 +89,8 @@ module CorporatePortal
       end
       # The same object the controller would act through, so the button is shown
       # only when cancelling would actually be allowed.
-      @cancellation = CancelAgentBooking.new(booking: @booking, user: current_user)
+      @stay_cancellation = CancelAgentBooking.new(booking: @booking, user: current_user)
+      @room_cancellation = CancelAgentBooking.new(booking: @booking, user: current_user, whole_stay: false)
     end
 
     private

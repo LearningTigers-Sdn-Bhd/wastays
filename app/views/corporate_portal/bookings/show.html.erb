@@ -179,14 +179,26 @@
     <%= link_to "All bookings", corporate_bookings_path,
           class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
 
-    <%# Offered only when the service would accept it, so the agent is never
-        shown a button that answers with a refusal. %>
-    <% if @cancellation.cancellable? %>
-      <%= link_to(@bookings.size > 1 ? "Cancel whole stay (#{@bookings.size} rooms)" : "Cancel booking",
-            new_corporate_booking_cancellation_path(@booking),
-            class: "rounded-xl border border-destructive px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10") %>
+    <%# Each button is offered only when the service would accept it, so the agent
+        is never shown one that answers with a refusal. A single booking has one;
+        a room of a larger stay has two, because the rooms may be separate parties. %>
+    <% if @bookings.size > 1 %>
+      <% if @room_cancellation.cancellable? %>
+        <%= link_to "Cancel this room", new_corporate_booking_cancellation_path(@booking, scope: "room"),
+              class: "rounded-xl border border-destructive px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10" %>
+      <% end %>
+      <% if @stay_cancellation.cancellable? %>
+        <%= link_to "Cancel whole stay (#{@bookings.size} rooms)", new_corporate_booking_cancellation_path(@booking),
+              class: "rounded-xl border border-destructive px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10" %>
+      <% end %>
+      <% if !cancelled && !@room_cancellation.cancellable? %>
+        <p class="self-center text-xs text-muted-foreground"><%= @room_cancellation.refusal_reason %></p>
+      <% end %>
+    <% elsif @stay_cancellation.cancellable? %>
+      <%= link_to "Cancel booking", new_corporate_booking_cancellation_path(@booking),
+            class: "rounded-xl border border-destructive px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10" %>
     <% elsif !cancelled %>
-      <p class="self-center text-xs text-muted-foreground"><%= @cancellation.refusal_reason %></p>
+      <p class="self-center text-xs text-muted-foreground"><%= @stay_cancellation.refusal_reason %></p>
     <% end %>
   </div>
 </div>

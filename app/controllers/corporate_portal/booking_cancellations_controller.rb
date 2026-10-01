@@ -9,12 +9,12 @@ module CorporatePortal
     before_action :load_booking
 
     def new
-      @cancellation = CancelAgentBooking.new(booking: @booking, user: current_user)
+      @cancellation = CancelAgentBooking.new(booking: @booking, user: current_user, whole_stay: whole_stay?)
       redirect_to corporate_booking_path(@booking), alert: @cancellation.refusal_reason if @cancellation.refusal_reason.present?
     end
 
     def create
-      result = CancelAgentBooking.call(booking: @booking, user: current_user)
+      result = CancelAgentBooking.call(booking: @booking, user: current_user, whole_stay: whole_stay?)
 
       if result.success?
         redirect_to corporate_booking_path(@booking),
@@ -25,6 +25,9 @@ module CorporatePortal
     end
 
     private
+
+    # A multi-room stay is cancelled whole unless the agent chose just this room.
+    def whole_stay? = params[:scope].to_s != "room"
 
     # Scoped to this account, so another agency's booking is not found rather
     # than forbidden.

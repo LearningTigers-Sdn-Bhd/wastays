@@ -428,10 +428,12 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
         .to contain_exactly(corporate_booking_path(rooms[0]), corporate_booking_path(rooms[1]))
     end
 
-    it "makes plain that cancelling takes the whole stay" do
+    it "offers to cancel just this room as well as the whole stay" do
       get corporate_booking_path(opened)
 
-      expect(response.body).to include("Cancel whole stay (3 rooms)")
+      page = Capybara.string(response.body)
+      expect(page).to have_link("Cancel whole stay (3 rooms)", href: new_corporate_booking_cancellation_path(opened))
+      expect(page).to have_link("Cancel this room", href: new_corporate_booking_cancellation_path(opened, scope: "room"))
     end
 
     it "says which room of the stay each list row is" do
