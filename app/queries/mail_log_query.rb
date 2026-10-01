@@ -21,8 +21,7 @@ class MailLogQuery
   end
 
   def date_range
-    start_date = parse_date(@params[:start_date])
-    end_date = parse_date(@params[:end_date])
+    start_date, end_date = @params[:range].to_s.split("/", 2).map { |value| parse_date(value) }
     return unless start_date || end_date
 
     start_date&.beginning_of_day..end_date&.end_of_day

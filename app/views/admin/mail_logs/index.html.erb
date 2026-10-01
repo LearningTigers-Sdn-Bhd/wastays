@@ -1,6 +1,6 @@
 <% content_for :title, "Mail Log | WAStays Admin" %>
 <% active_status = MailEvent::STATUSES.include?(params[:status]) ? params[:status] : "all" %>
-<% filter_params = { q: params[:q].presence, start_date: params[:start_date].presence, end_date: params[:end_date].presence } %>
+<% filter_params = { q: params[:q].presence, range: params[:range].presence } %>
 <% tabs = [
      { name: "all", label: "All", icon: "mail", count: @status_counts.values.sum },
      { name: "sent", label: "Sent", icon: "circle-check", count: @status_counts.fetch("sent", 0) },
@@ -38,14 +38,9 @@
              selected: (active_status == "all" ? "" : active_status)) %>
       <% end %>
     </div>
-    <div class="w-full sm:w-44">
-      <%= render PanelsUI::FormField.new(form: form, attribute: :start_date, label: "From") do |field| %>
-        <% field.with_date_picker(value: params[:start_date], linked_to: :end_date) %>
-      <% end %>
-    </div>
-    <div class="w-full sm:w-44">
-      <%= render PanelsUI::FormField.new(form: form, attribute: :end_date, label: "To") do |field| %>
-        <% field.with_date_picker(value: params[:end_date], min: params[:start_date].presence) %>
+    <div class="w-full sm:w-64">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :range, label: "Date range") do |field| %>
+        <% field.with_date_picker(range: true, value: params[:range].presence) %>
       <% end %>
     </div>
     <% if filter_params.values.any?(&:present?) || active_status != "all" %>

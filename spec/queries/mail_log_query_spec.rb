@@ -21,9 +21,9 @@ RSpec.describe MailLogQuery do
   end
 
   it "filters by date range and ignores bad dates" do
-    expect(result(start_date: "2026-09-01", end_date: "2026-09-02")).to eq([ old_sent ])
-    expect(result(start_date: "2026-09-10")).to eq([ new_failed ])
-    expect(result(end_date: "2026-09-10")).to eq([ old_sent ])
-    expect(result(start_date: "nope", end_date: "nope")).to eq([ new_failed, old_sent ])
+    expect(result(range: "2026-09-01/2026-09-02")).to eq([ old_sent ])
+    expect(result(range: "2026-09-10")).to eq([ new_failed ])
+    expect(result(range: "/2026-09-10")).to eq([ old_sent ])
+    expect(result(range: "nope/nope")).to eq([ new_failed, old_sent ])
   end
 end
