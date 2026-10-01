@@ -39,6 +39,14 @@
       <%= hidden_field_tag "ar_payment_submission[booking_id]", @booking.id %>
       <%= hidden_field_tag "ar_payment_submission[currency]", @booking.currency %>
       <%= hidden_field_tag "ar_payment_submission[payment_method]", "bank_transfer" %>
+      <% due_now = @ar_payment_submission.amount.presence || @booking.total_amount %>
+      <div>
+        <%= f.label :amount, "Amount paid (#{@booking.currency})", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
+        <%= f.number_field :amount, value: number_with_precision(due_now, precision: 2), required: true, min: 0.01, step: "0.01", class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>
+        <% if deadline.stage_label %>
+          <p class="mt-1 text-xs text-slate-500"><%= deadline.stage_label %> due now. <%= deadline.following_stage_note %></p>
+        <% end %>
+      </div>
       <div>
         <%= f.label :reference_number, "Reference / transaction number", class: "mb-1.5 block text-sm font-semibold text-slate-900" %>
         <%= f.text_field :reference_number, required: true, class: "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-slate-400 focus:outline-none focus:ring-0" %>

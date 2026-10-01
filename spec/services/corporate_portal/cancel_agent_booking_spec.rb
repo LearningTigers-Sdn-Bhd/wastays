@@ -64,6 +64,25 @@ RSpec.describe CorporatePortal::CancelAgentBooking do
     expect(booking.reload.payment_due_at).to be_nil
   end
 
+  it "waives the stages still owed on a booking with a payment schedule" do
+    booking = agent_booking(payment_due_at: nil, total_amount: 1000, check_in: 60.days.from_now, check_out: 62.days.from_now)
+    Bookings::CreatePaymentSchedule.call(booking: booking)
+
+    described_class.call(booking: booking, user: corporate_user)
+
+    expect(booking.reload.payment_instalments.map(&:status)).to eq(%w[waived waived])
+    expect(booking.payment_due_at).to be_nil
+  end
+
+  it "refuses once the deposit is paid, since only the hotel can decide about the money" do
+    booking = agent_booking(payment_status: "partial")
+
+    result = described_class.call(booking: booking, user: corporate_user)
+
+    expect(result).not_to be_success
+    expect(booking.reload.status).to eq("confirmed")
+  end
+
   describe "a multi-room stay" do
     it "cancels every room in the group, not just the one asked for" do
       group = create(:group_booking, hotel: hotel)

@@ -5,7 +5,7 @@
      data-stay-discount-example-price-value="<%= example_price %>"
      data-stay-discount-example-currency-value="<%= currency %>"
      data-stay-discount-example-per-person-value="<%= per_person %>"
-     data-action="input->stay-discount-example#render change->stay-discount-example#render">
+     data-action="input->stay-discount-example#render change->stay-discount-example#render rate-plan-room-pricing:example-price@window->stay-discount-example#updatePrice">
   <div class="grid gap-3 sm:grid-cols-4">
     <%= render PanelsUI::FormField.new(form: discount_form, attribute: :min_nights, label: "Guest stays at least", size: :sm, required: true) do |field| %>
       <% field.with_input(type: :number, min: 2, step: 1, inputmode: "numeric", placeholder: "3",

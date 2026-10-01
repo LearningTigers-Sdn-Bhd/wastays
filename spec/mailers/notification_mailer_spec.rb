@@ -237,6 +237,82 @@ RSpec.describe NotificationMailer, type: :mailer do
       expect(mail.body.encoded).to include("Amount did not match")
     end
 
+    context "on a booking with a payment schedule" do
+      let(:booking) do
+        create(:booking, hotel: hotel, hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                         guest_email: "guest@example.com", status: "confirmed", payment_status: "pending",
+                         total_amount: 1000, currency: "MYR", check_in: 60.days.from_now, check_out: 62.days.from_now)
+      end
+      let!(:folio) { create(:booking_folio, booking: booking, hotel: hotel, currency: "MYR") }
+
+      before { Bookings::CreatePaymentSchedule.call(booking: booking) }
+
+      # The HTML part decoded: the raw encoded body is line-wrapped, which splits
+      # any sentence longer than a line.
+      def html_of(mail) = mail.html_part.body.decoded
+
+      def pay(amount)
+        result = Folios::Transactions::InsertTransaction.new(
+          booking_folio: folio, amount: amount, transaction_type: "payment", category: "booking_payment",
+          user: create(:user), description: "test payment", options: { system_posting: true, posting_source: "spec" }
+        ).call
+        raise result.error unless result.success?
+
+        Deposits::SyncBookingPaymentStatus.call(booking.reload)
+      end
+
+      it "reminds the agent of the deposit due, not the booking total" do
+        body = html_of(described_class.agent_payment_reminder(agent_delivery("agent_payment_reminder")))
+
+        expect(body).to include("Amount due now")
+        expect(body).to include("MYR 500.00")
+        expect(body).to include("Booking total")
+      end
+
+      it "does not call a booking paid in full after only the deposit" do
+        pay(500)
+
+        body = html_of(described_class.agent_payment_approved(agent_delivery("agent_payment_approved")))
+
+        expect(body).not_to include("paid in full")
+        expect(body).to include("Still to pay")
+        expect(body).to include("Send your transfer slip")
+      end
+
+      it "still says paid in full once everything is paid" do
+        pay(1000)
+
+        body = html_of(described_class.agent_payment_approved(agent_delivery("agent_payment_approved")))
+
+        expect(body).to include("paid in full")
+        expect(body).not_to include("Send your transfer slip")
+      end
+
+      it "says the deposit is retained when a paid booking is released and the hotel keeps deposits" do
+        hotel.update!(agent_deposit_non_refundable: true)
+        pay(500)
+
+        body = html_of(described_class.agent_booking_released(agent_delivery("agent_booking_released")))
+
+        expect(body).to include("MYR 500.00 you have already paid is retained by the hotel")
+      end
+
+      it "says the hotel will be in touch about money paid when the deposit is refundable" do
+        pay(500)
+
+        body = html_of(described_class.agent_booking_released(agent_delivery("agent_booking_released")))
+
+        expect(body).to include("will be in touch about the MYR 500.00 you have already paid")
+        expect(body).not_to include("retained")
+      end
+
+      it "makes no claim about money when nothing was paid" do
+        body = html_of(described_class.agent_booking_released(agent_delivery("agent_booking_released")))
+
+        expect(body).not_to include("already paid")
+      end
+    end
+
     it "says plainly that the rooms are gone when they have been released" do
       mail = described_class.agent_booking_released(agent_delivery("agent_booking_released"))
 

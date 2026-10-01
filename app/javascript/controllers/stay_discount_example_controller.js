@@ -9,6 +9,16 @@ export default class extends Controller {
   static values = { price: Number, currency: String, perPerson: Boolean }
 
   connect() {
+    // A row cloned from the template carries the price it was rendered with,
+    // which may be stale by now; the section holds the current one.
+    const section = this.element.closest("[data-stay-discount-wizard-price-value]")
+    const current = Number.parseFloat(section?.dataset.stayDiscountWizardPriceValue)
+    if (current > 0) this.priceValue = current
+    this.render()
+  }
+
+  updatePrice(event) {
+    this.priceValue = event.detail.price
     this.render()
   }
 

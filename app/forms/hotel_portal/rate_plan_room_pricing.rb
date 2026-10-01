@@ -113,6 +113,14 @@ module HotelPortal
                       .derive_price(room_type&.base_price)
     end
 
+    # One representative nightly price, for illustrating what a discount does.
+    # A per-room plan has a single figure; a per-person plan is read at its
+    # primary occupancy (two adults unless set), clamped to what the room fits.
+    # Nil when the form holds nothing usable yet, so callers can fall back.
+    def example_price
+      per_person? ? example_price_per_person : example_price_per_room
+    end
+
     # The full matrix this form stores. Empty for a per-room plan, which prices
     # the room once rather than per adult count, and for a derived per-person
     # plan, which works its prices out from Standard's each night so a change
@@ -144,7 +152,30 @@ module HotelPortal
       { pricing_mode: "fixed", pricing_value: default_rate, occupancy_ladder: nil }
     end
 
+    # Standard's price for each adult count, for a derived per-person plan to
+    # adjust. The Pricing tab's live example needs it in the browser.
+    def standard_prices = standard_occupancy_prices.transform_values(&:to_f)
+
     private
+
+    def example_price_per_room
+      value = derived? ? anchor : default_rate
+      value if value.to_d.positive?
+    end
+
+    def example_price_per_person
+      adults = primary_occupancy.to_i.clamp(1, max_adults)
+      value = if manual?
+        price_for(adults)
+      elsif derived?
+        standard = standard_occupancy_prices[adults]
+        RoomTypeRatePlan.new(pricing_mode: derive_mode, pricing_value: derive_value).derive_price(standard) if standard
+      else
+        occupancy_matrix[adults]
+      end
+      value = value.to_s.to_d
+      value if value.positive?
+    end
 
     def ladder_settings
       return unless auto?

@@ -114,7 +114,9 @@ module CorporatePortal
             raise ActiveRecord::Rollback
           end
 
-          # The rooms are gone; the sweeper has nothing left to release.
+          # The rooms are gone; the sweeper has nothing left to release and no
+          # stage is owed.
+          ::Bookings::WaivePendingInstalments.call(booking)
           booking.update!(payment_due_at: nil)
           cancelled << booking
         end

@@ -49,6 +49,83 @@ RSpec.describe Bookings::ReleaseUnpaidAgentBookings do
     expect(log.metadata["reason"]).to include("Payment not received by")
   end
 
+  describe "a booking with a payment schedule" do
+    let(:hotel) { create(:hotel, status: "live", agent_payment_hold_hours: 72) }
+    let(:reviewer) { create(:user) }
+    let(:booking) do
+      agent_booking(payment_due_at: nil, total_amount: 1000, currency: "MYR",
+                    check_in: 60.days.from_now, check_out: 62.days.from_now)
+    end
+    let!(:folio) { create(:booking_folio, booking: booking, hotel: hotel, currency: "MYR") }
+
+    before { Bookings::CreatePaymentSchedule.call(booking: booking, from: now - 4.days) }
+
+    def pay(amount)
+      result = Folios::Transactions::InsertTransaction.new(
+        booking_folio: folio, amount: amount, transaction_type: "payment", category: "booking_payment",
+        user: reviewer, description: "test payment", options: { system_posting: true, posting_source: "spec" }
+      ).call
+      raise result.error unless result.success?
+
+      Deposits::SyncBookingPaymentStatus.call(booking.reload, folio_transaction: result.transaction, user: reviewer)
+    end
+
+    def release_reason
+      BookingAuditLog.where(auditable: booking, action_type: "cancel").last.metadata["reason"]
+    end
+
+    it "names the deposit when that is what was missed" do
+      described_class.call(now: now)
+
+      expect(booking.reload.status).to eq("cancelled")
+      expect(release_reason).to start_with("Deposit not received by")
+    end
+
+    it "names the balance when only the balance was missed, and says what became of the deposit" do
+      pay(500)
+      balance_due = booking.reload.payment_instalments.last.due_at
+
+      described_class.call(now: balance_due + 1.minute)
+
+      expect(release_reason).to start_with("Balance not received by")
+      expect(release_reason).to include("MYR 500.00 already paid has not been refunded; a refund needs a decision.")
+    end
+
+    it "says the deposit is retained when the hotel's deposit is non-refundable" do
+      hotel.update!(agent_deposit_non_refundable: true)
+      pay(500)
+
+      described_class.call(now: booking.reload.payment_instalments.last.due_at + 1.minute)
+
+      expect(release_reason).to include("MYR 500.00 already paid is retained: the deposit is non-refundable.")
+    end
+
+    it "moves no money either way" do
+      pay(500)
+
+      expect { described_class.call(now: booking.reload.payment_instalments.last.due_at + 1.minute) }
+        .not_to change { folio.folio_transactions.count }
+    end
+
+    it "waives the stages it cancelled and leaves the paid one alone" do
+      pay(500)
+
+      described_class.call(now: booking.reload.payment_instalments.last.due_at + 1.minute)
+
+      expect(booking.reload.payment_instalments.map(&:status)).to eq(%w[paid waived])
+      expect(booking.payment_due_at).to be_nil
+    end
+
+    it "does not release between the two deadlines" do
+      pay(500)
+
+      result = described_class.call(now: now)
+
+      expect(result.released).to be_empty
+      expect(booking.reload.status).to eq("confirmed")
+    end
+  end
+
   it "returns the rooms to sale" do
     booking = agent_booking
     create(:booking_room, booking: booking, room_type: create(:room_type, hotel: hotel))

@@ -9,18 +9,45 @@ import { Controller } from "@hotwired/stimulus"
 // only ever writes to a <p>.
 export default class extends Controller {
   static targets = ["mode", "manualPanel", "derivedPanel", "autoPanel", "preview", "rungTemplate"]
-  static values = { anchor: Number, maxAdults: Number, currency: String, perPerson: Boolean }
+  static values = { anchor: Number, maxAdults: Number, currency: String, perPerson: Boolean, standardPrices: Object }
 
   connect() {
     this.refresh()
   }
 
-  refresh() {
+  refresh(event) {
     const mode = this.currentMode
     this.toggle(this.manualPanelTargets, mode === "manual")
     this.toggle(this.derivedPanelTargets, mode === "derived")
     this.toggle(this.autoPanelTargets, mode === "auto")
     this.renderPreview(mode)
+    // The server already rendered the discount examples with the saved price;
+    // only a user edit needs to tell them the price moved.
+    if (event) this.announceExamplePrice(mode)
+  }
+
+  // Mirrors HotelPortal::RatePlanRoomPricing#example_price: the one nightly
+  // figure the Discounts tab uses to illustrate a rule. A per-guest plan is read
+  // at its primary occupancy. Null while the form holds nothing usable, so the
+  // examples keep their last price rather than dropping to zero.
+  announceExamplePrice(mode) {
+    const price = this.examplePrice(mode)
+    if (price === null || !(price > 0)) return
+
+    window.dispatchEvent(new CustomEvent("rate-plan-room-pricing:example-price", { detail: { price } }))
+  }
+
+  examplePrice(mode) {
+    if (!this.perPersonValue) return mode === "derived" ? this.derivedAnchor() : this.field("default_rate")
+
+    const adults = this.clamp(this.field("primary_occupancy") ?? 2, 1, this.maxAdultsValue)
+    if (mode === "manual") return this.field(`prices][${adults}`)
+    if (mode === "auto") return this.field("default_rate")
+
+    const standard = this.standardPricesValue[adults]
+    const value = this.field("derive_value")
+    if (standard === undefined || value === null) return null
+    return this.select("derive_mode") === "offset" ? Math.max(standard + value, 0) : Math.max(standard * (1 + value / 100), 0)
   }
 
   get currentMode() {

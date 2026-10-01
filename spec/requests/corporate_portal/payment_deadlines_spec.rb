@@ -124,6 +124,90 @@ RSpec.describe "CorporatePortal payment deadlines", type: :request do
       expect(response).to redirect_to(corporate_booking_path(booking))
     end
 
+    def submit_slip(booking, **extra)
+      post corporate_ar_payment_submissions_path, params: {
+        ar_payment_submission: {
+          booking_id: booking.id, reference_number: "TRF-901", received_at: Date.current, payment_method: "bank_transfer",
+          slip: fixture_file_upload("spec/fixtures/files/sample_image.jpg", "image/jpeg")
+        }.merge(extra)
+      }
+    end
+
+    context "with a payment schedule" do
+      let(:booking) do
+        agent_booking(check_in: 60.days.from_now, check_out: 62.days.from_now, total_amount: 1000).tap do |record|
+          Bookings::CreatePaymentSchedule.call(booking: record)
+        end
+      end
+
+      it "asks for the deposit first and says what follows" do
+        get corporate_booking_path(booking)
+
+        text = response.parsed_body.text.squish
+        expect(text).to include("Pay MYR 500.00 (deposit)")
+        expect(text).to include("Then MYR 500.00 by")
+      end
+
+      it "starts the form at the deposit, not the booking total" do
+        get new_corporate_ar_payment_submission_path(booking_id: booking.id)
+
+        expect(response.parsed_body.at_css("input[name='ar_payment_submission[amount]']")["value"]).to eq("500.00")
+      end
+
+      it "files the slip for the amount sent, not the booking total" do
+        expect { submit_slip(booking, amount: "500") }.to change(ArPaymentSubmission, :count).by(1)
+
+        expect(ArPaymentSubmission.last.amount).to eq(500)
+      end
+
+      it "files the deposit when no amount is sent" do
+        submit_slip(booking)
+
+        expect(ArPaymentSubmission.last.amount).to eq(500)
+      end
+
+      it "refuses less than the deposit" do
+        expect { submit_slip(booking, amount: "100") }.not_to change(ArPaymentSubmission, :count)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.parsed_body.text).to include("must be at least MYR 500.00")
+      end
+
+      it "refuses more than is owed" do
+        expect { submit_slip(booking, amount: "1500") }.not_to change(ArPaymentSubmission, :count)
+
+        expect(response.parsed_body.text).to include("more than the MYR 1000.00 still owed")
+      end
+
+      it "still shows the balance after the deposit is paid" do
+        folio = create(:booking_folio, booking: booking, hotel: hotel, currency: "MYR")
+        posted = Folios::Transactions::InsertTransaction.new(
+          booking_folio: folio, amount: 500, transaction_type: "payment", category: "booking_payment",
+          user: create(:user), description: "deposit", options: { system_posting: true, posting_source: "spec" }
+        ).call
+        raise posted.error unless posted.success?
+
+        Deposits::SyncBookingPaymentStatus.call(booking)
+        Bookings::SettlePaymentInstalments.call(booking: booking.reload)
+
+        get corporate_booking_path(booking)
+
+        text = response.parsed_body.text.squish
+        expect(booking.reload.payment_status).to eq("partial")
+        expect(text).to include("Pay MYR 500.00 (balance)")
+        expect(text).not_to include("No payment is outstanding")
+      end
+    end
+
+    it "asks a booking with no schedule for everything owed, as before" do
+      booking = agent_booking
+
+      get new_corporate_ar_payment_submission_path(booking_id: booking.id)
+      expect(response.parsed_body.at_css("input[name='ar_payment_submission[amount]']")["value"]).to eq("500.00")
+
+      expect { submit_slip(booking, amount: "100") }.not_to change(ArPaymentSubmission, :count)
+    end
+
     it "shows the paused state instead of pay-now while it is under review" do
       booking = agent_booking
       create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship, booking: booking)

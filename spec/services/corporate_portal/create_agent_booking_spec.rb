@@ -144,6 +144,40 @@ RSpec.describe CorporatePortal::CreateAgentBooking do
     end
   end
 
+  describe "the payment schedule" do
+    let(:guest) { [ [ { name: "Ada Lim", phone: "+60123456789" } ] ] }
+
+    it "asks for the whole amount within the hold when arrival is under 30 days away" do
+      result = call(guest)
+
+      expect(result.booking.payment_instalments.map { |i| [ i.kind, i.amount ] }).to eq([ [ "full", result.booking.total_amount ] ])
+    end
+
+    it "splits a booking made well ahead into a deposit and a balance" do
+      result = call(guest, { check_in: (Date.current + 60).to_s, check_out: (Date.current + 62).to_s })
+      booking = result.booking
+
+      expect(booking.payment_instalments.map(&:kind)).to eq(%w[deposit balance])
+      expect(booking.payment_instalments.sum(&:amount)).to eq(booking.total_amount)
+      expect(booking.payment_due_at).to eq(booking.payment_instalments.first.due_at)
+    end
+
+    it "writes none for a direct-bill account" do
+      relationship.update!(relationship_type: "direct_bill")
+
+      expect(call(guest).booking.payment_instalments).to be_empty
+    end
+
+    it "gives every room of a multi-room booking its own schedule" do
+      result = call(
+        [ [ { name: "Ada Lim", phone: "+60123456789" } ], [ { name: "Grace Tan", phone: "+60123456780" } ] ],
+        { check_in: (Date.current + 60).to_s, check_out: (Date.current + 62).to_s }
+      )
+
+      expect(result.bookings.map { |booking| booking.payment_instalments.map(&:kind) }).to all(eq(%w[deposit balance]))
+    end
+  end
+
   it "refuses without a room category" do
     result = call([ [ { name: "Ada Lim", phone: "+60123456789" } ] ], { room_type_id: nil })
 

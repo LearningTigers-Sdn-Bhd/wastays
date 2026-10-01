@@ -90,6 +90,13 @@ export default class extends Controller {
     return Number.parseInt(this.fromNightValueTarget.value, 10) || 1
   }
 
+  // Fired by the Pricing tab as its price is edited, so the simulator and the
+  // rows' examples follow what is on screen rather than the last saved price.
+  updatePrice(event) {
+    this.priceValue = event.detail.price
+    if (this.hasSimulateNightsTarget) this.updateExample()
+  }
+
   updateExample() {
     const nights = Number.parseInt(this.simulateNightsTarget.value, 10) || this.minNights
 

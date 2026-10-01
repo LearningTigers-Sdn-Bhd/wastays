@@ -4,7 +4,8 @@
 <section aria-labelledby="rate-plan-stay-discounts-heading" class="space-y-4" data-controller="nested-rows stay-discount-wizard"
          data-stay-discount-wizard-price-value="<%= example_price %>"
          data-stay-discount-wizard-currency-value="<%= rate_plan.currency %>"
-         data-stay-discount-wizard-per-person-value="<%= per_person %>">
+         data-stay-discount-wizard-per-person-value="<%= per_person %>"
+         data-action="rate-plan-room-pricing:example-price@window->stay-discount-wizard#updatePrice">
   <div class="flex items-start justify-between gap-3">
     <div class="flex items-center gap-1.5">
       <h3 id="rate-plan-stay-discounts-heading" class="text-base font-semibold text-foreground">Long-stay discounts</h3>

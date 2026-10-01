@@ -11,6 +11,7 @@ class HotelPortal::RatePlansController < HotelPortal::SettingsBaseController
     @rate_plan = current_hotel.rate_plans.build
     @rate_plan.currency = current_hotel.default_currency || "MYR"
     load_new_rate_plan_form(room_type_id: params[:room_type_id])
+    prefill_from_duplicate_source if duplicate_source
   end
 
   def edit
@@ -153,6 +154,36 @@ class HotelPortal::RatePlansController < HotelPortal::SettingsBaseController
   end
 
   private
+
+  # Nothing is saved here: "Duplicate" opens the new-plan form filled from the
+  # source, and the plan only exists once that form is submitted. Whatever the
+  # source's kind, the copy is a custom plan (create always makes one).
+  def duplicate_source
+    return @duplicate_source if defined?(@duplicate_source)
+
+    @duplicate_source = current_hotel.rate_plans.find_by(id: params[:duplicate_from])
+  end
+
+  def prefill_from_duplicate_source
+    @rate_plan.assign_attributes(
+      duplicate_source.slice(*RatePlans::Resolve::CREATABLE_ATTRIBUTES.excluding(:rate_plan_age_bands_attributes))
+        .merge(name: "Copy of #{duplicate_source.name}")
+    )
+    duplicate_source.rate_plan_age_bands.each do |band|
+      @rate_plan.rate_plan_age_bands.build(
+        band.slice(:min_age, :max_age, :pricing_mode, :price_value, :label, :position)
+      )
+    end
+
+    assignment = duplicate_source.room_type_rate_plans.find_by(room_type_id: @selected_room_type&.id)
+    return unless assignment
+
+    @room_pricing = HotelPortal::RatePlanRoomPricing.from_assignment(
+      assignment,
+      room_type: @selected_room_type,
+      sells_per_person: current_hotel.sells_per_person?
+    )
+  end
 
   def respond_to_status_change(message, success: true)
     if params[:return_to].present?

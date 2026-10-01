@@ -141,15 +141,14 @@ module CorporatePortal
       result.booking
     end
 
-    # Standard accounts hold the room against a payment deadline; direct bill is
-    # invoiced after the stay and gets no deadline. Stamped here rather than in
-    # a model callback so the only bookings carrying one are the ones an agent
-    # made, and so the clock starts when the booking was actually taken.
+    # Standard accounts hold the room against a payment schedule -- a deposit
+    # within the hotel's hold and the rest before arrival; direct bill is
+    # invoiced after the stay and gets none. Written here rather than in a model
+    # callback so the only bookings carrying one are the ones an agent made, and
+    # so the clock starts when the booking was actually taken. The booking's own
+    # deadline is set to the first stage.
     def stamp_payment_deadline(booking)
-      due_at = ::Bookings::PaymentHold.due_at(booking: booking)
-      return if due_at.blank?
-
-      booking.update!(payment_due_at: due_at)
+      ::Bookings::CreatePaymentSchedule.call(booking: booking)
     end
 
     def booking_params(room_type, guests, index)
