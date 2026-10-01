@@ -1285,7 +1285,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
     it "reads as paid, in the ordinary badge colour, once there is no deadline left" do
       booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
-                      corporate_booked_at: Time.current, payment_due_at: nil)
+                      corporate_booked_at: Time.current, payment_due_at: nil, payment_status: "captured")
 
       expect(presenter.agent_attribution).to include(
         payment_state: :paid, payment_label: "Paid", badge_variant: :accent

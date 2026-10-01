@@ -36,6 +36,7 @@ module CorporatePortal
              .order(created_at: :desc, id: :desc),
         limit: page_size)
       @payment_presenters = payment_presenters_for(@bookings)
+      @stay_sizes = stay_sizes_for(@bookings)
     end
 
     # The search form, and its results once dates are given.
@@ -101,6 +102,15 @@ module CorporatePortal
       return candidates.find { |option| option.rate_plan.id.to_s == @rate_plan_id.to_s } if @rate_plan_id.present?
 
       candidates.first if candidates.one?
+    end
+
+    # How many rooms each multi-room stay on this page has, so a row can say it is
+    # one of several. Counted across the whole account, not just the page.
+    def stay_sizes_for(bookings)
+      group_ids = bookings.filter_map(&:group_booking_id).uniq
+      return {} if group_ids.empty?
+
+      corporate_bookings.where(group_booking_id: group_ids).group(:group_booking_id).count
     end
 
     # Keyed by booking id, so a view can ask for one row's payment state without

@@ -381,6 +381,80 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     expect(response.body).not_to include("Theo Walkin")
   end
 
+  # A multi-room stay is several bookings under one group. Opening one of them
+  # leads with that room; the rest of the stay follows beneath it.
+  describe "a room that belongs to a multi-room stay" do
+    let(:group) { create(:group_booking, hotel: hotel) }
+    let!(:rooms) do
+      [ [ "Chen Fengping", 1200 ], [ "Law Shunwan", 1200 ], [ "Tse Hanyee", 600 ] ].each_with_index.map do |(name, amount), index|
+        create(:booking, hotel: hotel, hotel_corporate_account: relationship, group_booking: group, group_position: index + 1,
+                         guest_name: name, adults: 2, total_amount: amount, check_in: check_in, check_out: check_out).tap do |booking|
+          guest = create(:guest, name: name, phone: "#{Guest::PHONE_NOT_CAPTURED} RES4757-#{index + 1}")
+          create(:booking_guest, booking: booking, guest: guest, is_primary: true)
+        end
+      end
+    end
+    let(:opened) { rooms.last }
+
+    it "leads with the room that was opened: its guest, its guests and its own total" do
+      get corporate_booking_path(opened)
+
+      page = Capybara.string(response.body)
+      expect(page.find("h1")).to have_text("Tse Hanyee")
+      header = page.find("dl", match: :first)
+      expect(header.text).to match(/MYR\s+600\.00/)
+      expect(header).not_to have_text("3000.00")
+    end
+
+    it "says the room belongs to a stay, and gives the stay's total" do
+      get corporate_booking_path(opened)
+
+      expect(Capybara.string(response.body).find("[data-testid='stay-context']"))
+        .to have_text("Part of a 3-room stay").and have_text(/MYR\s+3000\.00/)
+    end
+
+    it "gives the opened room its full card and lists the others compactly, each linking to its own page" do
+      get corporate_booking_path(opened)
+
+      page = Capybara.string(response.body)
+      cards = page.all("[data-testid='agent-room-detail']")
+      expect(cards.size).to eq(1)
+      expect(cards.first).to have_text("Tse Hanyee")
+
+      expect(page).to have_css("[data-testid='other-rooms-heading']", text: "Other rooms in this stay (2)")
+      others = page.all("[data-testid='other-room']")
+      expect(others.map { |row| row.text }.join).to include("Chen Fengping", "Law Shunwan")
+      expect(others.map { |row| row.find("a", text: "View")[:href] })
+        .to contain_exactly(corporate_booking_path(rooms[0]), corporate_booking_path(rooms[1]))
+    end
+
+    it "makes plain that cancelling takes the whole stay" do
+      get corporate_booking_path(opened)
+
+      expect(response.body).to include("Cancel whole stay (3 rooms)")
+    end
+
+    it "says which room of the stay each list row is" do
+      get corporate_bookings_path
+
+      expect(response.body).to include("Room 3 of 3", "Room 1 of 3")
+    end
+
+    it "does not show an internal placeholder phone number to the agent" do
+      get corporate_booking_path(opened)
+
+      expect(response.body).not_to include("NOT CAPTURED")
+    end
+  end
+
+  it "does not label a single booking as part of a stay" do
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, guest_name: "Solo Guest")
+
+    get corporate_booking_path(booking)
+
+    expect(response.body).not_to include("stay-context", "Other rooms in this stay", "Cancel whole stay")
+  end
+
   describe "the bookings list" do
     it "puts the most recently made booking first" do
       older = travel_to(2.days.ago) { create(:booking, hotel: hotel, hotel_corporate_account: relationship, guest_name: "Older Guest") }

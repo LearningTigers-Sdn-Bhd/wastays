@@ -37,7 +37,7 @@ module Ezee
     # makes every imported reservation look like the same person -- 1193
     # bookings collapsing onto one guest record. These guests are unknown and
     # unrelated, so their sentinels have to differ.
-    GUEST_PHONE_SENTINEL = "NOT CAPTURED"
+    GUEST_PHONE_SENTINEL = Guest::PHONE_NOT_CAPTURED
 
     def self.phone_sentinel_for(reference) = "#{GUEST_PHONE_SENTINEL} #{reference}"
 

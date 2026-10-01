@@ -15,6 +15,16 @@ class Guest < ApplicationRecord
   encrypts :government_id, deterministic: true
   encrypts :passport_number, deterministic: true
 
+  # Written in place of a phone number the source never had (the reservation
+  # importer, for one), so unrelated guests are not merged on a shared blank. It
+  # is a marker for the system, not something to show a person.
+  PHONE_NOT_CAPTURED = "NOT CAPTURED"
+
+  def self.placeholder_phone?(value) = value.to_s.start_with?(PHONE_NOT_CAPTURED)
+
+  # The phone to show, or nil when all there is is the placeholder.
+  def self.displayable_phone(value) = (value.presence unless placeholder_phone?(value))
+
   OTP_EXPIRY = 10.minutes
   MAGIC_LINK_EXPIRY = 24.hours
   OTP_LENGTH = 6

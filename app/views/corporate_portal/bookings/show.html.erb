@@ -11,8 +11,16 @@
     </div>
     <h1 class="mt-2 text-2xl font-bold text-foreground"><%= @booking.guest_name %></h1>
     <p class="mt-1 text-sm text-muted-foreground">
-      <%= @booking.hotel.name %><%= " · #{pluralize(@bookings.size, 'room')}" if @bookings.size > 1 %>
+      <%= @booking.hotel.name %>
     </p>
+    <%# This page leads with the room that was opened. When it belongs to a larger
+        stay, say so and give the stay's total; the other rooms follow below. %>
+    <% if @bookings.size > 1 %>
+      <p class="mt-1 text-xs text-muted-foreground" data-testid="stay-context">
+        Part of a <%= @bookings.size %>-room stay · stay total
+        <%= @booking.currency %> <%= number_with_precision(@bookings.sum { |booking| booking.total_amount.to_d }, precision: 2) %>
+      </p>
+    <% end %>
 
     <dl class="mt-6 grid grid-cols-2 gap-4 text-sm">
       <div>
@@ -45,7 +53,7 @@
         <dt class="text-muted-foreground">Total</dt>
         <dd class="font-bold">
           <%= @booking.currency %>
-          <%= number_with_precision(@bookings.sum { |booking| booking.total_amount.to_d }, precision: 2) %>
+          <%= number_with_precision(@booking.total_amount, precision: 2) %>
         </dd>
       </div>
     </dl>
@@ -60,11 +68,11 @@
     <%# The total above is one number; a TA billing a client on top of it needs
         to know what is tax rather than room revenue. Grouped by name and
         summed across every room in the stay. %>
-    <% tax_totals = @bookings.flat_map { |booking| Array(booking.tax_lines) }
+    <% tax_totals = Array(@booking.tax_lines)
                              .reject { |line| Booking.tourism_tax_line?(line) }
                              .group_by { |line| line["name"] }
                              .transform_values { |lines| lines.sum { |line| line["amount"].to_d } } %>
-    <% room_subtotal = @bookings.sum { |booking| booking.total_amount.to_d } - tax_totals.values.sum %>
+    <% room_subtotal = @booking.total_amount.to_d - tax_totals.values.sum %>
     <% if tax_totals.present? %>
       <dl class="mt-4 space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
         <div class="flex justify-between">
@@ -128,9 +136,40 @@
     </section>
   <% end %>
 
-  <%= render partial: "corporate_portal/bookings/room_detail",
-        collection: @bookings.map { |booking| CorporatePortal::BookingDetailPresenter.new(booking) },
-        as: :room, locals: { room_count: @bookings.size } %>
+  <%# The room that was opened gets its full card. The rest of its stay is only
+      listed -- enough to see what else a cancellation would take, and a link to
+      open any one of them. %>
+  <% stay = @bookings.to_a %>
+  <%= render "corporate_portal/bookings/room_detail",
+        room: CorporatePortal::BookingDetailPresenter.new(@booking),
+        room_counter: stay.index(@booking), room_count: stay.size %>
+
+  <% others = stay - [ @booking ] %>
+  <% if others.any? %>
+    <section class="overflow-hidden rounded-xl border border-border bg-card" data-testid="other-rooms">
+      <h2 class="border-b border-border bg-muted/40 px-4 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground" data-testid="other-rooms-heading">
+        Other rooms in this stay (<%= others.size %>)
+      </h2>
+      <ul class="divide-y divide-border text-sm">
+        <% others.each do |other| %>
+          <% summary = CorporatePortal::BookingDetailPresenter.new(other) %>
+          <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2" data-testid="other-room">
+            <div class="min-w-0">
+              <span class="font-semibold text-foreground"><%= other.guest_name %></span>
+              <span class="ms-1 text-xs text-muted-foreground">
+                <%= summary.room_type_name %> · <%= other.formatted_reservation_number %>
+                <%= "· #{summary.status_label}" unless other.status == "confirmed" %>
+              </span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="tabular-nums text-muted-foreground"><%= other.currency %> <%= number_with_precision(other.total_amount, precision: 2) %></span>
+              <%= link_to "View", corporate_booking_path(other), class: "text-xs font-bold text-foreground underline-offset-4 hover:underline" %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 
   <div class="flex flex-wrap gap-3">
     <% if may_book_anywhere? %>
@@ -143,8 +182,9 @@
     <%# Offered only when the service would accept it, so the agent is never
         shown a button that answers with a refusal. %>
     <% if @cancellation.cancellable? %>
-      <%= link_to "Cancel booking", new_corporate_booking_cancellation_path(@booking),
-            class: "rounded-xl border border-destructive px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10" %>
+      <%= link_to(@bookings.size > 1 ? "Cancel whole stay (#{@bookings.size} rooms)" : "Cancel booking",
+            new_corporate_booking_cancellation_path(@booking),
+            class: "rounded-xl border border-destructive px-4 py-2.5 text-sm font-bold text-destructive hover:bg-destructive/10") %>
     <% elsif !cancelled %>
       <p class="self-center text-xs text-muted-foreground"><%= @cancellation.refusal_reason %></p>
     <% end %>
