@@ -43,7 +43,7 @@ module Admin
       def save(actor:)
         return false unless valid?
 
-        password = (SecureRandom.alphanumeric(GENERATED_PASSWORD_LENGTH) if verify_owner_account?)
+        password = (new_owner_password if verify_owner_account?)
 
         result = HotelOps::CreateHotel.new(
           account_params: { name: account_name },
@@ -94,6 +94,10 @@ module Admin
       end
 
       private
+
+      def new_owner_password
+        SecureRandom.alphanumeric(GENERATED_PASSWORD_LENGTH)
+      end
 
       def owner_params(password)
         base = { name: owner_name, email: owner_email }

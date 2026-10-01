@@ -133,6 +133,27 @@ RSpec.describe "AgentPortal::Hotels", type: :request do
       expect(response.body).to include(login_url)
     end
 
+    it "uses the owner password the agent typed" do
+      hotel_params[:agent_portal_hotels_create_form][:owner_password] = "owner-pass-1"
+
+      post agent_hotels_path, params: hotel_params
+
+      owner = User.find_by(email: "owner-#{token}@lumastay.test")
+      expect(owner.authenticate("owner-pass-1")).to eq(owner)
+      expect(flash[:owner_credentials]["password"]).to eq("owner-pass-1")
+    end
+
+    it "rejects an owner password shorter than 8 characters" do
+      hotel_params[:agent_portal_hotels_create_form][:owner_password] = "short"
+
+      expect {
+        post agent_hotels_path, params: hotel_params
+      }.not_to change(Hotel, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Owner password is too short")
+    end
+
     it "re-renders the form when a field is missing" do
       hotel_params[:agent_portal_hotels_create_form].delete(:sell_mode)
 

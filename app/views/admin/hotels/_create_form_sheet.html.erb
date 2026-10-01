@@ -45,6 +45,16 @@
               <% end %>
             </div>
 
+            <% if agent %>
+              <%= render PanelsUI::FormField.new(
+                    form: builder,
+                    attribute: :owner_password,
+                    label: "Owner password",
+                    hint: "Optional. At least #{Admin::SuperAgents::CreateService::MINIMUM_PASSWORD_LENGTH} characters. Leave it empty and the system makes one.") do |field| %>
+                <% field.with_input(type: :password, minlength: Admin::SuperAgents::CreateService::MINIMUM_PASSWORD_LENGTH, autocomplete: "new-password", value: "", placeholder: "Set a password for the owner") %>
+              <% end %>
+            <% end %>
+
             <% unless agent %>
             <%= render PanelsUI::Switch.new(
                   form: builder,
