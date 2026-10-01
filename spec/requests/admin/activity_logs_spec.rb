@@ -59,6 +59,25 @@ RSpec.describe "Admin::ActivityLogs", type: :request do
     expect(response.body).to include("app/jobs/sync_job.rb:12")
   end
 
+  it "lists who is active and records the visit of the signed-in user" do
+    teammate = create(:user, account: account, name: "Teammate #{token}", last_seen_at: 3.minutes.ago)
+
+    get "/admin/activity_logs", params: { tab: "active" }
+
+    expect(response.body).to include("Active now", "Teammate #{token}", superadmin.name)
+    expect(response.body).not_to include("Date range")
+    expect(superadmin.reload.last_seen_at).to be_within(1.minute).of(Time.current)
+    expect(teammate.reload.last_seen_at).to be < 1.minute.ago
+  end
+
+  it "shows an empty state when nobody is active" do
+    User.update_all(last_seen_at: nil)
+
+    get "/admin/activity_logs", params: { tab: "active", q: "no-such-#{token}" }
+
+    expect(response.body).to include("Nobody is active right now")
+  end
+
   it "filters by hotel" do
     create(:inventory_audit_log, hotel: hotel, user: superadmin, action_type: "rate_update")
     create(:inventory_audit_log, hotel: create(:hotel, account: account, name: "Other Hotel #{token}"), user: superadmin, action_type: "inventory_update")

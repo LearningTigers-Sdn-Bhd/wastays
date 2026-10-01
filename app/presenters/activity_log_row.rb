@@ -72,11 +72,20 @@ class ActivityLogRow
     )
   end
 
+  def self.build_active(user)
+    hotels = user.hotels.map(&:name)
+    Row.new(
+      record: user, hotel: nil, time: user.last_seen_at, who: user.name, event: user.role.humanize,
+      details: user.email, summary: hotels.first(3).join(", ") + (hotels.size > 3 ? " and #{hotels.size - 3} more" : ""),
+      detail: { email: user.email, role: user.role, last_seen_at: user.last_seen_at, hotels: hotels }
+    )
+  end
+
   def self.room_summary(log)
     change = [ log.old_status, log.new_status ].map { |status| status.to_s.humanize.presence || "N/A" }.join(" -> ") if log.old_status || log.new_status
     [ change, log.reason.presence ].compact.join(". ")
   end
 
   private_class_method :build_inventory, :build_bookings, :build_folios, :build_night_audits,
-                       :build_onboarding, :build_rooms, :build_financial, :build_errors, :room_summary
+                       :build_onboarding, :build_rooms, :build_financial, :build_errors, :build_active, :room_summary
 end

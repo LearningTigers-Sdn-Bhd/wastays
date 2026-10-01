@@ -89,4 +89,26 @@ RSpec.describe ActivityLogQuery do
       expect(described_class.hotel_scoped?("rooms")).to be(true)
     end
   end
+
+  describe "the active tab" do
+    let!(:online) { create(:user, name: "Olivia Online #{SecureRandom.hex(3)}", last_seen_at: 5.minutes.ago) }
+    let!(:away) { create(:user, name: "Aaron Away #{SecureRandom.hex(3)}", last_seen_at: 20.minutes.ago) }
+    let!(:never) { create(:user, last_seen_at: nil) }
+
+    it "lists only people seen in the last 15 minutes, newest first" do
+      expect(result(tab: "active")).to eq([ online ])
+    end
+
+    it "searches name, email and role" do
+      expect(result(tab: "active", q: online.name)).to eq([ online ])
+      expect(result(tab: "active", q: online.email)).to eq([ online ])
+      expect(result(tab: "active", q: "no-match-xyz")).to be_empty
+    end
+
+    it "ignores the date range and the hotel filter" do
+      expect(result(tab: "active", range: "2020-01-01/2020-01-02", hotel_id: hotel.id)).to eq([ online ])
+      expect(described_class.date_filtered?("active")).to be(false)
+      expect(described_class.date_filtered?("rooms")).to be(true)
+    end
+  end
 end

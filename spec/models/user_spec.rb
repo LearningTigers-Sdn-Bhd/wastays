@@ -70,4 +70,27 @@ RSpec.describe User, type: :model do
       expect(user.errors[:account]).to include("must be a hotel account")
     end
   end
+
+  describe "#touch_last_seen!" do
+    let(:user) { create(:user) }
+
+    it "records the first visit" do
+      expect { user.touch_last_seen! }.to change { user.reload.last_seen_at }.from(nil)
+    end
+
+    it "writes at most once a minute" do
+      user.touch_last_seen!
+      first_seen = user.reload.last_seen_at
+
+      travel_to(30.seconds.from_now) { user.touch_last_seen! }
+      expect(user.reload.last_seen_at).to eq(first_seen)
+
+      travel_to(2.minutes.from_now) { user.touch_last_seen! }
+      expect(user.reload.last_seen_at).to be > first_seen
+    end
+
+    it "does not change updated_at" do
+      expect { user.touch_last_seen! }.not_to change { user.reload.updated_at }
+    end
+  end
 end

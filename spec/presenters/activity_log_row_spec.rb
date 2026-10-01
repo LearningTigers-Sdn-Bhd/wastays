@@ -59,4 +59,13 @@ RSpec.describe ActivityLogRow do
     expect(row).to have_attributes(hotel: nil, who: nil, event: "Faraday::TimeoutError", details: "Channex timed out", summary: "Handled / Warning / application.active_job")
     expect(row.detail[:backtrace]).to eq(%w[app/a.rb:1 app/b.rb:2])
   end
+
+  it "maps an active user without exposing credentials" do
+    user = create(:user, role: "admin", last_seen_at: 2.minutes.ago)
+
+    row = described_class.for("active", user)
+
+    expect(row).to have_attributes(who: user.name, event: "Admin", details: user.email, time: user.last_seen_at)
+    expect(row.detail.keys).to eq(%i[email role last_seen_at hotels])
+  end
 end

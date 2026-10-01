@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -3297,6 +3297,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_060000) do
     t.boolean "can_create_hotels", default: false, null: false
     t.datetime "created_at", null: false
     t.string "email"
+    t.datetime "last_seen_at"
     t.string "name"
     t.string "password_digest"
     t.string "role"
@@ -3306,6 +3307,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_060000) do
     t.index ["account_id"], name: "index_users_on_account_id"
     t.index ["account_id"], name: "index_users_on_unique_corporate_account", unique: true, where: "((role)::text = 'corporate'::text)"
     t.index ["agent_code"], name: "index_users_on_agent_code", unique: true
+    t.index ["last_seen_at"], name: "index_users_on_last_seen_at"
   end
 
   create_table "webhook_endpoints", force: :cascade do |t|
