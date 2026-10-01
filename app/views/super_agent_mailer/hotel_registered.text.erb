@@ -1,7 +1,0 @@
-<%= @hotel.name %> registered with your invite link
-
-<%= @owner&.name || "The owner" %> registered <%= @hotel.name %> on <%= l(@hotel.created_at.to_date, format: :long) %> with your agent code <%= @agent.agent_code %>.
-
-The hotel is in setup now. You can open it to help the owner with onboarding.
-
-Open your hotels: <%= agent_hotels_url %>

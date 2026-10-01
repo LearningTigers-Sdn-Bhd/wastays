@@ -43,7 +43,7 @@ module Admin
       def save(actor:)
         return false unless valid?
 
-        password = (new_owner_password if verify_owner_account?)
+        password = (SecureRandom.alphanumeric(GENERATED_PASSWORD_LENGTH) if verify_owner_account?)
 
         result = HotelOps::CreateHotel.new(
           account_params: { name: account_name },
@@ -54,15 +54,13 @@ module Admin
             sell_mode: sell_mode,
             plan_id: plan_id,
             salesperson_id: salesperson_id.presence,
-            created_by_user_id: actor.id,
             preferred_channel_manager: preferred_channel_manager,
             allow_boat_information: allow_boat_information?,
             hide_payout_reports: hide_payout_reports?
           },
           # A nil invitation is what tells CreateHotel to provision the owner
           # user directly instead of waiting for an activation link.
-          owner_invitation: owner_invitation_options(actor),
-          agent: (actor if actor.super_agent?)
+          owner_invitation: owner_invitation_options(actor)
         ).call
 
         if result[:success]
@@ -94,10 +92,6 @@ module Admin
       end
 
       private
-
-      def new_owner_password
-        SecureRandom.alphanumeric(GENERATED_PASSWORD_LENGTH)
-      end
 
       def owner_params(password)
         base = { name: owner_name, email: owner_email }

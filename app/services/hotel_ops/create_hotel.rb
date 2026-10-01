@@ -2,12 +2,11 @@
 
 module HotelOps
   class CreateHotel
-    def initialize(account_params:, user_params:, hotel_params:, owner_invitation: nil, agent: nil)
+    def initialize(account_params:, user_params:, hotel_params:, owner_invitation: nil)
       @account_params = account_params
       @user_params = user_params
       @hotel_params = hotel_params
       @owner_invitation_options = owner_invitation
-      @agent = agent
     end
 
     def call
@@ -16,7 +15,7 @@ module HotelOps
         SeedAccountRoles.call(account)
 
         sanitize_amenities
-        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "setup", amenities: [], created_by_user_id: @agent&.id).merge(account: account))
+        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "setup", amenities: []).merge(account: account))
         owner_role = Role.find_by!(account: account, slug: "hotel_owner")
 
         user = nil
@@ -40,8 +39,6 @@ module HotelOps
           UserRole.create!(user: user, role: owner_role)
           UserHotelAccess.create!(user: user, hotel: hotel, role: owner_role)
         end
-
-        SuperAgents::GrantHotelAccess.call(agent: @agent, hotel: hotel) if @agent
 
         Onboarding::InitializeProgress.new(
           hotel: hotel,

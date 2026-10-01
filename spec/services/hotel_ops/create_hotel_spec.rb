@@ -67,19 +67,6 @@ RSpec.describe HotelOps::CreateHotel do
       end
     end
 
-    context 'with an agent' do
-      let(:agent) { create(:user, :super_agent) }
-
-      it 'gives the agent General Manager access to the new hotel' do
-        result = described_class.new(
-          account_params: account_params, user_params: user_params, hotel_params: hotel_params, agent: agent
-        ).call
-
-        access = agent.user_hotel_accesses.find_by(hotel: result[:hotel])
-        expect(access.role).to have_attributes(slug: 'general_manager', account: result[:account])
-      end
-    end
-
     context 'with invalid params' do
       let(:user_params) { { name: '', email: 'invalid', password: '' } }
 
