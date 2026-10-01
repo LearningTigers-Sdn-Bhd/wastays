@@ -26,6 +26,15 @@ class Admin::Hotels::SettingsController < Admin::BaseController
     redirect_to admin_hotel_path(@hotel, tab: "salesperson"), alert: e.record.errors.full_messages.to_sentence
   end
 
+  def update_super_agent
+    agent_id = params.require(:super_agent).permit(:id)[:id]
+    agent = current_user.account.users.super_agents.find(agent_id) if agent_id.present?
+    Admin::Hotels::UpdateSuperAgent.call(hotel: @hotel, agent:)
+    redirect_to admin_hotel_path(@hotel, tab: "super_agent"), notice: "Super agent saved."
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotFound => e
+    redirect_to admin_hotel_path(@hotel, tab: "super_agent"), alert: e.message
+  end
+
   def send_owner_password_reset
     owner = selected_owner!
     token = OwnerPasswordReset.issue!(owner)
