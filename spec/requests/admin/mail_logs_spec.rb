@@ -15,7 +15,7 @@ RSpec.describe "Admin::MailLogs", type: :request do
     get "/admin/mail_logs"
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Mail log", "All statuses", "Subject #{token}", "guest-#{token}@example.com", "SMTP down")
+    expect(response.body).to include("Mail log", "Subject #{token}", "guest-#{token}@example.com", "SMTP down")
   end
 
   it "filters by status" do
@@ -24,6 +24,8 @@ RSpec.describe "Admin::MailLogs", type: :request do
 
     get "/admin/mail_logs", params: { status: "sent" }
 
+    options = Nokogiri::HTML(response.body).css("select#status option").map { |option| [ option.text.strip, option["value"] ] }
+    expect(options).to eq([ [ "All", "" ], [ "Sent", "sent" ], [ "Failed", "failed" ] ])
     expect(response.body).to include("Kept #{token}")
     expect(response.body).not_to include("Hidden #{token}")
   end

@@ -34,9 +34,8 @@
     <div class="w-full sm:w-44">
       <%= render PanelsUI::FormField.new(form: form, attribute: :status, label: "Status") do |field| %>
         <% field.with_select_menu(
-             MailEvent::STATUSES.map { |status| { label: status.titleize, value: status } },
-             include_blank: "All statuses",
-             selected: (active_status unless active_status == "all")) %>
+             [ { label: "All", value: "" } ] + MailEvent::STATUSES.map { |status| { label: status.titleize, value: status } },
+             selected: (active_status == "all" ? "" : active_status)) %>
       <% end %>
     </div>
     <div class="w-full sm:w-44">
