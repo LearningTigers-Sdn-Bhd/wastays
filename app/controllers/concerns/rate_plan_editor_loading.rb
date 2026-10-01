@@ -13,7 +13,7 @@ module RatePlanEditorLoading
 
   def load_rate_plan_editor(room_type_id: nil)
     @assignments = @rate_plan.room_type_rate_plans
-      .includes(:occupancy_prices, :room_type, :rate_plan)
+      .includes(:occupancy_prices, :rate_plan, room_type: :rate_plans)
       .to_a
       .sort_by { |assignment| [ assignment.room_type.name.downcase, assignment.room_type_id ] }
     @assigned_room_types = @assignments.map(&:room_type)

@@ -460,6 +460,8 @@ module HotelPortal
 
     # The bookings in view that are on a payment schedule, one presenter each.
     def agent_payments_presenters
+      # One query for every child's stages, however the children were loaded.
+      ActiveRecord::Associations::Preloader.new(records: child_bookings, associations: :payment_instalments).call
       @agent_payments_presenters ||= child_bookings
         .select { |child| child.payment_instalments.any? }
         .map { |child| AgentPaymentsPresenter.new(booking: child, user: @user, hotel: hotel) }
