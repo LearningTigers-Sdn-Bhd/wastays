@@ -1,6 +1,6 @@
 # Importing future reservations from eZee
 
-**Status: planned, not built.** Every decision below is settled with the client.
+**Status: built (Reservation List layout), plus a second eZee report layout, the reservation CSV (see "The reservation CSV layout" at the end). The text below was written before the build.** Every decision below is settled with the client.
 This document is the working context for the feature: what the file is, what
 wastays requires, what was decided and why, and which questions are still open.
 Read it before touching the importer — several of the constraints here are not
@@ -725,3 +725,65 @@ importable rather than merely parseable:
   refused by the 2.0 production rule.
 - Totals reconcile: 90 room-nights, 139 adults, 1 child, `25669.01` total,
   `2885.00` paid — all four printed in the footer and recomputable from the rows.
+
+
+---
+
+## 8. The reservation CSV layout (second eZee report)
+
+eZee exports the same reservations through more than one report. Sandbay's is a
+flat CSV rather than the Crystal Reports `.xls`. The importer reads both:
+`Ezee::LayoutDetector` picks the layout (a CSV with `Res. No` and `Business
+Source` headers is the reservation CSV; `.xls`/`.xlsx` is the Reservation List;
+anything else is refused, never guessed), `Ezee::ParseFile` dispatches, and each
+parser returns `Ezee::ReservationRow`s. Nothing after the parser knows which
+layout ran. The operator can override detection on the upload form.
+
+What differs from the Reservation List, and how it is handled:
+
+| | Reservation CSV |
+| --- | --- |
+| Columns | read by **header name** (`Ezee::ReservationCsvParser`) |
+| Reservation no. | `RES4433-1`; the `-N` suffix ties the rooms of one booking together (`group_ref`) |
+| Money | `Rate(RM)` is **per room per night**; stay total = rate x nights. eZee has no per-person model, but a per-person hotel is fine: the file's price is kept as the booking's total, never re-quoted from the rate plan |
+| Agency / channel | `Business Source`: `CTrip` = OTA, `Direct Booking` = direct, blank = `internal` with an "unlabeled agent booking" note, anything else = agency (corporate account). **A blank Business Source is often an agency typed into the guest field** (`PERFECT HOLIDAY(SABRINA)`, `DREAMY ISLAND ( MOON )`): `Ezee::AgencyFromGuest` reads the part before the bracket as the agency and matches it to the Business Source spelling by words (Holiday/Holidays/Vacation count as one), or gives it its own account. A name matching two agencies equally is not guessed at |
+| Status | `Confirm Booking` = confirmed; `Hold Confirm Booking` = unpaid hold (`pending`); `Released` = cancelled |
+| Guest | real name; `Mr./Ms./Mrs./Dr.` is stripped and kept in the staff note |
+| Remarks | `Reservation Remarks` and `Check In Remarks` are kept as the booking's special requests |
+| Boat | parsed from the remark by `Ezee::BoatRemark` (a time = resort boat, `OWN BOAT` = own, `(CHARTER)` = charter) and written to the primary guest. A resort-boat time missing from the hotel's timetable is a warning, not a failure |
+| Category names | compared without the word "Room" and brackets, so `Standard Room (Twin)` matches `Standard Twin` |
+| Rate plan | matched on the words of the plan name (`Agent Rate International` = `International Agent Rate`); no match is a warning |
+| Footer | `Total Reservation,#(N)`, asserted against what parsed |
+
+Released rows are kept as **cancelled** bookings (`Ezee::CreateCancelledBooking`)
+whatever their arrival date, so the guest and their booking history survive: no
+room held, no inventory, folio or notification. Other rows arriving before the
+business date are still skipped.
+
+Known limits, deliberately left:
+
+- **Holds import as confirmed**, with an "Unpaid hold in eZee" note. That is
+  deliberate: a `confirmed` booking holds its assigned room and inventory, so a
+  held room cannot be double-booked. A real `pending` status does not hold a room
+  today (`Booking::OCCUPYING_STATUSES`, `Bookings::AvailableRoomNumbers`,
+  `Bookings::InventoryManager`), has no "confirm" action in
+  `Bookings::TransitionStatus`, and would leak into reports that read
+  `OCCUPYING_STATUSES` (police report, stay view, agent stay search). The row
+  already carries `booking_status: "pending"` for when that is built.
+- **The jetty fee is not charged.** The eZee balance runs RM10 a head above the
+  room total on most agent and direct bookings: that is the resort's jetty fee
+  (RM10 per person per entrance, all nationalities, charged to the agent), not
+  tourism tax. It is noted on the booking. **Tourism tax** (RM10 per room per
+  night, international guests only, collected at check-in) is also not charged,
+  because the export carries no nationality.
+- **Every booking is created by the importing user.** The eZee `User` is kept in
+  the internal note; mapping it to real staff is a later step.
+- Agency-specific rate plans are matched by name: a plan whose first word is the
+  agency's first word wins over the Rate Type (Perfect Vacation Sdn. Bhd. ->
+  "Perfect Holiday", which is the same company's brand). Generic tiers
+  (International, Malaysian, Standard, ...) are never matched that way.
+- Dev data: `bin/rails sandbay:seed_hotel` creates Sand Bay Resort (per person,
+  41 rooms, 6 categories, 7 rate plans with per-adult prices, child multiplier 0.5,
+  the boat timetable). Re-runnable.
+- Fixture: `spec/fixtures/files/ezee_reservation_csv_sample.csv`, an anonymised
+  cut of Sandbay's real export that keeps the edge cases.

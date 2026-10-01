@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2893,15 +2893,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.decimal "amount_paid", precision: 10, scale: 2
     t.date "arrival"
     t.datetime "booked_at"
+    t.string "boat_in_time"
+    t.string "boat_in_type"
+    t.string "boat_out_time"
+    t.string "boat_out_type"
     t.string "booked_by"
+    t.string "booking_status", default: "confirmed", null: false
     t.bigint "booking_id"
     t.integer "children", default: 0, null: false
     t.datetime "created_at", null: false
     t.date "departure"
     t.string "group_key"
     t.string "guest_name"
+    t.text "internal_note"
     t.jsonb "issues", default: [], null: false
     t.integer "nights", default: 0, null: false
+    t.bigint "rate_plan_id"
     t.string "rate_type"
     t.text "remark"
     t.bigint "reservation_import_id", null: false
@@ -2912,12 +2919,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.string "room_type_name"
     t.integer "sheet_row", null: false
     t.string "source"
+    t.string "source_key"
     t.string "status", null: false
     t.decimal "total_amount", precision: 10, scale: 2
     t.datetime "updated_at", null: false
     t.index ["reservation_import_id", "sheet_row"], name: "idx_reservation_import_rows_on_import_and_sheet_row", unique: true
     t.index ["reservation_import_id", "status"], name: "idx_reservation_import_rows_on_import_and_status"
     t.index ["reservation_import_id"], name: "index_reservation_import_rows_on_reservation_import_id"
+    t.check_constraint "booking_status::text = ANY (ARRAY['confirmed'::character varying, 'pending'::character varying, 'cancelled'::character varying]::text[])", name: "reservation_import_rows_booking_status_allowed"
     t.check_constraint "status::text = ANY (ARRAY['importable'::character varying, 'imported'::character varying, 'past'::character varying, 'blocked'::character varying, 'created'::character varying, 'failed'::character varying]::text[])", name: "reservation_import_rows_status_allowed"
   end
 
@@ -2932,6 +2941,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.bigint "hotel_id", null: false
     t.integer "processed_rows", default: 0, null: false
     t.integer "skipped_count", default: 0, null: false
+    t.string "source_layout"
     t.datetime "started_at"
     t.string "status", default: "draft", null: false
     t.string "step"

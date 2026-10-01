@@ -23,6 +23,9 @@ class ReservationImport < ApplicationRecord
 
   scope :recent_first, -> { order(created_at: :desc) }
 
+  # The eZee report this file was read as, for the preview and the audit trail.
+  def layout_label = Ezee::ParseFile::LABELS[source_layout&.to_sym]
+
   def running? = status.in?(%w[queued running])
   def finished? = status.in?(%w[completed failed])
 

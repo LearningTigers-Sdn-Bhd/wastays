@@ -33,7 +33,7 @@ class ReservationImportRow < ApplicationRecord
 
     pattern = "%#{sanitize_sql_like(query)}%"
     where(
-      "reservation_number ILIKE :p OR guest_name ILIKE :p OR source ILIKE :p OR " \
+      "reservation_number ILIKE :p OR guest_name ILIKE :p OR source ILIKE :p OR agency_name ILIKE :p OR " \
       "room_number ILIKE :p OR room_type_name ILIKE :p OR " \
       "CAST(total_amount AS text) ILIKE :p OR CAST(adults + children AS text) ILIKE :p OR " \
       "to_char(arrival, 'DD Mon YYYY') ILIKE :p OR to_char(departure, 'DD Mon YYYY') ILIKE :p",

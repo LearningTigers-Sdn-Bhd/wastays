@@ -15,8 +15,10 @@ module Ezee
 
     def self.call(...) = new(...).call
 
-    def initialize(import:)
+    # `layout` forces a report layout; left nil, the file is detected.
+    def initialize(import:, layout: nil)
       @import = import
+      @layout = layout
     end
 
     def call
@@ -26,7 +28,7 @@ module Ezee
       plan = ImportPlan.call(hotel: @import.hotel, rows: parsed.rows)
       write!(plan)
 
-      @import.update!(total_rows: plan.importable.size)
+      @import.update!(total_rows: plan.importable.size, source_layout: parsed.layout&.to_s)
       Result.new(rows_written: plan.entries.size)
     end
 
@@ -57,6 +59,14 @@ module Ezee
         rate_type: row.rate_type,
         booked_at: row.booked_at,
         booked_by: row.user,
+        booking_status: entry.booking_status,
+        source_key: row.source_key,
+        internal_note: row.internal_note,
+        boat_in_type: row.boat_in&.dig(:type),
+        boat_in_time: row.boat_in&.dig(:time),
+        boat_out_type: row.boat_out&.dig(:type),
+        boat_out_time: row.boat_out&.dig(:time),
+        rate_plan_id: entry.rate_plan&.id,
         arrival: row.arrival,
         departure: row.departure,
         adults: row.adults,
@@ -85,7 +95,7 @@ module Ezee
       Tempfile.create([ "ezee", File.extname(blob.filename.to_s) ], binmode: true) do |tempfile|
         tempfile.write(blob.download)
         tempfile.flush
-        ReservationListParser.call(path: tempfile.path, filename: blob.filename.to_s)
+        ParseFile.call(path: tempfile.path, filename: blob.filename.to_s, layout: @layout)
       end
     end
   end
