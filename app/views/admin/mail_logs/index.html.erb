@@ -26,10 +26,17 @@
 
   <%= form_with url: admin_mail_logs_path, method: :get, class: "flex flex-wrap items-end gap-4",
         data: { controller: "auto-submit", action: "input->auto-submit#submit", turbo_action: "advance" } do |form| %>
-    <%= form.hidden_field :status, value: active_status unless active_status == "all" %>
     <div class="w-full flex-1 sm:min-w-64">
       <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search") do |field| %>
         <% field.with_input(type: :search, value: params[:q], placeholder: "Recipient or subject") %>
+      <% end %>
+    </div>
+    <div class="w-full sm:w-44">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :status, label: "Status") do |field| %>
+        <% field.with_select_menu(
+             MailEvent::STATUSES.map { |status| { label: status.titleize, value: status } },
+             include_blank: "All statuses",
+             selected: (active_status unless active_status == "all")) %>
       <% end %>
     </div>
     <div class="w-full sm:w-44">
@@ -42,9 +49,9 @@
         <% field.with_date_picker(value: params[:end_date], min: params[:start_date].presence) %>
       <% end %>
     </div>
-    <% if filter_params.values.any?(&:present?) %>
+    <% if filter_params.values.any?(&:present?) || active_status != "all" %>
       <div class="flex items-center gap-2">
-        <%= render PanelsUI::Button.new(as: :a, href: admin_mail_logs_path(status: (active_status unless active_status == "all")), variant: :ghost) do %>Clear<% end %>
+        <%= render PanelsUI::Button.new(as: :a, href: admin_mail_logs_path, variant: :ghost) do %>Clear<% end %>
       </div>
     <% end %>
   <% end %>

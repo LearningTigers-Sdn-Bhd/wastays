@@ -15,7 +15,7 @@ RSpec.describe "Admin::MailLogs", type: :request do
     get "/admin/mail_logs"
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include("Mail log", "Subject #{token}", "guest-#{token}@example.com", "SMTP down")
+    expect(response.body).to include("Mail log", "All statuses", "Subject #{token}", "guest-#{token}@example.com", "SMTP down")
   end
 
   it "filters by status" do
