@@ -26,7 +26,7 @@
   <%= form_with url: admin_mail_logs_path, method: :get, class: "flex flex-wrap items-end gap-4",
         data: { controller: "auto-submit", action: "input->auto-submit#submit", turbo_action: "advance" } do |form| %>
     <%= form.hidden_field :status, value: active_status unless active_status == "all" %>
-    <div class="w-full sm:w-72">
+    <div class="w-full flex-1 sm:min-w-64">
       <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search") do |field| %>
         <% field.with_input(type: :search, value: params[:q], placeholder: "Recipient or subject") %>
       <% end %>
