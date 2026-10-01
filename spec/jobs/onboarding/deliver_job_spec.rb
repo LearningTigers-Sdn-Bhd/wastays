@@ -54,17 +54,17 @@ RSpec.describe Onboarding::DeliverJob, type: :job do
     expect(delivery.reload).to have_attributes(status: "sent", attempt_count: 1, completed_at: be_present)
   end
 
-  it "delivers an agent update email" do
+  it "delivers the agent live email" do
     delivery = create(
       :onboarding_delivery, onboarding_submission: submission,
-      delivery_type: "agent_submitted", recipient_email: "agent@example.com"
+      delivery_type: "agent_approved", recipient_email: "agent@example.com"
     )
 
     expect {
       described_class.perform_now(delivery.id)
     }.to change { ActionMailer::Base.deliveries.size }.by(1)
 
-    expect(ActionMailer::Base.deliveries.last.subject).to eq("#{hotel.name}: setup submitted for review")
+    expect(ActionMailer::Base.deliveries.last.subject).to eq("#{hotel.name} is now live")
     expect(delivery.reload.status).to eq("sent")
   end
 end

@@ -19,17 +19,16 @@ RSpec.describe SuperAgentMailer do
     end
   end
 
-  describe "#onboarding_update" do
-    SuperAgentMailer::UPDATES.each do |type, update|
-      it "sends the #{type} update" do
-        submission = create(:onboarding_submission, hotel:, submitted_by: create(:user, account: hotel.account))
-        delivery = create(:onboarding_delivery, onboarding_submission: submission, delivery_type: type, recipient_email: "aina@agent.test")
+  describe "#hotel_live" do
+    it "tells the agent the hotel is live" do
+      submission = create(:onboarding_submission, hotel:, submitted_by: create(:user, account: hotel.account))
+      delivery = create(:onboarding_delivery, onboarding_submission: submission, delivery_type: "agent_approved", recipient_email: "aina@agent.test")
 
-        email = described_class.onboarding_update(delivery)
+      email = described_class.hotel_live(delivery)
 
-        expect(email.subject).to eq("Luma Stay: #{update[:subject]}")
-        expect(email.text_part.body.to_s).to include("Status: #{update[:status]}", update[:next_step])
-      end
+      expect(email.to).to eq([ "aina@agent.test" ])
+      expect(email.subject).to eq("Luma Stay is now live")
+      expect(email.text_part.body.to_s).to include("The hotel can take bookings now", "/agent/hotels")
     end
   end
 end

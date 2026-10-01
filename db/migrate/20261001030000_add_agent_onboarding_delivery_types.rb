@@ -5,7 +5,7 @@ class AddAgentOnboardingDeliveryTypes < ActiveRecord::Migration[8.0]
     staff_invitation corporate_invitation admin_submitted
     owner_changes_requested owner_approved owner_launch_decision_required
   ].freeze
-  AGENT_TYPES = %w[agent_submitted agent_changes_requested agent_launch_decision_required agent_approved].freeze
+  AGENT_TYPES = %w[agent_approved].freeze
 
   def up
     replace_constraint(OLD_TYPES + AGENT_TYPES)

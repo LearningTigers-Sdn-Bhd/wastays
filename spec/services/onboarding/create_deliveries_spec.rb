@@ -11,30 +11,30 @@ RSpec.describe Onboarding::CreateDeliveries do
 
     before { hotel.update!(created_by_user: agent) }
 
-    it "adds an agent delivery on submission" do
-      described_class.for_submission(submission)
+    it "adds an agent delivery when the hotel goes live" do
+      described_class.for_owners(submission, "owner_approved")
 
-      expect(submission.deliveries.find_by(delivery_type: "agent_submitted").recipient_email).to eq("agent@example.com")
+      expect(submission.deliveries.find_by(delivery_type: "agent_approved").recipient_email).to eq("agent@example.com")
     end
 
-    it "adds the matching agent delivery for each owner step" do
-      described_class::AGENT_TYPES.except("admin_submitted").each do |owner_type, agent_type|
-        described_class.for_owners(submission, owner_type)
+    it "adds no agent delivery for the other onboarding steps" do
+      described_class.for_submission(submission)
+      described_class.for_owners(submission, "owner_changes_requested")
+      described_class.for_owners(submission, "owner_launch_decision_required")
 
-        expect(submission.deliveries.where(delivery_type: agent_type)).to exist
-      end
+      expect(submission.deliveries.where(delivery_type: OnboardingDelivery::DELIVERY_TYPES.grep(/\Aagent_/))).to be_empty
     end
 
     it "does not add the same agent delivery twice" do
-      2.times { described_class.for_submission(submission) }
+      2.times { described_class.for_owners(submission, "owner_approved") }
 
-      expect(submission.deliveries.where(delivery_type: "agent_submitted").count).to eq(1)
+      expect(submission.deliveries.where(delivery_type: "agent_approved").count).to eq(1)
     end
   end
 
   it "adds no agent delivery when no agent is linked" do
-    described_class.for_submission(submission)
+    described_class.for_owners(submission, "owner_approved")
 
-    expect(submission.deliveries.where(delivery_type: described_class::AGENT_TYPES.values)).to be_empty
+    expect(submission.deliveries.where(delivery_type: "agent_approved")).to be_empty
   end
 end

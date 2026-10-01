@@ -2366,7 +2366,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_030000) do
     t.index ["onboarding_submission_id"], name: "index_onboarding_deliveries_on_onboarding_submission_id"
     t.index ["source_type", "source_id"], name: "index_onboarding_deliveries_on_source_type_and_source_id"
     t.index ["status", "updated_at"], name: "index_onboarding_deliveries_on_status_and_updated_at"
-    t.check_constraint "delivery_type::text = ANY (ARRAY['staff_invitation'::character varying, 'corporate_invitation'::character varying, 'admin_submitted'::character varying, 'owner_changes_requested'::character varying, 'owner_approved'::character varying, 'owner_launch_decision_required'::character varying, 'agent_submitted'::character varying, 'agent_changes_requested'::character varying, 'agent_launch_decision_required'::character varying, 'agent_approved'::character varying]::text[])", name: "onboarding_deliveries_type_allowed"
+    t.check_constraint "delivery_type::text = ANY (ARRAY['staff_invitation'::character varying, 'corporate_invitation'::character varying, 'admin_submitted'::character varying, 'owner_changes_requested'::character varying, 'owner_approved'::character varying, 'owner_launch_decision_required'::character varying, 'agent_approved'::character varying]::text[])", name: "onboarding_deliveries_type_allowed"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'sent'::character varying, 'held'::character varying, 'failed'::character varying]::text[])", name: "onboarding_deliveries_status_allowed"
   end
 

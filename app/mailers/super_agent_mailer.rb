@@ -1,31 +1,7 @@
 # frozen_string_literal: true
 
-# Keeps a super agent informed about the hotels linked to them.
+# Tells a super agent when a hotel joins with their code and when it goes live.
 class SuperAgentMailer < ApplicationMailer
-  # Subject ending, status and next step for each onboarding step.
-  UPDATES = {
-    "agent_submitted" => {
-      subject: "setup submitted for review",
-      status: "Submitted for review",
-      next_step: "WAStays checks the setup. You get an email when it is approved or needs changes."
-    },
-    "agent_changes_requested" => {
-      subject: "changes requested",
-      status: "Changes requested",
-      next_step: "The owner must fix the setup and submit again. Open the hotel to help."
-    },
-    "agent_launch_decision_required" => {
-      subject: "approved, waiting for launch",
-      status: "Approved",
-      next_step: "The owner must choose when to launch."
-    },
-    "agent_approved" => {
-      subject: "now live",
-      status: "Live",
-      next_step: "The hotel can take bookings now."
-    }
-  }.freeze
-
   # A hotel registered with the agent's invite link.
   def hotel_registered(hotel)
     @hotel = hotel
@@ -35,10 +11,10 @@ class SuperAgentMailer < ApplicationMailer
     mail(to: @agent.email, subject: "#{@hotel.name} registered with your invite link")
   end
 
-  def onboarding_update(delivery)
+  # The hotel finished onboarding and can take bookings.
+  def hotel_live(delivery)
     @hotel = delivery.onboarding_submission.hotel
-    @update = UPDATES.fetch(delivery.delivery_type)
 
-    mail(to: delivery.recipient_email, subject: "#{@hotel.name}: #{@update[:subject]}")
+    mail(to: delivery.recipient_email, subject: "#{@hotel.name} is now live")
   end
 end
