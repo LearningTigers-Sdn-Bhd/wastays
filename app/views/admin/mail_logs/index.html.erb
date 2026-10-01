@@ -49,53 +49,56 @@
     <% end %>
   <% end %>
 
-  <% if @events.empty? %>
-    <%= render PanelsUI::EmptyState.new(
-          icon: "mail",
-          title: "No emails found",
-          description: "Change the filters, or wait for the platform to send an email.") %>
-  <% else %>
-    <%= render PanelsUI::Table.new(
-          caption: "Emails matching the current filters",
-          density: :compact,
-          header_style: :sentence,
-          hoverable: true,
-          wrapper_class: "rounded-md border border-border bg-card") do |table| %>
-      <% table.with_header do %>
-        <tr>
-          <th scope="col">Sent</th>
-          <th scope="col">Email</th>
-          <th scope="col" class="hidden md:table-cell">Recipients</th>
-          <th scope="col">Subject</th>
-          <th scope="col">Status</th>
-        </tr>
-      <% end %>
-
-      <% table.with_body do %>
-        <% @events.each do |event| %>
-          <tr>
-            <td class="whitespace-nowrap text-muted-foreground"><%= l(event.sent_at, format: "%d %b %Y, %H:%M") %></td>
-            <td class="font-medium text-foreground">
-              <%= event.mailer.delete_suffix("Mailer").titleize %>
-              <% if event.mail_action.present? %>
-                <span class="mt-0.5 block text-xs font-normal text-muted-foreground"><%= event.mail_action.humanize %></span>
-              <% end %>
-            </td>
-            <td class="hidden break-all text-muted-foreground md:table-cell"><%= event.recipients.presence || "-" %></td>
-            <td>
-              <%= event.subject.presence || "-" %>
-              <% if event.error_message.present? %>
-                <span class="mt-0.5 block text-xs text-destructive"><%= event.error_message.truncate(120) %></span>
-              <% end %>
-            </td>
-            <td>
-              <%= render PanelsUI::Badge.new(label: event.status.titleize, variant: event.status == "failed" ? :destructive : :success, size: :sm, indicator: true) %>
-            </td>
-          </tr>
-        <% end %>
-      <% end %>
+  <%= render PanelsUI::Table.new(
+        caption: "Emails matching the current filters",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: @events.any?,
+        wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Sent</th>
+        <th scope="col">Email</th>
+        <th scope="col" class="hidden md:table-cell">Recipients</th>
+        <th scope="col">Subject</th>
+        <th scope="col">Status</th>
+      </tr>
     <% end %>
 
-    <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
+    <% table.with_body do %>
+      <% if @events.empty? %>
+        <tr>
+          <td colspan="5">
+            <%= render PanelsUI::EmptyState.new(
+                  icon: "mail",
+                  title: "No emails found",
+                  description: "Change the filters, or wait for the platform to send an email.") %>
+          </td>
+        </tr>
+      <% end %>
+      <% @events.each do |event| %>
+        <tr>
+          <td class="whitespace-nowrap text-muted-foreground"><%= l(event.sent_at, format: "%d %b %Y, %H:%M") %></td>
+          <td class="font-medium text-foreground">
+            <%= event.mailer.delete_suffix("Mailer").titleize %>
+            <% if event.mail_action.present? %>
+              <span class="mt-0.5 block text-xs font-normal text-muted-foreground"><%= event.mail_action.humanize %></span>
+            <% end %>
+          </td>
+          <td class="hidden break-all text-muted-foreground md:table-cell"><%= event.recipients.presence || "-" %></td>
+          <td>
+            <%= event.subject.presence || "-" %>
+            <% if event.error_message.present? %>
+              <span class="mt-0.5 block text-xs text-destructive"><%= event.error_message.truncate(120) %></span>
+            <% end %>
+          </td>
+          <td>
+            <%= render PanelsUI::Badge.new(label: event.status.titleize, variant: event.status == "failed" ? :destructive : :success, size: :sm, indicator: true) %>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
   <% end %>
+
+  <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
 </section>
