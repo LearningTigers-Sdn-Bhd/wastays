@@ -302,7 +302,6 @@ Rails.application.routes.draw do
   get "/admin/hotels/:id/edit", to: redirect("/admin/hotels/%{id}?tab=hotel_details"), as: :edit_admin_hotel
   namespace :admin do
     resource :profile, only: [ :edit, :update ], controller: "profiles"
-    get "audit_logs/index"
     get "margin_rules/index"
     get "margin_rules/create"
     get "margin_rules/destroy"
@@ -401,7 +400,10 @@ Rails.application.routes.draw do
         patch :merge
       end
     end
-    resources :audit_logs, only: [ :index ]
+    get "audit_logs", to: redirect("/admin/activity_logs")
+    resources :activity_logs, only: [ :index, :show ]
+    resources :mail_logs, only: [ :index, :show ]
+    resources :notification_logs, only: [ :index, :show ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
@@ -704,7 +706,7 @@ Rails.application.routes.draw do
     resources :arrivals, only: [ :index ]
     resources :checked_out_guests, only: [ :index ]
     resources :audit_logs, only: [ :index ]
-    resources :notification_logs, only: [ :index ] do
+    resources :notification_logs, only: [ :index, :show ] do
       post :resend, on: :member
     end
     resources :channel_settlement_receipts, only: %i[new create], path: "ota-settlement-receipts"

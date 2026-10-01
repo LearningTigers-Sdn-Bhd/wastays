@@ -1,0 +1,119 @@
+<% content_for :title, "Activity Log | WAStays Admin" %>
+<% filter_params = { q: params[:q].presence, hotel_id: params[:hotel_id].presence, range: params[:range].presence } %>
+<% headings = @tab == "active" ? { time: "Last seen", who: "User", event: "Role", details: "Email and hotels" } : { time: "Time", who: "Who", event: "Event", details: "Details" } %>
+<% placeholders = { "active" => "Name, email or role", "errors" => "Error class or message" } %>
+<% tabs = [
+     { name: "active", label: "Active now", icon: "users" },
+     { name: "inventory", label: "Inventory", icon: "layers" },
+     { name: "bookings", label: "Bookings", icon: "calendar-days" },
+     { name: "folios", label: "Folios", icon: "receipt" },
+     { name: "night_audits", label: "Night audits", icon: "moon" },
+     { name: "onboarding", label: "Onboarding", icon: "rocket" },
+     { name: "rooms", label: "Rooms", icon: "bed-double" },
+     { name: "financial", label: "Financial", icon: "banknote" },
+     { name: "errors", label: "Errors", icon: "circle-alert" }
+   ] %>
+
+<%= render PanelsUI::PageHeader.new(
+      title: "Activity log",
+      description: "Review what staff and the platform changed across all hotels.") %>
+
+<section aria-label="Activity" class="space-y-4">
+  <%= render PanelsUI::Tabs.new(id: "activity-tabs", active: @tab, variant: :line, aria_label: "Filter activity by source") do |nav| %>
+    <% tabs.each do |tab| %>
+      <% nav.with_tab(
+           name: tab[:name],
+           label: tab[:label],
+           icon: tab[:icon],
+           count: @tab_counts.fetch(tab[:name]),
+           href: admin_activity_logs_path(filter_params.merge(tab: tab[:name])),
+           data: { turbo_action: "advance" }) %>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: admin_activity_logs_path, method: :get, class: "flex flex-wrap items-end gap-4",
+        data: { controller: "auto-submit", action: "input->auto-submit#submit change->auto-submit#submit", turbo_action: "advance" } do |form| %>
+    <%= form.hidden_field :tab, value: @tab %>
+    <div class="w-full flex-1 sm:min-w-64">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search") do |field| %>
+        <% field.with_input(type: :search, value: params[:q], placeholder: placeholders.fetch(@tab, "Event, staff name or booking")) %>
+      <% end %>
+    </div>
+    <% if @hotel_choices.any? %>
+    <div class="w-full sm:w-56">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :hotel_id, label: "Hotel") do |field| %>
+        <% field.with_combobox(
+             @hotel_choices,
+             prompt: "All hotels",
+             selected: params[:hotel_id].presence,
+             allow_empty_option: true,
+             max_options: 50,
+             empty_text: "No hotels found") %>
+      <% end %>
+    </div>
+    <% end %>
+    <% if @show_range %>
+      <div class="w-full sm:w-64">
+        <%= render PanelsUI::FormField.new(form: form, attribute: :range, label: "Date range") do |field| %>
+          <% field.with_date_picker(range: true, value: params[:range].presence) %>
+        <% end %>
+      </div>
+    <% end %>
+    <% if filter_params.values.any?(&:present?) %>
+      <div class="flex items-center gap-2">
+        <%= render PanelsUI::Button.new(as: :a, href: admin_activity_logs_path(tab: @tab), variant: :ghost) do %>Clear<% end %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%= render PanelsUI::Table.new(
+        caption: "Activity matching the current filters",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: @rows.any?,
+        wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col"><%= headings[:time] %></th>
+        <% if @show_hotel %><th scope="col" class="hidden md:table-cell">Hotel</th><% end %>
+        <th scope="col" class="hidden md:table-cell"><%= headings[:who] %></th>
+        <th scope="col"><%= headings[:event] %></th>
+        <th scope="col" class="hidden lg:table-cell"><%= headings[:details] %></th>
+        <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+      </tr>
+    <% end %>
+
+    <% table.with_body do %>
+      <% if @rows.empty? %>
+        <tr>
+          <td colspan="<%= @show_hotel ? 6 : 5 %>">
+            <%= render PanelsUI::EmptyState.new(
+                  icon: "file-text",
+                  title: @tab == "active" ? "Nobody is active right now" : "No activity found",
+                  description: @tab == "active" ? "People show here for 15 minutes after their last page view." : "Change the filters to see more activity.") %>
+          </td>
+        </tr>
+      <% end %>
+      <% @rows.each do |row| %>
+        <tr>
+          <td class="whitespace-nowrap text-muted-foreground"><%= l(row.time, format: "%d %b %Y, %H:%M") %></td>
+          <% if @show_hotel %><td class="hidden text-muted-foreground md:table-cell"><%= row.hotel.presence || "-" %></td><% end %>
+          <td class="hidden text-foreground md:table-cell"><%= row.who.presence || "-" %></td>
+          <td class="font-medium text-foreground"><%= row.event %></td>
+          <td class="hidden lg:table-cell">
+            <%= row.details %>
+            <% if row.summary.present? %>
+              <span class="mt-0.5 block text-xs text-muted-foreground"><%= row.summary %></span>
+            <% end %>
+          </td>
+          <td class="text-right">
+            <%= render PanelsUI::Button.new(as: :a, href: admin_activity_log_path(row.record, tab: @tab), variant: :ghost, size: :sm, aria: { label: "View #{row.event} activity" }, data: { turbo_frame: "log_detail_sheet" }) do %>View<% end %>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
+  <%= turbo_frame_tag "log_detail_sheet" %>
+</section>

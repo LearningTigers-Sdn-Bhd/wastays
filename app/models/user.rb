@@ -38,6 +38,15 @@ class User < ApplicationRecord
   before_validation :normalize_email
   before_validation :assign_default_time_zone
 
+  # Written at most once a minute for each user, so presence costs little.
+  LAST_SEEN_THROTTLE = 1.minute
+
+  def touch_last_seen!
+    return if last_seen_at.present? && last_seen_at > LAST_SEEN_THROTTLE.ago
+
+    update_column(:last_seen_at, Time.current)
+  end
+
   def superadmin?
     role == "superadmin"
   end

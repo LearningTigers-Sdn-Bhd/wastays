@@ -15,6 +15,7 @@ class ApplicationController < ActionController::Base
   helper_method :current_user, :logged_in?, :current_agent_account
   around_action :use_user_time_zone
   before_action :set_current_request_id
+  before_action :record_user_presence
   before_action :redirect_legacy_hotel_portal_path
 
   private
@@ -33,6 +34,10 @@ class ApplicationController < ActionController::Base
 
   def current_agent_account
     @current_agent_account ||= HotelCorporateAccount.find_by(id: session[:hotel_corporate_account_id]) if session[:hotel_corporate_account_id]
+  end
+
+  def record_user_presence
+    current_user&.touch_last_seen!
   end
 
   def set_current_request_id
