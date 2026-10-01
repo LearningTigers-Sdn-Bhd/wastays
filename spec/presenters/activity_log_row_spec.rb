@@ -50,4 +50,13 @@ RSpec.describe ActivityLogRow do
 
     expect(described_class.for("financial", event)).to have_attributes(who: "Night Audit", event: "Business date closed", details: "Business date #{event.business_date}")
   end
+
+  it "maps an error without a hotel or a person" do
+    event = ErrorEvent.create!(error_class: "Faraday::TimeoutError", message: "Channex timed out", handled: true, severity: "warning", source: "application.active_job", backtrace: "app/a.rb:1\napp/b.rb:2", occurred_at: Time.current)
+
+    row = described_class.for("errors", event)
+
+    expect(row).to have_attributes(hotel: nil, who: nil, event: "Faraday::TimeoutError", details: "Channex timed out", summary: "Handled / Warning / application.active_job")
+    expect(row.detail[:backtrace]).to eq(%w[app/a.rb:1 app/b.rb:2])
+  end
 end

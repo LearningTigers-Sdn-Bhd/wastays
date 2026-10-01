@@ -48,6 +48,17 @@ RSpec.describe "Admin::ActivityLogs", type: :request do
     expect(response.body).to include("Folio closed for checkout")
   end
 
+  it "lists errors and shows their backtrace in a sheet" do
+    event = ErrorEvent.create!(error_class: "Faraday::TimeoutError", message: "Timeout #{token}", backtrace: "app/jobs/sync_job.rb:12", occurred_at: Time.current)
+
+    get "/admin/activity_logs", params: { tab: "errors" }
+    expect(response.body).to include("Faraday::TimeoutError", "Timeout #{token}")
+    expect(response.body).not_to include("All hotels")
+
+    get "/admin/activity_logs/#{event.id}", params: { tab: "errors" }
+    expect(response.body).to include("app/jobs/sync_job.rb:12")
+  end
+
   it "filters by hotel" do
     create(:inventory_audit_log, hotel: hotel, user: superadmin, action_type: "rate_update")
     create(:inventory_audit_log, hotel: create(:hotel, account: account, name: "Other Hotel #{token}"), user: superadmin, action_type: "inventory_update")

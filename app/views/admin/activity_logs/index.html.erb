@@ -7,7 +7,8 @@
      { name: "night_audits", label: "Night audits", icon: "moon" },
      { name: "onboarding", label: "Onboarding", icon: "rocket" },
      { name: "rooms", label: "Rooms", icon: "bed-double" },
-     { name: "financial", label: "Financial", icon: "banknote" }
+     { name: "financial", label: "Financial", icon: "banknote" },
+     { name: "errors", label: "Errors", icon: "circle-alert" }
    ] %>
 
 <%= render PanelsUI::PageHeader.new(
@@ -32,7 +33,7 @@
     <%= form.hidden_field :tab, value: @tab %>
     <div class="w-full flex-1 sm:min-w-64">
       <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search") do |field| %>
-        <% field.with_input(type: :search, value: params[:q], placeholder: "Event, staff name or booking") %>
+        <% field.with_input(type: :search, value: params[:q], placeholder: @tab == "errors" ? "Error class or message" : "Event, staff name or booking") %>
       <% end %>
     </div>
     <% if @hotel_choices.any? %>
@@ -91,7 +92,7 @@
       <% @rows.each do |row| %>
         <tr>
           <td class="whitespace-nowrap text-muted-foreground"><%= l(row.time, format: "%d %b %Y, %H:%M") %></td>
-          <td class="hidden text-muted-foreground md:table-cell"><%= row.record.hotel.name %></td>
+          <td class="hidden text-muted-foreground md:table-cell"><%= row.hotel.presence || "-" %></td>
           <td class="hidden text-foreground md:table-cell"><%= row.who.presence || "-" %></td>
           <td class="font-medium text-foreground"><%= row.event %></td>
           <td class="hidden lg:table-cell">

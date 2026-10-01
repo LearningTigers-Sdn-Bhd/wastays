@@ -72,4 +72,21 @@ RSpec.describe ActivityLogQuery do
       expect(result(tab: "onboarding", range: "2020-01-01/2020-01-02")).to be_empty
     end
   end
+
+  describe "the errors tab" do
+    let!(:error_event) { ErrorEvent.create!(error_class: "Faraday::TimeoutError", message: "Channex timed out", occurred_at: Time.current) }
+
+    it "reads error events and searches class and message" do
+      expect(result(tab: "errors")).to eq([ error_event ])
+      expect(result(tab: "errors", q: "channex")).to eq([ error_event ])
+      expect(result(tab: "errors", q: "Faraday")).to eq([ error_event ])
+      expect(result(tab: "errors", q: "no-match-xyz")).to be_empty
+    end
+
+    it "ignores the hotel filter, because an error has no hotel" do
+      expect(result(tab: "errors", hotel_id: hotel.id)).to eq([ error_event ])
+      expect(described_class.hotel_scoped?("errors")).to be(false)
+      expect(described_class.hotel_scoped?("rooms")).to be(true)
+    end
+  end
 end

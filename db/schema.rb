@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1112,6 +1112,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_050000) do
     t.index ["status"], name: "index_e_invoice_submissions_on_status"
     t.index ["uuid"], name: "index_e_invoice_submissions_on_individual_uuid", unique: true, where: "((uuid IS NOT NULL) AND (consolidated = false))"
     t.index ["uuid"], name: "index_e_invoice_submissions_on_uuid", where: "(uuid IS NOT NULL)"
+  end
+
+  create_table "error_events", force: :cascade do |t|
+    t.text "backtrace"
+    t.jsonb "context", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.string "error_class", null: false
+    t.boolean "handled", default: false, null: false
+    t.text "message"
+    t.datetime "occurred_at", null: false
+    t.string "severity", default: "error", null: false
+    t.string "source"
+    t.datetime "updated_at", null: false
+    t.index ["occurred_at"], name: "index_error_events_on_occurred_at"
   end
 
   create_table "exchange_rates", force: :cascade do |t|

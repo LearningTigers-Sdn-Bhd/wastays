@@ -3,7 +3,7 @@
       description: "#{@tab.titleize} activity",
       fields: [
         [ "Time", l(@row.time, format: "%d %b %Y, %H:%M") ],
-        [ "Hotel", @row.record.hotel.name ],
+        [ "Hotel", @row.hotel ],
         [ "Who", @row.who ],
         [ "Details", @row.details ],
         [ "Change", @row.summary ]
