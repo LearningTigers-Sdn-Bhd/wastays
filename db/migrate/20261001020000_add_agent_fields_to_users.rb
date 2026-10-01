@@ -11,7 +11,7 @@ class AddAgentFieldsToUsers < ActiveRecord::Migration[8.0]
 
     # Every super agent needs a code for the invite link.
     select_values("SELECT id FROM users WHERE role = 'super_agent' AND agent_code IS NULL").each do |id|
-      code = Array.new(6) { CODE_CHARACTERS.sample }.join
+      code = Array.new(6) { CODE_CHARACTERS[SecureRandom.random_number(CODE_CHARACTERS.length)] }.join
       execute "UPDATE users SET agent_code = #{connection.quote(code)} WHERE id = #{id.to_i}"
     end
   end

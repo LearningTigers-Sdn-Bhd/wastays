@@ -9,7 +9,7 @@ module SuperAgents
 
     def self.call
       loop do
-        code = Array.new(LENGTH) { CHARACTERS.sample }.join
+        code = Array.new(LENGTH) { CHARACTERS[SecureRandom.random_number(CHARACTERS.length)] }.join
         return code unless User.exists?(agent_code: code)
       end
     end
