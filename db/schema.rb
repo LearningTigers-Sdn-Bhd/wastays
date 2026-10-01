@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_01_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1961,6 +1961,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.string "contact_phone"
     t.string "country"
     t.datetime "created_at", null: false
+    t.bigint "created_by_user_id"
     t.string "default_currency", default: "MYR", null: false
     t.text "description"
     t.bigint "featured_photo_attachment_id"
@@ -2007,6 +2008,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.decimal "usd_conversion_rate", precision: 10, scale: 4, default: "4.5", null: false
     t.string "whatsapp_number"
     t.index ["account_id"], name: "index_hotels_on_account_id"
+    t.index ["created_by_user_id"], name: "index_hotels_on_created_by_user_id"
     t.index ["featured_photo_attachment_id"], name: "index_hotels_on_featured_photo_attachment_id"
     t.index ["hotel_prefix"], name: "index_hotels_on_hotel_prefix", unique: true
     t.index ["plan_id"], name: "index_hotels_on_plan_id"
@@ -2364,7 +2366,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.index ["onboarding_submission_id"], name: "index_onboarding_deliveries_on_onboarding_submission_id"
     t.index ["source_type", "source_id"], name: "index_onboarding_deliveries_on_source_type_and_source_id"
     t.index ["status", "updated_at"], name: "index_onboarding_deliveries_on_status_and_updated_at"
-    t.check_constraint "delivery_type::text = ANY (ARRAY['staff_invitation'::character varying, 'corporate_invitation'::character varying, 'admin_submitted'::character varying, 'owner_changes_requested'::character varying, 'owner_approved'::character varying, 'owner_launch_decision_required'::character varying]::text[])", name: "onboarding_deliveries_type_allowed"
+    t.check_constraint "delivery_type::text = ANY (ARRAY['staff_invitation'::character varying, 'corporate_invitation'::character varying, 'admin_submitted'::character varying, 'owner_changes_requested'::character varying, 'owner_approved'::character varying, 'owner_launch_decision_required'::character varying, 'agent_submitted'::character varying, 'agent_changes_requested'::character varying, 'agent_launch_decision_required'::character varying, 'agent_approved'::character varying]::text[])", name: "onboarding_deliveries_type_allowed"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'sent'::character varying, 'held'::character varying, 'failed'::character varying]::text[])", name: "onboarding_deliveries_status_allowed"
   end
 
@@ -3261,7 +3263,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
 
   create_table "users", force: :cascade do |t|
     t.bigint "account_id", null: false
+    t.string "agent_code"
     t.integer "auth_version", default: 0, null: false
+    t.boolean "can_create_hotels", default: false, null: false
     t.datetime "created_at", null: false
     t.string "email"
     t.string "name"
@@ -3272,6 +3276,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
     t.index ["account_id"], name: "index_users_on_account_id"
     t.index ["account_id"], name: "index_users_on_unique_corporate_account", unique: true, where: "((role)::text = 'corporate'::text)"
+    t.index ["agent_code"], name: "index_users_on_agent_code", unique: true
   end
 
   create_table "webhook_endpoints", force: :cascade do |t|
@@ -3504,6 +3509,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_020000) do
   add_foreign_key "hotel_wifi_networks", "hotels"
   add_foreign_key "hotels", "accounts"
   add_foreign_key "hotels", "plans"
+  add_foreign_key "hotels", "users", column: "created_by_user_id", on_delete: :nullify
   add_foreign_key "hotels", "users", column: "salesperson_id"
   add_foreign_key "hotels", "users", column: "training_completed_by_id"
   add_foreign_key "housekeeping_requests", "bookings"

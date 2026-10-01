@@ -8,6 +8,7 @@ module Admin::NavigationHelper
     hotels_active = controller_name == "hotels" || onboarding_active
     bookings_active = controller_name == "bookings"
     salespersons_active = controller_name == "salespersons"
+    super_agents_active = controller_name == "super_agents"
     margin_rules_active = controller_name == "margin_rules"
     setup_fee_rules_active = controller_name == "setup_fee_rules"
     exchange_rates_active = controller_name == "exchange_rates"
@@ -38,7 +39,8 @@ module Admin::NavigationHelper
         items: [
           PanelsUI::Navigation::Item.new(label: "Hotels", path: admin_hotels_path, search_text: "Hotels Manage Hotels Onboarding Training Setup", active: hotels_active, icon: "building-2"),
           PanelsUI::Navigation::Item.new(label: "Bookings", path: admin_bookings_path, search_text: "Bookings Platform Bookings", active: bookings_active, icon: "calendar-days"),
-          PanelsUI::Navigation::Item.new(label: "Salespersons", path: admin_salespersons_path, search_text: "Salespersons Hotel Assignment", active: salespersons_active, icon: "users")
+          PanelsUI::Navigation::Item.new(label: "Salespersons", path: admin_salespersons_path, search_text: "Salespersons Hotel Assignment", active: salespersons_active, icon: "users"),
+          PanelsUI::Navigation::Item.new(label: "Super agents", path: admin_super_agents_path, search_text: "Super Agents Create Hotels Owner Sign-in", active: super_agents_active, icon: "briefcase")
         ]
       ),
       PanelsUI::Navigation::Section.new(
