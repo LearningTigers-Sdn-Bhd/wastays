@@ -2,11 +2,12 @@
 
 module HotelOps
   class CreateHotel
-    def initialize(account_params:, user_params:, hotel_params:, owner_invitation: nil)
+    def initialize(account_params:, user_params:, hotel_params:, owner_invitation: nil, agent: nil)
       @account_params = account_params
       @user_params = user_params
       @hotel_params = hotel_params
       @owner_invitation_options = owner_invitation
+      @agent = agent
     end
 
     def call
@@ -40,6 +41,8 @@ module HotelOps
           UserHotelAccess.create!(user: user, hotel: hotel, role: owner_role)
         end
 
+        grant_agent_access(account, hotel) if @agent
+
         Onboarding::InitializeProgress.new(
           hotel: hotel,
           actor: @owner_invitation_options&.fetch(:invited_by, nil)
@@ -62,6 +65,14 @@ module HotelOps
     end
 
     private
+
+    # The agent who set the hotel up can open it as General Manager. That is
+    # enough to help the owner through onboarding, but not to manage the
+    # account. The owner can remove the agent in Staff Management.
+    def grant_agent_access(account, hotel)
+      role = Role.find_by!(account: account, slug: "general_manager")
+      UserHotelAccess.create!(user: @agent, hotel: hotel, role: role)
+    end
 
     def deliver_owner_invitation(result)
       OwnerActivationMailer.activate(result.fetch(:owner_invitation), result.fetch(:invitation_token)).deliver_later

@@ -54,13 +54,15 @@ module Admin
             sell_mode: sell_mode,
             plan_id: plan_id,
             salesperson_id: salesperson_id.presence,
+            created_by_user_id: actor.id,
             preferred_channel_manager: preferred_channel_manager,
             allow_boat_information: allow_boat_information?,
             hide_payout_reports: hide_payout_reports?
           },
           # A nil invitation is what tells CreateHotel to provision the owner
           # user directly instead of waiting for an activation link.
-          owner_invitation: owner_invitation_options(actor)
+          owner_invitation: owner_invitation_options(actor),
+          agent: (actor if actor.super_agent?)
         ).call
 
         if result[:success]
