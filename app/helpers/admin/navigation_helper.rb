@@ -62,9 +62,14 @@ module Admin::NavigationHelper
           PanelsUI::Navigation::Item.new(label: "Plan Access", path: admin_plans_path, search_text: "Plan Access Plans Subscription Features Pricing Tiers Gating", active: plans_active, icon: "layers"),
           PanelsUI::Navigation::Item.new(label: "Booking Sources", path: admin_booking_sources_path, search_text: "Booking Sources OTA Logos Walk-in Channel Manager", active: booking_sources_active, icon: "tag"),
           PanelsUI::Navigation::Item.new(label: "Attraction Registry", path: admin_attractions_path, search_text: "Attractions Registry Places Tourism Nearby", active: attractions_active, icon: "map-pin"),
-          PanelsUI::Navigation::Item.new(label: "Audit Logs", path: admin_audit_logs_path, search_text: "Audit Logs System Activity", active: audit_logs_active, icon: "file-text"),
-          PanelsUI::Navigation::Item.new(label: "Mail Log", path: admin_mail_logs_path, search_text: "Mail Log Email Sent Delivery Failed", active: mail_logs_active, icon: "mail"),
           PanelsUI::Navigation::Item.new(label: "Observation Deck", path: admin_observation_deck_index_path, search_text: "Observation Deck Telescope Debug Mission Control", active: observation_deck_active, icon: "eye", external: true)
+        ]
+      ),
+      PanelsUI::Navigation::Section.new(
+        label: "Logs",
+        items: [
+          PanelsUI::Navigation::Item.new(label: "Audit Logs", path: admin_audit_logs_path, search_text: "Audit Logs System Activity", active: audit_logs_active, icon: "file-text"),
+          PanelsUI::Navigation::Item.new(label: "Mail Log", path: admin_mail_logs_path, search_text: "Mail Log Email Sent Delivery Failed", active: mail_logs_active, icon: "mail")
         ]
       ),
       PanelsUI::Navigation::Section.new(
