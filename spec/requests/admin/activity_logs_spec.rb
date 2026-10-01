@@ -32,6 +32,22 @@ RSpec.describe "Admin::ActivityLogs", type: :request do
     expect(response.body).to include("Reopen folio")
   end
 
+  it "renders every tab" do
+    create(:room_operational_audit_log, hotel: hotel, user: superadmin, room_number: "Z-#{token}")
+    create(:financial_audit_event, hotel: hotel, event_type: "folio_closed_for_checkout")
+
+    ActivityLogQuery::TABS.each_key do |tab|
+      get "/admin/activity_logs", params: { tab: tab }
+
+      expect(response).to have_http_status(:success)
+    end
+
+    get "/admin/activity_logs", params: { tab: "rooms" }
+    expect(response.body).to include("Room Z-#{token}", "Dirty -&gt; Ready")
+    get "/admin/activity_logs", params: { tab: "financial" }
+    expect(response.body).to include("Folio closed for checkout")
+  end
+
   it "filters by hotel" do
     create(:inventory_audit_log, hotel: hotel, user: superadmin, action_type: "rate_update")
     create(:inventory_audit_log, hotel: create(:hotel, account: account, name: "Other Hotel #{token}"), user: superadmin, action_type: "inventory_update")

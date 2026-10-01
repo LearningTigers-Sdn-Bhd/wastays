@@ -30,5 +30,43 @@ class ActivityLogRow
     )
   end
 
-  private_class_method :build_inventory, :build_bookings, :build_folios
+  def self.build_night_audits(log)
+    Row.new(
+      record: log, time: log.created_at, who: log.user&.name || "System", event: log.action_type.humanize,
+      details: "Business date #{log.night_audit.business_date}", summary: log.message.to_s,
+      detail: { message: log.message, metadata: log.metadata }.compact
+    )
+  end
+
+  def self.build_onboarding(event)
+    Row.new(
+      record: event, time: event.occurred_at, who: event.user&.name || "System", event: event.event_type.humanize,
+      details: event.section_key&.humanize, summary: "",
+      detail: { section_key: event.section_key, metadata: event.metadata }.compact
+    )
+  end
+
+  def self.build_rooms(log)
+    Row.new(
+      record: log, time: log.created_at, who: log.user&.name || "System", event: log.event_type.humanize,
+      details: "Room #{log.room_number}", summary: room_summary(log),
+      detail: { room_number: log.room_number, old_status: log.old_status, new_status: log.new_status, reason: log.reason, metadata: log.metadata }.compact
+    )
+  end
+
+  def self.build_financial(event)
+    Row.new(
+      record: event, time: event.occurred_at, who: event.actor.try(:name) || event.source.to_s.titleize, event: event.event_type.humanize,
+      details: event.booking&.confirmation_token || "Business date #{event.business_date}", summary: event.reason.to_s,
+      detail: { source: event.source, business_date: event.business_date, currency: event.currency, reason: event.reason, metadata: event.metadata }.compact
+    )
+  end
+
+  def self.room_summary(log)
+    change = [ log.old_status, log.new_status ].map { |status| status.to_s.humanize.presence || "N/A" }.join(" -> ") if log.old_status || log.new_status
+    [ change, log.reason.presence ].compact.join(". ")
+  end
+
+  private_class_method :build_inventory, :build_bookings, :build_folios, :build_night_audits,
+                       :build_onboarding, :build_rooms, :build_financial, :room_summary
 end
