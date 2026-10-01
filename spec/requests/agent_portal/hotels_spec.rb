@@ -51,6 +51,15 @@ RSpec.describe "AgentPortal::Hotels", type: :request do
       expect(response.body).not_to include("Other #{token}")
     end
 
+    it "shows the invite link in a read-only field with a copy button" do
+      get agent_hotels_path
+
+      page = Nokogiri::HTML(response.body)
+      field = page.at_css("input[readonly][value=\"#{register_url(c: agent.agent_code)}\"]")
+      expect(field).to be_present
+      expect(page.at_css("button[data-clipboard-text-value=\"#{register_url(c: agent.agent_code)}\"]")).to be_present
+    end
+
     it "opens each hotel in a new tab" do
       hotel = create(:hotel, created_by_user: agent)
 
