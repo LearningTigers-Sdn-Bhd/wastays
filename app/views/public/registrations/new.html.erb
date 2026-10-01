@@ -97,11 +97,19 @@
           Already have an account?
           <%= link_to "Sign in here", login_path, class: "text-primary font-semibold hover:underline underline-offset-2" %>
         </p>
+        <% if invite_agent %>
+          <p class="mt-2 text-xs text-muted-foreground">
+            Invited by <span class="font-semibold text-foreground"><%= invite_agent.name %></span>
+          </p>
+        <% end %>
       </div>
 
       <%= form_with url: register_path, local: true, class: "space-y-6",
             data: { controller: "wizard", action: "submit->wizard#handleSubmit",
                     wizard_current_value: @wizard_start_step || 1 } do |f| %>
+        <% if invite_agent %>
+          <%= hidden_field_tag :c, invite_agent.agent_code %>
+        <% end %>
 
         <!-- Step Progress -->
         <div class="flex items-center mb-2">

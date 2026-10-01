@@ -7,7 +7,6 @@ module AgentPortal
     # other value, so a changed request cannot pick a plan or a feature.
     class CreateForm < Admin::Hotels::CreateForm
       AGENT_FIELDS = %i[account_name owner_name owner_email owner_password hotel_name sell_mode].freeze
-      PLAN_SLUG = "enterprise"
 
       # Optional. Empty means the system makes the owner a password.
       attr_accessor :owner_password
@@ -18,12 +17,9 @@ module AgentPortal
 
       def initialize(attributes = {})
         super(attributes.to_h.symbolize_keys.slice(*AGENT_FIELDS))
-        self.plan_id = Plan.active.find_by(slug: PLAN_SLUG)&.id
-        self.preferred_channel_manager = "undecided"
+        assign_attributes(SuperAgents::HotelDefaults.call)
         self.creation_action = "create_only"
         self.verify_owner_account = true
-        self.allow_boat_information = false
-        self.hide_payout_reports = true
       end
 
       private

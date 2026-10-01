@@ -16,7 +16,7 @@ module HotelOps
         SeedAccountRoles.call(account)
 
         sanitize_amenities
-        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "setup", amenities: []).merge(account: account))
+        hotel = Hotel.create!(@hotel_params.reverse_merge(status: "setup", amenities: [], created_by_user_id: @agent&.id).merge(account: account))
         owner_role = Role.find_by!(account: account, slug: "hotel_owner")
 
         user = nil
@@ -41,7 +41,7 @@ module HotelOps
           UserHotelAccess.create!(user: user, hotel: hotel, role: owner_role)
         end
 
-        grant_agent_access(account, hotel) if @agent
+        SuperAgents::GrantHotelAccess.call(agent: @agent, hotel: hotel) if @agent
 
         Onboarding::InitializeProgress.new(
           hotel: hotel,
@@ -65,14 +65,6 @@ module HotelOps
     end
 
     private
-
-    # The agent who set the hotel up can open it as General Manager. That is
-    # enough to help the owner through onboarding, but not to manage the
-    # account. The owner can remove the agent in Staff Management.
-    def grant_agent_access(account, hotel)
-      role = Role.find_by!(account: account, slug: "general_manager")
-      UserHotelAccess.create!(user: @agent, hotel: hotel, role: role)
-    end
 
     def deliver_owner_invitation(result)
       OwnerActivationMailer.activate(result.fetch(:owner_invitation), result.fetch(:invitation_token)).deliver_later
