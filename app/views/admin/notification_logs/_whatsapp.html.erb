@@ -12,13 +12,14 @@
       <th scope="col" class="hidden md:table-cell">Hotel</th>
       <th scope="col" class="hidden md:table-cell">Booking</th>
       <th scope="col">Status</th>
+      <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
     </tr>
   <% end %>
 
   <% table.with_body do %>
     <% if notifications.empty? %>
       <tr>
-        <td colspan="5">
+        <td colspan="6">
           <%= render PanelsUI::EmptyState.new(
                 icon: "message-circle",
                 title: "No WhatsApp messages found",
@@ -41,6 +42,9 @@
           <span class="mt-0.5 block text-xs text-muted-foreground"><%= delivery.booking.guest_name %></span>
         </td>
         <td><%= render PanelsUI::Badge.new(label: delivery.status.titleize, variant: variants.fetch(delivery.status, :neutral), size: :sm, indicator: true) %></td>
+        <td class="text-right">
+          <%= render PanelsUI::Button.new(as: :a, href: admin_notification_log_path(delivery, tab: "whatsapp"), variant: :ghost, size: :sm, aria: { label: "View WhatsApp message" }, data: { turbo_frame: "log_detail_sheet" }) do %>View<% end %>
+        </td>
       </tr>
     <% end %>
   <% end %>

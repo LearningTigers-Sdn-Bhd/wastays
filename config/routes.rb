@@ -402,8 +402,8 @@ Rails.application.routes.draw do
       end
     end
     resources :audit_logs, only: [ :index ]
-    resources :mail_logs, only: [ :index ]
-    resources :notification_logs, only: [ :index ]
+    resources :mail_logs, only: [ :index, :show ]
+    resources :notification_logs, only: [ :index, :show ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
@@ -706,7 +706,7 @@ Rails.application.routes.draw do
     resources :arrivals, only: [ :index ]
     resources :checked_out_guests, only: [ :index ]
     resources :audit_logs, only: [ :index ]
-    resources :notification_logs, only: [ :index ] do
+    resources :notification_logs, only: [ :index, :show ] do
       post :resend, on: :member
     end
     resources :channel_settlement_receipts, only: %i[new create], path: "ota-settlement-receipts"

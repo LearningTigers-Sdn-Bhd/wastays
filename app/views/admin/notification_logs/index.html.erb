@@ -45,4 +45,5 @@
   <%= render "admin/notification_logs/#{@tab}", notifications: @notifications %>
 
   <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
+  <%= turbo_frame_tag "log_detail_sheet" %>
 </section>

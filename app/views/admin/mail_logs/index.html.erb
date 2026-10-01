@@ -57,13 +57,14 @@
         <th scope="col" class="hidden md:table-cell">Recipients</th>
         <th scope="col">Subject</th>
         <th scope="col">Status</th>
+        <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
       </tr>
     <% end %>
 
     <% table.with_body do %>
       <% if @events.empty? %>
         <tr>
-          <td colspan="5">
+          <td colspan="6">
             <%= render PanelsUI::EmptyState.new(
                   icon: "mail",
                   title: "No emails found",
@@ -90,10 +91,14 @@
           <td>
             <%= render PanelsUI::Badge.new(label: event.status.titleize, variant: event.status == "failed" ? :destructive : :success, size: :sm, indicator: true) %>
           </td>
+          <td class="text-right">
+            <%= render PanelsUI::Button.new(as: :a, href: admin_mail_log_path(event), variant: :ghost, size: :sm, aria: { label: "View email #{event.subject}" }, data: { turbo_frame: "log_detail_sheet" }) do %>View<% end %>
+          </td>
         </tr>
       <% end %>
     <% end %>
   <% end %>
 
   <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
+  <%= turbo_frame_tag "log_detail_sheet" %>
 </section>

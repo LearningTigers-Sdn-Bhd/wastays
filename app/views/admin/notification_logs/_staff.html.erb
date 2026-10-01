@@ -13,13 +13,14 @@
       <th scope="col" class="hidden md:table-cell">Staff</th>
       <th scope="col">Severity</th>
       <th scope="col">Status</th>
+      <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
     </tr>
   <% end %>
 
   <% table.with_body do %>
     <% if notifications.empty? %>
       <tr>
-        <td colspan="6">
+        <td colspan="7">
           <%= render PanelsUI::EmptyState.new(
                 icon: "bell",
                 title: "No staff alerts found",
@@ -39,6 +40,9 @@
         <td class="hidden text-muted-foreground md:table-cell"><%= alert.recipient.name %></td>
         <td><%= render PanelsUI::Badge.new(label: alert.severity.titleize, variant: severities.fetch(alert.severity, :neutral), size: :sm) %></td>
         <td><%= render PanelsUI::Badge.new(label: status_label, variant: status_variant, size: :sm, indicator: true) %></td>
+        <td class="text-right">
+          <%= render PanelsUI::Button.new(as: :a, href: admin_notification_log_path(alert, tab: "staff"), variant: :ghost, size: :sm, aria: { label: "View staff alert" }, data: { turbo_frame: "log_detail_sheet" }) do %>View<% end %>
+        </td>
       </tr>
     <% end %>
   <% end %>

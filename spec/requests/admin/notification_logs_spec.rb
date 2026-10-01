@@ -33,4 +33,29 @@ RSpec.describe "Admin::NotificationLogs", type: :request do
 
     expect(response.body).to include("No WhatsApp messages found")
   end
+
+  it "shows the data sent for a WhatsApp message" do
+    delivery = create(:notification_delivery, hotel: hotel, channel: "whatsapp", payload: { guest_name: "Guest #{token}" })
+
+    get "/admin/notification_logs/#{delivery.id}", params: { tab: "whatsapp" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Guest #{token}", "check_in_confirmation")
+  end
+
+  it "shows the full message of a staff alert" do
+    alert = create(:staff_notification, hotel: hotel, subject: create(:night_audit, hotel: hotel), message: "Full message #{token}")
+
+    get "/admin/notification_logs/#{alert.id}", params: { tab: "staff" }
+
+    expect(response.body).to include("Full message #{token}")
+  end
+
+  it "does not show an email delivery on the WhatsApp tab" do
+    delivery = create(:notification_delivery, hotel: hotel, channel: "email")
+
+    get "/admin/notification_logs/#{delivery.id}", params: { tab: "whatsapp" }
+
+    expect(response).to have_http_status(:not_found)
+  end
 end

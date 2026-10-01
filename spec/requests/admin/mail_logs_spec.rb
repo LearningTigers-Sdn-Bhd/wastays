@@ -33,4 +33,21 @@ RSpec.describe "Admin::MailLogs", type: :request do
 
     expect(response.body).to include("No emails found")
   end
+
+  it "shows the email text in a sheet" do
+    event = MailEvent.create!(mailer: "GuestMailer", subject: "Hello #{token}", recipients: "guest@example.com", body: "Dear guest #{token}", sent_at: Time.current)
+
+    get "/admin/mail_logs/#{event.id}"
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Hello #{token}", "Dear guest #{token}", "guest@example.com")
+  end
+
+  it "explains when the email text was not kept" do
+    event = MailEvent.create!(mailer: "GuestMailer", subject: "Old #{token}", sent_at: Time.current)
+
+    get "/admin/mail_logs/#{event.id}"
+
+    expect(response.body).to include("did not keep the text")
+  end
 end
