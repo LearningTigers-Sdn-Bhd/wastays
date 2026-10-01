@@ -28,6 +28,9 @@ production:
   prune_observation_entries:
     class: ObservationDeck::PruneEntriesJob
     schedule: at 3am every day
+  prune_log_entries:
+    class: Logs::PruneOldEntriesJob
+    schedule: at 3:30am every day
   cleanup_room_locks:
     class: CleanupRoomLocksJob
     schedule: every 5 minutes
@@ -69,6 +72,9 @@ demo:
   prune_observation_entries:
     class: ObservationDeck::PruneEntriesJob
     schedule: at 3am every day
+  prune_log_entries:
+    class: Logs::PruneOldEntriesJob
+    schedule: at 3:30am every day
   cleanup_room_locks:
     class: CleanupRoomLocksJob
     schedule: every 5 minutes
