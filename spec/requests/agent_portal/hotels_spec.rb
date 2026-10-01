@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "AgentPortal::Hotels", type: :request do
   let(:token) { SecureRandom.hex(6) }
   let(:platform_account) { create(:account, name: "Platform #{token}") }
-  let(:agent) { create(:user, :super_agent, account: platform_account) }
+  let(:agent) { create(:user, :super_agent, account: platform_account, can_create_hotels: true) }
   let!(:enterprise) { Plan.find_by(slug: "enterprise") || create(:plan, name: "Enterprise", slug: "enterprise") }
   let(:hotel_params) do
     {
@@ -167,7 +167,7 @@ RSpec.describe "AgentPortal::Hotels", type: :request do
 end
 
 RSpec.describe "AgentPortal hotel access", type: :request do
-  let(:agent) { create(:user, :super_agent) }
+  let(:agent) { create(:user, :super_agent, can_create_hotels: true) }
 
   before do
     Plan.find_by(slug: "enterprise") || create(:plan, name: "Enterprise", slug: "enterprise")
@@ -190,5 +190,30 @@ RSpec.describe "AgentPortal hotel access", type: :request do
     expect(response).to have_http_status(:ok)
     expect(request.path).not_to include("setup_lock")
     expect(response.body).to include("Agent portal")
+  end
+end
+
+RSpec.describe "AgentPortal hotel creation switch and invite", type: :request do
+  let(:agent) { create(:user, :super_agent) }
+
+  before { sign_in_as(agent) }
+
+  it "blocks hotel creation by default and hides the Add hotel button" do
+    get agent_hotels_path
+    expect(response.body).not_to include(new_agent_hotel_path)
+
+    get new_agent_hotel_path
+    expect(response).to redirect_to(agent_hotels_path)
+
+    expect {
+      post agent_hotels_path, params: { agent_portal_hotels_create_form: { hotel_name: "Blocked" } }
+    }.not_to change(Hotel, :count)
+  end
+
+  it "shows the invite link with the agent code" do
+    get agent_hotels_path
+
+    expect(response.body).to include("Invite a hotel")
+    expect(response.body).to include(register_url(c: agent.agent_code))
   end
 end

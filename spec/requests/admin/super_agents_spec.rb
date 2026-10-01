@@ -28,6 +28,8 @@ RSpec.describe "Admin::SuperAgents", type: :request do
 
       agent = User.find_by(email: "aina-#{token}@example.com")
       expect(agent.authenticate(flash[:agent_credentials]["password"])).to eq(agent)
+      expect(agent.agent_code).to match(/\A[A-Z2-9]{6}\z/)
+      expect(agent.can_create_hotels).to be(false)
 
       follow_redirect!
       expect(response.body).to include("Agent sign-in details")
@@ -54,6 +56,18 @@ RSpec.describe "Admin::SuperAgents", type: :request do
       post admin_super_agents_path, params: { user: { name: "Aina", email: "" } }
 
       expect(response).to have_http_status(:unprocessable_content)
+    end
+  end
+
+  describe "PATCH /admin/super-agents/:id" do
+    it "turns hotel creation on and off" do
+      agent = create(:user, :super_agent, account: admin_account)
+
+      patch admin_super_agent_path(agent), params: { user: { can_create_hotels: "1" } }
+      expect(agent.reload.can_create_hotels).to be(true)
+
+      patch admin_super_agent_path(agent), params: { user: { can_create_hotels: "0" } }
+      expect(agent.reload.can_create_hotels).to be(false)
     end
   end
 

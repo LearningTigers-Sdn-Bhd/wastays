@@ -5,7 +5,7 @@ module Admin
     include SheetActionCompletion
 
     def index
-      @agents = current_user.account.users.where(role: "super_agent").includes(:created_hotels).order(:name)
+      @agents = current_user.account.users.super_agents.includes(:created_hotels).order(:name)
     end
 
     def new
@@ -24,8 +24,17 @@ module Admin
       end
     end
 
+    # The table switch for one agent: may they create hotels themselves?
+    def update
+      agent = current_user.account.users.super_agents.find(params[:id])
+      agent.update!(can_create_hotels: params.dig(:user, :can_create_hotels) == "1")
+
+      notice = agent.can_create_hotels? ? "#{agent.name} can now create hotels." : "#{agent.name} can no longer create hotels."
+      redirect_to admin_super_agents_path, notice: notice, status: :see_other
+    end
+
     def destroy
-      agent = current_user.account.users.where(role: "super_agent").find(params[:id])
+      agent = current_user.account.users.super_agents.find(params[:id])
       agent.destroy!
       redirect_to admin_super_agents_path, notice: "Super agent removed.", status: :see_other
     end

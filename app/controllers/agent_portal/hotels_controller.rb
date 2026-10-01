@@ -4,6 +4,8 @@ module AgentPortal
   class HotelsController < BaseController
     include SheetActionCompletion
 
+    before_action :require_create_permission!, only: [ :new, :create ]
+
     def index
       @hotels = current_user.created_hotels.order(created_at: :desc)
     end
@@ -24,6 +26,14 @@ module AgentPortal
     end
 
     private
+
+    # A superadmin turns hotel creation on for each agent. The invite link
+    # works either way.
+    def require_create_permission!
+      return if current_user.can_create_hotels?
+
+      redirect_to agent_hotels_path, alert: "You cannot create hotels. Share your invite link instead.", status: :see_other
+    end
 
     def create_params
       params.fetch(:agent_portal_hotels_create_form, {})

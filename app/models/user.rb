@@ -20,6 +20,8 @@ class User < ApplicationRecord
                                     inverse_of: :assigned_to
 
   has_many :assigned_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
+  scope :super_agents, -> { where(role: "super_agent") }
+
   has_many :created_hotels, class_name: "Hotel", foreign_key: "created_by_user_id", dependent: :nullify, inverse_of: :created_by_user
 
   has_many :user_roles, dependent: :destroy
@@ -30,6 +32,7 @@ class User < ApplicationRecord
   validates :role, presence: true, inclusion: { in: ROLES }
   validates :time_zone, inclusion: { in: ActiveSupport::TimeZone.all.map(&:name) }
   validates :account_id, uniqueness: true, if: :corporate?
+  validates :agent_code, uniqueness: true, allow_nil: true
   validate :role_matches_account_kind
 
   before_validation :normalize_email

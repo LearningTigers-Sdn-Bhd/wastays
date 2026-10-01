@@ -4,7 +4,7 @@
 
 <%= render PanelsUI::PageHeader.new(
       title: "Super agents",
-      description: "Super agents create hotels and give the owner sign-in details. They can open only the hotels they created.") do |header| %>
+      description: "Super agents bring in hotels with their invite link. Turn on \"Can create hotels\" to let an agent also create hotels themselves.") do |header| %>
   <% header.with_actions do %>
     <%= render PanelsUI::Button.new(
           as: :a,
@@ -23,7 +23,7 @@
     <%= render PanelsUI::EmptyState.new(
           icon: "briefcase",
           title: "No super agents yet",
-          description: "Add a super agent to let them create hotels.") %>
+          description: "Add a super agent to start bringing in hotels.") %>
   <% else %>
     <%= render PanelsUI::Table.new(
           caption: "Super agents",
@@ -35,7 +35,9 @@
         <tr>
           <th scope="col">Name</th>
           <th scope="col" class="hidden md:table-cell">Email</th>
-          <th scope="col">Hotels created</th>
+          <th scope="col">Code</th>
+          <th scope="col">Hotels</th>
+          <th scope="col">Can create hotels</th>
           <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
         </tr>
       <% end %>
@@ -45,7 +47,22 @@
           <tr>
             <td class="font-medium text-foreground"><%= agent.name %></td>
             <td class="hidden text-muted-foreground md:table-cell"><%= agent.email %></td>
+            <td class="font-mono"><%= agent.agent_code %></td>
             <td class="tabular-nums"><%= agent.created_hotels.size %></td>
+            <td>
+              <%= form_with model: agent, url: admin_super_agent_path(agent), method: :patch, id: "super-agent-#{agent.id}-create-hotels",
+                    data: { controller: "auto-submit" } do |builder| %>
+                <%= render PanelsUI::Switch.new(
+                      form: builder,
+                      attribute: :can_create_hotels,
+                      id: "super_agent_#{agent.id}_can_create_hotels",
+                      label: "#{agent.name} can create hotels",
+                      label_hidden: true,
+                      size: :sm,
+                      tone: :success,
+                      data: { action: "change->auto-submit#submitNow" }) %>
+              <% end %>
+            </td>
             <td class="text-right">
               <%= form_with url: admin_super_agent_path(agent), method: :delete, class: "inline",
                     data: {

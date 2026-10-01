@@ -22,6 +22,7 @@ module Admin
           name: @params[:name],
           email: @params[:email],
           role: "super_agent",
+          agent_code: ::SuperAgents::GenerateCode.call,
           account: @account,
           password: password,
           password_confirmation: password
