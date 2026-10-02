@@ -41,6 +41,7 @@ end %>
            data-booking-room-rows-availability-url-value="<%= availability_hotel_bookings_path(current_hotel) %>"
            data-booking-room-rows-rate-options-url-value="<%= rate_options_hotel_bookings_path(current_hotel) %>"
            data-booking-room-rows-price-url-value="<%= stay_price_hotel_bookings_path(current_hotel) %>"
+           data-booking-room-rows-auto-charges-value="<%= auto_charge_options(current_hotel).to_json %>"
            data-booking-room-rows-auto-assign-enabled-value="<%= current_hotel.auto_assign_rooms_enabled? %>"
            data-booking-room-rows-room-row-url-value="<%= room_row_hotel_bookings_path(current_hotel) %>">
         <%= form_with model: @booking, url: form_url, local: true, class: "flex min-h-0 flex-1 flex-col", id: "manual_booking_form",

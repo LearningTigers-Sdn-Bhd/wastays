@@ -21,6 +21,40 @@ RSpec.describe "HotelPortal::Bookings::GuestRegistrationCards", type: :request d
   end
 
   describe "GET /hotel/:hotel_id/bookings/:booking_id/guest_registration_card" do
+    [ false, true ].each do |signed|
+      it "hides the full payment section on #{signed ? 'signed' : 'draft'} cards without changing saved content" do
+        card = booking.create_guest_registration_card!(hotel: hotel)
+        card.save_signature_for_guest!(signer_name: "Aisha Tan", signature_data_url: "data:image/png;base64,abc123") if signed
+        saved_attributes = card.reload.attributes
+        hotel.update!(guest_registration_card_show_pricing: false)
+
+        get hotel_booking_guest_registration_card_path(hotel, booking)
+
+        expect(response).to have_http_status(:success)
+        document = Nokogiri::HTML(response.body)
+        labels = document.css("dt").map { |node| node.text.strip }
+        expect(labels).not_to include("Room price", "Amount paid", "Total charges", "Tax", "Due amount")
+        expect(document.css("h2, p").map { |node| node.text.strip }).not_to include("Payment", "Payment details")
+        expect(card.reload.attributes).to eq(saved_attributes)
+
+        hotel.update!(guest_registration_card_show_pricing: true)
+        get hotel_booking_guest_registration_card_path(hotel, booking)
+        expect(response.body).to include("Room price", "Amount paid", "Total charges", "Due amount")
+      end
+    end
+
+    it "keeps the staff payment alert and action when card pricing is hidden" do
+      grant_permission("post_folio_payments")
+      hotel.update!(guest_registration_card_show_pricing: false)
+      booking.update!(total_amount: 138.24)
+      create(:booking_folio, booking: booking, hotel: hotel)
+
+      get hotel_booking_guest_registration_card_path(hotel, booking)
+
+      expect(response.body).to include("Outstanding balance: MYR 138.24", "Add Payment")
+      expect(Nokogiri::HTML(response.body).at_css("article.grc-print").text).not_to include("Room price", "Outstanding balance:")
+    end
+
     it "creates a draft card on first open and shows the pending registration number" do
       get hotel_booking_guest_registration_card_path(hotel, booking)
 

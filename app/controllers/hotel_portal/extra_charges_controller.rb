@@ -88,7 +88,7 @@ module HotelPortal
     def extra_charge_params
       params.require(:hotel_extra_charge).permit(
         :name, :code, :description, :category, :pricing_type, :rate_value,
-        :charging_unit, :percentage_basis, :allow_amount_override, :active,
+        :charging_unit, :percentage_basis, :allow_amount_override, :auto_apply, :charge_children, :active,
         tax_rule_keys: []
       )
     end

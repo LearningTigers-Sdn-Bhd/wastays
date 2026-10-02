@@ -39,6 +39,54 @@ RSpec.describe GuestRegistrationCardPdfService do
     PDF::Reader.new(StringIO.new(pdf)).pages.map(&:text).join("\n")
   end
 
+  it "shows the full payment section by default" do
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).to include("Room price", "Amount paid", "Total charges", "Tax", "Due amount")
+  end
+
+  [ false, true ].each do |signed|
+    it "uses the current pricing setting for a #{signed ? 'signed' : 'draft'} PDF" do
+      card.save_signature_for_guest!(signer_name: "Aisha Tan", signature_data_url: "data:image/png;base64,abc123") if signed
+      saved_attributes = card.reload.attributes
+      hotel.update!(guest_registration_card_show_pricing: false)
+
+      text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+      expect(text).not_to include("Room price", "Amount paid", "Total charges", "Tax", "Due amount")
+      expect(text).to include("Aisha Tan", "Booking", "Room type")
+      expect(card.reload.attributes).to eq(saved_attributes)
+
+      hotel.update!(guest_registration_card_show_pricing: true)
+      expect(pdf_text(described_class.new(card, booking, presenter).generate)).to include("Room price", "Due amount")
+    end
+  end
+
+  it "preserves mixed Chinese terms, punctuation, and checkbox symbols in the PDF" do
+    terms = "Check-in 入住时间下午三点。繁體中文。 Food Allergy 食物过敏：☐ No ☑ Yes"
+    hotel.update!(guest_registration_card_terms: terms)
+
+    text = pdf_text(described_class.new(card, booking, presenter).generate)
+
+    expect(text).to include("入住时间下午三点。繁體中文。", "食物过敏：", "☐ No ☑ Yes")
+    expect(hotel.reload.guest_registration_card_terms).to eq(terms)
+  end
+
+  it "keeps the signature section intact after long Chinese terms" do
+    terms = (1..65).map do |number|
+      "#{number}. Terms 条款：入住时间下午三点，退房时间中午十二点。Food Allergy 食物过敏：☐ No ☑ Yes。"
+    end.join("\n")
+    hotel.update!(guest_registration_card_terms: terms, guest_registration_card_show_pricing: false)
+
+    pdf = described_class.new(card, booking, presenter).generate
+    pages = PDF::Reader.new(StringIO.new(pdf)).pages
+
+    expect(pages.size).to be > 1
+    expect(pages.map(&:text).join("\n")).to include("65. Terms")
+    expect(pages.last.text).to include("Guest signature", "Signature")
+    expect(pages.last.text).not_to include("65. Terms")
+  end
+
   it "generates a valid PDF binary" do
     pdf = described_class.new(card, booking, presenter).generate
 

@@ -224,6 +224,41 @@ module Reports
         "Booking balance settled"
       end
 
+      def voided? = status.to_s == "voided"
+
+      def total_in_words = Reports::AmountInWords.call(total_due, currency: currency)
+
+      # The summary goes to whoever settles. When an agent or company pays, it names them
+      # first, and the guest's contact details fold into the guest block to keep three columns.
+      def summary_party_blocks
+        return party_blocks if group? || bill_to_block.nil?
+
+        guest, contact, stay = booking_party_blocks
+        [ bill_to_block, guest.merge(entries: guest[:entries] + contact[:entries]), stay ]
+      end
+
+      # A group's rooms each carry their own room and rate, so only a single booking has one.
+      def room_rate_block
+        return if group?
+
+        rooms = booking.booking_rooms
+        {
+          heading: "Room & rate",
+          entries: [ {
+            columns: [
+              [ "Room", rooms.map { |room| room_label(room) }.join(", ") ],
+              [ "Rate plan", rooms.filter_map { |room| room.rate_plan&.name }.uniq.join(", ").presence ],
+              [ "Booked by", booking.corporate_booked_by&.name ]
+            ]
+          } ]
+        }
+      end
+
+      # The agent's deposit and balance stages, as promised when the booking was made.
+      def payment_schedule
+        group? ? [] : booking.payment_instalments.to_a
+      end
+
       def summary_rows
         rows = []
         rows << SummaryRow.new(label: "Accommodation", amount: accommodation_total, variant: nil) unless accommodation_total.zero?
@@ -231,6 +266,9 @@ module Reports
           rows << SummaryRow.new(label: name, amount: lines.sum(0.to_d) { |line| line["amount"].to_d }, variant: nil)
         end
         rows << SummaryRow.new(label: "", amount: nil, variant: :spacer)
+        # A voided booking owes nothing, whatever the reservation once totalled.
+        return rows << SummaryRow.new(label: "Booking voided - nothing due", amount: 0, variant: :subtotal) if voided?
+
         rows << SummaryRow.new(
           label: balance_label,
           amount: balance.abs,
@@ -288,6 +326,29 @@ module Reports
 
       def tourism_tax_collected? = @bookings.any?(&:tourism_tax_collected?)
 
+      def bill_to_block
+        return @bill_to_block if defined?(@bill_to_block)
+
+        relationship = @booking&.hotel_corporate_account
+        @bill_to_block = relationship && {
+          heading: "Bill to",
+          entries: [
+            [ "Payer", relationship.corporate_account&.name ],
+            [ "Billing address", CorporateAccounts::BillingAddressPresenter.new(relationship).display ],
+            [ "Account type", relationship.account_type.to_s.humanize.presence ],
+            [ "Agent ref", @booking.agent_reference ]
+          ]
+        }
+      end
+
+      def room_label(room)
+        name = room.room_type_snapshot.to_h["name"].presence || room.room_type.name
+        [ name, room.room_number ].compact_blank.join(" · ")
+      end
+
+      # A phone with no digits in it ("." or "-") is a placeholder typed to get past a form.
+      def printable_phone(value) = (value if value.to_s.match?(/\d/))
+
       def booking_party_blocks
         address = PostalAddresses::Presenter.from_booking_guest(
           booking.booking_guests.find(&:primary?),
@@ -299,7 +360,7 @@ module Reports
             heading: "Guest details",
             entries: [
               [ "Guest", booking.guest_name ],
-              [ "Address", address.display.presence || "Not provided" ],
+              [ "Address", (address.display unless address.country_only?) || "Not provided" ],
               [ "Nationality", booking.guest_country ]
             ]
           },
@@ -307,7 +368,7 @@ module Reports
             heading: "Contact details",
             entries: [
               [ "Email", booking.guest_email ],
-              [ "Phone", booking.guest_phone ]
+              [ "Phone", printable_phone(booking.guest_phone) ]
             ]
           },
           {

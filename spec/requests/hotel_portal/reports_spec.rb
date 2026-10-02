@@ -1597,9 +1597,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           start_date: start_date.to_s, end_date: start_date.to_s)
 
         page = Capybara.string(response.body)
-        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 3)
-        expect(page.text).to include("Daily breakdown", "Revenue by source", "Revenue register")
-        expect(page.text).to include("Other charges", "Total charges", "Net revenue", "Booking / folio", "Base amount", "Total amount")
+        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 4)
+        expect(page.text).to include("Daily breakdown", "Revenue by source", "Revenue by extra charge", "Revenue register")
+        expect(page.text).to include("Extra charges", "Total charges", "Net revenue", "Booking / folio", "Base amount", "Total amount")
       end
 
       it "queries the Charge Register scope once without filters" do

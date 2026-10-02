@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_050000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1614,6 +1614,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_030000) do
 
   create_table "hotel_extra_charges", force: :cascade do |t|
     t.boolean "allow_amount_override", default: true, null: false
+    t.boolean "auto_apply", default: false, null: false
+    t.boolean "charge_children", default: true, null: false
     t.string "charging_unit", default: "per_item", null: false
     t.datetime "created_at", null: false
     t.text "description"
@@ -1987,6 +1989,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_030000) do
     t.boolean "grc_tablet_signing_enabled", default: false, null: false
     t.boolean "guest_chat_enabled", default: true, null: false
     t.jsonb "guest_registration_card_fields"
+    t.boolean "guest_registration_card_show_pricing", default: true, null: false
     t.text "guest_registration_card_terms"
     t.boolean "hide_payout_reports", default: false, null: false
     t.string "hotel_prefix"

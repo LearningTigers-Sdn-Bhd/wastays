@@ -134,7 +134,7 @@ RSpec.describe HotelPortal::Reports::DailyReportExcelExportService do
     kpi_value = overview_rows.find { |row| row["A"]&.fetch(:value) == "Total Charges" }.fetch("B")
 
     expect(sheet_names(overview_entries)).to eq([ "Overview" ])
-    expect(sheet_names(revenue_entries)).to eq([ "Daily Breakdown", "Revenue by Source", "Revenue Register" ])
+    expect(sheet_names(revenue_entries)).to eq([ "Daily Breakdown", "Revenue by Source", "Revenue by Extra Charge", "Revenue Register" ])
     expect(sheet_names(cashier_entries)).to eq([ "Payment Activity", "Activity By Payment Mode", "Currency Summary" ])
     expect(sheet_names(cashier_activity_entries)).to eq([ "Payment Activity" ])
     expect(sheet_names(cashier_summary_entries)).to eq([ "Activity By Payment Mode", "Currency Summary" ])

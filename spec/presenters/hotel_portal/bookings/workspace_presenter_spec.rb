@@ -479,6 +479,38 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
   end
 
   describe "reference rows" do
+    %w[travel_agent internal corporate].each do |source|
+      it "identifies the linked agency for #{source} bookings without portal attribution" do
+        account = create(:hotel_corporate_account, hotel: hotel,
+          corporate_account: create(:account, :corporate, name: "Sand Bay Travel"))
+        booking.update!(source: source, hotel_corporate_account: account, corporate_booked_at: nil)
+
+        row = presenter.booking_reference_rows.first
+
+        expect(row[:source]).to eq(source.tr("_", " ").titleize)
+        expect(row[:source_account_name]).to eq("Sand Bay Travel")
+      end
+    end
+
+    it "keeps agency names on their own child rows and leaves the group summary unchanged" do
+      group = create(:group_booking, hotel: hotel)
+      account = create(:hotel_corporate_account, hotel: hotel,
+        corporate_account: create(:account, :corporate, name: "Sand Bay Travel"))
+      booking.update!(group_booking: group, group_position: 1, hotel_corporate_account: account)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+
+      rows = described_class.new(booking.reload, params: { scope: "group" }, hotel: hotel).booking_reference_rows
+
+      expect(rows.first[:source_account_name]).to be_nil
+      expect(rows.drop(1).map { |row| row[:source_account_name] }).to eq([ "Sand Bay Travel", nil ])
+    end
+
+    it "does not invent an agency name for an unlinked travel agent booking" do
+      booking.update!(source: "travel_agent")
+
+      expect(presenter.booking_reference_rows.first).to include(source: "Travel Agent", source_account_name: nil)
+    end
+
     def format_source_for(value)
       value.to_s.presence&.tr("_", " ")&.titleize || "—"
     end

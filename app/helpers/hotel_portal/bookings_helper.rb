@@ -1,4 +1,11 @@
 module HotelPortal::BookingsHelper
+  # Auto-apply extra charges the booking sheet adds to its billing summary.
+  def auto_charge_options(hotel)
+    hotel.hotel_extra_charges.auto_applied.active.ordered.includes(:transaction_code).map do |charge|
+      { name: charge.name, rate: charge.rate_value.to_d.to_s("F"), unit: charge.charging_unit, children: charge.charge_children? }
+    end
+  end
+
   STATUS_ICONS = {
     "pending" => "clock",
     "confirmed" => "circle-check",

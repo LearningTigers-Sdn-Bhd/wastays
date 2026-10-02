@@ -243,11 +243,13 @@ report metadata needs; Bricolage separates the report title from the hotel name
 by typeface rather than by size alone. This divergence from Inter is a decision,
 not drift. Do not "correct" PDFs back to Inter.
 
-Both faces are vendored in `app/assets/fonts` with their OFL licences. Do not
-switch them to system fonts: a system font that lacks a bold sibling silently
+These faces, Noto Sans SC, and Noto Sans Symbols 2 are vendored in `app/assets/fonts`
+with their OFL licences. Do not switch them to system fonts: a system font that lacks a bold sibling silently
 renders every bold weight as regular, which is what these files exist to prevent.
-Non-Latin text falls through to a system CJK font, and its absence is logged
-rather than fatal.
+Chinese text falls through to bundled static Noto Sans SC regular and bold
+fonts, followed by Noto Sans Symbols 2 for checkboxes and other symbols.
+Explicit Unicode-font environment overrides retain precedence. A missing
+fallback is logged rather than fatal.
 
 Use `PdfTheme` tokens. Never a raw number:
 

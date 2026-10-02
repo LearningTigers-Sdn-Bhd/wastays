@@ -1,4 +1,6 @@
 <% adjustment = daily_report_adjustment_presentation(@revenue_report.totals[:adjustments]) %>
+<% tax_names = @revenue_report.tax_names %>
+<% revenue_colspan = 8 + tax_names.size %>
 <%= render "daily_report_metric_row", aria_label: "Revenue summary", metrics: [
   { label: "Bookings engaged", value: format_number(@revenue_report.totals[:booking_count]), detail: "Bookings with posted revenue" },
   { label: "Total charges", value: "MYR #{format_number(@revenue_report.totals[:total_charges], precision: 2)}", detail: "Before adjustments" },
@@ -17,7 +19,7 @@
       ) do |table| %>
     <% table.with_header do %>
       <tr>
-        <% [@date_preset == "this_year" ? "Month" : "Date", "Bookings", "Accommodation", "Other charges", "Tax", "Total charges", "Adjustments", "Net revenue"].each_with_index do |heading, index| %>
+        <% [@date_preset == "this_year" ? "Month" : "Date", "Bookings", "Accommodation", "Room fees", "Extra charges", *tax_names, "Total charges", "Adjustments", "Net revenue"].each_with_index do |heading, index| %>
           <th scope="col" class="<%= index >= 2 ? "text-right" : "text-left" %>"><%= heading %></th>
         <% end %>
       </tr>
@@ -29,8 +31,11 @@
             <th scope="row" class="whitespace-nowrap font-semibold text-foreground"><%= @date_preset == "this_year" ? row[:date].strftime("%b %Y") : row[:date].strftime("%d %b") %></th>
             <td><%= format_number(row[:booking_count]) %></td>
             <td class="text-right">MYR <%= format_number(row[:accommodation], precision: 2) %></td>
+            <td class="text-right">MYR <%= format_number(row[:room_fees], precision: 2) %></td>
             <td class="text-right">MYR <%= format_number(row[:other_charges], precision: 2) %></td>
-            <td class="text-right">MYR <%= format_number(row[:tax], precision: 2) %></td>
+            <% tax_names.each do |tax_name| %>
+              <td class="text-right">MYR <%= format_number(row[:taxes].fetch(tax_name, 0), precision: 2) %></td>
+            <% end %>
             <td class="text-right font-semibold">MYR <%= format_number(row[:total_charges], precision: 2) %></td>
             <% row_adjustment = daily_report_adjustment_presentation(row[:adjustments]) %>
             <td class="text-right <%= row[:adjustments].positive? ? "text-success" : (row[:adjustments].negative? ? "text-destructive" : "text-foreground") %>"><%= row_adjustment[:value] %></td>
@@ -38,7 +43,7 @@
           </tr>
         <% end %>
       <% else %>
-        <%= render "table_empty_state", colspan: 8, message: "No revenue data for this selected period." %>
+        <%= render "table_empty_state", colspan: revenue_colspan, message: "No revenue data for this selected period." %>
       <% end %>
     <% end %>
   <% end %>
@@ -55,7 +60,7 @@
       ) do |table| %>
     <% table.with_header do %>
       <tr>
-        <% ["Source", "Bookings", "Accommodation", "Other charges", "Tax", "Total charges", "Adjustments", "Net revenue"].each_with_index do |heading, index| %>
+        <% ["Source", "Bookings", "Accommodation", "Room fees", "Extra charges", *tax_names, "Total charges", "Adjustments", "Net revenue"].each_with_index do |heading, index| %>
           <th scope="col" class="<%= index >= 2 ? "text-right" : "text-left" %>"><%= heading %></th>
         <% end %>
       </tr>
@@ -67,8 +72,11 @@
             <th scope="row" class="font-semibold text-foreground"><%= row[:source] %></th>
             <td><%= format_number(row[:booking_count]) %></td>
             <td class="text-right">MYR <%= format_number(row[:accommodation], precision: 2) %></td>
+            <td class="text-right">MYR <%= format_number(row[:room_fees], precision: 2) %></td>
             <td class="text-right">MYR <%= format_number(row[:other_charges], precision: 2) %></td>
-            <td class="text-right">MYR <%= format_number(row[:tax], precision: 2) %></td>
+            <% tax_names.each do |tax_name| %>
+              <td class="text-right">MYR <%= format_number(row[:taxes].fetch(tax_name, 0), precision: 2) %></td>
+            <% end %>
             <td class="text-right font-semibold">MYR <%= format_number(row[:total_charges], precision: 2) %></td>
             <% source_adjustment = daily_report_adjustment_presentation(row[:adjustments]) %>
             <td class="text-right <%= row[:adjustments].positive? ? "text-success" : (row[:adjustments].negative? ? "text-destructive" : "text-foreground") %>"><%= source_adjustment[:value] %></td>
@@ -76,7 +84,53 @@
           </tr>
         <% end %>
       <% else %>
-        <%= render "table_empty_state", colspan: 8, message: "No source revenue data for this selected period." %>
+        <%= render "table_empty_state", colspan: revenue_colspan, message: "No source revenue data for this selected period." %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>
+
+<section class="space-y-3" aria-labelledby="revenue-extra-heading">
+  <h2 id="revenue-extra-heading" class="text-base font-semibold text-foreground">Revenue by extra charge</h2>
+  <%= render PanelsUI::Table.new(
+        caption: "Revenue by extra charge",
+        density: :compact,
+        header_style: :sentence,
+        hoverable: true,
+        wrapper_class: "rounded-lg border border-border bg-card"
+      ) do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <% ["Item", "Count", "Amount", *@revenue_report.extra_tax_names, "Total incl. tax"].each_with_index do |heading, index| %>
+          <th scope="col" class="<%= index >= 1 ? "text-right" : "text-left" %>"><%= heading %></th>
+        <% end %>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if @revenue_report.extra_rows.any? %>
+        <% @revenue_report.extra_rows.each do |row| %>
+          <tr>
+            <th scope="row" class="font-semibold text-foreground"><%= row[:item] %></th>
+            <td class="text-right"><%= format_number(row[:count]) %></td>
+            <td class="text-right">MYR <%= format_number(row[:amount], precision: 2) %></td>
+            <% @revenue_report.extra_tax_names.each do |tax_name| %>
+              <td class="text-right">MYR <%= format_number(row[:taxes].fetch(tax_name, 0), precision: 2) %></td>
+            <% end %>
+            <td class="text-right font-semibold">MYR <%= format_number(row[:total], precision: 2) %></td>
+          </tr>
+        <% end %>
+        <% extra_totals = @revenue_report.extra_totals %>
+        <tr class="bg-muted/55">
+          <th scope="row" class="font-semibold text-foreground">Total</th>
+          <td class="text-right font-semibold"><%= format_number(extra_totals[:count]) %></td>
+          <td class="text-right font-semibold">MYR <%= format_number(extra_totals[:amount], precision: 2) %></td>
+          <% @revenue_report.extra_tax_names.each do |tax_name| %>
+            <td class="text-right font-semibold">MYR <%= format_number(extra_totals[:taxes].fetch(tax_name, 0), precision: 2) %></td>
+          <% end %>
+          <td class="text-right font-semibold">MYR <%= format_number(extra_totals[:total], precision: 2) %></td>
+        </tr>
+      <% else %>
+        <%= render "table_empty_state", colspan: 4 + @revenue_report.extra_tax_names.size, message: "No extra charges for this selected period." %>
       <% end %>
     <% end %>
   <% end %>
