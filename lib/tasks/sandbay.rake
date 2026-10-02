@@ -101,6 +101,10 @@ namespace :sandbay do
           RatePlan.find_or_create_by!(hotel: hotel, name: plan_name) { |new_plan| new_plan.kind = "custom" }
         end
         plan.update!(child_price_multiplier: 0.5)
+        # The agent rates are what travel agents book from their portal, each for
+        # its own market; the publish rates and the agency-specific plans are not.
+        agent_market = { "International Agent Rate" => "international", "Malaysian Agent Rate" => "local" }[plan_name]
+        plan.update!(ta_access: "all", ta_market: agent_market) if agent_market
 
         assignment = RoomTypeRatePlan.find_or_create_by!(room_type: room_type, rate_plan: plan)
         assignment.update!(pricing_mode: "fixed")
