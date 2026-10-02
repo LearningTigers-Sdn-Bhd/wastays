@@ -78,19 +78,29 @@ module FinancialControls
     end
 
     def validate_override!
-      unless @override
-        msg = if business_date_record.force_closed?
-                "The business date #{@business_date} has been force-closed. Please provide an override flag to post to a force-closed date."
-        else
-                "The business date #{@business_date} is already closed. Please provide an override flag to post to a closed date."
-        end
-        raise PostingBlocked, msg
-      end
+      raise PostingBlocked, closed_date_message unless @override
 
       raise OverrideReasonRequired, "Override reason can't be blank." if @override_reason.blank?
       raise PermissionRequired, "Override postings require the #{OVERRIDE_PERMISSION} permission." unless override_permission?
 
       true
+    end
+
+    # Front desk staff read this, so it uses plain words and real dates.
+    def closed_date_message
+      today = @hotel.current_business_date
+      next_step = if override_permission?
+                    "turn on \"Post to a closed business date\" to record it"
+      else
+                    "ask your manager to record it"
+      end
+
+      "You can't record this on #{format_date(@business_date)}. Night audit has already closed that day. " \
+        "Use today's date (#{format_date(today)}), or #{next_step}."
+    end
+
+    def format_date(date)
+      date&.strftime("%-d %b %Y")
     end
 
     def override_permission?

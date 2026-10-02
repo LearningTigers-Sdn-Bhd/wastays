@@ -822,7 +822,63 @@ RSpec.describe "HotelPortal::Folios::Actions transactions", type: :request, froz
 
         post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00", description: "Cash", posting_date: closed_date)
 
-        expect(flash[:alert]).to include("business date #{closed_date} is already closed")
+        expect(flash[:alert]).to include("You can't record this on #{closed_date.strftime('%-d %b %Y')}")
+      end
+
+      context "with the closed-date override" do
+        let(:closed_date) { 1.day.ago.to_date }
+
+        before do
+          create(:night_audit, hotel: hotel, business_date: closed_date, status: "completed", force_closed: true)
+          create(:hotel_business_date, hotel: hotel, business_date: closed_date, status: "force_closed")
+        end
+
+        def post_backdated_payment(reason: "Paid at the desk before audit")
+          post_transaction(transaction_type: "payment", category: "cash", payment_source: "cash", amount: "100.00",
+            description: "Cash", posting_date: closed_date, override_night_audit: "1", override_reason: reason)
+        end
+
+        it "posts a payment to a force-closed date for a user with the date-lock permission" do
+          grant_permission(FinancialControls::PostingGuard::OVERRIDE_PERMISSION)
+
+          expect { post_backdated_payment }.to change(FolioTransaction, :count).by(1)
+
+          transaction = FolioTransaction.last
+          expect(transaction.posting_date).to eq(closed_date)
+          expect(transaction.metadata).to include("override_night_audit" => true, "override_reason" => "Paid at the desk before audit")
+        end
+
+        it "requires a reason" do
+          grant_permission(FinancialControls::PostingGuard::OVERRIDE_PERMISSION)
+
+          expect { post_backdated_payment(reason: " ") }.not_to change(FolioTransaction, :count)
+          expect(flash[:alert]).to eq("Override reason can't be blank.")
+        end
+
+        it "rejects the override without the date-lock permission" do
+          expect { post_backdated_payment }.not_to change(FolioTransaction, :count)
+          expect(flash[:alert]).to include("override_financial_date_lock")
+        end
+
+        it "shows the override switch only to users with the date-lock permission" do
+          open_form(transaction_type: "payment", active_folio_id: folio.id)
+          expect(response.body).not_to include("folio_transaction[override_night_audit]")
+
+          grant_permission(FinancialControls::PostingGuard::OVERRIDE_PERMISSION)
+          open_form(transaction_type: "payment", active_folio_id: folio.id)
+          expect(response.body).to include("folio_transaction[override_night_audit]")
+        end
+
+        it "hides the override box until the posting date is before the current business date" do
+          grant_permission(FinancialControls::PostingGuard::OVERRIDE_PERMISSION)
+          box = "[data-closed-date-override-target='box']"
+
+          open_form(transaction_type: "payment", active_folio_id: folio.id)
+          expect(Nokogiri::HTML(response.body).at_css(box)["hidden"]).not_to be_nil
+
+          open_form(transaction_type: "payment", active_folio_id: folio.id, folio_transaction: { posting_date: closed_date.iso8601 })
+          expect(Nokogiri::HTML(response.body).at_css(box)["hidden"]).to be_nil
+        end
       end
 
       it "rejects staff inserts while night audit is running" do
