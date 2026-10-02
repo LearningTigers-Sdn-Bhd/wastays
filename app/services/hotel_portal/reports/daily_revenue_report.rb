@@ -80,7 +80,7 @@ module HotelPortal
           source_stats[source][:taxes][tax_name] += tx.amount
         end
 
-        tax_names = daily_stats.values.flat_map { |stats| stats[:taxes].keys }.uniq.sort
+        tax_names = (daily_stats.values.flat_map { |stats| stats[:taxes].keys } + enabled_tax_names).uniq.sort
 
         rows = if monthly?
           aggregate_monthly(accounting, daily_stats)
@@ -113,6 +113,11 @@ module HotelPortal
       end
 
       private
+
+      # An enabled tax keeps its column when the period has no charge for it, so a zero reads as "none charged".
+      def enabled_tax_names
+        @hotel.transaction_codes.active.where(system_key: %w[sst_tax tourism_tax]).pluck(:name)
+      end
 
       def new_stats
         { booking_ids: Set.new, taxes: Hash.new(0.to_d) }.merge(DailyRevenueAccounting::ZERO_BUCKET)
