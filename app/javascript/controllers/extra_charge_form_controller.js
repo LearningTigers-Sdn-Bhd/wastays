@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "name", "code", "pricingType", "pricedFields", "percentageFields", "unitFields",
-    "overrideFields", "rate", "ratePrefix", "previewName", "previewAmount"
+    "overrideFields", "childFields", "rate", "ratePrefix", "previewName", "previewAmount"
   ]
 
   static values = { currency: String }
@@ -31,6 +31,7 @@ export default class extends Controller {
     this.percentageFieldsTarget.hidden = !percentage
     this.unitFieldsTarget.hidden = percentage
     this.overrideFieldsTarget.hidden = !fixed
+    this.childFieldsTarget.hidden = !fixed
     this.ratePrefixTarget.textContent = percentage ? "%" : this.currencyValue
     this.previewNameTarget.textContent = this.nameTarget.value.trim() || "Extra charge"
 

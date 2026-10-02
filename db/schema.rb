@@ -1614,6 +1614,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_030000) do
 
   create_table "hotel_extra_charges", force: :cascade do |t|
     t.boolean "allow_amount_override", default: true, null: false
+    t.boolean "auto_apply", default: false, null: false
+    t.boolean "charge_children", default: true, null: false
     t.string "charging_unit", default: "per_item", null: false
     t.datetime "created_at", null: false
     t.text "description"

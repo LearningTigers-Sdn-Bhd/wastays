@@ -26,9 +26,11 @@ class HotelExtraCharge < ApplicationRecord
   validate :transaction_code_code_is_short
   validate :percentage_rate_is_valid
   validate :percentage_amount_cannot_be_overridden
+  validate :auto_apply_is_fixed_price
 
   scope :active, -> { joins(:transaction_code).merge(TransactionCode.active) }
   scope :ordered, -> { order(:position, :id) }
+  scope :auto_applied, -> { where(auto_apply: true) }
 
   def manual? = pricing_type == "manual"
   def fixed? = pricing_type == "fixed"
@@ -49,6 +51,12 @@ class HotelExtraCharge < ApplicationRecord
   end
 
   private
+
+  def auto_apply_is_fixed_price
+    return unless auto_apply? && !fixed?
+
+    errors.add(:auto_apply, "needs a fixed price")
+  end
 
   def transaction_code_belongs_to_hotel
     return if hotel.blank? || transaction_code.blank? || transaction_code.hotel_id == hotel_id
