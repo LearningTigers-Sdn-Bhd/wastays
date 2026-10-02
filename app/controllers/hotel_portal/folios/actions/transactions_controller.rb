@@ -27,6 +27,8 @@ module HotelPortal
           [ "adjustment", "write_off" ] => "post_folio_write_offs"
         }.freeze
 
+        helper_method :closed_date_override_permitted?
+
         def show
           return create if request.post?
 
@@ -565,8 +567,24 @@ module HotelPortal
             metadata[:refund_source] = folio_transaction_params[:refund_source].to_s.strip
           end
           options[:metadata] = metadata if metadata.any?
+          options.merge!(closed_date_override_options) if closed_date_override?
 
           options
+        end
+
+        # Lets a user with the date-lock permission post to a business date that
+        # night audit has already closed. The guard checks the permission again.
+        def closed_date_override?
+          ActiveModel::Type::Boolean.new.cast(folio_transaction_params[:override_night_audit])
+        end
+
+        def closed_date_override_options
+          reason = folio_transaction_params[:override_reason].to_s.strip
+          { override_night_audit: true, correction_reason: reason, correction_note: reason }
+        end
+
+        def closed_date_override_permitted?
+          current_user.has_permission?(::FinancialControls::PostingGuard::OVERRIDE_PERMISSION, hotel: current_hotel)
         end
 
         def refund_transaction?
@@ -601,7 +619,9 @@ module HotelPortal
             :hotel_payment_method_id,
             :refund_source,
             :booking_folio_id,
-            :routing_override_reason
+            :routing_override_reason,
+            :override_night_audit,
+            :override_reason
           )
         end
       end

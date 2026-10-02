@@ -386,10 +386,12 @@ class Booking < ApplicationRecord
     primary_guest&.repeat? || false
   end
 
-  validates :guest_name, :guest_phone, presence: true
-  # The desk usually takes only a phone number, so a booking entered by staff may
-  # go without an address. Everything else — the public funnel, OTA ingestion —
-  # reaches us with one and still has to.
+  validates :guest_name, presence: true
+  # The desk may take a booking before it has any contact detail, and the guest
+  # fills in the phone at check-in. Everything else — the public funnel, OTA
+  # ingestion — reaches us with a phone and an email, and still has to. Later
+  # edits may clear the phone, because staff own the guest details after that.
+  validates :guest_phone, presence: true, on: :create, unless: :created_by_staff?
   validates :guest_email, presence: true, unless: :created_by_staff?
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true

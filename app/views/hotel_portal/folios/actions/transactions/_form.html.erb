@@ -224,10 +224,37 @@
               </section>
             <% end %>
 
-            <div <%= "data-extra-charge-posting-target=immediateField" if @extra_charge_options.present? %>>
-              <%= render PanelsUI::FormField.new(form: form, attribute: :posting_date, label: "Posting date", required: true) do |field| %>
-                <% field.with_input(type: :date, value: params.dig(:folio_transaction, :posting_date).presence || current_hotel.current_business_date, required: true,
-                     data: (@discount_options.present? ? { discount_posting_target: "postingDate" } : {})) %>
+            <% override_allowed = closed_date_override_permitted? && @discount_options.blank? %>
+            <% posting_date_value = params.dig(:folio_transaction, :posting_date).presence || current_hotel.current_business_date.iso8601 %>
+            <div class="space-y-6" <% if override_allowed %>data-controller="closed-date-override" data-closed-date-override-current-business-date-value="<%= current_hotel.current_business_date.iso8601 %>"<% end %>>
+              <div <%= "data-extra-charge-posting-target=immediateField" if @extra_charge_options.present? %>>
+                <%= render PanelsUI::FormField.new(form: form, attribute: :posting_date, label: "Posting date", required: true) do |field| %>
+                  <% posting_date_data = @discount_options.present? ? { discount_posting_target: "postingDate" } : {} %>
+                  <% posting_date_data = posting_date_data.merge(closed_date_override_target: "postingDate", action: "input->closed-date-override#update change->closed-date-override#update") if override_allowed %>
+                  <% field.with_input(type: :date, value: posting_date_value, required: true, data: posting_date_data) %>
+                <% end %>
+              </div>
+
+              <% if override_allowed %>
+                <% date_closed = posting_date_value.to_s < current_hotel.current_business_date.iso8601 %>
+                <% override_on = date_closed && ActiveModel::Type::Boolean.new.cast(params.dig(:folio_transaction, :override_night_audit)) %>
+                <div class="space-y-4 rounded-md border border-warning/30 bg-warning/10 p-4" data-closed-date-override-target="box" <%= "hidden" unless date_closed %>>
+                  <div data-closed-date-override-target="toggle">
+                    <%= render PanelsUI::Switch.new(
+                          form:,
+                          attribute: :override_night_audit,
+                          checked: override_on,
+                          label: "Post to a closed business date",
+                          description: "Night audit has already closed this date. Turn this on only to record a missed posting.",
+                          data: { action: "change->closed-date-override#update" }) %>
+                  </div>
+                  <div data-closed-date-override-target="reason" <%= "hidden" unless override_on %>>
+                    <%= render PanelsUI::FormField.new(form:, attribute: :override_reason, label: "Override reason", required: true) do |field| %>
+                      <% field.with_input(value: params.dig(:folio_transaction, :override_reason), required: true,
+                           placeholder: "For example, payment received on 1 Oct but not posted before audit") %>
+                    <% end %>
+                  </div>
+                </div>
               <% end %>
             </div>
 

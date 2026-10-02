@@ -624,7 +624,7 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
 
       expect(hero).to include('data-controller="concierge-hero"')
       expect(hero).to include('data-concierge-hero-target="sentinel"')
-      expect(hero).to include(hotel.name)
+      expect(hero).to include(ERB::Util.html_escape(hotel.name))
       expect(hero).not_to include("<a ")
     end
 
