@@ -142,6 +142,16 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(document.at_css("turbo-frame#concierge_qr_dialog")).to be_present
     end
 
+    it "shows pricing enabled by default with an accessible setting" do
+      get hotel_general_settings_path(hotel)
+
+      expect(hotel.reload.guest_registration_card_show_pricing?).to be(true)
+      section = Nokogiri::HTML(response.body).at_css("#guest-registration-card")
+      checkbox = section.at_css("input[type='checkbox'][name='hotel[guest_registration_card_show_pricing]']")
+      expect(checkbox["checked"]).to eq("checked")
+      expect(checkbox.ancestors("label").first.text.squish).to include("Show pricing on registration card", "draft and signed cards")
+    end
+
     it "renders the guest registration card field selection" do
       get hotel_general_settings_path(hotel)
 
@@ -450,6 +460,20 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   end
 
   describe 'PATCH /hotel/settings' do
+    %w[0 1].each do |value|
+      it "saves registration card pricing visibility as #{value}" do
+        hotel.update!(guest_registration_card_show_pricing: value == "0")
+
+        patch hotel_general_settings_path(hotel), params: {
+          form_id: "hotel_settings",
+          hotel: { guest_registration_card_show_pricing: value }
+        }
+
+        expect(response).to redirect_to(hotel_general_settings_path(hotel))
+        expect(hotel.reload.guest_registration_card_show_pricing?).to eq(value == "1")
+      end
+    end
+
     it "updates guest registration card fields" do
       patch hotel_general_settings_path(hotel), params: {
         form_id: "hotel_settings",

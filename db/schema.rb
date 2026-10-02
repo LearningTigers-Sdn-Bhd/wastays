@@ -1987,6 +1987,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_030000) do
     t.boolean "grc_tablet_signing_enabled", default: false, null: false
     t.boolean "guest_chat_enabled", default: true, null: false
     t.jsonb "guest_registration_card_fields"
+    t.boolean "guest_registration_card_show_pricing", default: true, null: false
     t.text "guest_registration_card_terms"
     t.boolean "hide_payout_reports", default: false, null: false
     t.string "hotel_prefix"

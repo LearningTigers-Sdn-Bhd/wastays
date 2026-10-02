@@ -31,6 +31,21 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/bookings/:booking_id/workspace" do
+    it "shows the linked agency beneath the source in References" do
+      account = create(:hotel_corporate_account, hotel: hotel,
+        corporate_account: create(:account, :corporate, name: "Sand Bay Travel"))
+      booking.update!(source: "travel_agent", hotel_corporate_account: account)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      table = document.css("table").find { |node| node.css("th").map { |header| header.text.strip }.include?("Source") }
+      source_cell = table.at_css("tbody tr").css("td")[3]
+      expect(source_cell.text.squish).to eq("Travel Agent Sand Bay Travel")
+      expect(source_cell.at_css("span").text).to eq("Sand Bay Travel")
+    end
+
     it "lazily renders five empty document sections only on the Documents tab" do
       get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
       expect(response.body).not_to include('data-testid="booking-documents"')

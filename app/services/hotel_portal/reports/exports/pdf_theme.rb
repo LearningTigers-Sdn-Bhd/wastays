@@ -74,27 +74,10 @@ module HotelPortal
         TEXT_FAMILY = "Public Sans"
         DISPLAY_FAMILY = "Bricolage Grotesque"
         FALLBACK_FAMILY = "Unicode Fallback"
+        SYMBOLS_FAMILY = "Symbols Fallback"
 
-        # Latin only, so non-Latin guest names fall through to a system CJK face.
-        CJK_FONT_CANDIDATES = [
-          {
-            normal: "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            bold: "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
-          },
-          {
-            normal: "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
-            bold: "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"
-          },
-          {
-            normal: "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            bold: "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-          },
-          {
-            normal: "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-            bold: "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
-          }
-        ].freeze
-
+        # The Latin faces fall through to bundled static Chinese fonts so exports
+        # have the same glyph coverage on every host.
         def self.configure_font(pdf)
           pdf.font_families.update(TEXT_FAMILY => text_font_paths, DISPLAY_FAMILY => display_font_paths)
           paths = cjk_font_paths
@@ -105,8 +88,12 @@ module HotelPortal
                 italic: paths.fetch(:normal), bold_italic: paths.fetch(:bold)
               }
             )
-            pdf.fallback_fonts = [ FALLBACK_FAMILY ]
           end
+          symbols = font_dir.join("NotoSansSymbols2-Regular.ttf").to_s
+          pdf.font_families.update(
+            SYMBOLS_FAMILY => { normal: symbols, bold: symbols, italic: symbols, bold_italic: symbols }
+          )
+          pdf.fallback_fonts = paths ? [ FALLBACK_FAMILY, SYMBOLS_FAMILY ] : [ SYMBOLS_FAMILY ]
           pdf.font(TEXT_FAMILY)
         end
 
@@ -127,8 +114,7 @@ module HotelPortal
           { normal: bold, bold: bold, italic: bold, bold_italic: bold }
         end
 
-        # Optional: without it, non-Latin characters render as blanks rather than
-        # failing the export outright.
+        # Explicit deployment overrides retain precedence over the bundled fonts.
         def self.cjk_font_paths
           override = ENV["WASTAYS_PDF_UNICODE_FONT_PATH"].presence
           candidates = []
@@ -138,12 +124,15 @@ module HotelPortal
               bold: ENV["WASTAYS_PDF_UNICODE_BOLD_FONT_PATH"].presence || override
             }
           end
-          candidates.concat(CJK_FONT_CANDIDATES)
+          candidates << {
+            normal: font_dir.join("NotoSansSC-Regular.ttf").to_s,
+            bold: font_dir.join("NotoSansSC-Bold.ttf").to_s
+          }
           paths = candidates.find { |candidate| candidate.values.all? { |path| File.file?(path) } }
           if paths.nil?
             Rails.logger.warn(
               "PDF CJK fallback font not found; non-Latin text will render blank. " \
-              "Install fonts-noto-cjk or set WASTAYS_PDF_UNICODE_FONT_PATH."
+              "Restore the bundled Noto Sans SC fonts or set WASTAYS_PDF_UNICODE_FONT_PATH."
             )
           end
           paths
