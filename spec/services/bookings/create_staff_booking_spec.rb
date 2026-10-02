@@ -101,6 +101,22 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     expect(guest_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_empty
   end
 
+  it "links the booking to the company so the corporate portal lists it" do
+    corporate_account = create(:hotel_corporate_account, hotel: hotel)
+    params = common_params.merge(hotel_corporate_account_id: corporate_account.id)
+
+    booking = described_class.new(hotel: hotel, common_params: params, room_rows: room_rows, user: nil).call.booking
+
+    expect(booking.reload).to have_attributes(hotel_corporate_account_id: corporate_account.id, corporate_booked_by_id: nil)
+    expect(Booking.where(hotel_corporate_account_id: corporate_account.corporate_account.hotel_corporate_accounts.select(:id))).to include(booking)
+  end
+
+  it "leaves the company link empty when no company is billed" do
+    booking = described_class.new(hotel: hotel, common_params: common_params, room_rows: room_rows, user: nil).call.booking
+
+    expect(booking.reload.hotel_corporate_account_id).to be_nil
+  end
+
   it "rolls back all rooms when cumulative unassigned reservations exceed inventory" do
     room_type.update!(quantity: 1, room_numbers: %w[101])
     create(:room_inventory, room_type: room_type, date: Date.current, quantity: 1, status: "open")

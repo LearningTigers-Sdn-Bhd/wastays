@@ -245,6 +245,9 @@ module Bookings
           bill_tourism_tax_to_company: @bill_tourism_tax_to_company
         )
         raise CreationFailed, result.error unless result.success?
+
+        # The corporate portal lists a booking by this column, not by the billing party.
+        booking.update!(hotel_corporate_account_id: account_id)
       end
     end
 
