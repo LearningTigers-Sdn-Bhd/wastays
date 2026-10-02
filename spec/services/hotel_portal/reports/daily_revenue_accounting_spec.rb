@@ -23,6 +23,7 @@ RSpec.describe HotelPortal::Reports::DailyRevenueAccounting do
 
     expect(accounting.totals).to eq(
       accommodation: 100.to_d,
+      room_fees: 0.to_d,
       other_charges: 25.to_d,
       tax: 8.to_d,
       adjustments: -15.to_d,
@@ -54,5 +55,16 @@ RSpec.describe HotelPortal::Reports::DailyRevenueAccounting do
     payment = tx(transaction_type: "payment", category: "refund", amount: -20)
 
     expect(accounting.bucket_for(payment)).to eq({})
+  end
+
+  it "puts no-show, early departure, late checkout and cancellation fees in room fees" do
+    fees = %w[no_show_charge early_departure_charge late_checkout_charge cancellation_charge].map { |category| tx(category: category, amount: 10) }
+    extra = tx(category: "other", amount: 5)
+
+    accounting = described_class.new(fees + [ extra ])
+
+    expect(accounting.totals).to include(room_fees: 40.to_d, other_charges: 5.to_d, accommodation: 0.to_d, total_charges: 45.to_d)
+    expect(fees.map { |fee| accounting.extra_charge?(fee) }).to all(be(false))
+    expect(accounting.extra_charge?(extra)).to be(true)
   end
 end

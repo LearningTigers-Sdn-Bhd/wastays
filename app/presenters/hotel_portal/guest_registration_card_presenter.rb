@@ -11,6 +11,10 @@ module HotelPortal
       @selected_booking_guest = find_booking_guest(booking_guest_id)
     end
 
+    def show_pricing?
+      hotel.guest_registration_card_show_pricing?
+    end
+
     def terms
       @terms ||= @card.signed? ? @card.terms_snapshot : @card.capture_terms_snapshot_preview
     end

@@ -6,15 +6,16 @@ export default class extends Controller {
     // Collection switches.
     "tourismTaxCollection", "depositCollection", "collectPayment", "tourismTaxCollected", "depositEnabled", "depositAmount",
     // Billing summary rows.
-    "folioGroup", "folioNote", "roomTotal", "taxTotal", "tourismTaxRow", "tourismTaxTotal", "tourismTaxNote",
+    "folioGroup", "folioNote", "autoChargeList", "roomTotal", "taxTotal", "tourismTaxRow", "tourismTaxTotal", "tourismTaxNote",
     "surchargeRow", "surchargeTotal", "surchargeTaxRow", "surchargeTaxTotal", "depositRow", "depositTotal",
     "collectedLabel", "collectedTotal", "grandTotal"
   ]
-  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean }
+  static values = { autoCharges: Array, availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean }
 
   connect() {
     this.nextIndex = this.rowTargets.length
     this.baseTotal = 0
+    this.autoChargeTotal = 0
     this.tourismTax = 0
     this.surcharge = 0
     this.surchargeTax = 0
@@ -195,6 +196,7 @@ export default class extends Controller {
   // recalcRow re-solves against the same target rather than dropping it.
   occupancyChanged(event) {
     this.recalcRow(event.target.closest("[data-booking-room-rows-target~='row']"))
+    this.updateTotals()
   }
 
   // Typing a final total (tax included) re-solves the room net on the server:
@@ -433,7 +435,7 @@ export default class extends Controller {
       (collectingTourism ? this.tourismTax : 0) + deposit
 
     this.collectedLabelTargets.forEach((target) => { target.textContent = collecting ? "Total to collect" : "Total" })
-    this.collectedTotalTargets.forEach((target) => { target.textContent = (collecting ? total : this.baseTotal).toFixed(2) })
+    this.collectedTotalTargets.forEach((target) => { target.textContent = (collecting ? total : this.baseTotal + this.autoChargeTotal).toFixed(2) })
 
     const folioUnpaid = collecting && !payingFolio
     this.folioGroupTargets.forEach((target) => target.classList.toggle("opacity-50", folioUnpaid))
@@ -572,11 +574,57 @@ export default class extends Controller {
     native.value = selectedValue || ""
   }
 
-  updateNights() {
+  stayNights() {
     const start = new Date(this.checkInTarget.value)
     const finish = new Date(this.checkOutTarget.value)
-    const nights = Math.max(0, Math.ceil((finish - start) / 86400000)) || 0
-    this.nightsTarget.textContent = nights
+    return Math.max(0, Math.ceil((finish - start) / 86400000)) || 0
+  }
+
+  updateNights() {
+    this.nightsTarget.textContent = this.stayNights()
+  }
+
+  // Mirrors ExtraCharges::ForecastQuote: a charge that is not per night is
+  // billed once for the stay, a per-night charge once for each night.
+  autoChargeAmount(charge, room) {
+    const perGuest = ["per_person", "per_person_night"].includes(charge.unit)
+    const quantity = perGuest ? Math.max(1, room.adults + (charge.children ? room.children : 0)) : 1
+    const nightly = ["per_night", "per_room_night", "per_person_night"].includes(charge.unit)
+    return Number(charge.rate) * quantity * (nightly ? this.stayNights() : 1)
+  }
+
+  // Adults and children on the rooms that are picked so far, one entry per room.
+  roomGuests() {
+    return this.rowTargets
+      .filter((row) => this.readValue(this.roleEl(row, "room-type")))
+      .map((row) => {
+        const adults = Number(this.readValue(this.roleEl(row, "adults")) || 1)
+        const children = Number(this.readValue(this.roleEl(row, "children")) || 0)
+        return { adults, children }
+      })
+  }
+
+  renderAutoCharges() {
+    if (!this.hasAutoChargeListTarget) return
+    const list = this.autoChargeListTarget
+    const currency = list.dataset.currency
+    const lines = this.autoChargesValue.map((charge) => ({
+      name: charge.name,
+      amount: this.roomGuests().reduce((sum, room) => sum + this.autoChargeAmount(charge, room), 0)
+    })).filter((line) => line.amount > 0)
+
+    this.autoChargeTotal = lines.reduce((sum, line) => sum + line.amount, 0)
+    list.replaceChildren(...lines.map((line) => {
+      const row = document.createElement("div")
+      row.className = "flex justify-between"
+      const label = document.createElement("span")
+      label.textContent = line.name
+      const amount = document.createElement("strong")
+      amount.className = "text-foreground"
+      amount.textContent = `${currency} ${line.amount.toFixed(2)}`
+      row.append(label, amount)
+      return row
+    }))
   }
 
   updateTotals() {
@@ -587,6 +635,7 @@ export default class extends Controller {
 
     this.baseTotal = grandTotal
     this.tourismTax = tourismTaxTotal
+    this.renderAutoCharges()
 
     this.roomTotalTargets.forEach((target) => { target.textContent = roomTotal.toFixed(2) })
     this.taxTotalTargets.forEach((target) => { target.textContent = taxTotal.toFixed(2) })

@@ -172,31 +172,33 @@
             </dl>
           </div>
 
-          <div class="p-4">
-            <h2 class="mb-2 text-base font-semibold text-foreground">Payment details</h2>
-            <dl class="grid gap-x-8 gap-y-2 sm:grid-cols-2">
-              <div class="min-w-0">
-                <dt class="text-xs font-medium text-muted-foreground">Room price</dt>
-                <dd class="mt-1 text-sm font-medium tabular-nums text-foreground"><%= @presenter.room_price_display %></dd>
-              </div>
-              <div class="min-w-0">
-                <dt class="text-xs font-medium text-muted-foreground">Amount paid</dt>
-                <dd class="mt-1 text-sm font-medium tabular-nums text-foreground"><%= @presenter.format_money(@presenter.amount_paid) %></dd>
-              </div>
-              <div class="min-w-0">
-                <dt class="text-xs font-medium text-muted-foreground">Total charges</dt>
-                <dd class="mt-1 text-sm font-medium tabular-nums text-foreground"><%= @presenter.format_money(@presenter.total_charges) %></dd>
-              </div>
-              <div class="min-w-0">
-                <dt class="text-xs font-medium text-muted-foreground">Tax</dt>
-                <dd class="mt-1 text-sm font-medium tabular-nums text-foreground"><%= @presenter.format_money(@booking.tax_total) %></dd>
-              </div>
-              <div class="border-t border-border pt-2 sm:col-span-2">
-                <dt class="text-xs font-medium text-muted-foreground">Due amount</dt>
-                <dd class="mt-1 text-base font-semibold tabular-nums text-destructive"><%= @presenter.format_money(@presenter.due_amount) %></dd>
-              </div>
-            </dl>
-          </div>
+          <% if @presenter.show_pricing? %>
+            <div class="p-4">
+              <h2 class="mb-2 text-base font-semibold text-foreground">Payment details</h2>
+              <dl class="grid gap-x-8 gap-y-2 sm:grid-cols-2">
+                <div class="min-w-0">
+                  <dt class="text-xs font-medium text-muted-foreground">Room price</dt>
+                  <dd class="mt-1 text-sm font-medium tabular-nums text-foreground"><%= @presenter.room_price_display %></dd>
+                </div>
+                <div class="min-w-0">
+                  <dt class="text-xs font-medium text-muted-foreground">Amount paid</dt>
+                  <dd class="mt-1 text-sm font-medium tabular-nums text-foreground"><%= @presenter.format_money(@presenter.amount_paid) %></dd>
+                </div>
+                <div class="min-w-0">
+                  <dt class="text-xs font-medium text-muted-foreground">Total charges</dt>
+                  <dd class="mt-1 text-sm font-medium tabular-nums text-foreground"><%= @presenter.format_money(@presenter.total_charges) %></dd>
+                </div>
+                <div class="min-w-0">
+                  <dt class="text-xs font-medium text-muted-foreground">Tax</dt>
+                  <dd class="mt-1 text-sm font-medium tabular-nums text-foreground"><%= @presenter.format_money(@booking.tax_total) %></dd>
+                </div>
+                <div class="border-t border-border pt-2 sm:col-span-2">
+                  <dt class="text-xs font-medium text-muted-foreground">Due amount</dt>
+                  <dd class="mt-1 text-base font-semibold tabular-nums text-destructive"><%= @presenter.format_money(@presenter.due_amount) %></dd>
+                </div>
+              </dl>
+            </div>
+          <% end %>
 
           <% if @presenter.boat_transfer? %>
             <div class="border-t border-border p-4">
@@ -359,16 +361,18 @@
         </dl>
       </div>
 
-      <div class="p-2.5">
-        <p class="text-xs font-bold uppercase font-semibold text-foreground">Payment details</p>
-        <dl class="grid grid-cols-2 gap-x-6">
-          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Room price</dt><dd class="text-foreground">: <%= @presenter.room_price_display %></dd></div>
-          <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Amount paid</dt><dd class="text-foreground">: <%= @presenter.format_money(@presenter.amount_paid) %></dd></div>
-          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Total charges</dt><dd class="text-foreground">: <%= @presenter.format_money(@presenter.total_charges) %></dd></div>
-          <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Tax</dt><dd class="text-foreground">: <%= @presenter.format_money(@booking.tax_total) %></dd></div>
-          <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Due amount</dt><dd class="font-semibold text-rose-600">: <%= @presenter.format_money(@presenter.due_amount) %></dd></div>
-        </dl>
-      </div>
+      <% if @presenter.show_pricing? %>
+        <div class="p-2.5">
+          <p class="text-xs font-bold uppercase font-semibold text-foreground">Payment details</p>
+          <dl class="grid grid-cols-2 gap-x-6">
+            <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Room price</dt><dd class="text-foreground">: <%= @presenter.room_price_display %></dd></div>
+            <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Amount paid</dt><dd class="text-foreground">: <%= @presenter.format_money(@presenter.amount_paid) %></dd></div>
+            <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Total charges</dt><dd class="text-foreground">: <%= @presenter.format_money(@presenter.total_charges) %></dd></div>
+            <div class="grid grid-cols-[4.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Tax</dt><dd class="text-foreground">: <%= @presenter.format_money(@booking.tax_total) %></dd></div>
+            <div class="grid grid-cols-[6.6rem_1fr] gap-x-2"><dt class="font-semibold text-muted-foreground">Due amount</dt><dd class="font-semibold text-rose-600">: <%= @presenter.format_money(@presenter.due_amount) %></dd></div>
+          </dl>
+        </div>
+      <% end %>
 
       <% if @presenter.boat_transfer? %>
         <div class="border-t border-border-interactive p-2.5">

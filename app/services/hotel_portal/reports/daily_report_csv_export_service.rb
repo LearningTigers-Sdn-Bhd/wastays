@@ -54,33 +54,32 @@ module HotelPortal
 
       def append_revenue(csv)
         csv << [ "Daily Breakdown" ]
-        csv << [ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Adjustments", "Net Revenue" ]
-        @revenue_report.rows.each do |row|
-          csv << [
-            row[:date].iso8601, row[:booking_count], decimal(row[:accommodation]), decimal(row[:other_charges]),
-            decimal(row[:tax]), decimal(row[:total_charges]), decimal(row[:adjustments]), decimal(row[:net_revenue])
-          ]
-        end
-        csv << [ "Total", @revenue_report.totals[:booking_count], decimal(@revenue_report.totals[:accommodation]),
-          decimal(@revenue_report.totals[:other_charges]), decimal(@revenue_report.totals[:tax]),
-          decimal(@revenue_report.totals[:total_charges]), decimal(@revenue_report.totals[:adjustments]),
-          decimal(@revenue_report.totals[:net_revenue]) ]
-        csv << []
+        append_revenue_rows(csv, "Date", @revenue_report.rows) { |row| row[:date].iso8601 }
 
         csv << [ "Revenue by Source" ]
-        csv << [ "Source", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Adjustments", "Net Revenue" ]
-        @revenue_report.source_rows.each do |row|
-          csv << [
-            row[:source], row[:booking_count], decimal(row[:accommodation]), decimal(row[:other_charges]),
-            decimal(row[:tax]), decimal(row[:total_charges]), decimal(row[:adjustments]), decimal(row[:net_revenue])
-          ]
-        end
-        csv << [ "Total", @revenue_report.totals[:booking_count], decimal(@revenue_report.totals[:accommodation]),
-          decimal(@revenue_report.totals[:other_charges]), decimal(@revenue_report.totals[:tax]),
-          decimal(@revenue_report.totals[:total_charges]), decimal(@revenue_report.totals[:adjustments]),
-          decimal(@revenue_report.totals[:net_revenue]) ]
+        append_revenue_rows(csv, "Source", @revenue_report.source_rows) { |row| row[:source] }
+
+        csv << [ "Revenue by Extra Charge" ]
+        csv << @revenue_report.extra_headers
+        @revenue_report.extra_rows.each { |row| csv << [ row[:item], *extra_cells(row) ] }
+        csv << [ "Total", *extra_cells(@revenue_report.extra_totals) ]
         csv << []
         append_transactions(csv, "Revenue Register", @charge_register)
+      end
+
+      def append_revenue_rows(csv, label, rows)
+        csv << @revenue_report.headers(label)
+        rows.each { |row| csv << [ yield(row), *revenue_cells(row) ] }
+        csv << [ "Total", *revenue_cells(@revenue_report.totals) ]
+        csv << []
+      end
+
+      def revenue_cells(row)
+        @revenue_report.values(row).map { |value| value.is_a?(BigDecimal) ? decimal(value) : value }
+      end
+
+      def extra_cells(row)
+        @revenue_report.extra_values(row).map { |value| value.is_a?(BigDecimal) ? decimal(value) : value }
       end
 
       def append_cashier(csv)

@@ -61,6 +61,8 @@ module HotelPortal
         draw_revenue_table(pdf, "Daily Breakdown", @revenue_report.rows, :date)
         pdf.move_down THEME::SPACE[:lg]
         draw_revenue_table(pdf, "Revenue by Source", @revenue_report.source_rows, :source)
+        pdf.move_down THEME::SPACE[:lg]
+        draw_extra_charge_table(pdf)
         pdf.start_new_page(layout: :landscape)
         draw_section_heading(pdf, "Revenue Register", "Revenue charges and adjustments posted during the reporting period")
         draw_charge_register(pdf)
@@ -89,26 +91,36 @@ module HotelPortal
 
         label_header = label_key == :date ? "Date" : "Source"
         data = rows.map do |row|
-          [
-            label_key == :date ? row[:date].strftime("%d %b %Y") : row[:source],
-            row[:booking_count].to_s,
-            money(row[:accommodation]), money(row[:other_charges]), money(row[:tax]),
-            money(row[:total_charges]), money(row[:adjustments]), money(row[:net_revenue])
-          ]
+          [ label_key == :date ? row[:date].strftime("%d %b %Y") : row[:source], *revenue_cells(row) ]
         end
-        totals = @revenue_report.totals
-        data << [
-          "Total", totals[:booking_count].to_s, money(totals[:accommodation]), money(totals[:other_charges]),
-          money(totals[:tax]), money(totals[:total_charges]), money(totals[:adjustments]), money(totals[:net_revenue])
-        ]
+        data << [ "Total", *revenue_cells(@revenue_report.totals) ]
 
-        draw_data_table(
-          pdf,
-          [ label_header, "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Adjustments", "Net Revenue" ],
-          data,
-          numeric_columns: (1..7).to_a,
-          total_row: data.size
-        )
+        headers = @revenue_report.headers(label_header)
+        draw_data_table(pdf, headers, data, numeric_columns: (1...headers.size).to_a, total_row: data.size)
+      end
+
+      def draw_extra_charge_table(pdf)
+        draw_section_heading(pdf, "Revenue by Extra Charge")
+        if @revenue_report.extra_rows.empty?
+          draw_empty_state(pdf, "No extra charges for this selected period.")
+          return
+        end
+
+        data = @revenue_report.extra_rows.map { |row| [ row[:item], *extra_cells(row) ] }
+        data << [ "Total", *extra_cells(@revenue_report.extra_totals) ]
+
+        headers = @revenue_report.extra_headers
+        draw_data_table(pdf, headers, data, numeric_columns: (1...headers.size).to_a, total_row: data.size)
+      end
+
+      def revenue_cells(row)
+        count, *amounts = @revenue_report.values(row)
+        [ count.to_s, *amounts.map { |amount| money(amount) } ]
+      end
+
+      def extra_cells(row)
+        count, *amounts = @revenue_report.extra_values(row)
+        [ count.to_s, *amounts.map { |amount| money(amount) } ]
       end
 
       def draw_charge_register(pdf)

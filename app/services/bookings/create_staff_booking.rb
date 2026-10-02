@@ -44,6 +44,7 @@ module Bookings
           raise CreationFailed, Array(result.errors).to_sentence unless result.success?
 
           bookings << result.booking
+          apply_automatic_extra_charges!(result.booking)
           Boats::AssignTimes.call(booking: result.booking, params: @boat_params)
         end
 
@@ -75,6 +76,11 @@ module Bookings
     end
 
     private
+
+    def apply_automatic_extra_charges!(booking)
+      result = ExtraCharges::ApplyAutomatic.call(booking: booking, user: @user)
+      raise CreationFailed, result.error unless result.success?
+    end
 
     def child_params(row)
       params = @common_params.merge(
@@ -245,6 +251,9 @@ module Bookings
           bill_tourism_tax_to_company: @bill_tourism_tax_to_company
         )
         raise CreationFailed, result.error unless result.success?
+
+        # The corporate portal lists a booking by this column, not by the billing party.
+        booking.update!(hotel_corporate_account_id: account_id)
       end
     end
 

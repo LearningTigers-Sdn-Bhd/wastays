@@ -24,7 +24,7 @@ module ExtraCharges
     end
 
     def call
-      return failure("Only fixed night-based extra charges can be scheduled.") unless @extra_charge.fixed? && @extra_charge.nightly?
+      return failure("Only fixed night-based extra charges can be scheduled.") unless schedulable?
       return failure("Extra charge is not available for this booking.") unless available?
       return failure("No remaining occupied nights are available for this charge.") if allowed_dates.empty?
       return failure("Select dates within the remaining stay.") if selected_dates.empty? || selected_dates.any? { |date| !allowed_dates.include?(date) }
@@ -44,6 +44,10 @@ module ExtraCharges
 
     private
 
+    def schedulable?
+      @extra_charge.fixed? && (@extra_charge.nightly? || @extra_charge.auto_apply?)
+    end
+
     def available?
       @extra_charge.hotel_id == @booking.hotel_id && @folio.booking_id == @booking.id &&
         @folio.open? && @extra_charge.transaction_code.active?
@@ -58,10 +62,12 @@ module ExtraCharges
     end
 
     def selected_dates
-      @selected_dates ||= begin
+      @selected_dates ||= if @extra_charge.nightly?
         first = @starts_on || allowed_dates.first
         last = @ends_on || allowed_dates.last
         first && last && first <= last ? (first..last).to_a : []
+      else
+        allowed_dates.first(1)
       end
     end
 
@@ -75,8 +81,8 @@ module ExtraCharges
 
     def quantity
       @quantity ||= case @extra_charge.charging_unit
-      when "per_room_night" then [ @booking.booking_rooms.count, 1 ].max
-      when "per_person_night" then [ @booking.adults.to_i + @booking.children.to_i, 1 ].max
+      when "per_room_night", "per_room" then [ @booking.booking_rooms.count, 1 ].max
+      when "per_person_night", "per_person" then [ @booking.adults.to_i + (@extra_charge.charge_children? ? @booking.children.to_i : 0), 1 ].max
       else 1
       end
     end

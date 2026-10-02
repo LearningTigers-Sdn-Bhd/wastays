@@ -17,6 +17,27 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
   end
 
   describe "GET /guest-registration-card/:token" do
+    [ false, true ].each do |signed|
+      it "hides the full payment section on #{signed ? 'signed' : 'draft'} cards without changing saved content" do
+        card.save_signature_for_guest!(signer_name: "Aisha Tan", signature_data_url: "data:image/png;base64,abc123") if signed
+        saved_attributes = card.reload.attributes
+        hotel.update!(guest_registration_card_show_pricing: false)
+
+        get guest_registration_card_path(card.public_token)
+
+        expect(response).to have_http_status(:success)
+        document = Nokogiri::HTML(response.body)
+        labels = document.css("dt").map { |node| node.text.strip }
+        expect(labels).not_to include("Room price", "Amount paid", "Total charges", "Tax", "Due amount")
+        expect(document.css("h2, p").map { |node| node.text.strip }).not_to include("Payment", "Payment details")
+        expect(card.reload.attributes).to eq(saved_attributes)
+
+        hotel.update!(guest_registration_card_show_pricing: true)
+        get guest_registration_card_path(card.public_token)
+        expect(response.body).to include("Room price", "Amount paid", "Total charges", "Due amount")
+      end
+    end
+
     # The card is a public, token-addressed page with no :hotel_id, so
     # current_hotel is nil. Staff open it all the time -- they send the link and
     # then click it -- and the shared layout must not fall over when it does.

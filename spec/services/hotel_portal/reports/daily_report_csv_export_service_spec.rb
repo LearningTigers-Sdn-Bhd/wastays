@@ -9,8 +9,10 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     {
       booking_count: 1,
       accommodation: 480.to_d,
+      room_fees: 0.to_d,
       other_charges: 0.to_d,
       tax: 38.40.to_d,
+      taxes: { "SST" => 38.40.to_d },
       total_charges: 518.40.to_d,
       adjustments: -20.to_d,
       net_revenue: 498.40.to_d
@@ -18,13 +20,18 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
   end
   let(:revenue_row) { revenue_totals.merge(date: date) }
   let(:source_row) { revenue_totals.merge(source: "Direct") }
+  let(:extra_row) { { item: "Extra bed", count: 2, amount: 80.to_d, taxes: { "SST" => 6.40.to_d }, total: 86.40.to_d } }
   let(:revenue_report) do
     HotelPortal::Reports::DailyRevenueReport::Result.new(
       start_date: date,
       end_date: date,
       totals: revenue_totals,
       rows: [ revenue_row ],
-      source_rows: [ source_row ]
+      source_rows: [ source_row ],
+      tax_names: [ "SST" ],
+      extra_rows: [ extra_row ],
+      extra_totals: extra_row.merge(item: "Total"),
+      extra_tax_names: [ "SST" ]
     )
   end
   let(:cashier_report) do
@@ -93,7 +100,10 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
   it "exports revenue analysis and the Revenue Register" do
     csv = generate("revenue", charge_register: [ charge_row ])
 
-    expect(csv).to include("Daily Breakdown", "Revenue by Source", "Revenue Register")
+    expect(csv).to include("Daily Breakdown", "Revenue by Source", "Revenue by Extra Charge", "Revenue Register")
+    expect(csv).to include("Date,Bookings,Accommodation,Room Fees,Extra Charges,SST,Total Charges,Adjustments,Net Revenue")
+    expect(csv).to include("2026-07-21,1,480.00,0.00,0.00,38.40,518.40,-20.00,498.40")
+    expect(csv).to include("Item,Count,Amount,SST,Total Incl. Tax", "Extra bed,2,80.00,6.40,86.40")
     expect(csv).to include(HotelPortal::Reports::DailyRevenueTransactionsCsvExportService::HEADERS.to_csv.strip)
     expect(csv).to include("G01,Garden Chalet,Original,480.00,38.40,518.40,MYR")
     expect(csv).not_to include("Cashier Summary")

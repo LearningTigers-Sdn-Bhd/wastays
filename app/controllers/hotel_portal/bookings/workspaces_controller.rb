@@ -73,6 +73,7 @@ module HotelPortal
           { booking_rooms: [ :room_type, :rate_plan ] },
           { booking_guests: [ :guest, :guest_registration_card ] },
           :hotel,
+          { hotel_corporate_account: :corporate_account },
           { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } },
           :payment_transactions,
           :refund_request,
@@ -81,7 +82,7 @@ module HotelPortal
           booking_billing_parties: [ :billing_terms, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account }, :booking_folios ],
           booking_notes: :user,
           group_booking: [
-            { bookings: [ :hotel, :booking_folio, { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } }, :housekeeping_requests, :complaint_requests, :folio_operation_logs, { booking_rooms: [ :room_type, :rate_plan ] }, { booking_guests: [ :guest, :guest_registration_card ] }, { booking_billing_parties: [ :billing_terms, :booking_folios, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { booking_folios: [ :deposit_movements, :folio_forecasted_charges, { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { folio_transactions: [ :user, :transaction_code ] }, { hotel_corporate_account: :corporate_account } ] } ] },
+            { bookings: [ :hotel, :booking_folio, { hotel_corporate_account: :corporate_account }, { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } }, :housekeeping_requests, :complaint_requests, :folio_operation_logs, { booking_rooms: [ :room_type, :rate_plan ] }, { booking_guests: [ :guest, :guest_registration_card ] }, { booking_billing_parties: [ :billing_terms, :booking_folios, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { booking_folios: [ :deposit_movements, :folio_forecasted_charges, { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { folio_transactions: [ :user, :transaction_code ] }, { hotel_corporate_account: :corporate_account } ] } ] },
             { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } }
           ],
           booking_folios: [ :ar_invoice, :deposit_movements, :folio_forecasted_charges, { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] }, { folio_transactions: [ :user, :transaction_code ] }, { hotel_corporate_account: :corporate_account } ],

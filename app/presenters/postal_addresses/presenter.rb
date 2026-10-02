@@ -54,6 +54,9 @@ module PostalAddresses
     def complete? = REQUIRED_FIELDS.all? { |field| @values[field].present? }
     def missing? = @values.values.all?(&:blank?)
     def incomplete? = !missing? && !complete?
+    # A booking falls back to the guest's nationality for country, so a country alone
+    # says where the guest is from, not where they live.
+    def country_only? = @values.except("country").values.all?(&:blank?)
 
     def status_label
       return "Address missing" if missing?

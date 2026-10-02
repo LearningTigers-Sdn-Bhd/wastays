@@ -7,7 +7,8 @@ module HotelPortal
 
       CATEGORY_LABELS = {
         "accommodation" => "Accommodation",
-        "other_charges" => "Other Charges",
+        "room_fees" => "Room Fees",
+        "other_charges" => "Extra Charges",
         "tax" => "Tax",
         "discount" => "Discount",
         "gateway_payment" => "Online Payment",
@@ -83,8 +84,10 @@ module HotelPortal
           tx.transaction_type == "charge" && tx.category == "accommodation"
         when "tax"
           tx.transaction_type == "charge" && tx.category == "tax"
+        when "room_fees"
+          tx.transaction_type == "charge" && DailyRevenueAccounting::ROOM_FEE_CATEGORIES.include?(tx.category)
         when "other_charges"
-          tx.transaction_type == "charge" && !%w[accommodation tax].include?(tx.category)
+          DailyRevenueAccounting.extra_charge?(tx)
         when "discount"
           tx.transaction_type == "adjustment" && (tx.category == "discount" || tx.reversed_category == "discount")
         when "gateway_payment"

@@ -424,11 +424,9 @@ module HotelPortal
         # are different strings and the repeat sits inside one of them — so a part is
         # dropped when what has already been kept names it.
         # Every masthead names how to reach the hotel about the document it sits on, so the
-        # line is built here rather than passed in by each document. Every way of reaching
-        # it is named whether or not it publishes one — a dash says the number is absent,
-        # where dropping the label leaves a reader unable to tell a hotel without a landline
-        # from a document that failed to print the landline it had. A hotel publishing none
-        # of the three prints no line at all rather than a row of dashes.
+        # line is built here rather than passed in by each document. Only the ways the hotel
+        # publishes are printed: a "Fixed line: -" told an agent nothing and read as a
+        # printing fault. A hotel publishing none of the three prints no line at all.
         #
         # A document whose masthead is a snapshot passes contact details that are current
         # anyway: the identity is as it was, but a number the hotel stopped answering serves
@@ -439,9 +437,9 @@ module HotelPortal
             [ "Phone", @hotel.try(:contact_phone) ],
             [ "Email", @hotel.try(:contact_email) ]
           ]
-          return if parts.none? { |_label, value| value.present? }
-
-          parts.map { |label, value| "#{label}: #{value.presence || '-'}" }.join(" · ")
+          parts.select { |_label, value| value.present? }
+            .map { |label, value| "#{label}: #{value}" }
+            .join(" · ").presence
         end
 
         def hotel_address

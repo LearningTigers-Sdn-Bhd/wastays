@@ -36,6 +36,19 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     expect(room_type.room_inventories.find_by!(date: Date.current).quantity).to eq(4)
   end
 
+  it "schedules each auto-apply extra charge on the new booking" do
+    jetty_fee = create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 10,
+      charging_unit: "per_person", allow_amount_override: false, auto_apply: true)
+    rows = [ { room_type_id: room_type.id, room_number: "", adults: 2 } ]
+
+    result = described_class.new(hotel: hotel, common_params: common_params, room_rows: rows, user: nil).call
+
+    expect(result.success?).to be(true), result.errors.to_sentence
+    forecast = result.booking.booking_folio.folio_forecasted_charges.scheduled_extra_charges.sole
+    expect(forecast).to have_attributes(charge_kind: "extra_charge", amount: 20.to_d)
+    expect(forecast.metadata).to include("extra_charge_id" => jetty_fee.id)
+  end
+
   it "leaves the reservation unassigned when the property assigns rooms manually" do
     hotel.update!(auto_assign_rooms_enabled: false)
 
@@ -99,6 +112,22 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     # Accommodation forecasts land on the company folio; the guest folio has none.
     expect(company_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_present
     expect(guest_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_empty
+  end
+
+  it "links the booking to the company so the corporate portal lists it" do
+    corporate_account = create(:hotel_corporate_account, hotel: hotel)
+    params = common_params.merge(hotel_corporate_account_id: corporate_account.id)
+
+    booking = described_class.new(hotel: hotel, common_params: params, room_rows: room_rows, user: nil).call.booking
+
+    expect(booking.reload).to have_attributes(hotel_corporate_account_id: corporate_account.id, corporate_booked_by_id: nil)
+    expect(Booking.where(hotel_corporate_account_id: corporate_account.corporate_account.hotel_corporate_accounts.select(:id))).to include(booking)
+  end
+
+  it "leaves the company link empty when no company is billed" do
+    booking = described_class.new(hotel: hotel, common_params: common_params, room_rows: room_rows, user: nil).call.booking
+
+    expect(booking.reload.hotel_corporate_account_id).to be_nil
   end
 
   it "rolls back all rooms when cumulative unassigned reservations exceed inventory" do
