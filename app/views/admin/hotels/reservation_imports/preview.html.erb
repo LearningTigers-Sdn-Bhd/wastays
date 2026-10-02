@@ -64,6 +64,9 @@
       <div>
         <dt class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Value imported</dt>
         <dd class="mt-1 font-bold text-foreground"><%= number_to_currency(@total_value, unit: "RM ") %></dd>
+        <% if @released_count.positive? %>
+          <dd class="text-xs text-muted-foreground" data-testid="released-excluded">excludes <%= @released_count %> released</dd>
+        <% end %>
       </div>
       <div>
         <dt class="text-xs font-bold uppercase tracking-wide text-muted-foreground">Multi-room groups</dt>

@@ -9,7 +9,7 @@ module Ezee
   # spreadsheet, so a thousand-row file is parsed once rather than on every
   # page view, and the bookings created are the ones the operator approved.
   class BuildImportRows
-    Result = Struct.new(:rows_written, :error, keyword_init: true) do
+    Result = Struct.new(:rows_written, :error, :warnings, keyword_init: true) do
       def success? = error.blank?
     end
 
@@ -29,7 +29,7 @@ module Ezee
       write!(plan)
 
       @import.update!(total_rows: plan.importable.size, source_layout: parsed.layout&.to_s)
-      Result.new(rows_written: plan.entries.size)
+      Result.new(rows_written: plan.entries.size, warnings: parsed.warnings)
     end
 
     private

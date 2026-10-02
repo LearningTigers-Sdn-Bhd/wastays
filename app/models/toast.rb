@@ -8,7 +8,8 @@ module Toast
   # Rails flash keys -> toast variant. Anything else falls back to "default".
   TYPE_BY_FLASH_KEY = {
     "notice" => "success",
-    "alert" => "error"
+    "alert" => "error",
+    "warning" => "warning"
   }.freeze
 
   def self.type_for_flash(key)

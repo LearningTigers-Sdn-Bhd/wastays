@@ -320,6 +320,50 @@ RSpec.describe "Admin reservation imports", type: :request do
       expect(latest_import.rows.where(booking_status: "cancelled")).to be_present
     end
 
+    # A file whose footer states more reservations than it holds -- trimmed by hand,
+    # say -- stages, but the operator is told it does not add up.
+    it "warns when the file's own count does not match what it holds" do
+      trimmed = Tempfile.new([ "trimmed", ".csv" ])
+      trimmed.write(File.read(Rails.root.join("spec/fixtures/files/ezee_reservation_csv_sample.csv")).sub(/#\(\d+\)/, "#(999)"))
+      trimmed.flush
+
+      post admin_hotel_reservation_imports_path(hotel),
+           params: { file: Rack::Test::UploadedFile.new(trimmed.path, "text/csv", original_filename: "trimmed.csv") }
+
+      expect(flash[:warning]).to include("states 999 reservations")
+      expect(response).to redirect_to(admin_hotel_reservation_import_path(hotel, latest_import))
+    end
+
+    it "does not warn about a file that adds up" do
+      post admin_hotel_reservation_imports_path(hotel), params: { file: csv_upload }
+
+      expect(flash[:warning]).to be_blank
+    end
+
+    # A released reservation is kept as a cancelled booking and brings no revenue.
+    it "leaves released reservations out of the value, and says how many" do
+      post admin_hotel_reservation_imports_path(hotel), params: { file: csv_upload }
+      import = latest_import
+      # Set up the categories the fixture's rows use, so they stage as importable.
+      import.rows.pluck(:room_type_name).uniq.each_with_index do |name, index|
+        Rooms::SaveSeedRoomType.call!(
+          hotel: hotel,
+          attributes: { name: Ezee::ImportPlan.normalize_room_type(name).titleize, room_number_mode: "custom", quantity: 3,
+                        base_price: 300.0, max_adults: 4, max_children: 2, room_numbers: %w[1 2 3].map { |n| "X#{index}#{n}" } }
+        )
+      end
+      Ezee::BuildImportRows.call(import: import)
+      released = import.rows.importable.where(booking_status: "cancelled")
+      live = import.rows.importable.where.not(booking_status: "cancelled")
+      expect(released).to be_present
+
+      get admin_hotel_reservation_import_path(hotel, import)
+
+      page = Capybara.string(response.body)
+      expect(response.body).to include(ActionController::Base.helpers.number_to_currency(live.sum(:total_amount), unit: "RM "))
+      expect(page.find("[data-testid='released-excluded']")).to have_text("excludes #{released.count} released")
+    end
+
     it "refuses a CSV that is not an eZee report, saying what it expects" do
       other = Tempfile.new([ "other", ".csv" ])
       other.write("name,email\nA,a@example.com\n")

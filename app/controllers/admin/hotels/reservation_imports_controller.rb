@@ -59,6 +59,10 @@ module Admin
           return redirect_back_with(result.error)
         end
 
+        # The file said something about itself that does not add up (a footer that
+        # states more reservations than it holds, an unfamiliar heading). The import
+        # still stages, so the operator can judge, but is told.
+        flash[:warning] = result.warnings.to_sentence if result.warnings.present?
         redirect_to admin_hotel_reservation_import_path(@hotel, import)
       end
 
@@ -98,7 +102,10 @@ module Admin
         @attention_count = @import.rows.needing_attention.count
         outcome_rows = @import.rows.where(status: %w[importable created])
         @group_count = outcome_rows.where.not(group_key: nil).distinct.count(:group_key)
-        @total_value = outcome_rows.sum(:total_amount)
+        # A released reservation is kept as a cancelled booking and brings no revenue,
+        # so it is not part of the value -- but it is said how many were left out.
+        @released_count = outcome_rows.where(booking_status: "cancelled").count
+        @total_value = outcome_rows.where.not(booking_status: "cancelled").sum(:total_amount)
         @business_date = @hotel.current_business_date || @hotel.business_date_for
         load_agencies
         load_rows
