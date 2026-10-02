@@ -96,4 +96,57 @@ RSpec.describe CorporatePortal::CreateAgentBooking, "with several lines" do
     expect(result).to be_success
     expect(result.bookings.size).to eq(2)
   end
+
+  # Not every hotel sells per person. Where a room has one price whoever is in it,
+  # a stay of lines books exactly as the single-category request always did.
+  describe "on a hotel that charges per room" do
+    let(:room_hotel) { create(:hotel, status: "live") }
+    let(:room_agent_user) { create(:user, :corporate) }
+    let(:room_agent) do
+      create(:hotel_corporate_account, hotel: room_hotel, corporate_account: room_agent_user.account,
+                                       account_type: "travel_agent", agent_booking_enabled: true)
+    end
+    let!(:deluxe) do
+      Rooms::SaveSeedRoomType.call!(hotel: room_hotel, attributes: { name: "Deluxe", room_number_mode: "custom", quantity: 3, base_price: 250.0,
+                                                                     max_adults: 3, max_children: 2, room_numbers: %w[101 102 103] })
+    end
+    let!(:suite_room) do
+      Rooms::SaveSeedRoomType.call!(hotel: room_hotel, attributes: { name: "Suite", room_number_mode: "custom", quantity: 1, base_price: 600.0,
+                                                                     max_adults: 4, max_children: 2, room_numbers: %w[201] })
+    end
+
+    def book_rooms(lines)
+      described_class.call(
+        relationship: room_agent, user: room_agent_user,
+        params: { check_in: (Date.current + 20).to_s, check_out: (Date.current + 22).to_s, lines: lines,
+                  rooms_detail: { "0" => lead("A"), "1" => lead("B"), "2" => lead("C") } }
+      )
+    end
+
+    it "charges each room its one price, whoever is in it" do
+      result = book_rooms(
+        "0" => { room_type_id: deluxe.id, adults: 1, quantity: 1 },
+        "1" => { room_type_id: deluxe.id, adults: 3, children: 1, quantity: 1 },
+        "2" => { room_type_id: suite_room.id, adults: 2, quantity: 1 }
+      )
+
+      expect(result).to be_success
+      expect(result.bookings.map { |booking| booking.total_amount.to_d }).to eq([ 500, 500, 1200 ])
+      expect(result.bookings.map(&:adults)).to eq([ 1, 3, 2 ])
+    end
+
+    it "books a party of nobody as one adult, as the single-category request always did" do
+      result = book_rooms("0" => { room_type_id: deluxe.id, adults: 0, quantity: 1 })
+
+      expect(result).to be_success
+      expect(result.bookings.first.adults).to eq(1)
+    end
+
+    it "still counts the free rooms across lines" do
+      result = book_rooms("0" => { room_type_id: suite_room.id, adults: 2, quantity: 1 }, "1" => { room_type_id: suite_room.id, adults: 2, quantity: 1 })
+
+      expect(result).not_to be_success
+      expect(result.errors.join).to include("no longer has 2 rooms")
+    end
+  end
 end
