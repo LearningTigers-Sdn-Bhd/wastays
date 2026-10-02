@@ -14,8 +14,13 @@ class HotelCorporateAccount < ApplicationRecord
   has_many :bookings, dependent: :nullify
   has_many :rate_plan_agency_rules, dependent: :destroy
   has_many :booking_quotes, dependent: :nullify
+  has_many :claim_invitations, class_name: "CorporateInvitation", dependent: :destroy
 
   ACCOUNT_TYPES = %w[company government travel_agent airline salesperson].freeze
+  # Whether an agent books at local or international rates. Not set until the
+  # hotel says: an agent with no market sees only plans open to every market.
+  MARKETS = %w[local international].freeze
+  MARKET_LABELS = { "local" => "Local", "international" => "International" }.freeze
   UNAVAILABLE_ACCOUNT_TYPES = [].freeze
 
   enum :relationship_type, { standard: "standard", direct_bill: "direct_bill" }, prefix: true, validate: true
@@ -32,6 +37,7 @@ class HotelCorporateAccount < ApplicationRecord
   # silently release inventory. See Bookings::PaymentHold.
   validates :agent_payment_hold_hours, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validates :agent_code, uniqueness: { scope: :hotel_id }, allow_nil: true
+  validates :market, inclusion: { in: MARKETS }, allow_nil: true
   validate :corporate_account_kind
 
   before_validation :generate_agent_code, on: :create
@@ -40,6 +46,18 @@ class HotelCorporateAccount < ApplicationRecord
   scope :active, -> { where(status: "active") }
   scope :suspended, -> { where(status: "suspended") }
   scope :booking_enabled, -> { where(agent_booking_enabled: true) }
+
+  before_validation { self.market = market.presence }
+
+  def market_label = MARKET_LABELS[market]
+
+  # An account nobody can sign in to: the reservation importer creates one per
+  # travel agent, with their bookings already on it. Inviting a contact to claim
+  # it is how the agent gets in. Reads `users` so a list that preloads them does
+  # not ask per row.
+  def unclaimed?
+    corporate_account.users.empty?
+  end
 
   # Travel agents settle by bank transfer only: the hotel needs the remittance
   # slip against the invoice, and card fees on agent volume are not absorbed.

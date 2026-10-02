@@ -410,4 +410,14 @@ RSpec.describe Booking, type: :model do
       expect(booking).not_to be_closed
     end
   end
+
+  describe ".search" do
+    it "finds a booking by the reference the previous system gave it" do
+      imported = create(:booking, external_reference: "RES4433-2")
+      other = create(:booking, external_reference: "RES9999")
+
+      expect(described_class.search("res4433")).to include(imported)
+      expect(described_class.search("res4433")).not_to include(other)
+    end
+  end
 end

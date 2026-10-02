@@ -12,9 +12,11 @@ module HotelPortal
     # and the agent looking at their deadline must never be given different
     # answers.
     #
-    # Returns nil unless `corporate_booked_at` is set, so corporate bookings made
-    # before attribution was recorded stay unmarked rather than claiming an
-    # author nobody wrote down.
+    # A booking made in the agent portal carries who and when. One brought in from
+    # another system (the reservation importer) has only the agency it was booked
+    # under, and is marked with that alone: no author is claimed for it. A
+    # corporate booking that is not a travel agent's, made before attribution
+    # was recorded, stays unmarked.
     module AgentAttribution
       BADGE_VARIANTS = {
         overdue: :destructive,
@@ -33,7 +35,7 @@ module HotelPortal
         {
           agency: booking.hotel_corporate_account&.corporate_account&.name,
           person: booking.corporate_booked_by&.name,
-          booked_at: booking.corporate_booked_at.in_time_zone(time_zone).strftime("%d %b %Y %H:%M"),
+          booked_at: booking.corporate_booked_at&.in_time_zone(time_zone)&.strftime("%d %b %Y %H:%M"),
           payment_state: payment.state,
           payment_label: payment.badge_label,
           payment_due_label: payment.due_at_label,
@@ -47,7 +49,10 @@ module HotelPortal
       end
 
       def agent_booking?(booking)
-        booking.hotel_corporate_account_id.present? && booking.corporate_booked_at.present?
+        account = booking.hotel_corporate_account
+        return false if account.blank?
+
+        booking.corporate_booked_at.present? || account.travel_agent?
       end
     end
   end

@@ -16,9 +16,13 @@ module Ezee
     #   blocked     -- something is missing; `errors` says what
     Entry = Struct.new(
       :row, :status, :issues, :room_type, :room, :group_key,
-      :agency_name, :existing_booking_id, keyword_init: true
+      :agency_name, :existing_booking_id, :rate_plan, keyword_init: true
     ) do
       def importable? = status == :importable
+
+      # What the booking will be created as. A file that does not say is a
+      # confirmed reservation.
+      def booking_status = row.booking_status.presence || "confirmed"
 
       # Each issue names the column it belongs to, so the preview can mark the
       # offending cell rather than print a sentence underneath the row and
@@ -64,6 +68,9 @@ module Ezee
     # Staff mark a reservation's state by editing the agency name itself. The
     # prefix is not part of the name and is never the spelling an account is
     # named after.
+    # The words that name a standard rate tier rather than an agency.
+    GENERIC_PLAN_WORDS = %w[STANDARD INTERNATIONAL MALAYSIAN PUBLISH AGENT CORPORATE OTA RATE].freeze
+
     STATUS_PREFIX = /\A\s*POSTPONED?\s*[-:\s]\s*/
 
     def self.call(...) = new(...).call
@@ -135,18 +142,24 @@ module Ezee
       end
 
       entry.agency_name = agency_name_for(row)
-      entry.group_key = group_keys[group_signature(row)]
+      # A released room is kept as cancelled history, so it is never part of a
+      # live multi-room stay.
+      entry.group_key = row.cancelled? ? nil : group_keys[group_signature(row)]
 
       if row.arrival.blank? || row.departure.blank?
         entry.fault(:arrival, "Arrival or departure date could not be read.")
       elsif row.departure <= row.arrival
         entry.fault(:departure, "Departure #{row.departure} is not after arrival #{row.arrival}.")
-      elsif row.arrival < business_date
+      elsif row.arrival < business_date && !row.cancelled?
+        # Cancelled history is kept whatever its date: the point of importing it
+        # is the guest record, and it holds no room.
         entry.status = :past
         return entry
       end
 
       resolve_inventory(row, entry)
+      resolve_rate_plan(row, entry)
+      check_boat(row, entry)
 
       entry.caution(:guest_name, "No guest name in the file. This shows the booking source instead.") if blank_name?(row)
       entry.caution(:total_amount, "No amount on this reservation.") if row.total_amount.zero?
@@ -156,11 +169,14 @@ module Ezee
     end
 
     def resolve_inventory(row, entry)
-      entry.room_type = room_types_by_name[row.room_type.to_s.upcase]
+      entry.room_type = room_types_by_name[self.class.normalize_room_type(row.room_type)]
       if entry.room_type.nil?
         entry.fault(:room_type_name, "No room category named #{row.room_type.inspect} at this property.")
         return
       end
+
+      # A cancelled booking holds no room, so it is never assigned one.
+      return if row.cancelled?
 
       entry.room = rooms_by_number[row.room_number.to_s.upcase]
       if entry.room.nil?
@@ -182,8 +198,96 @@ module Ezee
     end
 
     def room_types_by_name
-      @room_types_by_name ||= @hotel.room_types.index_by { |type| type.name.to_s.upcase }
+      @room_types_by_name ||= @hotel.room_types.index_by { |type| self.class.normalize_room_type(type.name) }
     end
+
+    # eZee's category names and the property's rarely agree on spelling:
+    # "Standard Room (Twin)" and "Deluxe Room(King)" are "Standard Twin" and
+    # "Deluxe King" here. The word "Room" and the brackets carry no meaning, so
+    # both sides are compared without them.
+    def self.normalize_room_type(name)
+      name.to_s.upcase.gsub(/\bROOM\b/, " ").tr("()", "  ").squish
+    end
+
+    # Only a layout that names its rate type per reservation is matched to a
+    # plan; the Reservation List's "Agent" or "Promo" never was. A plan is
+    # matched on its words, not their order: eZee's "Agent Rate International"
+    # is this property's "International Agent Rate". The price is the file's
+    # either way, so no match is a caution, not a failure.
+    def resolve_rate_plan(row, entry)
+      return unless row.explicit_layout? && entry.room_type && row.rate_type.present?
+
+      plans = rate_plans_for(entry.room_type)
+      by_rate_type = plans.find { |plan| plan_words(plan.name) == plan_words(row.rate_type) }
+      entry.rate_plan = priced_agency_plan(plans, entry, row) || by_rate_type
+      return if entry.rate_plan || row.source_key == "ota"
+
+      entry.caution(:rate_type, "No rate plan like #{row.rate_type.inspect} on #{entry.room_type.name}; " \
+                                "the booking uses the standard rate. The price is kept as the file states.")
+    end
+
+    # Some plans belong to one agency ("Perfect Holiday" is Perfect Vacation
+    # Sdn. Bhd.'s brand name, "Super Sightseeing" is Super Sightseeing Holidays),
+    # and the eZee "Rate Type" on those bookings just says "Agent". Naming the
+    # agency is not enough to put a booking on its plan, though: the same agency
+    # also books at other prices (Perfect Vacation's rooms run at the Perfect
+    # Holiday rate, at 1,600 a room, and at negotiated ones). So the agency's plan
+    # is used only when it quotes what the file charged.
+    def priced_agency_plan(plans, entry, row)
+      plan = agency_rate_plan(plans, entry.agency_name)
+      plan if plan && quote_for(plan, entry.room_type, row) == row.total_amount
+    end
+
+    def agency_rate_plan(plans, agency)
+      return nil if agency.blank?
+
+      agency_word = self.class.normalize_agency(agency).split.first
+      plans.find do |plan|
+        word = plan_words_in_order(plan.name).first
+        word.present? && GENERIC_PLAN_WORDS.exclude?(word) && word == agency_word
+      end
+    end
+
+    # What wastays would charge this stay on that plan, or nil when it has no
+    # price for it (a party the category does not sleep, a night with no rate).
+    def quote_for(plan, room_type, row)
+      Bookings::BuildFinancialSnapshot.new(
+        hotel: @hotel, room_type: room_type, rate_plan: plan,
+        check_in: row.arrival.in_time_zone, check_out: row.departure.in_time_zone, guest_country: nil,
+        adults: [ row.adults, 1 ].max, children: row.children, child_ages: Array.new(row.children, 8)
+      ).call.room_total
+    rescue ArgumentError
+      nil
+    end
+
+    def plan_words_in_order(name) = name.to_s.upcase.scan(/[A-Z0-9]+/)
+
+    def rate_plans_for(room_type)
+      @rate_plans ||= {}
+      @rate_plans[room_type.id] ||= room_type.rate_plans.active.to_a
+    end
+
+    def plan_words(name) = name.to_s.upcase.scan(/[A-Z0-9]+/).sort
+
+    # The boat is read from the remark. A resort-boat time the property does not
+    # run is left unset rather than failing the booking, because the remark
+    # still says it.
+    def check_boat(row, entry)
+      return unless @hotel.allow_boat_information?
+
+      { "boat_in" => row.boat_in, "boat_out" => row.boat_out }.each do |kind, transfer|
+        next if transfer.blank?
+
+        if transfer[:type] == "provided" && boat_schedule.slot_at(transfer[:time], kind).nil?
+          entry.caution(:boat, "#{kind.tr('_', '-')} #{transfer[:time]} is not in the hotel's boat timetable; " \
+                               "the transfer is left unset (the remark keeps it).")
+        elsif transfer[:type] == "charter" && transfer[:time].blank?
+          entry.caution(:boat, "#{kind.tr('_', '-')} is a charter with no time; the transfer is left unset.")
+        end
+      end
+    end
+
+    def boat_schedule = @boat_schedule ||= Boats::Schedule.new(@hotel)
 
     def rooms_by_number
       @rooms_by_number ||= @hotel.rooms.where(archived_at: nil)
@@ -195,6 +299,9 @@ module Ezee
     # numbers skip, because the missing ones were cancelled, so contiguity would
     # split stays that belong together.
     def group_signature(row)
+      # A layout that names the booking a room belongs to says so outright.
+      return [ row.group_ref.to_s.upcase, row.arrival, row.departure ] if row.group_ref.present?
+
       [ row.guest_name.to_s.upcase, row.arrival, row.departure ]
     end
 
@@ -211,6 +318,9 @@ module Ezee
     end
 
     def agency_name_for(row)
+      # The reservation CSV carries the agency in its own column; here the guest
+      # name is a person, so it is never read as one.
+      return row.agency_name.presence if row.explicit_layout?
       return nil unless AGENCY_SOURCES.include?(row.source)
       return nil if blank_name?(row)
 
@@ -228,7 +338,7 @@ module Ezee
       names.index_with { |name| existing[self.class.normalize_agency(name)] }
     end
 
-    def blank_name?(row) = row.guest_name.to_s.match?(BLANK_NAME) || row.guest_name.blank?
+    def blank_name?(row) = row.guest_name.blank? || (!row.explicit_layout? && row.guest_name.to_s.match?(BLANK_NAME))
 
     def agency_collisions(entries)
       entries.select(&:importable?)

@@ -41,6 +41,22 @@
             <td class="text-muted-foreground"><%= row.created_on_label %></td>
             <td class="text-right"><%= render "hotel_portal/corporate_accounts/invitation_actions", row: row, presenter: presenter %></td>
           </tr>
+          <%# A link made for a contact the email cannot reach. Shown once, under its own row. %>
+          <% if @revealed_link && @revealed_link[:id] == row.invitation.id %>
+            <tr data-testid="external-invitation-link-row-<%= row.id %>">
+              <td colspan="8" class="bg-muted/40">
+                <div class="flex flex-wrap items-center gap-2" data-controller="clipboard" data-clipboard-success-text-value="Copied">
+                  <code data-clipboard-target="source" class="min-w-0 flex-1 break-all rounded-md bg-card px-3 py-2 font-mono text-xs text-foreground"><%= @revealed_link[:url] %></code>
+                  <button type="button" data-clipboard-target="button" data-action="clipboard#copy"
+                          class="inline-flex items-center gap-x-1 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:border-border-interactive">
+                    <%= cached_icon "copy", class: "size-3.5", aria: { hidden: true } %> Copy
+                  </button>
+                  <span data-clipboard-target="status" class="sr-only" aria-live="polite"></span>
+                </div>
+                <p class="mt-1 text-xs text-muted-foreground">Send this to <%= row.contact_email %>. Any earlier link or email no longer works.</p>
+              </td>
+            </tr>
+          <% end %>
         <% end %>
 
         <% if presenter.pinned_rows.any? && presenter.paginated_rows.any? %>
@@ -53,13 +69,30 @@
           <tr data-testid="<%= row.dom_id %>">
             <%= render "hotel_portal/corporate_accounts/row_identity", row: row %>
             <td class="font-mono text-xs font-semibold text-foreground"><%= row.agent_code.presence || "—" %></td>
-            <td class="text-muted-foreground"><%= row.account_type_label %></td>
+            <td class="text-muted-foreground">
+              <%= row.account_type_label %>
+              <% if row.relationship.market.present? %>
+                <span class="mt-0.5 block text-xs" data-testid="agent-market"><%= row.relationship.market_label %></span>
+              <% end %>
+            </td>
             <td class="text-muted-foreground"><%= row.terms_label %></td>
             <td><%= render "hotel_portal/corporate_accounts/credit_cell",
                             exposure: row.credit_exposure, direct_bill: row.direct_bill? %></td>
             <td><%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %></td>
             <td class="text-muted-foreground"><%= row.created_on_label %></td>
             <td class="text-right">
+              <%# An account the importer created has nobody able to sign in to it. %>
+              <% if row.relationship.unclaimed? %>
+                <%= render PanelsUI::Button.new(
+                  as: :a,
+                  href: new_hotel_corporate_account_path(current_hotel, hotel_corporate_account_id: row.relationship.id, return_to: request.fullpath),
+                  variant: :secondary,
+                  size: :sm,
+                  data: { testid: "external-account-invite-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
+                  <%= cached_icon "mail", class: "size-3.5", aria: { hidden: true } %>
+                  Invite contact
+                <% end %>
+              <% end %>
               <%= render PanelsUI::Button.new(
                 as: :a,
                 href: edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath),

@@ -35,7 +35,7 @@ RSpec.describe "Admin reservation imports", type: :request do
     get new_admin_hotel_reservation_import_path(hotel)
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Reservation list export")
+    expect(response.body).to include("eZee reservation export", "Report layout")
   end
 
   it "previews the file without creating anything" do
@@ -276,5 +276,59 @@ RSpec.describe "Admin reservation imports", type: :request do
     # And it stays searchable, same as a draft.
     get admin_hotel_reservation_import_path(hotel, import, q: created_row.reservation_number)
     expect(response.body).to include(created_row.reservation_number)
+  end
+  describe "the reservation CSV" do
+    let(:csv_upload) do
+      Rack::Test::UploadedFile.new(
+        Rails.root.join("spec/fixtures/files/ezee_reservation_csv_sample.csv"), "text/csv",
+        original_filename: "sandbay_resort_export.csv"
+      )
+    end
+
+    it "is detected without the operator choosing a layout, and says how it was read" do
+      post admin_hotel_reservation_imports_path(hotel), params: { file: csv_upload }
+      follow_redirect!
+
+      expect(latest_import.source_layout).to eq("reservation_csv")
+      expect(response.body).to include("Read as", "eZee reservation CSV")
+    end
+
+    it "shows each reservation's agency in its own column, and finds a reservation by it" do
+      post admin_hotel_reservation_imports_path(hotel), params: { file: csv_upload }
+      agency = latest_import.rows.where.not(agency_name: nil).first.agency_name
+
+      get admin_hotel_reservation_import_path(hotel, latest_import, filter: "all", q: agency)
+
+      expect(response.body).to include(">Agency<", ERB::Util.html_escape(agency))
+    end
+
+    it "shows the wastays reservation number beside eZee's once a booking exists" do
+      post admin_hotel_reservation_imports_path(hotel), params: { file: csv_upload }
+      row = latest_import.rows.first
+      booking = create(:booking, hotel: hotel)
+      row.update!(booking: booking, status: "created")
+
+      get admin_hotel_reservation_import_path(hotel, latest_import, filter: "all")
+
+      expect(response.body).to include(row.reservation_number, booking.formatted_reservation_number)
+    end
+
+    it "marks released rooms as kept, so the operator can see they were not dropped" do
+      post admin_hotel_reservation_imports_path(hotel), params: { file: csv_upload, layout: "reservation_csv" }
+      follow_redirect!
+
+      expect(latest_import.rows.where(booking_status: "cancelled")).to be_present
+    end
+
+    it "refuses a CSV that is not an eZee report, saying what it expects" do
+      other = Tempfile.new([ "other", ".csv" ])
+      other.write("name,email\nA,a@example.com\n")
+      other.flush
+
+      post admin_hotel_reservation_imports_path(hotel),
+           params: { file: Rack::Test::UploadedFile.new(other.path, "text/csv", original_filename: "other.csv") }
+
+      expect(flash[:alert]).to include("not a recognised eZee report")
+    end
   end
 end

@@ -512,6 +512,7 @@ Rails.application.routes.draw do
 
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
+      post :link, on: :member
     end
     get "room_groups", to: redirect("/hotel/%{hotel_id}/settings/property/room-groups"), as: :legacy_room_groups
     get "stay-view", to: "stay_view/board#index", as: :stay_view

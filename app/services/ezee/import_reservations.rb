@@ -22,7 +22,7 @@ module Ezee
     # is the property's own booking engine despite the label, so it is direct.
     # TIKET.COM has no registry key yet and lands on the generic OTA one.
     SOURCE_KEYS = {
-      "Travel Agent" => "internal", "Corporate" => "internal",
+      "Travel Agent" => "travel_agent", "Corporate" => "internal",
       "Phone Reservation" => "phone", "Walk In" => "walk_in",
       "Over-The-Counter" => "walk_in", "Internet Reservation" => "direct",
       "OTA (KPR ONLINE)" => "direct", "AGODA" => "agoda", "TIKET.COM" => "ota"
@@ -37,7 +37,7 @@ module Ezee
     # makes every imported reservation look like the same person -- 1193
     # bookings collapsing onto one guest record. These guests are unknown and
     # unrelated, so their sentinels have to differ.
-    GUEST_PHONE_SENTINEL = "NOT CAPTURED"
+    GUEST_PHONE_SENTINEL = Guest::PHONE_NOT_CAPTURED
 
     def self.phone_sentinel_for(reference) = "#{GUEST_PHONE_SENTINEL} #{reference}"
 
@@ -84,9 +84,11 @@ module Ezee
     def report(**payload) = @progress&.call(**payload)
 
     def create_booking(row)
-      result = Bookings::CreateManualBooking.new(
-        hotel: @hotel, params: booking_params(row), user: @user
-      ).call
+      result = if row.booking_status == "cancelled"
+        CreateCancelledBooking.new(hotel: @hotel, params: booking_params(row), user: @user).call
+      else
+        Bookings::CreateManualBooking.new(hotel: @hotel, params: booking_params(row), user: @user).call
+      end
 
       unless result.success?
         mark_failed(row, Array(result.errors).to_sentence)
@@ -94,6 +96,7 @@ module Ezee
       end
 
       row.update_columns(status: "created", booking_id: result.booking.id, updated_at: Time.current)
+      assign_boat(row, result.booking)
       result.booking
     rescue StandardError => e
       Rails.logger.warn("eZee import failed for #{row.reservation_number}: #{e.message}")
@@ -111,6 +114,39 @@ module Ezee
       )
     end
 
+    # The boat is the one part of a reservation that must not fail it: the
+    # remark already carries the text. A transfer the hotel's timetable does not
+    # offer is written down on the row instead.
+    def assign_boat(row, booking)
+      params = boat_params(row)
+      return if params.empty?
+
+      Boats::AssignTimes.call(booking: booking, params: params)
+    rescue Boats::ResolveTimes::InvalidSelection => e
+      warn_row(row, "Boat transfer not set: #{e.message}")
+    end
+
+    def boat_params(row)
+      { "boat_in" => [ row.boat_in_type, row.boat_in_time ], "boat_out" => [ row.boat_out_type, row.boat_out_time ] }
+        .each_with_object({}) do |(kind, (type, time)), params|
+          next if type.blank?
+
+          if type == "provided"
+            params[:"#{kind}_time"] = time
+          else
+            params[:"#{kind}_time"] = type
+            params[:"#{kind}_custom_time"] = time
+          end
+        end
+    end
+
+    def warn_row(row, message)
+      row.update_columns(
+        issues: row.issues + [ { "field" => nil, "level" => "warning", "message" => message } ],
+        updated_at: Time.current
+      )
+    end
+
     def booking_params(row)
       {
         guest_name: guest_name_for(row),
@@ -122,7 +158,8 @@ module Ezee
         room_type_id: row.room_type_id,
         room_number: row.room&.number,
         require_room_number: false,
-        source: SOURCE_KEYS.fetch(row.source, "internal"),
+        source: row.source_key.presence || SOURCE_KEYS.fetch(row.source, "internal"),
+        rate_plan_id: row.rate_plan_id,
         external_reference: row.reservation_number,
         hotel_corporate_account_id: corporate_account_id_for(row),
         manual_rate_override: room_total_for(row),
@@ -150,7 +187,7 @@ module Ezee
       snapshot = Bookings::SolveRoomTotalForFinalAmount.new(
         hotel: @hotel,
         room_type: row.room_type,
-        rate_plan: row.room_type.standard_rate_plan,
+        rate_plan: rate_plan_for(row),
         check_in: row.arrival,
         check_out: row.departure,
         guest_country: nil,
@@ -170,13 +207,28 @@ module Ezee
       row.guest_name.presence || row.source.presence || "Unknown"
     end
 
+    # A rate plan the planner matched wins; otherwise the category's standard
+    # one, as before.
+    def rate_plan_for(row)
+      (row.rate_plan_id && row.room_type.rate_plans.active.find_by(id: row.rate_plan_id)) || row.room_type.standard_rate_plan
+    end
+
     def notes_for(row)
       [
         "Imported from eZee reservation #{row.reservation_number} by #{@user.name}.",
-        ("Booked #{row.booked_at.to_fs(:short)} by #{row.booked_by}." if row.booked_at),
+        booked_line(row),
         "Source: #{row.source}. Rate type: #{row.rate_type}.",
-        ("Paid in eZee before migration: #{'%.2f' % row.amount_paid} — not posted here." if row.amount_paid.to_d.positive?)
+        ("Paid in eZee before migration: #{'%.2f' % row.amount_paid} — not posted here." if row.amount_paid.to_d.positive?),
+        ("Unpaid hold in eZee (not yet confirmed)." if row.booking_status == "pending"),
+        row.internal_note.presence
       ].compact.join(" ")
+    end
+
+    def booked_line(row)
+      return "Booked #{row.booked_at.to_fs(:short)} by #{row.booked_by}." if row.booked_at
+      return "Entered in eZee by #{row.booked_by}." if row.booked_by.present?
+
+      nil
     end
 
     def corporate_account_id_for(row)
@@ -227,8 +279,27 @@ module Ezee
         relationship_type: "standard",
         direct_bill_enabled: false,
         credit_currency: @hotel.default_currency.presence || "MYR",
+        market: market_for(key),
         status: "active"
       )
+    end
+
+    # Local or international, read from the rate types the agency was booked on
+    # ("Agent Rate Malaysian", "Agent Rate International"). An agency booked on
+    # both, or on neither, is left for the hotel to mark.
+    def market_for(key)
+      types = rate_types_by_agency.fetch(key, [])
+      return "local" if types.any? && types.all? { |type| type.match?(/malaysian|local/i) }
+      return "international" if types.any? && types.all? { |type| type.match?(/international/i) }
+
+      nil
+    end
+
+    def rate_types_by_agency
+      @rate_types_by_agency ||= @import.rows.importable.where.not(agency_name: nil)
+                                       .pluck(:agency_name, :rate_type)
+                                       .group_by { |name, _type| ImportPlan.normalize_agency(name) }
+                                       .transform_values { |pairs| pairs.map(&:last).compact_blank.uniq }
     end
 
     def build_groups(created)

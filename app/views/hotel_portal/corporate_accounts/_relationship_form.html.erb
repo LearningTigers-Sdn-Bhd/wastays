@@ -31,6 +31,13 @@
                 selected: @relationship.account_type) %>
             <% end %>
 
+            <%= render PanelsUI::FormField.new(form: form, attribute: :market, label: "Market",
+                  hint: "Local agents are offered local rates and international agents international ones. With no market set, an agent sees only the rates open to both.") do |field| %>
+              <% field.with_select_menu(
+                [ { label: "Not set", value: "" } ] + HotelCorporateAccount::MARKETS.map { |market| { label: HotelCorporateAccount::MARKET_LABELS.fetch(market), value: market } },
+                selected: @relationship.market.to_s) %>
+            <% end %>
+
             <%= render PanelsUI::FormField.new(form: form, attribute: :contact_email, label: "Contact email") do |field| %>
               <% field.with_input(type: :email, value: @relationship.effective_contact_email, autocomplete: "email") %>
             <% end %>

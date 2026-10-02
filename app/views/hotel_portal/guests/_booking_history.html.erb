@@ -34,8 +34,19 @@
             <% table.with_body do %>
               <% bookings.each do |booking| %>
                 <% booking_presenter = Guests::BookingPresenter.new(booking) %>
-                <tr>
-                  <td class="font-medium tabular-nums"><%= booking_presenter.confirmation_token %></td>
+                <% booking_path = hotel_booking_workspace_path(current_hotel, booking, tab: "booking_details") %>
+                <%# The whole row opens the booking, the way the other record tables do.
+                    The confirmation number is also a real link so it works without a
+                    mouse, and both leave the guest record's frame for the full page. %>
+                <tr class="group cursor-pointer focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/20"
+                    data-controller="clickable-row"
+                    data-clickable-row-url-value="<%= booking_path %>"
+                    data-action="click->clickable-row#visit">
+                  <td class="font-medium tabular-nums">
+                    <%= link_to booking_presenter.confirmation_token, booking_path,
+                          class: "underline-offset-4 hover:underline focus-visible:underline",
+                          data: { turbo_frame: "_top" } %>
+                  </td>
                   <td>
                     <span class="tabular-nums"><%= booking_presenter.check_in_formatted %> – <%= booking_presenter.check_out_formatted %></span>
                     <span class="mt-0.5 block text-xs font-normal text-muted-foreground"><%= booking_presenter.nights_label %></span>

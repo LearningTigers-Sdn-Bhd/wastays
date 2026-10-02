@@ -17,6 +17,11 @@ module CorporateInvitations
         @invitation.lock!
         raise ActiveRecord::RecordInvalid, @invitation unless @invitation.pending?
 
+        if @invitation.claim?
+          result = accept_claim!
+          next
+        end
+
         user = User.find_by(email: @invitation.email)
         validate_existing_user!(user)
         user ||= create_corporate_user!
@@ -32,6 +37,7 @@ module CorporateInvitations
         relationship = @invitation.hotel.hotel_corporate_accounts.create!(
           corporate_account: user.account,
           account_type: @invitation.account_type,
+          market: @invitation.market.presence,
           relationship_type: @invitation.relationship_type,
           credit_limit: @invitation.credit_limit,
           credit_currency: @invitation.credit_currency,
@@ -60,6 +66,30 @@ module CorporateInvitations
     private
 
     class AcceptanceError < StandardError; end
+
+    # The invitation names an account that already exists. The invitee becomes its
+    # login; the account, its name, its terms and its bookings are left exactly
+    # as they are. Locked, because two people accepting at once must not both
+    # become the account's owner.
+    def accept_claim!
+      relationship = @invitation.hotel_corporate_account
+      relationship.lock!
+      account = relationship.corporate_account
+      raise AcceptanceError, "This account has already been claimed." unless relationship.unclaimed?
+      raise AcceptanceError, "This email already belongs to a user." if User.exists?(email: @invitation.email)
+
+      user = User.create!(
+        account: account,
+        role: "corporate",
+        email: @invitation.email,
+        name: @user_attributes[:name],
+        password: @user_attributes[:password],
+        password_confirmation: @user_attributes[:password_confirmation]
+      )
+      relationship.update!(contact_email: relationship.contact_email.presence || @invitation.email)
+      @invitation.update!(accepted_at: Time.current)
+      Result.new(success?: true, user: user, relationship: relationship)
+    end
 
     def validate_existing_user!(user)
       return unless user

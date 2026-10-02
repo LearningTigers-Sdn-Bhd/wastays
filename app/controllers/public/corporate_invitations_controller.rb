@@ -11,6 +11,7 @@ module Public
 
       @existing_user = User.find_by(email: @invitation.email)
       return redirect_collision if @existing_user && !@existing_user.corporate?
+      return redirect_unavailable if @invitation.claim? && @existing_user
       return redirect_existing_user_login if @existing_user && current_user != @existing_user
 
       @user = User.new(email: @invitation.email)
@@ -20,6 +21,7 @@ module Public
       return redirect_unavailable unless @invitation&.pending?
       @existing_user = User.find_by(email: @invitation.email)
       return redirect_collision if @existing_user && !@existing_user.corporate?
+      return redirect_unavailable if @invitation.claim? && @existing_user
       return redirect_existing_user_login if @existing_user&.corporate? && current_user != @existing_user
 
       result = CorporateInvitations::AcceptService.new(

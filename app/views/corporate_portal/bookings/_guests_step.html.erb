@@ -1,0 +1,145 @@
+<section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+  <h2 class="text-sm font-bold text-foreground">Guest details</h2>
+  <p class="mt-1 text-xs text-muted-foreground">
+    <%= pluralize(@cart.rooms, "room") %> · <%= @cart.currency %> <%= number_with_precision(@cart.total_amount, precision: 2, delimiter: ",") %> for the stay.
+  </p>
+
+  <%= form_with url: corporate_bookings_path, method: :post, scope: :booking,
+                class: "mt-5 space-y-5" do |form| %>
+    <%= hidden_field_tag :hotel_relationship_id, @relationship.id %>
+    <%# The stay travels with the form: every line, exactly as it was quoted. %>
+    <% @lines.each_with_index do |line, line_index| %>
+      <% line.to_param_hash.each do |key, value| %>
+        <%= hidden_field_tag "booking[lines][#{line_index}][#{key}]", value %>
+      <% end %>
+    <% end %>
+    <%= form.hidden_field :check_in, value: @check_in %>
+    <%= form.hidden_field :check_out, value: @check_out %>
+
+    <%# One block per room, and inside it one per adult sharing that
+        room. The first of each is the lead the room is held under. %>
+    <% @room_slots.each_with_index do |slot, room_index| %>
+      <fieldset class="rounded-xl border border-border p-4" data-testid="guest-room">
+        <legend class="px-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Room <%= room_index + 1 %> · <%= slot.room_type.name %> · <%= slot.rate_plan.name %>
+          · <%= pluralize(slot.line.adults, "adult") %><%= ", #{pluralize(slot.line.children, 'child')}" if slot.line.children.positive? %>
+        </legend>
+        <div class="space-y-5">
+          <% slot.line.adults.times do |guest_index| %>
+            <%# A visible break between guests, not just vertical spacing --
+                on a narrow screen four stacked fields per guest otherwise read
+                as one long list with no seam between people. %>
+            <div class="<%= "border-t border-border pt-5" unless guest_index.zero? %>">
+              <p class="mb-2.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                <%= guest_index.zero? ? "Lead guest" : "Guest #{guest_index + 1}" %>
+              </p>
+              <%# A consistent two-up grid at every width, rather than reflowing to
+                  four columns on a wider screen: on this form five different fields
+                  (name, phone, email, nationality, ID) already read as plenty. %>
+              <div class="grid grid-cols-2 gap-3" data-controller="agent-guest-identity">
+                <%= render PanelsUI::FormField.new(form:, attribute: :name,
+                      id: "room-#{room_index}-guest-#{guest_index}-name", label: "Full name",
+                      class: "col-span-2") do |field| %>
+                  <% field.with_input(
+                       name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][name]",
+                       value: nil, required: guest_index.zero?, placeholder: "Full name") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :phone,
+                      id: "room-#{room_index}-guest-#{guest_index}-phone", label: "Phone") do |field| %>
+                  <% field.with_input(
+                       type: :tel,
+                       name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][phone]",
+                       value: nil, required: guest_index.zero?) %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :email,
+                      id: "room-#{room_index}-guest-#{guest_index}-email", label: "Email") do |field| %>
+                  <% field.with_input(
+                       type: :email,
+                       name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][email]",
+                       value: nil) %>
+                <% end %>
+                <%# Nested so the native <select> gets the correctly bracketed,
+                    indexed name (booking[rooms_detail][i][guests][j][country])
+                    the way with_input's manual `name:` override gets it for a plain
+                    input -- Combobox's own progressive-enhancement layer does not
+                    forward a caller's `name:` down to it. Malaysia is preselected as
+                    the common case for a domestic-facing property; the agent
+                    overrides it rather than picking it every time. %>
+                <%= form.fields_for(:rooms_detail, index: room_index) do |room_form| %>
+                  <%= room_form.fields_for(:guests, index: guest_index) do |guest_form| %>
+                    <%= render PanelsUI::FormField.new(form: guest_form, attribute: :country,
+                          id: "room-#{room_index}-guest-#{guest_index}-country", label: "Nationality") do |field| %>
+                      <% field.with_combobox(COUNTRY_OPTIONS, selected: "Malaysia",
+                           prompt: "Select nationality", allow_empty_option: true) %>
+                    <% end %>
+                  <% end %>
+                <% end %>
+                <%# IC for a Malaysian guest, passport number for anyone else -- one
+                    free-text field rather than asking the agent to first say which
+                    kind, with its label following whichever nationality is chosen
+                    (agent-guest-identity, client-side; matches Malaysia being the
+                    default nationality below). The desk still confirms and formally
+                    records it against the guest profile at check-in; this is a
+                    reference an agent finds genuinely useful to hand the hotel ahead
+                    of arrival. %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :government_id,
+                      id: "room-#{room_index}-guest-#{guest_index}-government-id", label: "IC") do |field| %>
+                  <%# 20, not the ICAO document-number length of 9: real passport fields
+                      need headroom for the spaces, hyphens or a check digit an agent
+                      might type, which the server strips down to the real number
+                      (CorporatePortal::CreateAgentBooking#identity_attributes). A
+                      Malaysian IC's own 12-digit limit is enforced separately, live, by
+                      agent-guest-identity. %>
+                  <% field.with_input(
+                       name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][government_id]",
+                       value: nil, placeholder: "IC number", maxlength: 20) %>
+                <% end %>
+                <%# Only bites once a nationality is actually given: a non-Malaysian
+                    guest record cannot save without a date of birth (the property's
+                    own reporting requirement), and a nationality with no way to answer
+                    that would fail the booking outright rather than just skip a field. %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth,
+                      id: "room-#{room_index}-guest-#{guest_index}-dob", label: "Date of birth",
+                      class: "col-span-2") do |field| %>
+                  <% field.with_input(
+                       type: :date, max: Date.yesterday,
+                       name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][date_of_birth]",
+                       value: nil) %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </fieldset>
+    <% end %>
+
+    <% boat_schedule = Boats::Schedule.new(@relationship.hotel) %>
+    <% if boat_schedule.enabled? %>
+      <fieldset class="space-y-3">
+        <legend class="text-sm font-semibold text-foreground">Boat transfer</legend>
+        <p class="text-sm text-muted-foreground">
+          This hotel is reached by boat. Pick the guests' boats if you know them; you can add or change them later, before arrival.
+        </p>
+        <%= render "hotel_portal/bookings/boat_transfer_fields",
+              form: form, schedule: boat_schedule,
+              boat_in: params.dig(:booking, :boat_in_time), boat_out: params.dig(:booking, :boat_out_time),
+              boat_in_custom_time: params.dig(:booking, :boat_in_custom_time),
+              boat_out_custom_time: params.dig(:booking, :boat_out_custom_time) %>
+      </fieldset>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form:, attribute: :agent_reference,
+          label: "Your reference", hint: "Optional. Your own voucher or file number, shown on this booking.") do |field| %>
+      <% field.with_input(placeholder: "e.g. TRV-2026-0142", maxlength: 100, autocomplete: "off") %>
+    <% end %>
+
+    <%= render PanelsUI::FormField.new(form:, attribute: :special_requests,
+          label: "Special requests", hint: "Applied to every room in this booking.") do |field| %>
+      <% field.with_input(placeholder: "Late arrival, adjoining rooms…") %>
+    <% end %>
+
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
+      Confirm <%= pluralize(@cart.rooms, "room") %>
+    <% end %>
+  <% end %>
+</section>

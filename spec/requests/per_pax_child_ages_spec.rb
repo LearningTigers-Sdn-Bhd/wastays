@@ -14,27 +14,31 @@ RSpec.describe "Per-pax child ages across channels", frozen_time: :business_day,
   describe "travel agent portal" do
     before { sign_in_as(ta_a_user) }
 
-    it "quotes the searched child by age and carries the ages into the booking form" do
-      get new_corporate_booking_path(hotel_relationship_id: ta_a.id, check_in: check_in, check_out: check_in + 3,
-                                     adults: 2, children: 1, child_ages: [ "8" ],
-                                     room_type_id: suite.id, rate_plan_id: fb_plan.id)
+    it "quotes the child by age, and carries the ages into the booking form" do
+      get new_corporate_booking_path(hotel_relationship_id: ta_a.id, check_in: check_in, check_out: check_in + 3, step: "rooms",
+                                     stage: "rate", add_room_type_id: suite.id, add_adults: 2, add_children: 1,
+                                     add_child_ages: "8", add_quantity: 1)
 
       page = Nokogiri::HTML(response.body)
-      expect(page.at_css("[data-controller='child-ages']")["data-child-ages-ages-value"]).to eq("[8]")
-      expect(page.css("input[name='booking[child_ages][]']").map { |input| input["value"] }).to eq([ "8" ])
       # 1,674 room total before tax; SST is folded into the figure shown.
       option = CorporatePortal::AgentStaySearch.call(
         hotel: hotel, check_in: check_in, check_out: check_in + 3, adults: 2, children: 1, child_ages: [ 8 ],
         relationship: ta_a
       ).options.find { |candidate| candidate.room_type == suite && candidate.rate_plan == fb_plan }
-      expect(page.text).to include(ActiveSupport::NumberHelper.number_to_rounded(option.total_amount, precision: 2))
+      expect(page.text).to include(ActiveSupport::NumberHelper.number_to_rounded(option.total_amount, precision: 2, delimiter: ","))
+
+      get new_corporate_booking_path(hotel_relationship_id: ta_a.id, check_in: check_in, check_out: check_in + 3, step: "guests",
+                                     lines: { "0" => { room_type_id: suite.id, rate_plan_id: fb_plan.id, adults: 2, children: 1,
+                                                        child_ages: "8", quantity: 1 } })
+
+      form = Nokogiri::HTML(response.body)
+      expect(form.at_css("input[name='booking[lines][0][child_ages]']")["value"]).to eq("8")
     end
 
-    it "tells the agent which rooms are too small for the party" do
-      get new_corporate_booking_path(hotel_relationship_id: ta_a.id, check_in: check_in, check_out: check_in + 1,
-                                     adults: 2, children: 2, child_ages: %w[5 6])
+    it "tells the agent which category cannot hold the party" do
+      get new_corporate_booking_path(hotel_relationship_id: ta_a.id, check_in: check_in, check_out: check_in + 1, step: "rooms",
+                                     stage: "rate", add_room_type_id: twin.id, add_adults: 2, add_children: 2, add_child_ages: "5,6")
 
-      expect(response.body).to include("Too small for this party")
       expect(response.body).to include("Pax Deluxe Twin holds up to 2 adults and 1 child.")
     end
 

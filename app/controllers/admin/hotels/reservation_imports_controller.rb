@@ -53,7 +53,7 @@ module Admin
         import = @hotel.reservation_imports.create!(user: current_user, status: "draft")
         import.file.attach(io: file.tempfile, filename: file.original_filename)
 
-        result = Ezee::BuildImportRows.call(import: import)
+        result = Ezee::BuildImportRows.call(import: import, layout: requested_layout)
         unless result.success?
           import.destroy
           return redirect_back_with(result.error)
@@ -71,6 +71,11 @@ module Admin
       end
 
       private
+
+      # Blank means detect it. Anything else has to be a layout the importer reads.
+      def requested_layout
+        params[:layout].presence_in(Ezee::ParseFile::LABELS.keys.map(&:to_s))
+      end
 
       def set_hotel
         @hotel = Hotel.locate!(params[:hotel_id])
@@ -132,7 +137,7 @@ module Admin
         @filter = params[:filter].presence_in(%w[all attention importable created imported past]) ||
           (@q.present? ? "all" : default_filter)
         @page = [ params[:page].to_i, 1 ].max
-        scope = filtered_rows(@filter).search(@q).in_sheet_order
+        scope = filtered_rows(@filter).search(@q).in_sheet_order.includes(:booking)
         @rows = scope.limit(PER_PAGE + 1).offset((@page - 1) * PER_PAGE).to_a
         @more = @rows.size > PER_PAGE
         @rows = @rows.first(PER_PAGE)

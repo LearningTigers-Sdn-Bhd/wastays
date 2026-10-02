@@ -34,10 +34,11 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
     plan
   end
 
+  # Rates are listed once the agent has chosen a room category.
   def offered_plan_names
-    get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s,
-                                   check_out: check_out.to_s, adults: 2)
-    response.parsed_body.css("li").map(&:text).grep(/Deluxe/).map(&:squish)
+    get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s, check_out: check_out.to_s,
+                                   step: "rooms", stage: "rate", add_room_type_id: room_type.id, add_adults: 2, add_quantity: 1)
+    response.parsed_body.css("[data-testid='agent-rates'] li").map { |item| item.text.squish }
   end
 
   def book(rate_plan_id:)
@@ -49,6 +50,19 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
         rooms_detail: { "0" => { guests: { "0" => { name: "Aisha Rahman", phone: "+60123456789" } } } }
       }
     }
+  end
+
+  it "lists room categories first, and no rates until one is chosen" do
+    full_board(ta_access: "all")
+
+    get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s,
+                                   check_out: check_out.to_s, step: "rooms")
+
+    page = response.parsed_body
+    expect(page.css("[data-testid='agent-room-type']").size).to eq(1)
+    expect(page.css("[data-testid='agent-room-type']").first.text).to include("Deluxe", "free")
+    expect(page.css("[data-testid='agent-rates']")).to be_empty
+    expect(response.body).not_to include("TA Full Board")
   end
 
   it "offers only the Corporate Rate until the property opens another plan" do
@@ -79,6 +93,55 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
 
     full_board(ta_access: "only", agencies: [ relationship ]).update!(name: "TA Half Board")
     expect(offered_plan_names.join).to include("TA Half Board")
+  end
+
+  describe "local and international agents" do
+    let(:local_plan) do
+      create(:rate_plan, :custom, hotel: hotel, name: "Malaysian Agent Rate", ta_access: "all", ta_market: "local").tap do |plan|
+        create(:room_type_rate_plan, rate_plan: plan, room_type: room_type, pricing_value: 300)
+      end
+    end
+    let(:international_plan) do
+      create(:rate_plan, :custom, hotel: hotel, name: "International Agent Rate", ta_access: "all", ta_market: "international").tap do |plan|
+        create(:room_type_rate_plan, rate_plan: plan, room_type: room_type, pricing_value: 500)
+      end
+    end
+
+    before do
+      local_plan
+      international_plan
+    end
+
+    it "shows a local agent only the local rate" do
+      relationship.update!(market: "local")
+
+      names = offered_plan_names.join
+
+      expect(names).to include("Malaysian Agent Rate")
+      expect(names).not_to include("International Agent Rate")
+    end
+
+    it "shows an international agent only the international rate" do
+      relationship.update!(market: "international")
+
+      names = offered_plan_names.join
+
+      expect(names).to include("International Agent Rate")
+      expect(names).not_to include("Malaysian Agent Rate")
+    end
+
+    it "shows neither market-specific rate to an agent the hotel has not marked" do
+      names = offered_plan_names.join
+
+      expect(names).not_to include("Malaysian Agent Rate")
+      expect(names).not_to include("International Agent Rate")
+    end
+
+    it "refuses to book a rate from the other market, even by posting its id" do
+      relationship.update!(market: "local")
+
+      expect { book(rate_plan_id: international_plan.id) }.not_to change(Booking, :count)
+    end
   end
 
   it "books the plan the agent chose" do

@@ -108,6 +108,45 @@ RSpec.describe CorporatePortal::CancelAgentBooking do
       expect(first.reload.status).to eq("confirmed")
     end
 
+    # An agent's block can be separate parties, each room with its own guests.
+    describe "cancelling just one room" do
+      let(:group) { create(:group_booking, hotel: hotel) }
+      let!(:first) { agent_booking(group_booking: group, group_position: 1) }
+      let!(:second) { agent_booking(group_booking: group, group_position: 2) }
+
+      it "cancels only that room and leaves the rest of the stay standing" do
+        result = described_class.call(booking: second, user: corporate_user, whole_stay: false)
+
+        expect(result).to be_success
+        expect(result.bookings.map(&:id)).to eq([ second.id ])
+        expect(second.reload.status).to eq("cancelled")
+        expect(first.reload.status).to eq("confirmed")
+      end
+
+      it "leaves the group open while any room is still held, and closes it with the last" do
+        described_class.call(booking: second, user: corporate_user, whole_stay: false)
+        expect(group.reload.projected_status).to eq("active")
+
+        described_class.call(booking: first, user: corporate_user, whole_stay: false)
+        expect(group.reload.projected_status).to eq("cancelled")
+      end
+
+      it "is not blocked by another room having been paid for, because that room is not touched" do
+        first.update!(payment_status: "captured")
+
+        expect(described_class.new(booking: second, user: corporate_user, whole_stay: false)).to be_cancellable
+        expect(described_class.new(booking: second, user: corporate_user)).not_to be_cancellable
+      end
+
+      it "still refuses a room that has itself been paid for" do
+        second.update!(payment_status: "captured")
+
+        result = described_class.call(booking: second, user: corporate_user, whole_stay: false)
+
+        expect(result.error).to include("has been paid")
+      end
+    end
+
     it "does not reach another agency's booking that happens to share a group id" do
       group = create(:group_booking, hotel: hotel)
       mine = agent_booking(group_booking: group, group_position: 1)

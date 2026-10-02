@@ -1,6 +1,5 @@
-<%# An agency booking. `source` is "internal" for these, the same as a booking
-    keyed at the desk, so the badge is the only thing on screen that says the
-    room was sold by an agent -- and the popover says by whom, and when. %>
+<%# An agency booking, named by its agency. Hovering says who there booked it and
+    when, where that was recorded, and whether it has been paid for. %>
 <% attribution = presenter.agent_attribution %>
 <% if attribution.present? %>
   <%= render PanelsUI::Popover.new(
@@ -18,7 +17,7 @@
           risk of being released should not look like one that is paid for. %>
       <%= render PanelsUI::Badge.new(variant: attribution[:badge_variant] || :accent, size: :sm, class: "gap-1.5") do %>
         <%= cached_icon "briefcase", class: "size-3 shrink-0", aria: { hidden: true } %>
-        <span>Agent</span>
+        <span class="max-w-[10rem] truncate"><%= attribution[:agency].presence || "Agent" %></span>
       <% end %>
     <% end %>
     <div class="w-72 text-left font-normal">

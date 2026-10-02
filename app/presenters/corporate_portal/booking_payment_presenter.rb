@@ -19,6 +19,7 @@ module CorporatePortal
       under_review: :info,
       overdue: :destructive,
       in_house: :warning,
+      unsettled: :warning,
       due: :warning,
       cancelled: :neutral
     }.freeze
@@ -73,6 +74,13 @@ module CorporatePortal
 
     def closed? = booking.closed?
 
+    # Unpaid, and with no deadline to pay by: a booking the hotel took in without
+    # putting the agent on the clock (one brought in from another system, say).
+    # Nobody has been paid, so it is not "Paid" -- it is simply not settled yet.
+    def unsettled?
+      !awaiting_payment? && !closed? && unpaid? && !under_review?
+    end
+
     # The one word for this booking's money, used by both portals' badges.
     #
     # A closed booking is checked for a pending submission before it is
@@ -84,6 +92,7 @@ module CorporatePortal
     def state
       return :under_review if closed? && under_review?
       return :cancelled if closed?
+      return :unsettled if unsettled?
       return :paid unless awaiting_payment?
       return :under_review if under_review?
       return :in_house if in_house?
@@ -108,6 +117,7 @@ module CorporatePortal
       case state
       when :cancelled then booking.status == "voided" ? "Voided" : "Cancelled"
       when :paid then "Paid"
+      when :unsettled then "Payment pending"
       when :under_review then "Slip under review"
       when :in_house then "Unpaid · guest in house"
       when :overdue then "Payment past due"

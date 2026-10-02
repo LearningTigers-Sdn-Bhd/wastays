@@ -1207,7 +1207,50 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.parsed_body.text).not_to include("Booked by an agency")
     end
 
-    it "leaves a corporate booking that predates attribution unmarked" do
+    # The cards carry only an icon for the source, which says "an agent" and not
+    # which one. Every card now names the agency under the confirmation code.
+    %w[cards list].each do |view|
+      it "names the travel agent on each booking in the #{view} view" do
+        booking(hotel_corporate_account: relationship)
+
+        get hotel_front_desk_path(hotel), params: { tab: "bookings", view: view }
+
+        page = Capybara.string(response.body)
+        if view == "cards"
+          expect(page.find("[data-testid='card-agency']")).to have_text(relationship.corporate_account.name)
+        else
+          expect(response.body).to include(ERB::Util.html_escape(relationship.corporate_account.name))
+        end
+      end
+    end
+
+    it "names the travel agent on an arrival's card" do
+      booking(hotel_corporate_account: relationship, check_in: Time.current.beginning_of_day + 14.hours, check_out: Time.current + 2.days)
+
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "cards" }
+
+      expect(response.body).to include("card-agency", ERB::Util.html_escape(relationship.corporate_account.name))
+    end
+
+    it "shows no agency line on a booking made at the desk" do
+      booking
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "cards" }
+
+      expect(response.body).not_to include("card-agency")
+    end
+
+    it "marks a travel agent's unattributed booking with its agency's name" do
+      booking(hotel_corporate_account: relationship)
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response.body).to include(ERB::Util.html_escape(relationship.corporate_account.name))
+      expect(response.body).to include("Booked by an agency")
+    end
+
+    it "leaves a company's booking that predates attribution unmarked" do
+      relationship.update!(account_type: "company")
       booking(hotel_corporate_account: relationship)
 
       get hotel_front_desk_path(hotel, tab: "bookings", view: "list")

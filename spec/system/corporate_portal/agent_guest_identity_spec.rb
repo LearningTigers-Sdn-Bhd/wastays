@@ -30,7 +30,8 @@ RSpec.describe "Agent guest identity fields", type: :system, js: true do
     sign_in_as_system(user)
     visit_when_loaded new_corporate_booking_path(
       hotel_relationship_id: relationship.id, check_in: (Date.current + 14).to_s,
-      check_out: (Date.current + 16).to_s, adults: 1, rooms: 1, room_type_id: room_type.id
+      check_out: (Date.current + 16).to_s, step: "guests",
+      lines: { "0" => { room_type_id: room_type.id, adults: 1, quantity: 1 } }
     )
   end
 

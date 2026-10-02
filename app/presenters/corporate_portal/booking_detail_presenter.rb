@@ -44,7 +44,7 @@ module CorporatePortal
           name: guest.name_snapshot.presence || guest.guest&.name,
           lead: guest.primary?,
           nationality: guest.country_snapshot,
-          phone: guest.phone_snapshot,
+          phone: ::Guest.displayable_phone(guest.phone_snapshot),
           email: guest.email_snapshot,
           masked_id: mask(guest.passport_number_snapshot.presence || guest.government_id_snapshot)
         )

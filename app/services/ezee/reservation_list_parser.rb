@@ -14,19 +14,8 @@ module Ezee
   # blank row" returns one row out of 1193 on the client's real file, without
   # raising.
   class ReservationListParser
-    Result = Struct.new(:rows, :declared_total, :warnings, :error, keyword_init: true) do
-      def success? = error.blank?
-    end
-
-    # One reservation. `remark` is the free-text line eZee prints underneath,
-    # which staff use as a scratchpad -- it may say "cancel" on a row sitting
-    # under the Active Reservation heading, so it is never read as a status.
-    Row = Struct.new(
-      :sheet_row, :reservation_number, :booked_at, :source, :guest_name,
-      :arrival, :departure, :adults, :children, :nights, :room_number,
-      :room_type, :rate_type, :total_amount, :amount_paid, :user, :remark,
-      keyword_init: true
-    )
+    Result = ParseResult
+    Row = ReservationRow
 
     # Roo is 1-indexed; these are the merged-cell offsets the report writes to.
     COLUMNS = {
@@ -88,7 +77,7 @@ module Ezee
 
       return failure("No reservations found. Is this an eZee reservation list?") if rows.empty?
 
-      Result.new(rows: rows, declared_total: declared, warnings: warnings)
+      Result.new(rows: rows, declared_total: declared, warnings: warnings, layout: :reservation_list)
     end
 
     # A data row is a reservation number plus an arrival. Group headings, remark
@@ -191,6 +180,6 @@ module Ezee
       BigDecimal(0)
     end
 
-    def failure(message) = Result.new(rows: [], warnings: [], error: message)
+    def failure(message) = Result.new(rows: [], warnings: [], error: message, layout: :reservation_list)
   end
 end

@@ -16,9 +16,11 @@ module CorporatePortal
   # at check-in. They are optional: an agent often holds rooms before knowing
   # who is travelling with whom.
   #
-  # Rooms share one occupancy, which is what keeps per-pax pricing honest: a
-  # room's price follows who is in that room, so a party split unevenly is
-  # booked as separate searches rather than averaged.
+  # A stay is a list of lines (CorporatePortal::StayLine): rooms of one category
+  # on one rate for one occupancy. Different categories, rates and parties are
+  # different lines of the same stay, all on the same dates, so a room's price
+  # still follows exactly who is in that room. A request that names one category
+  # at the top level (the older shape) is read as a single line.
   #
   # The bookings are attributed to the agent three ways: the agency through
   # hotel_corporate_account_id, the person who made it through
@@ -47,27 +49,44 @@ module CorporatePortal
     end
 
     def call
-      room_type = @hotel.room_types.find_by(id: @params[:room_type_id])
-      return failure("Choose a room category.") if room_type.blank?
-      return failure(room_type.occupancy_limit_message) unless room_type.fits?(adults: @params[:adults], children: @params[:children])
+      return failure("Choose a room category.") if lines.empty?
 
-      @rate_plan = resolve_rate_plan(room_type)
-      return failure("Choose a rate plan.") if @rate_plan.blank?
+      cart = stay_cart
+      early = cart.quotes.filter_map(&:error).reject { |message| message.include?("no longer has") }
+      return failure(early) if early.any?
       return failure("Name the lead guest for each room.") if rooms.empty?
       return failure(unnamed_rooms_message) if unnamed_rooms.any?
       return failure(*@boat_times.errors) if @boat_times.errors.any?
+      return failure(cart.errors) unless cart.success?
 
-      availability = check_availability(room_type)
-      return failure(availability) if availability.is_a?(String)
-
-      create_all(room_type)
+      create_all(cart)
     rescue Failed, Boats::ResolveTimes::InvalidSelection, ActiveRecord::RecordInvalid => e
       failure(e.message)
     end
 
     private
 
-    def rooms_requested = [ @params[:rooms].to_i, room_blocks.size, 1 ].max
+    # The stay's lines. A request with none, but a category at the top level, is
+    # one line of that category: `rooms` rooms for the one occupancy.
+    def lines
+      @lines ||= begin
+        listed = StayLine.parse(@params[:lines])
+        listed.presence || StayLine.parse([ @params.slice(:room_type_id, :rate_plan_id, :adults, :children, :child_ages)
+                                             .merge(quantity: [ @params[:rooms].to_i, room_blocks.size, 1 ].max) ])
+      end
+    end
+
+    def stay_cart
+      @stay_cart ||= AgentStayCart.call(
+        hotel: @hotel, relationship: @relationship, check_in: @params[:check_in], check_out: @params[:check_out], lines: lines
+      )
+    end
+
+    def rooms_requested = [ lines.sum(&:quantity), 1 ].max
+
+    # The line each room belongs to, in order: every room of the first line, then
+    # the second's, and so on. Guest blocks arrive in the same order.
+    def room_quotes = @room_quotes ||= stay_cart.quotes.flat_map { |quote| Array.new(quote.rooms, quote) }
 
     # Positions (1-based) of rooms asked for but left without a lead guest.
     # Booking the named ones alone would hand the agent fewer rooms than they
@@ -80,57 +99,23 @@ module CorporatePortal
       "Name the lead guest for #{unnamed_rooms.one? ? 'room' : 'rooms'} #{unnamed_rooms.to_sentence}."
     end
 
-    # The plan comes from the form, so it is re-checked against what this agency
-    # may book -- a hidden plan's id typed into the request is refused like any
-    # other. A form that names no plan (a page rendered before plans were
-    # selectable) still books when the category offers exactly one.
-    def resolve_rate_plan(room_type)
-      offered = @hotel.rate_plans.offered_to_agency(@relationship)
-        .joins(:room_type_rate_plans).where(room_type_rate_plans: { room_type_id: room_type.id })
-      return offered.find_by(id: @params[:rate_plan_id]) if @params[:rate_plan_id].present?
-
-      offered.one? ? offered.first : nil
-    end
-
-    # CreateManualBooking only checks availability when a room number is given,
-    # and an agent sells a category -- so without this the confirm step would
-    # accept anything the search had already refused, including a stale page or
-    # a second agent taking the last room at the same moment.
-    def check_availability(room_type)
-      result = AgentStaySearch.call(
-        hotel: @hotel, check_in: @params[:check_in], check_out: @params[:check_out],
-        adults: @params[:adults], children: @params[:children], child_ages: @params[:child_ages], rooms: rooms_requested,
-        relationship: @relationship
-      )
-      return result.error unless result.success?
-
-      option = result.options.find do |candidate|
-        candidate.room_type.id == room_type.id && candidate.rate_plan.id == @rate_plan.id
-      end
-      return nil if option&.available?
-      return "#{@rate_plan.name} can't be booked for these dates: #{option.restriction}." if option&.restricted?
-
-      "#{room_type.name} no longer has #{ActionController::Base.helpers.pluralize(rooms_requested, 'room')} " \
-        "free for these dates."
-    end
-
     # All or nothing. Half a party with rooms and half without is worse than a
     # refusal the agent can act on.
-    def create_all(room_type)
+    def create_all(cart)
       bookings = []
 
       ActiveRecord::Base.transaction do
         rooms.each_with_index do |guests, index|
-          bookings << create_booking(room_type, guests, index)
+          bookings << create_booking(room_quotes.fetch(index), guests, index)
         end
       end
 
       Result.new(bookings: bookings, group_booking: group_for(bookings), errors: [])
     end
 
-    def create_booking(room_type, guests, index)
+    def create_booking(quote, guests, index)
       result = Bookings::CreateManualBooking.new(
-        hotel: @hotel, params: booking_params(room_type, guests, index), user: @user
+        hotel: @hotel, params: booking_params(quote, guests, index), user: @user
       ).call
       raise Failed, Array(result.errors).to_sentence unless result.success?
 
@@ -151,8 +136,9 @@ module CorporatePortal
       ::Bookings::CreatePaymentSchedule.call(booking: booking)
     end
 
-    def booking_params(room_type, guests, index)
+    def booking_params(quote, guests, index)
       lead = guests.first || {}
+      line = quote.line
       identity = identity_attributes(country: lead[:country], id_number: lead[:government_id])
       {
         guest_name: lead[:name],
@@ -173,13 +159,13 @@ module CorporatePortal
         guest_date_of_birth: lead[:date_of_birth].presence,
         check_in: @params[:check_in],
         check_out: @params[:check_out],
-        adults: [ @params[:adults].to_i, 1 ].max,
-        children: @params[:children].to_i,
-        # Every room shares one occupancy, ages included, so each is priced
-        # exactly as the search quoted it.
-        child_ages: @params[:child_ages],
-        room_type_id: room_type.id,
-        rate_plan_id: @rate_plan.id,
+        # The line's own occupancy, ages included, so each room is priced exactly
+        # as the search quoted it.
+        adults: line.adults,
+        children: line.children,
+        child_ages: line.child_ages,
+        room_type_id: quote.room_type.id,
+        rate_plan_id: quote.rate_plan.id,
         # The agent sells the category, not a numbered room. The desk assigns one
         # at arrival, as it does for any unassigned reservation.
         require_room_number: false,
