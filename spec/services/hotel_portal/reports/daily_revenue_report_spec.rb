@@ -92,6 +92,28 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     end
   end
 
+  describe "enabled tax columns" do
+    let(:report) { described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call }
+
+    before do
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+    end
+
+    it "keeps a column for each enabled tax when the period has no charge" do
+      expect(report.tax_names).to eq([ "SST", "Tourism Tax" ])
+      expect(report.totals[:taxes]).to eq("SST" => 0.to_d, "Tourism Tax" => 0.to_d)
+    end
+
+    it "drops the column of a tax that is turned off" do
+      hotel.update!(tourism_tax_enabled: false)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+
+      expect(report.tax_names).to eq([ "SST" ])
+    end
+  end
+
   it "includes adjustments/reversals in the totals" do
     booking = create(:booking, hotel: hotel, source: "walk_in")
     folio = create(:booking_folio, booking: booking, hotel: hotel)
