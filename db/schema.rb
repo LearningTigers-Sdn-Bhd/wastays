@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_050000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -614,7 +614,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_050000) do
     t.string "guest_gender"
     t.string "guest_home_address"
     t.string "guest_name", null: false
-    t.string "guest_phone", null: false
+    t.string "guest_phone"
     t.string "guest_postal_code"
     t.integer "guest_registration_number"
     t.string "guest_registration_reference"

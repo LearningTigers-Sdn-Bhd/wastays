@@ -32,6 +32,11 @@ module HotelPortal
       booking_guest_form = booking_guest.dup
       booking_guest_form.assign_attributes(booking_guest_bibo_params)
       booking_guest_form.valid?
+      # The copy is a new record, so it clashes with the original on the
+      # uniqueness rules. Keep only the boat errors it is here to show.
+      (booking_guest_form.errors.attribute_names - BookingGuests::UpdateSnapshot::BIBO_ATTRIBUTES).each do |attribute|
+        booking_guest_form.errors.delete(attribute)
+      end
 
       result = BookingGuests::UpdateSnapshot.call(
         booking_guest: booking_guest,

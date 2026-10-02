@@ -57,8 +57,8 @@ RSpec.describe "CorporatePortal::BookingCancellations", type: :request do
       get new_corporate_booking_cancellation_path(second, scope: "room")
 
       expect(response.body).to include("Cancel this room?")
-      expect(response.body).to include(second.guest_name)
-      expect(response.body).not_to include(first.guest_name)
+      expect(response.body).to include(ERB::Util.html_escape(second.guest_name))
+      expect(response.body).not_to include(ERB::Util.html_escape(first.guest_name))
     end
 
     it "cancels only that room, and says one room was cancelled" do
@@ -134,7 +134,7 @@ RSpec.describe "CorporatePortal::BookingCancellations", type: :request do
 
       get corporate_bookings_path
 
-      expect(response.body).to include(booking.guest_name)
+      expect(response.body).to include(ERB::Util.html_escape(booking.guest_name))
       expect(response.body).to include("Cancelled")
     end
 

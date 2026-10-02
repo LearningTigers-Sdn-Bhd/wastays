@@ -101,7 +101,20 @@ RSpec.describe FinancialControls::PostingGuard do
   it "blocks force-closed dates without override" do
     create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "force_closed")
 
-    expect { guard_call }.to raise_error(described_class::PostingBlocked, /force-closed/)
+    expect { guard_call }.to raise_error(described_class::PostingBlocked, /Night audit has already closed that day/)
+  end
+
+  it "tells a user with the override permission to turn on the override" do
+    create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "force_closed")
+
+    expect { guard_call }.to raise_error(described_class::PostingBlocked, /turn on "Post to a closed business date"/)
+  end
+
+  it "tells a user without the override permission to ask their manager" do
+    create(:hotel_business_date, hotel: hotel, business_date: business_date, status: "force_closed")
+    staff = create(:user, role: "hotel_staff")
+
+    expect { guard_call(actor: staff) }.to raise_error(described_class::PostingBlocked, /ask your manager to record it/)
   end
 
   it "allows force-closed date override with permission and reason" do

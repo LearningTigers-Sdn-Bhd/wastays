@@ -137,7 +137,6 @@ end %>
                         <% field.with_autocomplete(
                              endpoint: search_hotel_guests_path(current_hotel),
                              type: :tel,
-                             required: true,
                              placeholder: "+60 12-345 6789",
                              data: { booking_guest_autofill_target: "phoneField" }) %>
                       <% end %>

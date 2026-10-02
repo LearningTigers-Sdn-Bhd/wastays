@@ -20,6 +20,25 @@ RSpec.describe Booking, type: :model do
     end
   end
 
+  describe "guest phone" do
+    it "is required when a public booking is created" do
+      booking = build(:booking, guest_phone: nil, created_by_staff: false)
+
+      expect(booking).not_to be_valid
+      expect(booking.errors[:guest_phone]).to include("can't be blank")
+    end
+
+    it "is optional when staff create the booking" do
+      expect(build(:booking, guest_phone: nil, created_by_staff: true)).to be_valid
+    end
+
+    it "may be cleared later, because the guest fills it in at check-in" do
+      booking = create(:booking, created_by_staff: false)
+
+      expect(booking.update(guest_phone: nil)).to be(true)
+    end
+  end
+
   describe "scopes" do
     let(:hotel) { create(:hotel) }
     let!(:confirmed_booking) { create(:booking, hotel: hotel, status: 'confirmed') }

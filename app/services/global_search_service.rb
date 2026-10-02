@@ -71,7 +71,7 @@ class GlobalSearchService
 
       {
         title: "#{booking.confirmation_token} · #{booking.guest_name}",
-        subtitle: "#{booking.guest_email} · #{booking.guest_phone}",
+        subtitle: [ booking.guest_email, booking.guest_phone ].compact_blank.join(" · "),
         group: "Bookings",
         url: hotel_booking_workspace_path(@hotel, booking, tab: "booking_details"),
         score: search_score(haystack, @query) + 6
