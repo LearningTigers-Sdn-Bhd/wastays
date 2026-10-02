@@ -73,7 +73,7 @@ module CorporatePortal
         Booking.where(
           hotel_corporate_account_id: @booking.hotel_corporate_account_id,
           group_booking_id: @booking.group_booking_id
-        ).order(:group_position, :id).to_a
+        ).includes(:hotel).order(:group_position, :id).to_a
       else
         [ @booking ]
       end

@@ -639,7 +639,7 @@ module HotelPortal
           bookings
             .where(hotel_id: hotel.id)
             .includes(
-              :hotel, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
+              :hotel, { hotel_corporate_account: :corporate_account }, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
               { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } },
               booking_folios: [ :folio_transactions, :folio_forecasted_charges, { booking_billing_party: :booking_guest, hotel_corporate_account: :corporate_account } ],
               booking_rooms: [ :room_type, :rate_plan ],

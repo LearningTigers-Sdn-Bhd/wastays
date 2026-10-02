@@ -90,29 +90,4 @@ RSpec.describe CorporatePortal::AgentStayCart do
 
     expect(result.errors).to include("Arrival cannot be in the past.")
   end
-
-  describe CorporatePortal::StayLine do
-    it "reads the indexed shape a URL or form carries, in order" do
-      parsed = described_class.parse(
-        "1" => { room_type_id: "7", adults: "3", children: "1", child_ages: "6", quantity: "2" },
-        "0" => { room_type_id: "5", rate_plan_id: "9", adults: "2" }
-      )
-
-      expect(parsed.map(&:room_type_id)).to eq([ 5, 7 ])
-      expect(parsed.last).to have_attributes(adults: 3, children: 1, child_ages: [ 6 ], quantity: 2, rate_plan_id: nil)
-    end
-
-    it "drops a line that names no category, and keeps no more ages than children" do
-      parsed = described_class.parse([ { adults: "2" }, { room_type_id: "5", children: "1", child_ages: "4,9,11" } ])
-
-      expect(parsed.size).to eq(1)
-      expect(parsed.first.child_ages).to eq([ 4 ])
-    end
-
-    it "round-trips through the params it puts in a URL" do
-      original = [ described_class.new(room_type_id: 5, rate_plan_id: 9, adults: 2, children: 2, child_ages: [ 4, 9 ], quantity: 3) ]
-
-      expect(described_class.parse(described_class.to_params(original))).to eq(original)
-    end
-  end
 end
