@@ -25,12 +25,17 @@ module HotelPortal
     # dropped it from the month's own total the moment they left.
     # .revenue_generating is the scope built for exactly this -- everything
     # that produced revenue, cancelled and voided excepted.
+    #
+    # "This month" is the month the stay starts, not the month the row was
+    # created. created_at is when the booking was entered, which for a migrated
+    # property (an eZee import) is the day of the import: every reservation then
+    # counted as this month's, whenever the guest actually arrives.
     def bookings_this_month_count
-      @hotel.bookings.revenue_generating.where(created_at: Time.current.all_month).count
+      stays_starting_this_month.count
     end
 
     def revenue_this_month
-      @hotel.bookings.revenue_generating.where(created_at: Time.current.all_month).sum(:total_amount)
+      stays_starting_this_month.sum(:total_amount)
     end
 
     def pending_actions_count
@@ -95,6 +100,12 @@ module HotelPortal
           percent: total_inventory > 0 ? (rooms_sold.to_f / total_inventory * 100).round : 0
         }
       end
+    end
+
+    private
+
+    def stays_starting_this_month
+      @hotel.bookings.revenue_generating.where(check_in: @hotel.hotel_time_zone.now.all_month)
     end
   end
 end
