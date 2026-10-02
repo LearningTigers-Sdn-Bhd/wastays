@@ -39,6 +39,11 @@ module CorporatePortal
       @stay_sizes = stay_sizes_for(@bookings)
     end
 
+    # The booking wizard: stay, room category, rate, guests. Each step is a page of
+    # its own, and where the agent has got to is carried in the URL, so Back and
+    # reload behave and any step can be returned to.
+    WIZARD_STEPS = %i[stay room rate guests].freeze
+
     # The search form, and its results once dates are given.
     def new
       @relationship = relationship_for_request
@@ -51,6 +56,7 @@ module CorporatePortal
       @room_type_id = params[:room_type_id]
       @rate_plan_id = params[:rate_plan_id]
 
+      @step = :stay
       return if @relationship.blank? || @check_in.blank? || @check_out.blank?
 
       @search = AgentStaySearch.call(
@@ -58,6 +64,7 @@ module CorporatePortal
         adults: @adults, children: @children, child_ages: @child_ages, rooms: @rooms, relationship: @relationship
       )
       @selected = selected_option
+      @step = wizard_step
     end
 
     def create
@@ -94,6 +101,20 @@ module CorporatePortal
     end
 
     private
+
+    # The furthest step the choices so far allow, or an earlier one the agent
+    # asked to go back to. A step is never shown ahead of what it needs.
+    def wizard_step
+      furthest = if @search.error.present? then :stay
+      elsif @selected.present? then :guests
+      elsif @room_type_id.present? && @search.available.any? { |option| option.room_type.id.to_s == @room_type_id.to_s } then :rate
+      else :room
+      end
+      requested = params[:step].to_s.to_sym
+      return furthest unless WIZARD_STEPS.include?(requested)
+
+      WIZARD_STEPS.index(requested) <= WIZARD_STEPS.index(furthest) ? requested : furthest
+    end
 
     # A link that names no plan (bookmarked before plans were selectable)
     # still selects the category when it offers exactly one. A plan closed for

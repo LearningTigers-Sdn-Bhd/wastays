@@ -21,6 +21,9 @@
       <% end %>
     <% end %>
 
+    <%= render "corporate_portal/bookings/wizard_progress", step: @step %>
+
+    <% if @step == :stay %>
     <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <%= form_with url: new_corporate_booking_path, method: :get, class: "space-y-4" do |form| %>
         <div class="grid gap-4 lg:grid-cols-2">
@@ -91,10 +94,11 @@
         </div>
 
         <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
-          Search availability
+          See available rooms
         <% end %>
       <% end %>
     </section>
+    <% end %>
 
     <% if @search.present? %>
       <% if @search.error.present? %>
@@ -102,11 +106,11 @@
           <% alert.with_description do %><%= @search.error %><% end %>
         <% end %>
       <% else %>
+        <% unless @step == :guests %>
         <section class="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div class="border-b border-border px-6 py-4">
-            <h2 class="text-sm font-bold text-foreground">
-              <%= pluralize(@rooms, "room") %> · <%= pluralize(@search.nights, "night") %> ·
-              <%= @check_in.strftime("%d %b") %> – <%= @check_out.strftime("%d %b %Y") %>
+            <h2 class="text-sm font-bold text-foreground" data-testid="wizard-step-title">
+              <%= @step == :room ? "Choose a room category" : "Choose a rate" %>
             </h2>
           </div>
 
@@ -121,7 +125,8 @@
             <% opened_type_id = @room_type_id.to_s %>
             <ul class="divide-y divide-border" data-testid="agent-room-types">
               <% @search.available.group_by(&:room_type).each do |room_type, options| %>
-                <% open = opened_type_id == room_type.id.to_s %>
+                <% open = @step == :rate && opened_type_id == room_type.id.to_s %>
+                <% next if @step == :rate && !open %>
                 <% cheapest = options.min_by(&:total_amount) %>
                 <li data-testid="agent-room-type" data-open="<%= open %>">
                   <div class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 <%= "bg-muted/30" if open %>">
@@ -140,13 +145,15 @@
                         <span class="block text-xs font-normal text-muted-foreground"><%= options.one? ? "Rate" : "From" %></span>
                         <%= cheapest.currency %> <%= number_with_precision(cheapest.total_amount, precision: 2) %>
                       </p>
-                      <%= render PanelsUI::Button.new(
-                            as: :a, variant: open ? :secondary : :primary, size: :sm, class: "shrink-0",
-                            href: new_corporate_booking_path(
-                              hotel_relationship_id: @relationship.id, check_in: @check_in,
-                              check_out: @check_out, adults: @adults, children: @children, child_ages: @child_ages,
-                              rooms: @rooms, room_type_id: room_type.id)) do %>
-                        <%= open ? "Chosen" : "Choose" %>
+                      <% unless open %>
+                        <%= render PanelsUI::Button.new(
+                              as: :a, variant: :primary, size: :sm, class: "shrink-0",
+                              href: new_corporate_booking_path(
+                                hotel_relationship_id: @relationship.id, check_in: @check_in,
+                                check_out: @check_out, adults: @adults, children: @children, child_ages: @child_ages,
+                                rooms: @rooms, room_type_id: room_type.id, step: "rate")) do %>
+                          Choose
+                        <% end %>
                       <% end %>
                     </div>
                   </div>
@@ -154,7 +161,9 @@
                   <% if open %>
                     <ul class="divide-y divide-border border-t border-border bg-muted/30" data-testid="agent-rates">
                       <% options.each do |option| %>
-                        <% chosen = @selected&.room_type&.id == option.room_type.id && @selected&.rate_plan&.id == option.rate_plan.id %>
+                        <%# Chosen only when the agent named the rate; a category with one rate is
+                            selected for them by the controller, which is not the same as a choice. %>
+                        <% chosen = params[:rate_plan_id].present? && @selected&.room_type&.id == option.room_type.id && @selected&.rate_plan&.id == option.rate_plan.id %>
                         <li class="flex flex-col gap-3 py-3 pl-8 pr-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:pl-10 sm:pr-6">
                           <div class="min-w-0">
                             <p class="text-sm font-semibold text-foreground"><%= option.rate_plan.name %></p>
@@ -201,7 +210,7 @@
               <% end %>
             </ul>
           <% end %>
-          <% if @search.too_small.any? %>
+          <% if @step == :room && @search.too_small.any? %>
             <div class="border-t border-border px-4 py-4 sm:px-6">
               <h3 class="text-xs font-bold text-muted-foreground">Too small for this party</h3>
               <ul class="mt-2 space-y-2">
@@ -215,7 +224,7 @@
               any closed ones under its own rates instead. %>
           <% bookable_ids = @search.available.map { |option| option.room_type.id }.uniq %>
           <% closed = @search.restricted.reject { |option| bookable_ids.include?(option.room_type.id) }.group_by(&:room_type) %>
-          <% if closed.any? %>
+          <% if @step == :room && closed.any? %>
             <div class="border-t border-border px-4 py-4 sm:px-6">
               <h3 class="text-xs font-bold text-muted-foreground">Not bookable for these dates</h3>
               <ul class="mt-2 space-y-2">
@@ -227,14 +236,15 @@
               </ul>
             </div>
           <% end %>
-          <% if (note = @search.available.first&.tourism_tax_note).present? %>
+          <% if @step == :rate && (note = @search.available.first&.tourism_tax_note).present? %>
             <p class="border-t border-border px-6 py-3 text-xs text-muted-foreground">
               <%= note %>
             </p>
           <% end %>
         </section>
+        <% end %>
 
-        <% if @selected.present? %>
+        <% if @step == :guests %>
           <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <h2 class="text-sm font-bold text-foreground">Guest details</h2>
             <p class="mt-1 text-xs text-muted-foreground">

@@ -113,7 +113,7 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     end
 
     it "names SST on the priced option and flags tourism tax as a checkout note" do
-      get new_corporate_booking_path(search_params(room_type_id: room_type.id))
+      get new_corporate_booking_path(search_params(room_type_id: room_type.id, step: "rate"))
 
       expect(response.body).to include("SST 8%")
       expect(response.body).to include("tourism tax")
@@ -379,6 +379,111 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
 
     expect(response.body).to include("Mina Corporate")
     expect(response.body).not_to include("Theo Walkin")
+  end
+
+  # The booking is a wizard: stay, room category, rate, guests. Each step is a page
+  # of its own, and a step is never shown ahead of the choices it needs.
+  describe "the booking wizard" do
+    let!(:second_room_type) do
+      Rooms::SaveSeedRoomType.call!(
+        hotel: hotel,
+        attributes: { name: "Suite", room_number_mode: "custom", quantity: 2, base_price: 400.0,
+                      max_adults: 3, max_children: 2, room_numbers: %w[201 202] }
+      )
+    end
+    let!(:extra_plan) do
+      create(:rate_plan, :custom, hotel: hotel, name: "TA Full Board", ta_access: "all").tap do |plan|
+        create(:room_type_rate_plan, rate_plan: plan, room_type: room_type, pricing_value: 400)
+      end
+    end
+
+    def page = Capybara.string(response.body)
+    def step = page.find("[data-testid='booking-wizard-steps']")["data-step"]
+
+    it "starts with the stay: hotel, dates and party, and nothing else" do
+      get new_corporate_booking_path
+
+      expect(step).to eq("stay")
+      expect(page).to have_text("See available rooms")
+      expect(page).to have_no_css("[data-testid='agent-room-types']")
+    end
+
+    it "then asks for a room category, listing no rates" do
+      get new_corporate_booking_path(search_params)
+
+      expect(step).to eq("room")
+      expect(page.find("[data-testid='wizard-step-title']")).to have_text("Choose a room category")
+      expect(page.all("[data-testid='agent-room-type']").size).to eq(2)
+      expect(page).to have_no_css("[data-testid='agent-rates']")
+      expect(page).to have_no_text("See available rooms")
+    end
+
+    it "then asks for a rate for the chosen category only" do
+      get new_corporate_booking_path(search_params(room_type_id: room_type.id, step: "rate"))
+
+      expect(step).to eq("rate")
+      expect(page.find("[data-testid='wizard-step-title']")).to have_text("Choose a rate")
+      expect(page.all("[data-testid='agent-room-type']").size).to eq(1)
+      expect(page.all("[data-testid='agent-rates'] li").size).to be >= 2
+      expect(page).to have_no_text("Suite")
+    end
+
+    it "shows a category's only rate as a choice rather than skipping past it" do
+      get new_corporate_booking_path(search_params(room_type_id: second_room_type.id, step: "rate"))
+
+      expect(step).to eq("rate")
+      expect(page.all("[data-testid='agent-rates'] li").size).to eq(1)
+    end
+
+    it "finally asks for the guests, and shows the guest form alone" do
+      plan = extra_plan
+      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: plan.id))
+
+      expect(step).to eq("guests")
+      expect(response.body).to include("Guest details", "Confirm 1 room")
+      expect(page).to have_no_css("[data-testid='agent-rates']")
+      expect(page).to have_no_css("[data-testid='agent-room-types']")
+    end
+
+    it "keeps what has been chosen in view, with a way to change each choice" do
+      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id))
+
+      summary = page.find("[data-testid='booking-wizard-summary']")
+      expect(summary).to have_text(hotel.name).and have_text("Deluxe").and have_text("TA Full Board")
+      expect(summary.all("a", text: "Change").size).to eq(3)
+    end
+
+    it "links the finished steps back, dropping the choices that came after them" do
+      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id))
+
+      room_href = page.find("[data-testid='wizard-step-room']")[:href]
+      expect(room_href).to include("step=room")
+      expect(room_href).not_to include("room_type_id", "rate_plan_id")
+
+      rate_href = page.find("[data-testid='wizard-step-rate']")[:href]
+      expect(rate_href).to include("step=rate", "room_type_id=#{room_type.id}")
+      expect(rate_href).not_to include("rate_plan_id")
+    end
+
+    it "goes back to an earlier step when asked" do
+      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id, step: "room"))
+
+      expect(step).to eq("room")
+      expect(page.all("[data-testid='agent-room-type']").size).to eq(2)
+    end
+
+    it "never shows a step ahead of the choices it needs" do
+      get new_corporate_booking_path(search_params(step: "guests"))
+
+      expect(step).to eq("room")
+      expect(response.body).not_to include("Guest details")
+    end
+
+    it "sends the Choose button to the rate step" do
+      get new_corporate_booking_path(search_params)
+
+      expect(page.first("[data-testid='agent-room-type'] a", text: "Choose")[:href]).to include("step=rate", "room_type_id=")
+    end
   end
 
   # A multi-room stay is several bookings under one group. Opening one of them

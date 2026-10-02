@@ -37,7 +37,7 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
   # Rates are listed once the agent has chosen a room category.
   def offered_plan_names
     get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s,
-                                   check_out: check_out.to_s, adults: 2, room_type_id: room_type.id)
+                                   check_out: check_out.to_s, adults: 2, room_type_id: room_type.id, step: "rate")
     response.parsed_body.css("[data-testid='agent-rates'] li").map { |item| item.text.squish }
   end
 
