@@ -36,29 +36,35 @@
   </ol>
 </nav>
 
-<%# What has been chosen so far, each with a way to change it. %>
+<%# What has been chosen so far: one cell per step, each with its own Change link. %>
 <% if here >= 1 && @search && @search.error.blank? %>
-  <dl class="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-xs" data-testid="booking-wizard-summary">
-    <div class="flex items-center gap-2">
-      <dt class="sr-only">Stay</dt>
-      <dd class="font-semibold text-foreground">
-        <%= @relationship.hotel.name %> · <%= @check_in.strftime("%d %b") %> – <%= @check_out.strftime("%d %b %Y") %>
-        · <%= pluralize(@search.nights, "night") %> · <%= pluralize(@rooms, "room") %> · <%= pluralize(@adults, "adult") %><%= ", #{pluralize(@children, 'child')}" if @children.to_i.positive? %>
-      </dd>
-      <%= link_to "Change", url_for_step.call(:stay), class: "font-bold text-muted-foreground underline-offset-4 hover:underline" %>
-    </div>
-    <% if here >= 2 && room_type_id %>
-      <div class="flex items-center gap-2">
-        <dt class="sr-only">Room</dt>
-        <dd class="font-semibold text-foreground"><%= (@selected&.room_type || @search.available.map(&:room_type).find { |type| type.id.to_s == room_type_id.to_s })&.name %></dd>
-        <%= link_to "Change", url_for_step.call(:room), class: "font-bold text-muted-foreground underline-offset-4 hover:underline" %>
-      </div>
-    <% end %>
-    <% if here >= 3 && @selected %>
-      <div class="flex items-center gap-2">
-        <dt class="sr-only">Rate</dt>
-        <dd class="font-semibold text-foreground"><%= @selected.rate_plan.name %> · <%= @selected.currency %> <%= number_with_precision(@selected.total_amount, precision: 2) %></dd>
-        <%= link_to "Change", url_for_step.call(:rate), class: "font-bold text-muted-foreground underline-offset-4 hover:underline" %>
+  <% room_name = (@selected&.room_type || @search.available.map(&:room_type).find { |type| type.id.to_s == room_type_id.to_s })&.name %>
+  <% cells = [] %>
+  <% cells << { key: :stay, label: "Stay", title: @relationship.hotel.name,
+                detail: "#{@check_in.strftime('%d %b')} – #{@check_out.strftime('%d %b %Y')}",
+                extra: [ pluralize(@search.nights, "night"), pluralize(@rooms, "room"),
+                         "#{pluralize(@adults, 'adult')}#{", #{pluralize(@children, 'child')}" if @children.to_i.positive?}" ].join(" · ") } %>
+  <% if here >= 2 && room_name %>
+    <% cells << { key: :room, label: "Room", title: room_name, detail: nil, extra: nil } %>
+  <% end %>
+  <% if here >= 3 && @selected %>
+    <% cells << { key: :rate, label: "Rate", title: @selected.rate_plan.name,
+                  detail: "#{@selected.currency} #{number_with_precision(@selected.total_amount, precision: 2, delimiter: ',')}",
+                  extra: (@rooms > 1 ? "#{@selected.currency} #{number_with_precision(@selected.per_room_amount, precision: 2, delimiter: ',')} per room" : "total for the stay") } %>
+  <% end %>
+
+  <dl class="grid divide-y divide-border overflow-hidden rounded-xl border border-border bg-card sm:grid-flow-col sm:auto-cols-fr sm:divide-x sm:divide-y-0" data-testid="booking-wizard-summary">
+    <% cells.each do |cell| %>
+      <div class="flex items-start justify-between gap-3 px-4 py-3" data-testid="summary-<%= cell[:key] %>">
+        <div class="min-w-0">
+          <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= cell[:label] %></dt>
+          <dd class="mt-0.5 truncate text-sm font-bold text-foreground"><%= cell[:title] %></dd>
+          <% if cell[:detail] %><dd class="text-xs font-semibold tabular-nums text-foreground"><%= cell[:detail] %></dd><% end %>
+          <% if cell[:extra] %><dd class="text-xs text-muted-foreground"><%= cell[:extra] %></dd><% end %>
+        </div>
+        <%= link_to "Change", url_for_step.call(cell[:key]),
+              class: "shrink-0 rounded-md border border-border px-2 py-1 text-xs font-bold text-foreground hover:bg-muted",
+              aria: { label: "Change #{cell[:label].downcase}" } %>
       </div>
     <% end %>
   </dl>

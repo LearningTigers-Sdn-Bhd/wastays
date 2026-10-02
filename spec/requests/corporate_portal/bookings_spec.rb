@@ -453,6 +453,19 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
       expect(summary.all("a", text: "Change").size).to eq(3)
     end
 
+    it "lays the summary out as one labelled cell per step, with its own Change link" do
+      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id))
+
+      stay = page.find("[data-testid='summary-stay']")
+      expect(stay).to have_text("STAY", normalize_ws: true).or have_text("Stay")
+      expect(stay).to have_text(hotel.name).and have_text("2 nights")
+      expect(page.find("[data-testid='summary-room']")).to have_text("Deluxe")
+      rate = page.find("[data-testid='summary-rate']")
+      expect(rate).to have_text("TA Full Board")
+      expect(rate.text).to match(/MYR\s+[\d,]+\.00/)
+      expect(page.all("[data-testid^='summary-'] a", text: "Change").size).to eq(3)
+    end
+
     it "links the finished steps back, dropping the choices that came after them" do
       get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id))
 
