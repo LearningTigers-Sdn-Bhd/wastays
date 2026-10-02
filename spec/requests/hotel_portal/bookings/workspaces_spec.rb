@@ -1533,6 +1533,32 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
   describe "PATCH /hotel/:hotel_id/bookings/:booking_id/workspace" do
     before { role.permissions << manage_bookings }
 
+    it "saves the primary guest with a blank phone so the guest can add it at check-in" do
+      booking_guest = create(:booking_guest, booking: booking, is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Fang Yi", phone: "", country: "Malaysia" },
+        save_scope: "snapshot"
+      }
+
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id))
+      expect(booking.reload.guest_phone).to be_blank
+      expect(booking_guest.reload.phone_snapshot).to be_blank
+    end
+
+    it "shows only the real error when the guest details cannot be saved" do
+      booking_guest = create(:booking_guest, booking: booking, is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "", country: "Malaysia" },
+        save_scope: "snapshot"
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Name can&#39;t be blank")
+      expect(response.body).not_to include("has already been taken")
+    end
+
     it "updates the selected stay snapshot without changing the reusable guest" do
       guest = create(:guest, name: "Reusable Guest")
       booking_guest = create(:booking_guest, booking: booking, guest: guest, is_primary: true)

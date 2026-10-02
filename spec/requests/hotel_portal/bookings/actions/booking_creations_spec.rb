@@ -358,11 +358,13 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(booking.guest_phone).to eq("+60123456789")
     end
 
-    it "still requires a phone number" do
+    it "takes a booking with no phone or email, so the guest can add them at check-in" do
       expect {
         post hotel_booking_action_new_booking_path(hotel),
           params: { booking: booking_params.merge(guest_email: "", guest_phone: "") }
-      }.not_to change(Booking, :count)
+      }.to change(Booking, :count).by(1)
+
+      expect(Booking.last.guest_phone).to be_blank
     end
 
     context "when the stay is priced by hand" do
