@@ -115,44 +115,88 @@
               Nothing has <%= pluralize(@rooms, "room") %> free for these dates.
             </p>
           <% else %>
-            <ul class="divide-y divide-border">
-              <% @search.available.each do |option| %>
-                <% chosen = @selected&.room_type&.id == option.room_type.id && @selected&.rate_plan&.id == option.rate_plan.id %>
-                <li class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6">
-                  <div class="min-w-0">
-                    <p class="font-bold text-foreground"><%= option.room_type.name %></p>
-                    <p class="mt-0.5 text-xs text-muted-foreground">
-                      <span class="font-semibold text-foreground"><%= option.rate_plan.name %></span> · <%= pluralize(option.available_count, "room") %> free
-                    </p>
-                    <% if option.rate_plan.description.present? %>
-                      <p class="mt-0.5 text-xs text-muted-foreground"><%= option.rate_plan.description %></p>
-                    <% end %>
-                    <% if option.tax_lines.present? %>
+            <%# Room category first, rates second. Listing every plan of every category
+                at once is a wall of near-identical rows; the agent picks a category,
+                and only then sees what that category is sold at. %>
+            <% opened_type_id = @room_type_id.to_s %>
+            <ul class="divide-y divide-border" data-testid="agent-room-types">
+              <% @search.available.group_by(&:room_type).each do |room_type, options| %>
+                <% open = opened_type_id == room_type.id.to_s %>
+                <% cheapest = options.min_by(&:total_amount) %>
+                <li data-testid="agent-room-type" data-open="<%= open %>">
+                  <div class="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 <%= "bg-muted/30" if open %>">
+                    <div class="min-w-0">
+                      <p class="font-bold text-foreground"><%= room_type.name %></p>
                       <p class="mt-0.5 text-xs text-muted-foreground">
-                        Includes <%= option.tax_lines.map { |line| "#{line['name']} (#{option.currency} #{number_with_precision(line['amount'].to_d * option.rooms, precision: 2)})" }.to_sentence %>
+                        <%= pluralize(options.first.available_count, "room") %> free ·
+                        <%= options.one? ? "1 rate" : "#{options.size} rates" %>
                       </p>
-                    <% end %>
+                      <% if room_type.description.present? %>
+                        <p class="mt-0.5 line-clamp-2 text-xs text-muted-foreground"><%= room_type.description %></p>
+                      <% end %>
+                    </div>
+                    <div class="flex items-center justify-between gap-4 sm:justify-end sm:shrink-0">
+                      <p class="font-bold tabular-nums text-foreground sm:text-right">
+                        <span class="block text-xs font-normal text-muted-foreground"><%= options.one? ? "Rate" : "From" %></span>
+                        <%= cheapest.currency %> <%= number_with_precision(cheapest.total_amount, precision: 2) %>
+                      </p>
+                      <%= render PanelsUI::Button.new(
+                            as: :a, variant: open ? :secondary : :primary, size: :sm, class: "shrink-0",
+                            href: new_corporate_booking_path(
+                              hotel_relationship_id: @relationship.id, check_in: @check_in,
+                              check_out: @check_out, adults: @adults, children: @children, child_ages: @child_ages,
+                              rooms: @rooms, room_type_id: room_type.id)) do %>
+                        <%= open ? "Chosen" : "Choose" %>
+                      <% end %>
+                    </div>
                   </div>
-                  <div class="flex items-center justify-between gap-4 sm:justify-end sm:shrink-0">
-                    <p class="font-bold tabular-nums text-foreground sm:text-right">
-                      <%= option.currency %> <%= number_with_precision(option.total_amount, precision: 2) %>
-                      <span class="block text-xs font-normal text-muted-foreground">
-                        <% if @rooms > 1 %>
-                          <%= option.currency %> <%= number_with_precision(option.per_room_amount, precision: 2) %> per room
-                        <% else %>
-                          total stay
-                        <% end %>
-                      </span>
-                    </p>
-                    <%= render PanelsUI::Button.new(
-                          as: :a, variant: chosen ? :secondary : :primary, size: :sm, class: "shrink-0",
-                          href: new_corporate_booking_path(
-                            hotel_relationship_id: @relationship.id, check_in: @check_in,
-                            check_out: @check_out, adults: @adults, children: @children, child_ages: @child_ages,
-                            rooms: @rooms, room_type_id: option.room_type.id, rate_plan_id: option.rate_plan.id)) do %>
-                      <%= chosen ? "Selected" : "Select" %>
-                    <% end %>
-                  </div>
+
+                  <% if open %>
+                    <ul class="divide-y divide-border border-t border-border bg-muted/30" data-testid="agent-rates">
+                      <% options.each do |option| %>
+                        <% chosen = @selected&.room_type&.id == option.room_type.id && @selected&.rate_plan&.id == option.rate_plan.id %>
+                        <li class="flex flex-col gap-3 py-3 pl-8 pr-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:pl-10 sm:pr-6">
+                          <div class="min-w-0">
+                            <p class="text-sm font-semibold text-foreground"><%= option.rate_plan.name %></p>
+                            <% if option.rate_plan.description.present? %>
+                              <p class="mt-0.5 text-xs text-muted-foreground"><%= option.rate_plan.description %></p>
+                            <% end %>
+                            <% if option.tax_lines.present? %>
+                              <p class="mt-0.5 text-xs text-muted-foreground">
+                                Includes <%= option.tax_lines.map { |line| "#{line['name']} (#{option.currency} #{number_with_precision(line['amount'].to_d * option.rooms, precision: 2)})" }.to_sentence %>
+                              </p>
+                            <% end %>
+                          </div>
+                          <div class="flex items-center justify-between gap-4 sm:justify-end sm:shrink-0">
+                            <p class="font-bold tabular-nums text-foreground sm:text-right">
+                              <%= option.currency %> <%= number_with_precision(option.total_amount, precision: 2) %>
+                              <span class="block text-xs font-normal text-muted-foreground">
+                                <% if @rooms > 1 %>
+                                  <%= option.currency %> <%= number_with_precision(option.per_room_amount, precision: 2) %> per room
+                                <% else %>
+                                  total stay
+                                <% end %>
+                              </span>
+                            </p>
+                            <%= render PanelsUI::Button.new(
+                                  as: :a, variant: chosen ? :secondary : :primary, size: :sm, class: "shrink-0",
+                                  href: new_corporate_booking_path(
+                                    hotel_relationship_id: @relationship.id, check_in: @check_in,
+                                    check_out: @check_out, adults: @adults, children: @children, child_ages: @child_ages,
+                                    rooms: @rooms, room_type_id: option.room_type.id, rate_plan_id: option.rate_plan.id)) do %>
+                              <%= chosen ? "Selected" : "Select" %>
+                            <% end %>
+                          </div>
+                        </li>
+                      <% end %>
+                      <%# Plans closed to this agency for these dates, for this category only. %>
+                      <% @search.restricted.select { |option| option.room_type.id == room_type.id }.each do |option| %>
+                        <li class="py-2 pl-8 pr-4 text-xs text-muted-foreground sm:pl-10 sm:pr-6">
+                          <span class="font-semibold text-foreground"><%= option.rate_plan.name %></span> · <%= option.restriction %>
+                        </li>
+                      <% end %>
+                    </ul>
+                  <% end %>
                 </li>
               <% end %>
             </ul>
@@ -167,14 +211,17 @@
               </ul>
             </div>
           <% end %>
-          <% if @search.restricted.any? %>
+          <%# A category with nothing bookable shows why; one with rates open shows
+              any closed ones under its own rates instead. %>
+          <% bookable_ids = @search.available.map { |option| option.room_type.id }.uniq %>
+          <% closed = @search.restricted.reject { |option| bookable_ids.include?(option.room_type.id) }.group_by(&:room_type) %>
+          <% if closed.any? %>
             <div class="border-t border-border px-4 py-4 sm:px-6">
               <h3 class="text-xs font-bold text-muted-foreground">Not bookable for these dates</h3>
               <ul class="mt-2 space-y-2">
-                <% @search.restricted.each do |option| %>
+                <% closed.each do |room_type, options| %>
                   <li class="text-xs text-muted-foreground">
-                    <span class="font-semibold text-foreground"><%= option.room_type.name %></span> ·
-                    <%= option.rate_plan.name %> · <%= option.restriction %>
+                    <span class="font-semibold text-foreground"><%= room_type.name %></span> · <%= options.first.restriction %>
                   </li>
                 <% end %>
               </ul>

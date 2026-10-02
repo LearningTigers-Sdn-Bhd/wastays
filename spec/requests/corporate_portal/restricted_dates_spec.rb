@@ -13,11 +13,12 @@ RSpec.describe "Corporate portal search: restricted dates", type: :request do
     create(:room_rate, room_type: suite, rate_plan: fb_plan, date: check_in + 1, price: 500, stop_sell: true)
     sign_in_as(ta_a_user)
 
-    get new_corporate_booking_path(hotel_relationship_id: ta_a.id, check_in: check_in, check_out: check_in + 3, adults: 2)
+    get new_corporate_booking_path(hotel_relationship_id: ta_a.id, check_in: check_in, check_out: check_in + 3, adults: 2,
+                                   room_type_id: suite.id)
 
     expect(response).to have_http_status(:ok)
     page = Nokogiri::HTML(response.body)
-    expect(page.text).to include("Not bookable for these dates")
+    # The category has another plan open, so the closed one is listed under its rates.
     expect(page.text).to include("Closed for sale on #{(check_in + 1).strftime('%-d %b')}")
     expect(page.css("a[href*='rate_plan_id=#{fb_plan.id}&'][href*='room_type_id=#{suite.id}&']")).to be_empty
     expect(page.css("a[href*='rate_plan_id=#{prm_plan.id}&'][href*='room_type_id=#{suite.id}&']")).not_to be_empty

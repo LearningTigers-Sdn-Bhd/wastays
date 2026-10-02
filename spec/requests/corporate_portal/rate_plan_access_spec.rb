@@ -34,10 +34,11 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
     plan
   end
 
+  # Rates are listed once the agent has chosen a room category.
   def offered_plan_names
     get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s,
-                                   check_out: check_out.to_s, adults: 2)
-    response.parsed_body.css("li").map(&:text).grep(/Deluxe/).map(&:squish)
+                                   check_out: check_out.to_s, adults: 2, room_type_id: room_type.id)
+    response.parsed_body.css("[data-testid='agent-rates'] li").map { |item| item.text.squish }
   end
 
   def book(rate_plan_id:)
@@ -49,6 +50,19 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
         rooms_detail: { "0" => { guests: { "0" => { name: "Aisha Rahman", phone: "+60123456789" } } } }
       }
     }
+  end
+
+  it "lists room categories first, and no rates until one is chosen" do
+    full_board(ta_access: "all")
+
+    get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s,
+                                   check_out: check_out.to_s, adults: 2)
+
+    page = response.parsed_body
+    expect(page.css("[data-testid='agent-room-type']").size).to eq(1)
+    expect(page.css("[data-testid='agent-room-type']").first.text).to include("Deluxe", "From")
+    expect(page.css("[data-testid='agent-rates']")).to be_empty
+    expect(response.body).not_to include("TA Full Board")
   end
 
   it "offers only the Corporate Rate until the property opens another plan" do

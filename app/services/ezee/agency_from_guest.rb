@@ -44,6 +44,7 @@ module Ezee
 
         row.agency_name = agency
         row.source = "Travel Agent"
+        row.source_key = "travel_agent"
         row.internal_note = note_for(row, agency, contact)
       end
       @rows

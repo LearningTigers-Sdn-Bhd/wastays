@@ -22,7 +22,7 @@ module Ezee
     # is the property's own booking engine despite the label, so it is direct.
     # TIKET.COM has no registry key yet and lands on the generic OTA one.
     SOURCE_KEYS = {
-      "Travel Agent" => "internal", "Corporate" => "internal",
+      "Travel Agent" => "travel_agent", "Corporate" => "internal",
       "Phone Reservation" => "phone", "Walk In" => "walk_in",
       "Over-The-Counter" => "walk_in", "Internet Reservation" => "direct",
       "OTA (KPR ONLINE)" => "direct", "AGODA" => "agoda", "TIKET.COM" => "ota"

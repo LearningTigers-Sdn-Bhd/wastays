@@ -143,6 +143,13 @@ RSpec.describe "Importing the eZee reservation CSV" do
       expect(booking.status).to eq("confirmed")
     end
 
+    it "tags an agent's bookings as Travel Agent, the way the agent portal tags its own" do
+      agent_rows = import.rows.where(status: "created").where.not(agency_name: nil)
+
+      expect(agent_rows).to be_present
+      expect(agent_rows.map { |row| row.booking.source }.uniq).to eq([ "travel_agent" ])
+    end
+
     it "leaves tourism tax off, because the export has no nationality" do
       expect(result.created.map(&:tourism_tax_amount).uniq).to eq([ 0 ])
     end

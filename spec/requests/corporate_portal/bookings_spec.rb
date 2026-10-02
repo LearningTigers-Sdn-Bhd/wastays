@@ -113,7 +113,7 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     end
 
     it "names SST on the priced option and flags tourism tax as a checkout note" do
-      get new_corporate_booking_path(search_params)
+      get new_corporate_booking_path(search_params(room_type_id: room_type.id))
 
       expect(response.body).to include("SST 8%")
       expect(response.body).to include("tourism tax")

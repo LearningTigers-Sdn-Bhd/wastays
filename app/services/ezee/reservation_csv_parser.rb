@@ -129,7 +129,7 @@ module Ezee
       return { label: "Trip.com", key: "ota", agency: nil } if value.match?(TRIP_COM)
       return { label: "Direct Booking", key: "direct", agency: nil } if value.match?(DIRECT)
 
-      { label: "Travel Agent", key: "internal", agency: value }
+      { label: "Travel Agent", key: "travel_agent", agency: value }
     end
 
     # Staff-only context. The remarks stay where the guest-facing requests go;

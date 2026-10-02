@@ -52,7 +52,7 @@ RSpec.describe Ezee::ReservationCsvParser do
     it "reads a Business Source company as the agency" do
       agent = result.rows.find { |r| r.agency_name.present? }
 
-      expect(agent).to have_attributes(source: "Travel Agent", source_key: "internal")
+      expect(agent).to have_attributes(source: "Travel Agent", source_key: "travel_agent")
     end
 
     it "reads CTrip as an OTA channel, not an agency" do

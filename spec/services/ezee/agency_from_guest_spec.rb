@@ -19,7 +19,7 @@ RSpec.describe Ezee::AgencyFromGuest do
 
     run(known, perfect)
 
-    expect(perfect).to have_attributes(source: "Travel Agent")
+    expect(perfect).to have_attributes(source: "Travel Agent", source_key: "travel_agent")
     expect(perfect.internal_note).to include("Contact: SABRINA")
   end
 
