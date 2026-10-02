@@ -1207,7 +1207,17 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.parsed_body.text).not_to include("Booked by an agency")
     end
 
-    it "leaves a corporate booking that predates attribution unmarked" do
+    it "marks a travel agent's unattributed booking with its agency's name" do
+      booking(hotel_corporate_account: relationship)
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response.body).to include(ERB::Util.html_escape(relationship.corporate_account.name))
+      expect(response.body).to include("Booked by an agency")
+    end
+
+    it "leaves a company's booking that predates attribution unmarked" do
+      relationship.update!(account_type: "company")
       booking(hotel_corporate_account: relationship)
 
       get hotel_front_desk_path(hotel, tab: "bookings", view: "list")

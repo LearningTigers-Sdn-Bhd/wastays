@@ -1087,7 +1087,18 @@ module HotelPortal
           ]
         end
 
+      pairs = booked_under_pairs + pairs
       pairs.map { |label, value| [ label, value.presence || "—" ] }
+    end
+
+    # The travel agent or company the reservation was booked under, when it was.
+    # Most reservations were not, and get no row at all rather than an empty one.
+    def booked_under_pairs
+      accounts = child_bookings.filter_map(&:hotel_corporate_account).uniq
+      return [] if accounts.empty?
+
+      label = accounts.all?(&:travel_agent?) ? "Travel Agent" : "Corporate Account"
+      [ [ label, accounts.map { |account| account.corporate_account&.name }.compact.to_sentence ] ]
     end
 
     # Identifiers for one room-booking: one row for a standalone booking, one per child for a
