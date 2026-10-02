@@ -8,11 +8,11 @@ RSpec.describe HotelPortal::DashboardStats, type: :service do
   let(:stats) { described_class.new(hotel) }
 
   describe "#bookings_this_month_count" do
-    it "returns the count of revenue-generating bookings created this month" do
-      create(:booking, hotel: hotel, status: "confirmed", created_at: Time.current)
-      create(:booking, hotel: hotel, status: "pending", created_at: Time.current) # Not revenue-generating
-      create(:booking, hotel: hotel, status: "cancelled", created_at: Time.current) # Not revenue-generating
-      create(:booking, hotel: hotel, status: "confirmed", created_at: 2.months.ago)
+    it "returns the count of revenue-generating bookings whose stay starts this month" do
+      create(:booking, hotel: hotel, status: "confirmed", check_in: Time.current, check_out: 1.day.from_now)
+      create(:booking, hotel: hotel, status: "pending", check_in: Time.current, check_out: 1.day.from_now) # Not revenue-generating
+      create(:booking, hotel: hotel, status: "cancelled", check_in: Time.current, check_out: 1.day.from_now) # Not revenue-generating
+      create(:booking, hotel: hotel, status: "confirmed", check_in: 2.months.ago, check_out: 2.months.ago + 1.day)
 
       expect(stats.bookings_this_month_count).to eq(1)
     end
@@ -20,18 +20,33 @@ RSpec.describe HotelPortal::DashboardStats, type: :service do
     # .active excludes "completed", so a guest who already checked out this
     # month used to vanish from the month's own count the moment they left.
     it "still counts a booking that has already checked out this month" do
-      create(:booking, hotel: hotel, status: "completed", created_at: Time.current)
+      create(:booking, hotel: hotel, status: "completed", check_in: Time.current, check_out: 1.day.from_now)
 
       expect(stats.bookings_this_month_count).to eq(1)
+    end
+
+    # An imported property has every row created on the day of the import.
+    it "goes by the stay dates, not by when the booking was entered" do
+      create(:booking, hotel: hotel, status: "confirmed", created_at: Time.current,
+                       check_in: 2.months.from_now, check_out: 2.months.from_now + 1.day)
+
+      expect(stats.bookings_this_month_count).to eq(0)
     end
   end
 
   describe "#revenue_this_month" do
     it "still counts a booking that has already checked out this month" do
-      create(:booking, hotel: hotel, status: "completed", created_at: Time.current, total_amount: 500)
-      create(:booking, hotel: hotel, status: "cancelled", created_at: Time.current, total_amount: 999)
+      create(:booking, hotel: hotel, status: "completed", check_in: Time.current, check_out: 1.day.from_now, total_amount: 500)
+      create(:booking, hotel: hotel, status: "cancelled", check_in: Time.current, check_out: 1.day.from_now, total_amount: 999)
 
       expect(stats.revenue_this_month).to eq(500)
+    end
+
+    it "leaves out a stay that starts in a later month, however recently it was entered" do
+      create(:booking, hotel: hotel, status: "confirmed", created_at: Time.current,
+                       check_in: 2.months.from_now, check_out: 2.months.from_now + 1.day, total_amount: 800)
+
+      expect(stats.revenue_this_month).to eq(0)
     end
   end
 
