@@ -8,13 +8,23 @@
     when it cannot find one -- so returning the rows bare is not enough. %>
 <%= turbo_frame_tag "import_rows_page_#{page}" do %>
   <% rows.each do |row| %>
-  <div class="grid grid-cols-[6rem_minmax(11rem,1fr)_8rem_14rem_4rem_6rem_7.5rem_7rem_10rem] items-start border-t border-border text-sm
+  <div class="grid grid-cols-[8rem_minmax(9rem,1.2fr)_minmax(6.5rem,0.8fr)_minmax(9rem,1.2fr)_13rem_6.5rem_4rem_minmax(8rem,1fr)_6rem_10rem] items-start border-t border-border text-sm
               <%= "bg-red-50/50" if row.status.in?(%w[blocked failed]) %>">
-    <div class="px-3 py-3 font-mono text-xs font-bold text-foreground"><%= row.reservation_number %></div>
+    <div class="px-3 py-3 font-mono text-xs font-bold text-foreground">
+      <%= row.reservation_number %>
+      <%# Once a booking exists it has its own wastays number; the eZee one above is only the old system's. %>
+      <% if row.booking %>
+        <%= link_to row.booking.formatted_reservation_number, admin_booking_path(row.booking),
+              class: "mt-1 block font-semibold text-blue-700 hover:text-blue-800", data: { turbo_frame: "_top" },
+              title: "wastays reservation number" %>
+      <% end %>
+    </div>
     <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :guest_name,
                value: row.guest_name, align: "text-foreground" %>
     <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :source,
                value: row.source, align: "text-muted-foreground" %>
+    <%= render "admin/hotels/reservation_imports/row_cell", row: row, field: :agency_name,
+               value: row.agency_name.presence || "—", align: "text-muted-foreground" %>
     <div class="whitespace-nowrap px-3 py-3 text-muted-foreground">
       <%= row.arrival&.strftime("%d %b %Y") %> → <%= row.departure&.strftime("%d %b %Y") %>
       <span class="block text-xs"><%= pluralize(row.nights, "night") %></span>
@@ -39,6 +49,11 @@
       <span class="inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold <%= tone %>">
         <%= row.status == "importable" ? "Will import" : row.status.humanize %>
       </span>
+      <% if row.booking_status == "cancelled" %>
+        <span class="mt-1 inline-block whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">released · kept as cancelled</span>
+      <% elsif row.booking_status == "pending" %>
+        <span class="mt-1 inline-block whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700">unpaid hold</span>
+      <% end %>
       <% if row.group_key.present? %>
         <span class="mt-1 inline-block whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">group</span>
       <% end %>

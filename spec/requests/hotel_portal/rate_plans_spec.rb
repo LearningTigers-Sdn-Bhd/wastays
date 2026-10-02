@@ -149,6 +149,7 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(doc.at_css('[data-tab-panel="pricing"] input[name="rate_plan[room_type_id]"][type="hidden"]')["value"]).to eq(room_type.id.to_s)
       expect(doc.at_css('[data-tab-panel="discounts"] [data-controller~="nested-rows"]')).to be_present
       expect(doc.at_css('[data-tab-panel="availability"] select[name="rate_plan[ta_access]"]')).to be_present
+      expect(doc.at_css('[data-tab-panel="availability"] select[name="rate_plan[ta_market]"]')).to be_present
       expect(doc.text).to include("Archive plan", "Delete plan")
       expect(doc.at_css('[data-tab-panel="details"]')["hidden"]).to be_nil
       expect(doc.at_css('[data-tab-panel="pricing"]')["hidden"]).not_to be_nil
@@ -654,6 +655,18 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
           rate_plan: { room_type_id: room_type.id, ta_access: ta_access, agency_account_ids: [ "" ] + agency_ids.map(&:to_s) },
           room_pricing: { rate_mode: "manual", default_rate: "225" }
         }, headers: turbo_headers
+      end
+
+      it "can be limited to local or to international agents" do
+        patch hotel_rate_plan_path(hotel, rate_plan), params: {
+          rate_plan: { room_type_id: room_type.id, ta_access: "all", ta_market: "international" },
+          room_pricing: { rate_mode: "manual", default_rate: "225" }
+        }, headers: turbo_headers
+
+        expect(response).to have_http_status(:see_other)
+        expect(rate_plan.reload.ta_market).to eq("international")
+        expect(rate_plan.offered_to_agency?(create(:hotel_corporate_account, hotel: hotel, market: "international"))).to be(true)
+        expect(rate_plan.offered_to_agency?(create(:hotel_corporate_account, hotel: hotel, market: "local"))).to be(false)
       end
 
       it "offers the plan to only the agencies picked" do

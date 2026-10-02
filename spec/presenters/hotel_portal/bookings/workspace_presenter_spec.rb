@@ -1285,7 +1285,7 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
 
     it "reads as paid, in the ordinary badge colour, once there is no deadline left" do
       booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
-                      corporate_booked_at: Time.current, payment_due_at: nil)
+                      corporate_booked_at: Time.current, payment_due_at: nil, payment_status: "captured")
 
       expect(presenter.agent_attribution).to include(
         payment_state: :paid, payment_label: "Paid", badge_variant: :accent
@@ -1297,10 +1297,28 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(presenter.agent_attribution).to be_nil
     end
 
-    it "says nothing for a corporate booking made before attribution was recorded" do
+    it "names the agency, and claims no author, for a travel agent's booking nobody attributed" do
+      booking.update!(hotel_corporate_account: relationship)
+
+      expect(presenter).to be_agent_booking
+      expect(presenter.agent_attribution).to include(agency: relationship.corporate_account.name, person: nil, booked_at: nil)
+    end
+
+    it "says nothing for a company's booking made before attribution was recorded" do
+      relationship.update!(account_type: "company")
       booking.update!(hotel_corporate_account: relationship)
 
       expect(presenter).not_to be_agent_booking
+    end
+
+    it "lists the travel agent among the reservation's references" do
+      booking.update!(hotel_corporate_account: relationship)
+
+      expect(presenter.reservation_reference_pairs.first).to eq([ "Travel Agent", relationship.corporate_account.name ])
+    end
+
+    it "lists no travel agent row for a reservation that was not booked under one" do
+      expect(presenter.reservation_reference_pairs.map(&:first)).not_to include("Travel Agent", "Corporate Account")
     end
   end
   describe "boat types" do

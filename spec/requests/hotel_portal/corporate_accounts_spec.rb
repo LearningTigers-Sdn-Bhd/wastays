@@ -404,6 +404,73 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(invitation).to be_pending
   end
 
+  describe "copying an invitation link, for a contact the email does not reach" do
+    let!(:invitation) { create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, email: "agent@perfect.test") }
+
+    def revealed_url = response.body[%r{http[^<\s]*/corporate-invitations/[\w-]+}]
+
+    it "shows a fresh link that opens the acceptance page" do
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(response).to have_http_status(:ok)
+      expect(revealed_url).to be_present
+      expect(response.body).to include("external-invitation-link-row-")
+
+      get URI(revealed_url).path
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Connect your Corporate Account")
+    end
+
+    it "shows the link in the results frame when asked by the Copy link button (a Turbo request)" do
+      post link_hotel_corporate_invitation_path(hotel, invitation), headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(revealed_url).to be_present
+      expect(response.body).to include("external-invitation-link-row-#{invitation.id}", "clipboard#copy")
+    end
+
+    it "stops the previous link from working, because only the new one is known" do
+      old_digest = invitation.token_digest
+
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(invitation.reload.token_digest).not_to eq(old_digest)
+    end
+
+    it "does not email anyone, and leaves an unsent invitation unsent" do
+      invitation.update!(last_sent_at: nil)
+
+      expect {
+        post link_hotel_corporate_invitation_path(hotel, invitation)
+      }.not_to have_enqueued_mail(CorporateInvitationMailer, :invite)
+
+      expect(invitation.reload.last_sent_at).to be_nil
+    end
+
+    it "revives a lapsed invitation so the link can be used" do
+      invitation.update!(expires_at: 1.minute.ago)
+
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(invitation.reload).to be_pending
+    end
+
+    it "does not show a link on the ordinary list" do
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).not_to include("external-invitation-link-row-")
+      expect(response.body).to include("external-invitation-link-#{invitation.id}")
+    end
+
+    it "cannot reach another hotel's invitation" do
+      other = create(:corporate_invitation)
+
+      post link_hotel_corporate_invitation_path(hotel, other)
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   it "revokes an unaccepted invitation" do
     invitation = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user)
 
@@ -436,5 +503,84 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     get "/hotel/#{hotel.to_param}/corporate-accounts"
 
     expect(response).to have_http_status(:not_found)
+  end
+
+  describe "an agent's market" do
+    let!(:relationship) { create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent") }
+
+    it "can be set on the account, and is shown in the list" do
+      patch hotel_corporate_account_path(hotel, relationship),
+            params: { hotel_corporate_account: { market: "international" } }
+
+      expect(relationship.reload.market).to eq("international")
+
+      get hotel_corporate_accounts_path(hotel)
+      expect(Capybara.string(response.body).find("[data-testid='agent-market']")).to have_text("International")
+    end
+
+    it "can be cleared again" do
+      relationship.update!(market: "local")
+
+      patch hotel_corporate_account_path(hotel, relationship), params: { hotel_corporate_account: { market: "" } }
+
+      expect(relationship.reload.market).to be_nil
+    end
+
+    it "is offered on the account's edit sheet" do
+      get edit_hotel_corporate_account_path(hotel, relationship)
+
+      expect(response.body).to include("hotel_corporate_account[market]")
+    end
+
+    it "travels with an invitation to a new account, and lands on the relationship it creates" do
+      post hotel_corporate_accounts_path(hotel), params: {
+        corporate_invitation: { email: "new@agent.test", market: "local" }
+      }
+      invitation = CorporateInvitation.last
+      expect(invitation.market).to eq("local")
+
+      result = CorporateInvitations::AcceptService.new(
+        invitation: invitation,
+        user_attributes: { account_name: "New Agent", name: "Nia", password: "password123", password_confirmation: "password123" }
+      ).call
+
+      expect(result.relationship.market).to eq("local")
+    end
+  end
+
+  describe "inviting a contact to an imported account" do
+    let(:agency_account) { create(:account, :corporate, name: "PERFECT VACATION SDN.BHD") }
+    let!(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: agency_account, account_type: "travel_agent")
+    end
+
+    it "offers the invite on an account nobody can sign in to, and not on one that has a login" do
+      get hotel_corporate_accounts_path(hotel)
+      expect(response.body).to include("Invite contact")
+
+      create(:user, :corporate, account: agency_account)
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).not_to include("external-account-invite-#{relationship.id}")
+    end
+
+    it "opens a short form for the account: its name, an email, and no billing terms to propose" do
+      get new_hotel_corporate_account_path(hotel, hotel_corporate_account_id: relationship.id)
+
+      expect(response.body).to include("Invite a contact", "PERFECT VACATION SDN.BHD")
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("input[name='corporate_invitation[hotel_corporate_account_id]']")["value"]).to eq(relationship.id.to_s)
+      expect(document.at_css("[data-controller='corporate-billing-terms']").has_attribute?("hidden")).to be(true)
+    end
+
+    it "sends the invitation to claim that account" do
+      expect {
+        post hotel_corporate_accounts_path(hotel), params: {
+          corporate_invitation: { email: "sabrina@perfect.test", hotel_corporate_account_id: relationship.id }
+        }
+      }.to change(CorporateInvitation, :count).by(1)
+
+      expect(CorporateInvitation.last).to have_attributes(email: "sabrina@perfect.test", hotel_corporate_account: relationship)
+    end
   end
 end

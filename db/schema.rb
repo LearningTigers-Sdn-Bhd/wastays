@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1547,6 +1547,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.decimal "credit_limit", precision: 12, scale: 2
     t.boolean "direct_bill_enabled", default: false, null: false
     t.bigint "hotel_id", null: false
+    t.string "market"
     t.integer "payment_terms_days"
     t.string "relationship_type", default: "standard", null: false
     t.string "sst_registration_number"
@@ -1563,6 +1564,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.check_constraint "account_type::text = ANY (ARRAY['company'::character varying, 'government'::character varying, 'travel_agent'::character varying, 'airline'::character varying, 'salesperson'::character varying]::text[])", name: "hotel_corporate_accounts_account_type_allowed"
     t.check_constraint "agent_payment_hold_hours IS NULL OR agent_payment_hold_hours > 0", name: "hotel_corporate_accounts_agent_payment_hold_hours_positive"
     t.check_constraint "credit_limit IS NULL OR credit_limit >= 0::numeric", name: "hotel_corporate_accounts_credit_limit_nonnegative"
+    t.check_constraint "market IS NULL OR (market::text = ANY (ARRAY['local'::character varying, 'international'::character varying]::text[]))", name: "hotel_corporate_accounts_market_check"
     t.check_constraint "payment_terms_days IS NULL OR payment_terms_days >= 0", name: "hotel_corporate_accounts_payment_terms_nonnegative"
     t.check_constraint "relationship_type::text = ANY (ARRAY['standard'::character varying, 'direct_bill'::character varying]::text[])", name: "hotel_corporate_accounts_relationship_type_allowed"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying]::text[])", name: "hotel_corporate_accounts_status_allowed"
@@ -2091,6 +2093,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.datetime "created_at", null: false
     t.string "email", null: false
     t.datetime "expires_at", null: false
+    t.bigint "hotel_corporate_account_id"
     t.bigint "hotel_id", null: false
     t.bigint "invited_by_user_id", null: false
     t.string "kind", default: "staff", null: false
@@ -2103,6 +2106,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.index ["accepted_at"], name: "index_invitations_on_accepted_at"
     t.index ["account_id"], name: "index_invitations_on_account_id"
     t.index ["expires_at"], name: "index_invitations_on_expires_at"
+    t.index ["hotel_corporate_account_id"], name: "index_invitations_on_hotel_corporate_account_id"
     t.index ["hotel_id", "email"], name: "index_pending_staff_invites_on_hotel_and_email", unique: true, where: "(accepted_at IS NULL)"
     t.index ["hotel_id"], name: "index_invitations_on_hotel_id"
     t.index ["invited_by_user_id"], name: "index_invitations_on_invited_by_user_id"
@@ -2812,10 +2816,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.string "sell_mode", default: "per_room", null: false
     t.decimal "single_supplement", precision: 10, scale: 2, default: "0.0", null: false
     t.string "ta_access", default: "hidden", null: false
+    t.string "ta_market", default: "all", null: false
     t.datetime "updated_at", null: false
     t.index ["archived_at"], name: "index_rate_plans_on_archived_at"
     t.index ["hotel_id"], name: "index_rate_plans_on_hotel_id"
     t.check_constraint "ta_access::text = ANY (ARRAY['hidden'::character varying, 'all'::character varying, 'except'::character varying, 'only'::character varying]::text[])", name: "rate_plans_ta_access_check"
+    t.check_constraint "ta_market::text = ANY (ARRAY['all'::character varying, 'local'::character varying, 'international'::character varying]::text[])", name: "rate_plans_ta_market_check"
   end
 
   create_table "receipts", force: :cascade do |t|
@@ -2893,15 +2899,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.decimal "amount_paid", precision: 10, scale: 2
     t.date "arrival"
     t.datetime "booked_at"
+    t.string "boat_in_time"
+    t.string "boat_in_type"
+    t.string "boat_out_time"
+    t.string "boat_out_type"
     t.string "booked_by"
+    t.string "booking_status", default: "confirmed", null: false
     t.bigint "booking_id"
     t.integer "children", default: 0, null: false
     t.datetime "created_at", null: false
     t.date "departure"
     t.string "group_key"
     t.string "guest_name"
+    t.text "internal_note"
     t.jsonb "issues", default: [], null: false
     t.integer "nights", default: 0, null: false
+    t.bigint "rate_plan_id"
     t.string "rate_type"
     t.text "remark"
     t.bigint "reservation_import_id", null: false
@@ -2912,12 +2925,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.string "room_type_name"
     t.integer "sheet_row", null: false
     t.string "source"
+    t.string "source_key"
     t.string "status", null: false
     t.decimal "total_amount", precision: 10, scale: 2
     t.datetime "updated_at", null: false
     t.index ["reservation_import_id", "sheet_row"], name: "idx_reservation_import_rows_on_import_and_sheet_row", unique: true
     t.index ["reservation_import_id", "status"], name: "idx_reservation_import_rows_on_import_and_status"
     t.index ["reservation_import_id"], name: "index_reservation_import_rows_on_reservation_import_id"
+    t.check_constraint "booking_status::text = ANY (ARRAY['confirmed'::character varying, 'pending'::character varying, 'cancelled'::character varying]::text[])", name: "reservation_import_rows_booking_status_allowed"
     t.check_constraint "status::text = ANY (ARRAY['importable'::character varying, 'imported'::character varying, 'past'::character varying, 'blocked'::character varying, 'created'::character varying, 'failed'::character varying]::text[])", name: "reservation_import_rows_status_allowed"
   end
 
@@ -2932,6 +2947,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
     t.bigint "hotel_id", null: false
     t.integer "processed_rows", default: 0, null: false
     t.integer "skipped_count", default: 0, null: false
+    t.string "source_layout"
     t.datetime "started_at"
     t.string "status", default: "draft", null: false
     t.string "step"
@@ -3551,6 +3567,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_01_070000) do
   add_foreign_key "inventory_audit_logs", "room_types"
   add_foreign_key "inventory_audit_logs", "users"
   add_foreign_key "invitations", "accounts"
+  add_foreign_key "invitations", "hotel_corporate_accounts"
   add_foreign_key "invitations", "hotels"
   add_foreign_key "invitations", "roles"
   add_foreign_key "invitations", "users", column: "invited_by_user_id"

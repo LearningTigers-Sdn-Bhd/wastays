@@ -639,7 +639,7 @@ module HotelPortal
           bookings
             .where(hotel_id: hotel.id)
             .includes(
-              :hotel, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
+              :hotel, { hotel_corporate_account: :corporate_account }, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
               { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } },
               booking_folios: [ :folio_transactions, :folio_forecasted_charges, { booking_billing_party: :booking_guest, hotel_corporate_account: :corporate_account } ],
               booking_rooms: [ :room_type, :rate_plan ],
@@ -1087,7 +1087,18 @@ module HotelPortal
           ]
         end
 
+      pairs = booked_under_pairs + pairs
       pairs.map { |label, value| [ label, value.presence || "—" ] }
+    end
+
+    # The travel agent or company the reservation was booked under, when it was.
+    # Most reservations were not, and get no row at all rather than an empty one.
+    def booked_under_pairs
+      accounts = child_bookings.filter_map(&:hotel_corporate_account).uniq
+      return [] if accounts.empty?
+
+      label = accounts.all?(&:travel_agent?) ? "Travel Agent" : "Corporate Account"
+      [ [ label, accounts.map { |account| account.corporate_account&.name }.compact.to_sentence ] ]
     end
 
     # Identifiers for one room-booking: one row for a standalone booking, one per child for a

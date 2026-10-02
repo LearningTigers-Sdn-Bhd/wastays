@@ -242,6 +242,7 @@ class HotelPortal::RatePlansController < HotelPortal::SettingsBaseController
       :channex_children_fee,
       :channex_infant_fee,
       :ta_access,
+      :ta_market,
       :hidden_from_public,
       agency_account_ids: [],
       rate_plan_age_bands_attributes: [ :id, :min_age, :max_age, :pricing_mode, :price_value, :label, :position, :_destroy ],

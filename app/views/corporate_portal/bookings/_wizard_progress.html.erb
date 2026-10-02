@@ -1,0 +1,64 @@
+<%# The booking wizard's header: where the agent is, the steps behind them as links
+    back, and what they have chosen so far. The whole stay -- hotel, dates and every
+    room line -- is in the URL, so going back to a step keeps what that step comes
+    before. %>
+<% steps = CorporatePortal::BookingsController::WIZARD_STEPS %>
+<% labels = { stay: "Stay", rooms: "Rooms", guests: "Guests" } %>
+<% here = steps.index(step) %>
+<% stay_params = { hotel_relationship_id: @relationship&.id, check_in: @check_in, check_out: @check_out }.compact_blank %>
+<% url_for_step = lambda do |target|
+     extra = { step: target }
+     extra[:lines] = CorporatePortal::StayLine.to_params(@lines) if @lines.any?
+     new_corporate_booking_path(stay_params.merge(extra))
+   end %>
+
+<nav aria-label="Booking steps" data-testid="booking-wizard-steps" data-step="<%= step %>">
+  <ol class="flex items-center gap-2 text-xs font-bold">
+    <% steps.each_with_index do |name, index| %>
+      <li class="flex items-center gap-2">
+        <% if index < here %>
+          <%= link_to url_for_step.call(name), class: "inline-flex items-center gap-1.5 text-foreground hover:underline", data: { testid: "wizard-step-#{name}" } do %>
+            <span class="inline-flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><%= cached_icon "check", class: "size-3", aria: { hidden: true } %></span>
+            <%= labels.fetch(name) %>
+          <% end %>
+        <% else %>
+          <span class="inline-flex items-center gap-1.5 <%= index == here ? "text-foreground" : "text-muted-foreground" %>"
+                <%= 'aria-current="step"'.html_safe if index == here %> data-testid="wizard-step-<%= name %>">
+            <span class="inline-flex size-5 items-center justify-center rounded-full border text-[10px] <%= index == here ? "border-primary bg-primary text-primary-foreground" : "border-border" %>"><%= index + 1 %></span>
+            <%= labels.fetch(name) %>
+          </span>
+        <% end %>
+        <% unless index == steps.size - 1 %><span class="h-px w-6 bg-border" aria-hidden="true"></span><% end %>
+      </li>
+    <% end %>
+  </ol>
+</nav>
+
+<%# What has been chosen so far: one cell per step, each with its own Change link. %>
+<% if here >= 1 && @base && @base.error.blank? %>
+  <% cells = [] %>
+  <% cells << { key: :stay, label: "Stay", title: @relationship.hotel.name,
+                detail: "#{@check_in.strftime('%d %b')} – #{@check_out.strftime('%d %b %Y')}",
+                extra: pluralize(@base.nights, "night") } %>
+  <% if here >= 2 && @cart&.success? %>
+    <% cells << { key: :rooms, label: "Rooms", title: pluralize(@cart.rooms, "room"),
+                  detail: "#{@cart.currency} #{number_with_precision(@cart.total_amount, precision: 2, delimiter: ',')}",
+                  extra: @cart.quotes.map { |quote| "#{quote.rooms} × #{quote.room_type.name}" }.to_sentence } %>
+  <% end %>
+
+  <dl class="grid divide-y divide-border overflow-hidden rounded-xl border border-border bg-card sm:grid-flow-col sm:auto-cols-fr sm:divide-x sm:divide-y-0" data-testid="booking-wizard-summary">
+    <% cells.each do |cell| %>
+      <div class="flex items-start justify-between gap-3 px-4 py-3" data-testid="summary-<%= cell[:key] %>">
+        <div class="min-w-0">
+          <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= cell[:label] %></dt>
+          <dd class="mt-0.5 truncate text-sm font-bold text-foreground"><%= cell[:title] %></dd>
+          <% if cell[:detail] %><dd class="text-xs font-semibold tabular-nums text-foreground"><%= cell[:detail] %></dd><% end %>
+          <% if cell[:extra] %><dd class="text-xs text-muted-foreground"><%= cell[:extra] %></dd><% end %>
+        </div>
+        <%= link_to "Change", url_for_step.call(cell[:key]),
+              class: "shrink-0 rounded-md border border-border px-2 py-1 text-xs font-bold text-foreground hover:bg-muted",
+              aria: { label: "Change #{cell[:label].downcase}" } %>
+      </div>
+    <% end %>
+  </dl>
+<% end %>

@@ -329,4 +329,19 @@ RSpec.describe Guest, type: :model do
       expect(record.safely_read_encrypted(:government_id)).to be_nil
     end
   end
+
+  describe "the not-captured phone placeholder" do
+    it "is recognised, and never offered as a phone number to show" do
+      placeholder = "#{described_class::PHONE_NOT_CAPTURED} RES4773-13"
+
+      expect(described_class.placeholder_phone?(placeholder)).to be(true)
+      expect(described_class.displayable_phone(placeholder)).to be_nil
+    end
+
+    it "leaves a real number alone" do
+      expect(described_class.placeholder_phone?("+60123456789")).to be(false)
+      expect(described_class.displayable_phone("+60123456789")).to eq("+60123456789")
+      expect(described_class.displayable_phone(nil)).to be_nil
+    end
+  end
 end

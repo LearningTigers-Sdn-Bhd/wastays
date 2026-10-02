@@ -100,6 +100,22 @@
                       Admin Panel
                     </a>
                   <% end %>
+                  <%# A travel agent or other corporate account lands here from the
+                      public site with nowhere else to go: its own portal. %>
+                  <% if current_user.corporate? %>
+                    <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-foreground hover:bg-muted transition-colors" href="<%= corporate_dashboard_path %>" data-testid="menu-corporate-dashboard">
+                      <%= cached_icon "layout-dashboard", class: "w-4 h-4 text-muted-foreground flex-none", aria: { hidden: true } %>
+                      My Dashboard
+                    </a>
+                    <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-foreground hover:bg-muted transition-colors" href="<%= corporate_bookings_path %>" data-testid="menu-corporate-bookings">
+                      <%= cached_icon "calendar-days", class: "w-4 h-4 text-muted-foreground flex-none", aria: { hidden: true } %>
+                      My Bookings
+                    </a>
+                    <a class="flex items-center gap-x-3 py-2.5 px-3 rounded-xl text-sm text-foreground hover:bg-muted transition-colors" href="<%= corporate_profile_path %>" data-testid="menu-corporate-profile">
+                      <%= cached_icon "user", class: "w-4 h-4 text-muted-foreground flex-none", aria: { hidden: true } %>
+                      Profile
+                    </a>
+                  <% end %>
                   <%# A corporate account, or staff not yet given a hotel, has
                       no hotel-scoped page to reach from here. %>
                   <% account_path = account_settings_path_for(current_user) %>

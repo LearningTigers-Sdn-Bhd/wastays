@@ -9,6 +9,7 @@
     <div class="min-w-0 flex-1">
       <div class="flex min-w-0 flex-wrap items-start gap-1.5"><p class="min-w-0 flex-1 break-words text-sm font-semibold text-foreground"><%= presenter.guest_name %></p><%= render "guest_markers", presenter: %></div>
       <p class="mt-1 truncate font-mono text-xs text-muted-foreground"><%= presenter.confirmation_token %></p>
+      <%= render "agency_line", booking: booking %>
     </div>
     <%= render "record_actions", booking:, tab: "in_house" %>
   </header>

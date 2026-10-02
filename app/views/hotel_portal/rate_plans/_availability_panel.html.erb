@@ -27,6 +27,14 @@
              data: { value_reveal_target: "source", action: "change->value-reveal#update" }) %>
       <% end %>
     </div>
+    <div class="max-w-md">
+      <%= render PanelsUI::FormField.new(form: f, attribute: :ta_market, label: "Which agents",
+            hint: "A plan marked local or international is hidden from the other market, and from agents with no market set.") do |field| %>
+        <% field.with_select_menu(
+             RatePlan::TA_MARKET_LABELS.map { |value, label| { label: label, value: value } },
+             selected: rate_plan.ta_market) %>
+      <% end %>
+    </div>
     <% agencies = current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).sort_by { |account| account.corporate_account.name.to_s.downcase } %>
     <div class="max-w-3xl" data-value-reveal-target="panel" data-reveal-values="except only" <%= "hidden" unless rate_plan.agency_rules? %>>
       <% if agencies.any? %>

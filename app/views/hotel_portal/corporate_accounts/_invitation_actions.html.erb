@@ -5,19 +5,34 @@
 <% filters = presenter.filter_params %>
 
 <% if row.expired? %>
-  <%= render PanelsUI::Button.new(
-    as: :a,
-    href: resend_hotel_corporate_invitation_path(current_hotel, row.invitation, **filters),
-    variant: :secondary,
-    size: :sm,
-    data: {
-      testid: "external-invitation-resend-#{row.id}",
-      turbo_method: :post,
-      turbo_frame: "corporate_accounts_results"
-    }) do %>
-    <%= cached_icon "send", class: "size-3.5", aria: { hidden: true } %>
-    <%= row.send_label %>
-  <% end %>
+  <div class="ml-auto inline-flex items-center gap-2">
+    <%= render PanelsUI::Button.new(
+      as: :a,
+      href: resend_hotel_corporate_invitation_path(current_hotel, row.invitation, **filters),
+      variant: :secondary,
+      size: :sm,
+      data: {
+        testid: "external-invitation-resend-#{row.id}",
+        turbo_method: :post,
+        turbo_frame: "corporate_accounts_results"
+      }) do %>
+      <%= cached_icon "send", class: "size-3.5", aria: { hidden: true } %>
+      <%= row.send_label %>
+    <% end %>
+    <%= render PanelsUI::Button.new(
+      as: :a,
+      href: link_hotel_corporate_invitation_path(current_hotel, row.invitation, **filters),
+      variant: :secondary,
+      size: :sm,
+      data: {
+        testid: "external-invitation-link-#{row.id}",
+        turbo_method: :post,
+        turbo_frame: "corporate_accounts_results"
+      }) do %>
+      <%= cached_icon "link", class: "size-3.5", aria: { hidden: true } %>
+      Copy link
+    <% end %>
+  </div>
 <% else %>
   <%= render PanelsUI::ButtonGroup.new(class: "ml-auto", data: { testid: "external-invitation-actions-#{row.id}" }) do %>
     <%= render PanelsUI::Button.new(
@@ -32,6 +47,20 @@
       }) do %>
       <%= cached_icon "send", class: "size-3.5", aria: { hidden: true } %>
       <%= row.send_label %>
+    <% end %>
+
+    <%= render PanelsUI::Button.new(
+      as: :a,
+      href: link_hotel_corporate_invitation_path(current_hotel, row.invitation, **filters),
+      variant: :secondary,
+      size: :sm,
+      data: {
+        testid: "external-invitation-link-#{row.id}",
+        turbo_method: :post,
+        turbo_frame: "corporate_accounts_results"
+      }) do %>
+      <%= cached_icon "link", class: "size-3.5", aria: { hidden: true } %>
+      Copy link
     <% end %>
 
     <%= render PanelsUI::Button.new(

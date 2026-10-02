@@ -60,6 +60,11 @@
                 <% end %>
                 <%= booking.check_in.to_date.strftime("%d %b") %> –
                 <%= booking.check_out.to_date.strftime("%d %b %Y") %>
+                <%# A room of a stay opens that room, with the rest of the stay beneath it. %>
+                <% stay_size = @stay_sizes[booking.group_booking_id] %>
+                <% if stay_size.to_i > 1 %>
+                  · <%= booking.group_position ? "Room #{booking.group_position} of #{stay_size}" : "One of #{stay_size} rooms" %>
+                <% end %>
               </p>
               <div class="mt-1.5">
                 <%= render "corporate_portal/bookings/payment_deadline", booking: booking, payment: payment, compact: true %>

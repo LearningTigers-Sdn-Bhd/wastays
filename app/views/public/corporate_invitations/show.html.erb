@@ -4,7 +4,11 @@
       <%= image_tag "logo/long-logo.png", alt: "WAStays", class: "mx-auto h-12 w-auto" %>
       <p class="mt-8 text-xs font-bold uppercase tracking-[0.3em] text-brand-primary">Corporate invitation</p>
       <h1 class="mt-4 text-4xl font-serif text-neutral-text-primary">Connect your Corporate Account</h1>
-      <p class="mt-3 text-sm text-neutral-text-secondary"><%= @invitation.hotel.name %> invited you to its corporate billing network.</p>
+      <% if @invitation.claim? %>
+        <p class="mt-3 text-sm text-neutral-text-secondary"><%= @invitation.hotel.name %> invited you to manage <strong><%= @invitation.hotel_corporate_account.corporate_account.name %></strong>.</p>
+      <% else %>
+        <p class="mt-3 text-sm text-neutral-text-secondary"><%= @invitation.hotel.name %> invited you to its corporate billing network.</p>
+      <% end %>
     </div>
 
     <div class="rounded-3xl border border-neutral-border bg-white p-8 shadow-sm">
@@ -20,10 +24,13 @@
           <% if @user.errors.any? %>
             <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><%= @user.errors.full_messages.to_sentence %></div>
           <% end %>
-          <div>
-            <%= label_tag "user_account_name", "Corporate account name", class: "mb-2 block text-xs font-bold uppercase tracking-wider" %>
-            <%= text_field_tag "user[account_name]", params.dig(:user, :account_name), id: "user_account_name", required: true, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm" %>
-          </div>
+          <%# A claimed account already has its name and its bookings; only a new one asks. %>
+          <% unless @invitation.claim? %>
+            <div>
+              <%= label_tag "user_account_name", "Corporate account name", class: "mb-2 block text-xs font-bold uppercase tracking-wider" %>
+              <%= text_field_tag "user[account_name]", params.dig(:user, :account_name), id: "user_account_name", required: true, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm" %>
+            </div>
+          <% end %>
           <div>
             <%= f.label :name, "Full name", class: "mb-2 block text-xs font-bold uppercase tracking-wider" %>
             <%= f.text_field :name, required: true, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm" %>
@@ -36,7 +43,7 @@
             <%= f.label :password_confirmation, "Confirm password", class: "mb-2 block text-xs font-bold uppercase tracking-wider" %>
             <%= f.password_field :password_confirmation, required: true, class: "w-full rounded-xl border border-neutral-border px-4 py-3 text-sm" %>
           </div>
-          <%= f.submit "Create account and accept", class: "w-full rounded-xl bg-brand-primary px-5 py-3 text-sm font-bold text-white" %>
+          <%= f.submit(@invitation.claim? ? "Create my login" : "Create account and accept", class: "w-full rounded-xl bg-brand-primary px-5 py-3 text-sm font-bold text-white") %>
         <% end %>
       <% end %>
     </div>

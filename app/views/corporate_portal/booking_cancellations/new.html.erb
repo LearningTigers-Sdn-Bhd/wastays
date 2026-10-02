@@ -1,7 +1,7 @@
 <% rooms = @cancellation.group %>
 <div class="mx-auto w-full max-w-2xl space-y-6">
   <%= render PanelsUI::PageHeader.new(
-        title: "Cancel this booking?",
+        title: (rooms.size > 1 ? "Cancel this whole stay?" : (@booking.group_booking_id.present? ? "Cancel this room?" : "Cancel this booking?")),
         description: "These rooms will be returned to sale, and the reservation kept on file as cancelled.") %>
 
   <%# A multi-room stay is several bookings under one group, so the agent is
@@ -43,7 +43,7 @@
 
   <div class="flex flex-wrap gap-3">
     <%= button_to "Confirm cancellation", corporate_booking_cancellation_path(@booking),
-          method: :post,
+          method: :post, params: { scope: (rooms.size == 1 && @booking.group_booking_id.present? ? "room" : nil) }.compact,
           class: "rounded-xl bg-destructive px-4 py-2.5 text-sm font-bold text-destructive-foreground hover:bg-destructive/90" %>
     <%= link_to "Keep the booking", corporate_booking_path(@booking),
           class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>

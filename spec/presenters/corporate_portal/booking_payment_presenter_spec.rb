@@ -234,10 +234,27 @@ RSpec.describe CorporatePortal::BookingPaymentPresenter do
     end
 
     it "is paid once nothing is owed" do
-      booking.update!(payment_due_at: nil)
+      booking.update!(payment_due_at: nil, payment_status: "captured")
 
       expect(presenter.state).to eq(:paid)
       expect(presenter.badge_variant).to eq(:success)
+    end
+
+    # A booking brought in from another system has no deadline and no payment
+    # recorded. Reading "no deadline" as "paid" told agents they had paid when
+    # nothing was known.
+    it "is not paid when there is no deadline and nothing has been paid" do
+      booking.update!(payment_due_at: nil, payment_status: "pending")
+
+      expect(presenter.state).to eq(:unsettled)
+      expect(presenter.badge_label).to eq("Payment pending")
+      expect(presenter.badge_variant).to eq(:warning)
+    end
+
+    it "stays unsettled for a part-paid booking with no deadline left" do
+      booking.update!(payment_due_at: nil, payment_status: "partial")
+
+      expect(presenter.state).to eq(:unsettled)
     end
 
     # A closed stay stays on the list as history, but should not compete with the
