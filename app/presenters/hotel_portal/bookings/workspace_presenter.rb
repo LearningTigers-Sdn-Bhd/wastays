@@ -1112,6 +1112,7 @@ module HotelPortal
           confirmation_code: child.confirmation_token.presence || "—",
           receipt_number: child.formatted_receipt_number.presence || "—",
           source: format_source(child.source),
+          source_account_name: child.hotel_corporate_account&.corporate_account&.name.presence,
           invoice_number: child.formatted_invoice_number.presence || "—",
           folio_account: child.folio_account_reference_display.presence || "—",
           guest_registration: child.formatted_guest_registration_number.presence || "—"
