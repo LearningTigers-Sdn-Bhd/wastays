@@ -135,6 +135,21 @@ RSpec.describe CorporatePortal::CreateAgentBooking, "with several lines" do
       expect(result.bookings.map(&:adults)).to eq([ 1, 3, 2 ])
     end
 
+    it "stores the children without pricing them, and asks for no ages" do
+      result = book_rooms("0" => { room_type_id: deluxe.id, adults: 2, children: 2, quantity: 1 })
+
+      expect(result).to be_success
+      expect(result.bookings.first).to have_attributes(children: 2, child_ages: [])
+      expect(result.bookings.first.total_amount.to_d).to eq(500)
+    end
+
+    it "refuses a party the category cannot hold" do
+      result = book_rooms("0" => { room_type_id: deluxe.id, adults: 4, quantity: 1 })
+
+      expect(result).not_to be_success
+      expect(result.errors).to include(deluxe.occupancy_limit_message)
+    end
+
     it "books a party of nobody as one adult, as the single-category request always did" do
       result = book_rooms("0" => { room_type_id: deluxe.id, adults: 0, quantity: 1 })
 
