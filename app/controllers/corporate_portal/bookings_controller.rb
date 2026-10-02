@@ -57,10 +57,14 @@ module CorporatePortal
       @step = :stay
       return if @relationship.blank? || @check_in.blank? || @check_out.blank?
 
-      # One search at the smallest party: it validates the dates and says which
-      # categories have rooms free, whoever is going to sleep in them.
+      # One search validates the dates and says which categories have rooms free,
+      # whoever is going to sleep in them. A category is priced for a party, and one
+      # may sell only from two adults up, so it is asked for one and for two; a
+      # category either answers is listed.
       @base = search_for(adults: 1, children: 0, rooms: 1)
       return if @base.error.present?
+
+      @base_options = @base.options + search_for(adults: 2, children: 0, rooms: 1).options
 
       @cart = AgentStayCart.call(
         hotel: @relationship.hotel, relationship: @relationship, check_in: @check_in, check_out: @check_out, lines: @lines
@@ -127,7 +131,7 @@ module CorporatePortal
     # stay already holds. Only categories the agency is offered a rate on appear.
     def free_rooms_by_category
       held = @lines.group_by(&:room_type_id).transform_values { |lines| lines.sum(&:quantity) }
-      @base.options.group_by(&:room_type).to_h do |room_type, options|
+      @base_options.group_by(&:room_type).to_h do |room_type, options|
         [ room_type, [ options.first.available_count - held.fetch(room_type.id, 0), 0 ].max ]
       end
     end
