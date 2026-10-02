@@ -150,6 +150,13 @@ RSpec.describe "Importing the eZee reservation CSV" do
       expect(agent_rows.map { |row| row.booking.source }.uniq).to eq([ "travel_agent" ])
     end
 
+    it "marks each agency local or international from the rate types it was booked on" do
+      relationships = hotel.hotel_corporate_accounts.where.not(market: nil)
+
+      expect(relationships).to be_present
+      expect(relationships.pluck(:market).uniq - %w[local international]).to be_empty
+    end
+
     it "leaves tourism tax off, because the export has no nationality" do
       expect(result.created.map(&:tourism_tax_amount).uniq).to eq([ 0 ])
     end

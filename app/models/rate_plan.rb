@@ -48,7 +48,19 @@ class RatePlan < ApplicationRecord
     "only" => "Only selected travel agents"
   }.freeze
 
+  # Which market of travel agent a plan is for. "all" offers it to any agent the
+  # access rule above admits; "local" or "international" offers it only to agents
+  # the hotel has marked that way, so a local agent never sees an international
+  # rate (and an agent with no market set sees only "all" plans).
+  TA_MARKETS = %w[all local international].freeze
+  TA_MARKET_LABELS = {
+    "all" => "Local and international agents",
+    "local" => "Local agents only",
+    "international" => "International agents only"
+  }.freeze
+
   validates :name, presence: true
+  validates :ta_market, inclusion: { in: TA_MARKETS }
   validates :kind, presence: true, inclusion: { in: KINDS }
   validates :ta_access, inclusion: { in: TA_ACCESS }
   validate :agency_accounts_fit_access
@@ -75,15 +87,19 @@ class RatePlan < ApplicationRecord
   # "All except" is a list of agencies to leave out, so it only ever offers to
   # an agency it can check against that list -- with none, only "all" answers.
   scope :offered_to_agency, lambda { |relationship|
-    open_to_all = for_audience(:corporate).where(ta_access: "all")
+    # Only plans for the agent's market -- or for every market -- however the
+    # access rule below admits them.
+    markets = [ "all", relationship&.market ].compact
+    in_market = where(ta_market: markets)
+    open_to_all = in_market.for_audience(:corporate).where(ta_access: "all")
     next open_to_all if relationship.nil?
 
     named = RatePlanAgencyRule.where(hotel_corporate_account_id: relationship.id)
       .where(RatePlanAgencyRule.arel_table[:rate_plan_id].eq(arel_table[:id]))
       .arel.exists
     open_to_all
-      .or(for_audience(:corporate).where(ta_access: "except").where.not(named))
-      .or(for_audience(:corporate).where(ta_access: "only").where(named))
+      .or(in_market.for_audience(:corporate).where(ta_access: "except").where.not(named))
+      .or(in_market.for_audience(:corporate).where(ta_access: "only").where(named))
   }
 
   after_save :sync_agency_rules, if: -> { @agency_account_ids }
@@ -156,6 +172,13 @@ class RatePlan < ApplicationRecord
     TA_ACCESS_LABELS.fetch(ta_access)
   end
 
+  def ta_market_label = TA_MARKET_LABELS.fetch(ta_market)
+
+  # Whether this plan is meant for the agent's market (or for all of them).
+  def in_market_for?(relationship)
+    ta_market == "all" || (relationship&.market.present? && ta_market == relationship.market)
+  end
+
   def agency_rules?
     ta_access.in?(%w[except only])
   end
@@ -163,6 +186,7 @@ class RatePlan < ApplicationRecord
   # Mirrors .offered_to_agency for a plan already in hand.
   def offered_to_agency?(relationship)
     return false unless bookable_by?(:corporate)
+    return false unless in_market_for?(relationship)
 
     case ta_access
     when "all" then true

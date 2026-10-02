@@ -13,6 +13,7 @@ class CorporateInvitation < Invitation
     :credit_currency,
     :payment_terms_days,
     :account_type,
+    :market,
     :agent_booking_enabled,
     :agent_payment_hold_hours
 
@@ -33,6 +34,7 @@ class CorporateInvitation < Invitation
   validates :credit_currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :account_type, inclusion: { in: HotelCorporateAccount::ACCOUNT_TYPES }
   validates :agent_payment_hold_hours, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validates :market, inclusion: { in: HotelCorporateAccount::MARKETS }, allow_blank: true
   validate :claimed_account_belongs_to_hotel
 
   def claim? = hotel_corporate_account_id.present?

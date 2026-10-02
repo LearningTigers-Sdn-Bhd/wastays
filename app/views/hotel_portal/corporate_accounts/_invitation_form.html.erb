@@ -35,6 +35,12 @@
                   HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } },
                   selected: @corporate_invitation.account_type) %>
               <% end %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :market, label: "Market",
+                    hint: "Local agents see local rates, international agents international ones.") do |field| %>
+                <% field.with_select_menu(
+                  [ { label: "Not set", value: "" } ] + HotelCorporateAccount::MARKETS.map { |market| { label: HotelCorporateAccount::MARKET_LABELS.fetch(market), value: market } },
+                  selected: @corporate_invitation.market.to_s) %>
+              <% end %>
             <% end %>
           </section>
 

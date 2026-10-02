@@ -505,6 +505,49 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
+  describe "an agent's market" do
+    let!(:relationship) { create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent") }
+
+    it "can be set on the account, and is shown in the list" do
+      patch hotel_corporate_account_path(hotel, relationship),
+            params: { hotel_corporate_account: { market: "international" } }
+
+      expect(relationship.reload.market).to eq("international")
+
+      get hotel_corporate_accounts_path(hotel)
+      expect(Capybara.string(response.body).find("[data-testid='agent-market']")).to have_text("International")
+    end
+
+    it "can be cleared again" do
+      relationship.update!(market: "local")
+
+      patch hotel_corporate_account_path(hotel, relationship), params: { hotel_corporate_account: { market: "" } }
+
+      expect(relationship.reload.market).to be_nil
+    end
+
+    it "is offered on the account's edit sheet" do
+      get edit_hotel_corporate_account_path(hotel, relationship)
+
+      expect(response.body).to include("hotel_corporate_account[market]")
+    end
+
+    it "travels with an invitation to a new account, and lands on the relationship it creates" do
+      post hotel_corporate_accounts_path(hotel), params: {
+        corporate_invitation: { email: "new@agent.test", market: "local" }
+      }
+      invitation = CorporateInvitation.last
+      expect(invitation.market).to eq("local")
+
+      result = CorporateInvitations::AcceptService.new(
+        invitation: invitation,
+        user_attributes: { account_name: "New Agent", name: "Nia", password: "password123", password_confirmation: "password123" }
+      ).call
+
+      expect(result.relationship.market).to eq("local")
+    end
+  end
+
   describe "inviting a contact to an imported account" do
     let(:agency_account) { create(:account, :corporate, name: "PERFECT VACATION SDN.BHD") }
     let!(:relationship) do

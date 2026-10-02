@@ -95,6 +95,55 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
     expect(offered_plan_names.join).to include("TA Half Board")
   end
 
+  describe "local and international agents" do
+    let(:local_plan) do
+      create(:rate_plan, :custom, hotel: hotel, name: "Malaysian Agent Rate", ta_access: "all", ta_market: "local").tap do |plan|
+        create(:room_type_rate_plan, rate_plan: plan, room_type: room_type, pricing_value: 300)
+      end
+    end
+    let(:international_plan) do
+      create(:rate_plan, :custom, hotel: hotel, name: "International Agent Rate", ta_access: "all", ta_market: "international").tap do |plan|
+        create(:room_type_rate_plan, rate_plan: plan, room_type: room_type, pricing_value: 500)
+      end
+    end
+
+    before do
+      local_plan
+      international_plan
+    end
+
+    it "shows a local agent only the local rate" do
+      relationship.update!(market: "local")
+
+      names = offered_plan_names.join
+
+      expect(names).to include("Malaysian Agent Rate")
+      expect(names).not_to include("International Agent Rate")
+    end
+
+    it "shows an international agent only the international rate" do
+      relationship.update!(market: "international")
+
+      names = offered_plan_names.join
+
+      expect(names).to include("International Agent Rate")
+      expect(names).not_to include("Malaysian Agent Rate")
+    end
+
+    it "shows neither market-specific rate to an agent the hotel has not marked" do
+      names = offered_plan_names.join
+
+      expect(names).not_to include("Malaysian Agent Rate")
+      expect(names).not_to include("International Agent Rate")
+    end
+
+    it "refuses to book a rate from the other market, even by posting its id" do
+      relationship.update!(market: "local")
+
+      expect { book(rate_plan_id: international_plan.id) }.not_to change(Booking, :count)
+    end
+  end
+
   it "books the plan the agent chose" do
     plan = full_board(ta_access: "all")
 

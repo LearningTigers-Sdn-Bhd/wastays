@@ -94,6 +94,7 @@ module CorporateInvitations
         invited_by_user: @invited_by_user,
         email: email,
         account_type: @attributes[:account_type].presence || "company",
+        market: @attributes[:market].presence,
         relationship_type: @attributes[:relationship_type].presence || "standard",
         credit_limit: @attributes[:credit_limit].presence,
         credit_currency: @attributes[:credit_currency].presence || @hotel.default_currency,

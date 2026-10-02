@@ -114,6 +114,7 @@ module HotelPortal
         :email,
         :hotel_corporate_account_id,
         :account_type,
+        :market,
         :relationship_type,
         :credit_limit,
         :credit_currency,
@@ -127,6 +128,7 @@ module HotelPortal
     def relationship_params
       params.require(:hotel_corporate_account).permit(
         :account_type,
+        :market,
         :agent_booking_enabled,
         :relationship_type,
         :credit_limit,

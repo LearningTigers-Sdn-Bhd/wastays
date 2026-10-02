@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_030000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1547,6 +1547,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_020000) do
     t.decimal "credit_limit", precision: 12, scale: 2
     t.boolean "direct_bill_enabled", default: false, null: false
     t.bigint "hotel_id", null: false
+    t.string "market"
     t.integer "payment_terms_days"
     t.string "relationship_type", default: "standard", null: false
     t.string "sst_registration_number"
@@ -1563,6 +1564,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_020000) do
     t.check_constraint "account_type::text = ANY (ARRAY['company'::character varying, 'government'::character varying, 'travel_agent'::character varying, 'airline'::character varying, 'salesperson'::character varying]::text[])", name: "hotel_corporate_accounts_account_type_allowed"
     t.check_constraint "agent_payment_hold_hours IS NULL OR agent_payment_hold_hours > 0", name: "hotel_corporate_accounts_agent_payment_hold_hours_positive"
     t.check_constraint "credit_limit IS NULL OR credit_limit >= 0::numeric", name: "hotel_corporate_accounts_credit_limit_nonnegative"
+    t.check_constraint "market IS NULL OR (market::text = ANY (ARRAY['local'::character varying, 'international'::character varying]::text[]))", name: "hotel_corporate_accounts_market_check"
     t.check_constraint "payment_terms_days IS NULL OR payment_terms_days >= 0", name: "hotel_corporate_accounts_payment_terms_nonnegative"
     t.check_constraint "relationship_type::text = ANY (ARRAY['standard'::character varying, 'direct_bill'::character varying]::text[])", name: "hotel_corporate_accounts_relationship_type_allowed"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'suspended'::character varying]::text[])", name: "hotel_corporate_accounts_status_allowed"
@@ -2814,10 +2816,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_020000) do
     t.string "sell_mode", default: "per_room", null: false
     t.decimal "single_supplement", precision: 10, scale: 2, default: "0.0", null: false
     t.string "ta_access", default: "hidden", null: false
+    t.string "ta_market", default: "all", null: false
     t.datetime "updated_at", null: false
     t.index ["archived_at"], name: "index_rate_plans_on_archived_at"
     t.index ["hotel_id"], name: "index_rate_plans_on_hotel_id"
     t.check_constraint "ta_access::text = ANY (ARRAY['hidden'::character varying, 'all'::character varying, 'except'::character varying, 'only'::character varying]::text[])", name: "rate_plans_ta_access_check"
+    t.check_constraint "ta_market::text = ANY (ARRAY['all'::character varying, 'local'::character varying, 'international'::character varying]::text[])", name: "rate_plans_ta_market_check"
   end
 
   create_table "receipts", force: :cascade do |t|

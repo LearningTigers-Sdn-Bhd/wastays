@@ -279,8 +279,27 @@ module Ezee
         relationship_type: "standard",
         direct_bill_enabled: false,
         credit_currency: @hotel.default_currency.presence || "MYR",
+        market: market_for(key),
         status: "active"
       )
+    end
+
+    # Local or international, read from the rate types the agency was booked on
+    # ("Agent Rate Malaysian", "Agent Rate International"). An agency booked on
+    # both, or on neither, is left for the hotel to mark.
+    def market_for(key)
+      types = rate_types_by_agency.fetch(key, [])
+      return "local" if types.any? && types.all? { |type| type.match?(/malaysian|local/i) }
+      return "international" if types.any? && types.all? { |type| type.match?(/international/i) }
+
+      nil
+    end
+
+    def rate_types_by_agency
+      @rate_types_by_agency ||= @import.rows.importable.where.not(agency_name: nil)
+                                       .pluck(:agency_name, :rate_type)
+                                       .group_by { |name, _type| ImportPlan.normalize_agency(name) }
+                                       .transform_values { |pairs| pairs.map(&:last).compact_blank.uniq }
     end
 
     def build_groups(created)

@@ -37,6 +37,7 @@ module CorporateInvitations
         relationship = @invitation.hotel.hotel_corporate_accounts.create!(
           corporate_account: user.account,
           account_type: @invitation.account_type,
+          market: @invitation.market.presence,
           relationship_type: @invitation.relationship_type,
           credit_limit: @invitation.credit_limit,
           credit_currency: @invitation.credit_currency,

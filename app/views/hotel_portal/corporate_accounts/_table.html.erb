@@ -69,7 +69,12 @@
           <tr data-testid="<%= row.dom_id %>">
             <%= render "hotel_portal/corporate_accounts/row_identity", row: row %>
             <td class="font-mono text-xs font-semibold text-foreground"><%= row.agent_code.presence || "—" %></td>
-            <td class="text-muted-foreground"><%= row.account_type_label %></td>
+            <td class="text-muted-foreground">
+              <%= row.account_type_label %>
+              <% if row.relationship.market.present? %>
+                <span class="mt-0.5 block text-xs" data-testid="agent-market"><%= row.relationship.market_label %></span>
+              <% end %>
+            </td>
             <td class="text-muted-foreground"><%= row.terms_label %></td>
             <td><%= render "hotel_portal/corporate_accounts/credit_cell",
                             exposure: row.credit_exposure, direct_bill: row.direct_bill? %></td>
