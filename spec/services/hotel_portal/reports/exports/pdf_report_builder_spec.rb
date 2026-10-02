@@ -202,7 +202,7 @@ RSpec.describe HotelPortal::Reports::Exports::PdfReportBuilder do
     expect(extracted_text(pdf.render)).to include("BOOKING VOUCHER", "QR", "ACCESSORY")
   end
 
-  it "names every way of reaching the hotel in the masthead, without being told to" do
+  it "names the ways of reaching the hotel in the masthead and skips the ones it does not publish" do
     contactable = double(
       "hotel", id: 17, name: "Seaview Hotel", address: "1 Jalan Pantai", city: "Kota Kinabalu",
       country: "Malaysia", hotel_time_zone: ActiveSupport::TimeZone["Kuala Lumpur"],
@@ -215,9 +215,8 @@ RSpec.describe HotelPortal::Reports::Exports::PdfReportBuilder do
       ).tap(&:add_header).render
     )
 
-    # A dash says the hotel publishes no landline, where dropping the label would leave a
-    # reader unable to tell that from a document that failed to print the one it had.
-    expect(text).to include("Fixed line: -", "Phone: +60 12-345 6789", "Email: stay@seaview.example")
+    expect(text).to include("Phone: +60 12-345 6789 · Email: stay@seaview.example")
+    expect(text).not_to include("Fixed line")
   end
 
   it "prints no contact line at all for a hotel that publishes none" do

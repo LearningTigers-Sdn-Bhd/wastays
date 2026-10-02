@@ -201,4 +201,66 @@ RSpec.describe Reports::Bookings::GenerateBookingSummary do
       expect(text).to include("Balance due", "350.00")
     end
   end
+
+  context "when an agent pays for the booking" do
+    let(:agency) do
+      create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent",
+        corporate_account: create(:account, :corporate, name: "Super Sightseeing Holidays"))
+    end
+
+    before do
+      booking.update!(hotel_corporate_account: agency, agent_reference: "SSH-881", guest_phone: "+60 12-111 2222")
+      booking.booking_rooms.first.update!(room_number: "B8", rate_plan: create(:rate_plan, hotel: hotel, name: "Agent Rate International"))
+      booking.payment_instalments.create!(position: 1, kind: "deposit", amount: 150, due_at: Time.zone.local(2026, 4, 3))
+      booking.payment_instalments.create!(position: 2, kind: "balance", amount: 150, due_at: Time.zone.local(2026, 4, 20))
+    end
+
+    it "names the agent as the payer, ahead of the guest" do
+      text = summary_for(booking.reload)
+
+      expect(text).to include("BILL TO", "Super Sightseeing Holidays", "Travel agent", "SSH-881", "+60 12-111 2222")
+      expect(text.index("BILL TO")).to be < text.index("GUEST DETAILS")
+      expect(text).not_to include("CONTACT DETAILS")
+    end
+
+    it "prints the room, rate plan, payment schedule and total in words" do
+      text = summary_for(booking.reload)
+
+      expect(text).to include("ROOM & RATE", "Deluxe · B8", "Agent Rate International")
+      expect(text).to include("Payment schedule", "Deposit", "Balance", "03 Apr 2026", "20 Apr 2026")
+      expect(text.squish).to include("Total due in words: Three hundred ringgit only")
+    end
+  end
+
+  it "keeps the guest and contact blocks when no agent or company pays" do
+    text = summary_for(booking)
+
+    expect(text).to include("GUEST DETAILS", "CONTACT DETAILS")
+    expect(text).not_to include("BILL TO", "Payment schedule")
+  end
+
+  it "drops placeholder contact values and an address that is only a country" do
+    booking.update!(guest_phone: ".", guest_home_address: nil, guest_city: nil, guest_country: "Malaysia")
+
+    text = summary_for(booking)
+
+    expect(text).to include("Address", "Not provided", "Nationality")
+    expect(text).not_to include("Phone")
+  end
+
+  it "prints no payment total when no payment is recorded" do
+    text = summary_for(booking)
+
+    expect(text).to include("No payments have been recorded for this reservation.")
+    expect(text).not_to include("Total payments")
+  end
+
+  it "shows nothing due on a voided booking" do
+    booking.update_columns(status: "voided")
+
+    text = summary_for(booking)
+
+    expect(text).to include("Booking voided - nothing due")
+    expect(text).not_to include("Balance due", "Total due in words")
+  end
 end

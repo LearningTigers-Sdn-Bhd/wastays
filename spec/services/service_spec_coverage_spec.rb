@@ -50,6 +50,9 @@ RSpec.describe "Service spec coverage" do
     # from the class it calls would assert the literal it was given.
     "hotel_portal/reports/booking_performance_columns" => "hotel_portal/reports/report_columns_spec.rb",
     "hotel_portal/reports/booking_performance_selection" => "hotel_portal/reports/record_selection_spec.rb",
+    # The cancellation block only has meaning on the page that prints it. The
+    # voucher and booking summary specs read it from the rendered PDF.
+    "reports/bookings/cancellation_policy_section" => "reports/bookings/generate_voucher_spec.rb",
     # The folio posting the instalment services share is exercised through them:
     # a spec for it apart from a payment or refund would assert its own mock.
     "bookings/payment_instalments/folio_posting" => "bookings/payment_instalments/mark_paid_spec.rb",
