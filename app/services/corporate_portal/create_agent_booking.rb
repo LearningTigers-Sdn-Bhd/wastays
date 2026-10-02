@@ -105,7 +105,9 @@ module CorporatePortal
       bookings = []
 
       ActiveRecord::Base.transaction do
-        rooms.each_with_index do |guests, index|
+        # Only the rooms the stay's lines ask for: a guest block with no room behind
+        # it (a stale form) is left unbooked rather than guessed at.
+        rooms.first(room_quotes.size).each_with_index do |guests, index|
           bookings << create_booking(room_quotes.fetch(index), guests, index)
         end
       end
@@ -161,7 +163,10 @@ module CorporatePortal
         check_out: @params[:check_out],
         # The line's own occupancy, ages included, so each room is priced exactly
         # as the search quoted it.
-        adults: line.adults,
+        # A room is booked for at least one adult. A party of nobody is refused at the
+        # quote on a per-person hotel, where it has no price; where a room's price does
+        # not depend on who is in it, it is booked as one, as it always was.
+        adults: [ line.adults, 1 ].max,
         children: line.children,
         child_ages: line.child_ages,
         room_type_id: quote.room_type.id,
@@ -185,7 +190,7 @@ module CorporatePortal
         special_requests: @params[:special_requests].presence,
         agent_reference: @params[:agent_reference].to_s.strip.first(100).presence,
         internal_notes: "Booked through the corporate portal by " \
-                        "#{@relationship.corporate_account&.name}#{" (room #{index + 1} of #{rooms.size})" if rooms.many?}."
+                        "#{@relationship.corporate_account&.name}#{" (room #{index + 1} of #{room_quotes.size})" if room_quotes.many?}."
       }.compact
     end
 
