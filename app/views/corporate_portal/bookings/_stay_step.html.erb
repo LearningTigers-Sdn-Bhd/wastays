@@ -1,0 +1,40 @@
+<%# Step one: where, and when. Who is sleeping in which room comes later, a line at a time. %>
+<section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+  <%= form_with url: new_corporate_booking_path, method: :get, class: "space-y-4" do |form| %>
+    <%= hidden_field_tag :step, "rooms" %>
+    <%# One linked hotel is not a choice, so it is shown, not asked -- read-only, with
+        the actual id still submitted. Two or more is a real choice. %>
+    <% if @relationships.one? %>
+      <% only_relationship = @relationships.first %>
+      <%= form.hidden_field :hotel_relationship_id, value: only_relationship.id %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :hotel_relationship_id,
+            id: "hotel-display", label: "Hotel", readonly: true) do |field| %>
+        <% field.with_input(name: "hotel_display", value: only_relationship.hotel.name) %>
+      <% end %>
+    <% else %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :hotel_relationship_id, label: "Hotel", required: true) do |field| %>
+        <% field.with_select_menu(@relationships.map { |r| { label: r.hotel.name, value: r.id } }, selected: @relationship&.id) %>
+      <% end %>
+    <% end %>
+
+    <%# Lines already in the stay ride along, so changing the dates keeps them. %>
+    <% CorporatePortal::StayLine.to_params(@lines).each do |index, attrs| %>
+      <% attrs.each do |key, value| %>
+        <%= hidden_field_tag "lines[#{index}][#{key}]", value %>
+      <% end %>
+    <% end %>
+
+    <div class="grid grid-cols-2 gap-4">
+      <%= render PanelsUI::FormField.new(form:, attribute: :check_in, label: "Arrival", required: true) do |field| %>
+        <% field.with_date_picker(value: @check_in, linked_to: :check_out, min: Date.current) %>
+      <% end %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :check_out, label: "Departure", required: true) do |field| %>
+        <% field.with_date_picker(value: @check_out, min: @check_in || Date.current) %>
+      <% end %>
+    </div>
+
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>
+      Continue to rooms
+    <% end %>
+  <% end %>
+</section>

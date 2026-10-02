@@ -36,8 +36,8 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
 
   # Rates are listed once the agent has chosen a room category.
   def offered_plan_names
-    get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s,
-                                   check_out: check_out.to_s, adults: 2, room_type_id: room_type.id, step: "rate")
+    get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s, check_out: check_out.to_s,
+                                   step: "rooms", stage: "rate", add_room_type_id: room_type.id, add_adults: 2, add_quantity: 1)
     response.parsed_body.css("[data-testid='agent-rates'] li").map { |item| item.text.squish }
   end
 
@@ -56,11 +56,11 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
     full_board(ta_access: "all")
 
     get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in.to_s,
-                                   check_out: check_out.to_s, adults: 2)
+                                   check_out: check_out.to_s, step: "rooms")
 
     page = response.parsed_body
     expect(page.css("[data-testid='agent-room-type']").size).to eq(1)
-    expect(page.css("[data-testid='agent-room-type']").first.text).to include("Deluxe", "From")
+    expect(page.css("[data-testid='agent-room-type']").first.text).to include("Deluxe", "free")
     expect(page.css("[data-testid='agent-rates']")).to be_empty
     expect(response.body).not_to include("TA Full Board")
   end

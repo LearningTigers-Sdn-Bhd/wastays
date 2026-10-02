@@ -39,6 +39,19 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
       check_out: check_out.to_s, adults: 2 }.merge(overrides)
   end
 
+  # The wizard's URL: the stay's hotel and dates, plus a cart of lines.
+  def stay_params(overrides = {})
+    { hotel_relationship_id: relationship.id, check_in: check_in.to_s, check_out: check_out.to_s }.merge(overrides)
+  end
+
+  def cart_of(*lines)
+    lines.each_with_index.to_h { |line, index| [ index.to_s, { room_type_id: room_type.id, adults: 2, quantity: 1 }.merge(line) ] }
+  end
+
+  def guests_step(*lines)
+    new_corporate_booking_path(stay_params(step: "guests", lines: cart_of(*(lines.presence || [ {} ]))))
+  end
+
   it "offers the hotels this account is linked to" do
     get new_corporate_booking_path
 
@@ -76,15 +89,8 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     expect(response.body).to include(ERB::Util.html_escape(second_hotel.name))
   end
 
-  it "explains the rooms field through an infotip rather than static hint text" do
-    get new_corporate_booking_path
-
-    expect(response.body).to include("About rooms")
-    expect(response.body).to include("Every room is booked with the same occupancy.")
-  end
-
   it "labels the ID field IC by default, matching the preselected nationality" do
-    get new_corporate_booking_path(search_params.merge(room_type_id: room_type.id))
+    get guests_step
 
     expect(response.body).to include("agent-guest-identity")
     expect(response.body).to include("IC number")
@@ -92,7 +98,8 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
   end
 
   it "shows what is available for the dates, priced for the stay" do
-    get new_corporate_booking_path(search_params)
+    get new_corporate_booking_path(stay_params(step: "rooms", stage: "rate", add_room_type_id: room_type.id,
+                                               add_adults: 2, add_quantity: 1))
 
     expect(response.body).to include("Deluxe")
     expect(response.body).to include("2 nights")
@@ -113,7 +120,8 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     end
 
     it "names SST on the priced option and flags tourism tax as a checkout note" do
-      get new_corporate_booking_path(search_params(room_type_id: room_type.id, step: "rate"))
+      get new_corporate_booking_path(stay_params(step: "rooms", stage: "rate", add_room_type_id: room_type.id,
+                                                 add_adults: 2, add_quantity: 1))
 
       expect(response.body).to include("SST 8%")
       expect(response.body).to include("tourism tax")
@@ -139,7 +147,7 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
   end
 
   it "asks for nationality with a searchable field per guest, Malaysia preselected" do
-    get new_corporate_booking_path(search_params.merge(room_type_id: room_type.id))
+    get guests_step
 
     expect(response.body).to include("Nationality")
     expect(response.body).not_to include("Nationality (optional)")
@@ -381,8 +389,9 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     expect(response.body).not_to include("Theo Walkin")
   end
 
-  # The booking is a wizard: stay, room category, rate, guests. Each step is a page
-  # of its own, and a step is never shown ahead of the choices it needs.
+  # The booking is a wizard: the stay (hotel and dates), the rooms (a cart of lines,
+  # each its own category, party and rate), then the guests. Where the agent is,
+  # cart included, is in the URL, and a step is never shown ahead of what it needs.
   describe "the booking wizard" do
     let!(:second_room_type) do
       Rooms::SaveSeedRoomType.call!(
@@ -399,103 +408,169 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
 
     def page = Capybara.string(response.body)
     def step = page.find("[data-testid='booking-wizard-steps']")["data-step"]
+    # The Deluxe has two rates open to this agent, so a line names one; the Suite has
+    # only the corporate rate, which a line may leave unnamed.
+    def line(room_type_id:, rate_plan_id: nil, adults: 2, children: 0, quantity: 1)
+      rate_plan_id ||= extra_plan.id if room_type_id == room_type.id
+      { room_type_id: room_type_id, rate_plan_id: rate_plan_id, adults: adults, children: children, quantity: quantity }.compact
+    end
+    def rooms_url(lines: nil, **extra)
+      new_corporate_booking_path(stay_params({ step: "rooms", lines: lines }.compact.merge(extra)))
+    end
 
-    it "starts with the stay: hotel, dates and party, and nothing else" do
+    it "starts with the stay: hotel and dates, and nothing about rooms" do
       get new_corporate_booking_path
 
       expect(step).to eq("stay")
-      expect(page).to have_text("See available rooms")
+      expect(page).to have_text("Continue to rooms")
       expect(page).to have_no_css("[data-testid='agent-room-types']")
     end
 
-    it "then asks for a room category, listing no rates" do
-      get new_corporate_booking_path(search_params)
+    it "then asks which category, listing no rates and no prices yet" do
+      get rooms_url
 
-      expect(step).to eq("room")
+      expect(step).to eq("rooms")
       expect(page.find("[data-testid='wizard-step-title']")).to have_text("Choose a room category")
       expect(page.all("[data-testid='agent-room-type']").size).to eq(2)
       expect(page).to have_no_css("[data-testid='agent-rates']")
-      expect(page).to have_no_text("See available rooms")
+      expect(page).to have_no_text("MYR")
     end
 
-    it "then asks for a rate for the chosen category only" do
-      get new_corporate_booking_path(search_params(room_type_id: room_type.id, step: "rate"))
+    it "then asks who is in the room" do
+      get rooms_url(stage: "occupancy", add_room_type_id: room_type.id)
 
-      expect(step).to eq("rate")
+      expect(page.find("[data-testid='wizard-step-title']")).to have_text("Who is in the Deluxe?")
+      expect(page).to have_css("[data-testid='occupancy-step']")
+      expect(page).to have_field("add_adults")
+      expect(page).to have_field("add_quantity")
+    end
+
+    it "then asks for a rate, for that party, in that category alone" do
+      get rooms_url(stage: "rate", add_room_type_id: room_type.id, add_adults: 2, add_quantity: 2)
+
       expect(page.find("[data-testid='wizard-step-title']")).to have_text("Choose a rate")
-      expect(page.all("[data-testid='agent-room-type']").size).to eq(1)
-      expect(page.all("[data-testid='agent-rates'] li").size).to be >= 2
+      expect(page.find("[data-testid='rate-party']")).to have_text("2 rooms").and have_text("Deluxe").and have_text("2 adults")
+      expect(page.all("[data-testid='agent-rate']").size).to be >= 2
       expect(page).to have_no_text("Suite")
     end
 
-    it "shows a category's only rate as a choice rather than skipping past it" do
-      get new_corporate_booking_path(search_params(room_type_id: second_room_type.id, step: "rate"))
+    it "adds a line to the stay when a rate is chosen, keeping the lines already there" do
+      existing = { "0" => line(room_type_id: second_room_type.id, rate_plan_id: second_room_type.rate_plans.first.id, adults: 3) }
+      get rooms_url(lines: existing, stage: "rate", add_room_type_id: room_type.id, add_adults: 2, add_quantity: 1)
 
-      expect(step).to eq("rate")
-      expect(page.all("[data-testid='agent-rates'] li").size).to eq(1)
+      href = page.first("[data-testid='select-rate']")[:href]
+      query = Rack::Utils.parse_nested_query(URI(href).query)
+      expect(query["lines"].keys).to eq(%w[0 1])
+      expect(query["lines"]["0"]["room_type_id"]).to eq(second_room_type.id.to_s)
+      expect(query["lines"]["1"]).to include("room_type_id" => room_type.id.to_s, "adults" => "2", "quantity" => "1")
+      expect(query["lines"]["1"]["rate_plan_id"]).to be_present
     end
 
-    it "finally asks for the guests, and shows the guest form alone" do
-      plan = extra_plan
-      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: plan.id))
+    it "shows the cart: every line, its price, the total, and a way to add another room or go on" do
+      lines = { "0" => line(room_type_id: room_type.id, adults: 2, quantity: 2), "1" => line(room_type_id: second_room_type.id, adults: 3) }
+      get rooms_url(lines: lines)
+
+      cart = page.find("[data-testid='stay-cart']")
+      expect(cart.all("[data-testid='cart-line']").size).to eq(2)
+      expect(cart).to have_text("2 rooms · Deluxe").and have_text("1 room · Suite").and have_text("3 adults")
+      expect(page.find("[data-testid='cart-total']")).to have_text("3 rooms")
+      expect(cart).to have_link("Add another room")
+      expect(cart).to have_link("Continue to guests")
+    end
+
+    it "removes a line from the cart" do
+      lines = { "0" => line(room_type_id: room_type.id), "1" => line(room_type_id: second_room_type.id) }
+      get rooms_url(lines: lines)
+
+      href = page.find("[data-testid='remove-line-0']")[:href]
+      query = Rack::Utils.parse_nested_query(URI(href).query)
+      expect(query["lines"].values.map { |entry| entry["room_type_id"] }).to eq([ second_room_type.id.to_s ])
+    end
+
+    it "does not offer Continue while a line cannot be booked, and says why" do
+      lines = { "0" => line(room_type_id: second_room_type.id, quantity: 3) } # the suite has two rooms
+      get rooms_url(lines: lines)
+
+      expect(page.find("[data-testid='cart-line-error']")).to have_text("no longer has")
+      expect(page).to have_no_link("Continue to guests")
+    end
+
+    it "no longer lists a category once the stay holds all its rooms" do
+      lines = { "0" => line(room_type_id: second_room_type.id, quantity: 2) }
+      get rooms_url(lines: lines, stage: "category")
+
+      expect(page.all("[data-testid='agent-room-type']").map(&:text).join).to include("Deluxe")
+      expect(page.all("[data-testid='agent-room-type']").map(&:text).join).not_to include("Suite")
+    end
+
+    it "refuses a party the category cannot hold, and says so" do
+      get rooms_url(stage: "rate", add_room_type_id: second_room_type.id, add_adults: 5)
+
+      expect(page.find("[data-testid='wizard-step-title']")).to have_text("Who is in the Suite?")
+      expect(page.find("[data-testid='occupancy-error']")).to have_text(second_room_type.occupancy_limit_message)
+    end
+
+    it "asks for the guests last: one block per room across every line, each named for its own category and party" do
+      lines = { "0" => line(room_type_id: room_type.id, adults: 2, quantity: 2), "1" => line(room_type_id: second_room_type.id, adults: 3) }
+      get new_corporate_booking_path(stay_params(step: "guests", lines: lines))
 
       expect(step).to eq("guests")
-      expect(response.body).to include("Guest details", "Confirm 1 room")
-      expect(page).to have_no_css("[data-testid='agent-rates']")
-      expect(page).to have_no_css("[data-testid='agent-room-types']")
+      rooms = page.all("[data-testid='guest-room']")
+      expect(rooms.size).to eq(3)
+      expect(rooms[0]).to have_text("Room 1 · Deluxe")
+      expect(rooms[2]).to have_text("Room 3 · Suite").and have_text("3 adults")
+      expect(page).to have_css("input[name='booking[rooms_detail][2][guests][2][name]']")
+      expect(page).to have_no_css("input[name='booking[rooms_detail][0][guests][2][name]']")
+      expect(page).to have_no_css("[data-testid='stay-cart']")
     end
 
-    it "keeps what has been chosen in view, with a way to change each choice" do
-      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id))
+    it "carries every line in the booking form" do
+      lines = { "0" => line(room_type_id: room_type.id), "1" => line(room_type_id: second_room_type.id, adults: 3) }
+      get new_corporate_booking_path(stay_params(step: "guests", lines: lines))
 
-      summary = page.find("[data-testid='booking-wizard-summary']")
-      expect(summary).to have_text(hotel.name).and have_text("Deluxe").and have_text("TA Full Board")
-      expect(summary.all("a", text: "Change").size).to eq(3)
+      expect(page).to have_css("input[name='booking[lines][0][room_type_id]'][value='#{room_type.id}']", visible: :all)
+      expect(page).to have_css("input[name='booking[lines][1][adults]'][value='3']", visible: :all)
     end
 
-    it "lays the summary out as one labelled cell per step, with its own Change link" do
-      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id))
+    it "keeps the stay and the rooms in view, each with a way to change it" do
+      get new_corporate_booking_path(stay_params(step: "guests", lines: { "0" => line(room_type_id: room_type.id, quantity: 2) }))
 
-      stay = page.find("[data-testid='summary-stay']")
-      expect(stay).to have_text("STAY", normalize_ws: true).or have_text("Stay")
-      expect(stay).to have_text(hotel.name).and have_text("2 nights")
-      expect(page.find("[data-testid='summary-room']")).to have_text("Deluxe")
-      rate = page.find("[data-testid='summary-rate']")
-      expect(rate).to have_text("TA Full Board")
-      expect(rate.text).to match(/MYR\s+[\d,]+\.00/)
-      expect(page.all("[data-testid^='summary-'] a", text: "Change").size).to eq(3)
+      expect(page.find("[data-testid='summary-stay']")).to have_text(hotel.name).and have_text("2 nights")
+      expect(page.find("[data-testid='summary-rooms']")).to have_text("2 rooms").and have_text("2 × Deluxe")
+      expect(page.all("[data-testid^='summary-'] a", text: "Change").size).to eq(2)
     end
 
-    it "links the finished steps back, dropping the choices that came after them" do
-      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id))
+    it "links the finished steps back with the cart intact" do
+      get new_corporate_booking_path(stay_params(step: "guests", lines: { "0" => line(room_type_id: room_type.id) }))
 
-      room_href = page.find("[data-testid='wizard-step-room']")[:href]
-      expect(room_href).to include("step=room")
-      expect(room_href).not_to include("room_type_id", "rate_plan_id")
-
-      rate_href = page.find("[data-testid='wizard-step-rate']")[:href]
-      expect(rate_href).to include("step=rate", "room_type_id=#{room_type.id}")
-      expect(rate_href).not_to include("rate_plan_id")
+      href = page.find("[data-testid='wizard-step-rooms']")[:href]
+      expect(href).to include("step=rooms")
+      expect(Rack::Utils.parse_nested_query(URI(href).query)["lines"]["0"]["room_type_id"]).to eq(room_type.id.to_s)
     end
 
-    it "goes back to an earlier step when asked" do
-      get new_corporate_booking_path(search_params(room_type_id: room_type.id, rate_plan_id: extra_plan.id, step: "room"))
+    it "never shows a step ahead of what it needs" do
+      get new_corporate_booking_path(stay_params(step: "guests"))
 
-      expect(step).to eq("room")
-      expect(page.all("[data-testid='agent-room-type']").size).to eq(2)
-    end
-
-    it "never shows a step ahead of the choices it needs" do
-      get new_corporate_booking_path(search_params(step: "guests"))
-
-      expect(step).to eq("room")
+      expect(step).to eq("rooms")
       expect(response.body).not_to include("Guest details")
     end
 
-    it "sends the Choose button to the rate step" do
-      get new_corporate_booking_path(search_params)
+    it "books the whole stay from the guests step, one booking per room, in one group" do
+      lines = { "0" => line(room_type_id: room_type.id, adults: 1, quantity: 1), "1" => line(room_type_id: second_room_type.id, adults: 2) }
 
-      expect(page.first("[data-testid='agent-room-type'] a", text: "Choose")[:href]).to include("step=rate", "room_type_id=")
+      expect {
+        post corporate_bookings_path, params: {
+          hotel_relationship_id: relationship.id,
+          booking: { check_in: check_in.to_s, check_out: check_out.to_s, lines: lines }.merge(
+            room_detail([ { name: "Ada Lim", phone: "+60123456789" } ], [ { name: "Bo Tan", phone: "+60127654321" }, { name: "Cy Ong" } ])
+          )
+        }
+      }.to change(Booking, :count).by(2)
+
+      bookings = Booking.order(:id).last(2)
+      expect(bookings.map { |booking| booking.booking_rooms.first.room_type }).to eq([ room_type, second_room_type ])
+      expect(bookings.map(&:adults)).to eq([ 1, 2 ])
+      expect(bookings.map(&:group_booking_id).uniq.compact.size).to eq(1)
     end
   end
 

@@ -184,12 +184,12 @@ RSpec.describe "CorporatePortal booking guests", type: :request do
 
     it "shows the boat fields only on a hotel with a boat timetable" do
       get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in, check_out: check_out,
-                                     adults: 2, rooms: 1, room_type_id: room_type.id)
+                                     step: "guests", lines: { "0" => { room_type_id: room_type.id, adults: 2, quantity: 1 } })
       expect(response.parsed_body.at_css("select[name='booking[boat_in_time]']")).to be_present
 
       hotel.update!(allow_boat_information: false)
       get new_corporate_booking_path(hotel_relationship_id: relationship.id, check_in: check_in, check_out: check_out,
-                                     adults: 2, rooms: 1, room_type_id: room_type.id)
+                                     step: "guests", lines: { "0" => { room_type_id: room_type.id, adults: 2, quantity: 1 } })
       expect(response.parsed_body.at_css("select[name='booking[boat_in_time]']")).to be_nil
     end
 

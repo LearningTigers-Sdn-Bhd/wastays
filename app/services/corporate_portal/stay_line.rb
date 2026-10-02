@@ -14,7 +14,8 @@ module CorporatePortal
     # shape) or an array of hashes. Anything that names no room category is
     # dropped, so an empty or half-typed line never reaches the quote.
     def self.parse(raw)
-      entries = raw.is_a?(Hash) || raw.respond_to?(:to_unsafe_h) ? raw.to_h.sort_by { |index, _| index.to_s.to_i }.map(&:last) : Array(raw)
+      hash = raw.respond_to?(:to_unsafe_h) ? raw.to_unsafe_h : raw
+      entries = hash.is_a?(Hash) ? hash.sort_by { |index, _| index.to_s.to_i }.map(&:last) : Array(hash)
       entries.filter_map do |entry|
         attrs = entry.respond_to?(:to_unsafe_h) ? entry.to_unsafe_h : entry.to_h
         attrs = attrs.symbolize_keys

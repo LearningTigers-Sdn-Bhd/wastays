@@ -17,22 +17,32 @@ RSpec.describe "Per-pax TA booking, end to end", type: :system, js: true do
   let(:check_in) { Date.current + 20 }
   let(:check_out) { check_in + 3 }
 
-  def search_and_open(relationship_id:, adults: 2, children: 0, rooms: 1)
-    visit_when_loaded new_corporate_booking_path(
-      hotel_relationship_id: relationship_id, check_in: check_in.to_s, check_out: check_out.to_s,
-      adults: adults, children: children, rooms: rooms
+  # The booking wizard: the stay's dates, then rooms (a category, who is in it, a
+  # rate), then guests. These drive its URLs directly where a step is not what is
+  # under test, and click through it where it is.
+  def rooms_url(relationship_id:, nights: 3, **extra)
+    new_corporate_booking_path(
+      hotel_relationship_id: relationship_id, check_in: check_in.to_s, check_out: (check_in + nights).to_s,
+      step: "rooms", **extra
     )
   end
 
-  # FB is attached to both Suite and Twin, so a plain "li with text Full
-  # Board" match is ambiguous - scope to the row naming both the room
-  # category and the plan.
-  def option_row(room_type_name, plan_name)
-    all("li").find { |li| li.text.include?(room_type_name) && li.text.include?(plan_name) }
+  # The rates one category is sold at, for a party.
+  def open_rates(relationship_id:, room_type: suite, adults: 2, children: 0, child_ages: nil, quantity: 1, nights: 3)
+    visit_when_loaded rooms_url(
+      relationship_id: relationship_id, nights: nights, stage: "rate", add_room_type_id: room_type.id,
+      add_adults: adults, add_children: children, add_child_ages: child_ages, add_quantity: quantity
+    )
   end
 
-  def select_option(room_type_name:, plan_name:)
-    within(option_row(room_type_name, plan_name)) { click_link "Select" }
+  def rate_row(plan_name)
+    all("[data-testid='agent-rate']").find { |row| row.text.include?(plan_name) }
+  end
+
+  # Adds the rate to the stay and goes on to the guests.
+  def add_rate_and_continue(plan_name)
+    within(rate_row(plan_name)) { click_link "Add to stay" }
+    click_link "Continue to guests"
   end
 
   def fill_lead_guest(name: "Ada Lim", phone: "+60123456789")
@@ -44,12 +54,12 @@ RSpec.describe "Per-pax TA booking, end to end", type: :system, js: true do
   # TA booking page shows the same total.
   it "U1: TA-A searches FB, sees the discounted price, books, and the booking page matches" do
     sign_in_as_system(ta_a_user)
-    search_and_open(relationship_id: ta_a.id)
+    open_rates(relationship_id: ta_a.id)
 
-    expect(page).to have_css("li", text: "Full Board", wait: 10)
-    expect(option_row("Pax Family Suite", "Full Board").text).to include("1350.00") # 2A x 3 nights x 0.9 (>=3-night discount)
+    expect(page).to have_css("[data-testid='agent-rate']", text: "Full Board", wait: 10)
+    expect(rate_row("Full Board").text).to include("1,350.00") # 2A x 3 nights x 0.9 (>=3-night discount)
 
-    select_option(room_type_name: "Pax Family Suite", plan_name: "Full Board")
+    add_rate_and_continue("Full Board")
     expect(page).to have_css("h2", text: "Guest details", wait: 10)
 
     fill_lead_guest
@@ -66,29 +76,29 @@ RSpec.describe "Per-pax TA booking, end to end", type: :system, js: true do
   # (only -> TA-A); CORP listed for TA-B only (except -> TA-C).
   it "U2a: TA-B sees the Suite's CORP but not its FB" do
     sign_in_as_system(ta_b_user)
-    search_and_open(relationship_id: ta_b.id)
+    open_rates(relationship_id: ta_b.id)
 
-    expect(page).to have_css("li", wait: 10)
-    expect(option_row("Pax Family Suite", "Full Board")).to be_nil
-    expect(option_row("Pax Family Suite", "Corporate")).to be_present
+    expect(page).to have_css("[data-testid='agent-rate']", wait: 10)
+    expect(rate_row("Full Board")).to be_nil
+    expect(rate_row("Corporate")).to be_present
   end
 
   it "U2b: TA-C sees neither the Suite's FB nor its CORP" do
     sign_in_as_system(ta_c_user)
-    search_and_open(relationship_id: ta_c.id)
+    open_rates(relationship_id: ta_c.id)
 
-    expect(page).to have_css("li", wait: 10)
-    expect(option_row("Pax Family Suite", "Full Board")).to be_nil
-    expect(option_row("Pax Family Suite", "Corporate")).to be_nil
+    expect(page).to have_css("[data-testid='agent-rate']", wait: 10)
+    expect(rate_row("Full Board")).to be_nil
+    expect(rate_row("Corporate")).to be_nil
   end
 
   # U3: TA searches 5 adults in the Suite - no bookable option, a clear message
-  it "U3: searching 5 adults shows no rooms available rather than a broken price" do
+  it "U3: asking for 5 adults in the Suite is refused with a message, not a broken price" do
     sign_in_as_system(ta_a_user)
-    search_and_open(relationship_id: ta_a.id, adults: 5)
+    open_rates(relationship_id: ta_a.id, adults: 5)
 
-    expect(page).to have_text(/nothing has \d+ room/i, wait: 10)
-    expect(option_row("Pax Family Suite", "Standard Rate")).to be_nil
+    expect(page).to have_text(suite.occupancy_limit_message, wait: 10)
+    expect(rate_row("Standard Rate")).to be_nil
   end
 
   # U4: TA searches 1, 3 and 5 nights for the same party - three different
@@ -96,20 +106,14 @@ RSpec.describe "Per-pax TA booking, end to end", type: :system, js: true do
   it "U4: 1, 3 and 5 nights for the same FB party price differently, matching the discount tiers" do
     sign_in_as_system(ta_a_user)
 
-    visit_when_loaded new_corporate_booking_path(
-      hotel_relationship_id: ta_a.id, check_in: check_in.to_s, check_out: (check_in + 1).to_s, adults: 2, children: 0, rooms: 1
-    )
-    expect(option_row("Pax Family Suite", "Full Board").text).to include("500.00")
+    open_rates(relationship_id: ta_a.id, nights: 1)
+    expect(rate_row("Full Board").text).to include("500.00")
 
-    visit_when_loaded new_corporate_booking_path(
-      hotel_relationship_id: ta_a.id, check_in: check_in.to_s, check_out: (check_in + 3).to_s, adults: 2, children: 0, rooms: 1
-    )
-    expect(option_row("Pax Family Suite", "Full Board").text).to include("1350.00")
+    open_rates(relationship_id: ta_a.id, nights: 3)
+    expect(rate_row("Full Board").text).to include("1,350.00")
 
-    visit_when_loaded new_corporate_booking_path(
-      hotel_relationship_id: ta_a.id, check_in: check_in.to_s, check_out: (check_in + 5).to_s, adults: 2, children: 0, rooms: 1
-    )
-    expect(option_row("Pax Family Suite", "Full Board").text).to include("2340.00")
+    open_rates(relationship_id: ta_a.id, nights: 5)
+    expect(rate_row("Full Board").text).to include("2,340.00")
   end
 
   # U6: TA cancels an unpaid booking - shown as cancelled, room free again
@@ -132,21 +136,58 @@ RSpec.describe "Per-pax TA booking, end to end", type: :system, js: true do
     expect(booking.reload.status).to eq("cancelled")
   end
 
-  # R1: the search asks one age per child, and the quote follows the band.
+  # M1: one stay of different rooms -- a different category, rate and party for each --
+  # built line by line, then booked together under one group.
+  it "M1: TA-A books a Suite for 2 on Full Board and a Twin for 1 on Standard, in one stay" do
+    sign_in_as_system(ta_a_user)
+    visit_when_loaded rooms_url(relationship_id: ta_a.id)
+
+    within(find("[data-testid='agent-room-type']", text: "Pax Family Suite", wait: 10)) { click_link "Choose" }
+    fill_in "Adults per room", with: "2"
+    click_button "See rates"
+    within(find("[data-testid='agent-rate']", text: "Full Board", wait: 10)) { click_link "Add to stay" }
+
+    expect(page).to have_css("[data-testid='cart-line']", count: 1, wait: 10)
+    click_link "Add another room"
+    within(find("[data-testid='agent-room-type']", text: "Pax Deluxe Twin", wait: 10)) { click_link "Choose" }
+    fill_in "Adults per room", with: "1"
+    click_button "See rates"
+    within(find("[data-testid='agent-rate']", text: "Standard Rate", wait: 10)) { click_link "Add to stay" }
+
+    expect(page).to have_css("[data-testid='cart-line']", count: 2, wait: 10)
+    expect(page.find("[data-testid='cart-total']").text).to include("2 rooms")
+    click_link "Continue to guests"
+
+    expect(page).to have_css("[data-testid='guest-room']", count: 2, wait: 10)
+    names = all("input[name$='[name]']")
+    names[0].set("Ada Lim")
+    all("input[type='tel']")[0].set("+60123456789")
+    # The first room has two adults to name, so the second room's lead is the third.
+    names[2].set("Bo Tan")
+    all("input[type='tel']")[2].set("+60127654321")
+    click_button "Confirm 2 rooms"
+
+    expect(page).to have_current_path(%r{/corporate/bookings/\d+}, wait: 10)
+    bookings = hotel.bookings.order(:id).last(2)
+    expect(bookings.map { |booking| booking.booking_rooms.first.room_type }).to eq([ suite, twin ])
+    expect(bookings.map { |booking| booking.booking_rooms.first.rate_plan }).to eq([ fb_plan, std_plan ])
+    expect(bookings.map(&:adults)).to eq([ 2, 1 ])
+    expect(bookings.map(&:group_booking_id).uniq.size).to eq(1)
+    expect(page).to have_text("Part of a 2-room stay")
+  end
+
+  # R1: the party step asks one age per child, and the quote follows the band.
   it "asks each child's age and quotes FB's child band for it" do
     sign_in_as_system(ta_a_user)
-    search_and_open(relationship_id: ta_a.id)
+    visit_when_loaded rooms_url(relationship_id: ta_a.id, stage: "occupancy", add_room_type_id: suite.id)
 
     expect(page).to have_no_css("select[aria-label='Age of child 1']")
     fill_in "Children per room", with: "1"
     find("select[aria-label='Age of child 1']", wait: 5).select("8")
-    click_button "Search availability"
+    click_button "See rates"
 
     # 2A + child 8: 500 + 40% of the 1-adult 300 = 620/night, 3 nights at 10% off = 1,674
-    # The page already lists the childless quote, so wait for the new price
-    # itself rather than any "Full Board" row, which the old list satisfies.
-    expect(page).to have_css("li", text: "1674.00", wait: 10)
-    expect(option_row("Pax Family Suite", "Full Board").text).to include("1674.00")
-    expect(find("select[aria-label='Age of child 1']").value).to eq("8")
+    expect(page).to have_css("[data-testid='agent-rate']", text: "1,674.00", wait: 10)
+    expect(rate_row("Full Board").text).to include("1,674.00")
   end
 end
