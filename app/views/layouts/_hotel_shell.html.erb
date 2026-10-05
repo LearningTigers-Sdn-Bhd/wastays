@@ -72,7 +72,7 @@
               <% menu.with_item(label: "Settings", href: settings_path, icon: "settings") %>
             <% end %>
             <% if current_user.super_agent? %>
-              <% menu.with_item(label: "Agent portal", href: agent_hotels_path, icon: "briefcase") %>
+              <% menu.with_item(label: "Partner portal", href: agent_hotels_path, icon: "briefcase") %>
             <% end %>
             <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
             <% menu.with_sign_out(label: "Sign out", path: logout_path) %>

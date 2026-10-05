@@ -15,7 +15,7 @@ RSpec.describe SuperAgentMailer do
 
       expect(email.to).to eq([ "aina@agent.test" ])
       expect(email.subject).to eq("Luma Stay registered with your invite link")
-      expect(email.text_part.body.to_s).to include("Hana Lim registered Luma Stay", agent.agent_code, "/agent/hotels")
+      expect(email.text_part.body.to_s).to include("Hana Lim registered Luma Stay", agent.agent_code, "/partner/hotels")
     end
   end
 
@@ -28,7 +28,7 @@ RSpec.describe SuperAgentMailer do
 
       expect(email.to).to eq([ "aina@agent.test" ])
       expect(email.subject).to eq("Luma Stay is now live")
-      expect(email.text_part.body.to_s).to include("The hotel can take bookings now", "/agent/hotels")
+      expect(email.text_part.body.to_s).to include("The hotel can take bookings now", "/partner/hotels")
     end
   end
 end
