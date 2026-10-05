@@ -454,6 +454,33 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     end
   end
 
+  it "marks a day-use bar with its hours up front, drops the source badge from the narrow bar, and keeps the source in the popover" do
+    segment = booking_segment.with(
+      day_use_hours: 5, source: "phone", source_label: "Phone",
+      check_in_at: Time.zone.local(2026, 7, 16, 15, 30), check_out_at: Time.zone.local(2026, 7, 16, 20, 30)
+    )
+
+    render_inline(HotelPortal::StayView::BookingBar.new(segment:))
+
+    segment_node = page.find(".panel-timeline__segment")
+    expect(segment_node["data-day-use"]).to eq("true")
+    trigger = page.find("#stay-view-booking-1-trigger")
+    expect(trigger.find("[data-slot='stay-view-day-use']")).to have_text("5h")
+    expect(trigger.all("[data-slot]").map { |node| node["data-slot"] }.first).to eq("stay-view-day-use")
+    expect(trigger).to have_no_css("[data-slot='stay-view-booking-source']")
+    panel = page.find("#stay-view-booking-1-panel", visible: :all)
+    expect(panel).to have_text("Day use · 5 hours")
+    expect(panel).to have_text("16 Jul, 15:30 – 20:30")
+    expect(panel).to have_text("via Phone")
+  end
+
+  it "leaves an overnight bar unmarked" do
+    render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment))
+
+    expect(page.find(".panel-timeline__segment")["data-day-use"]).to eq("false")
+    expect(page).to have_no_css("[data-slot='stay-view-day-use']")
+  end
+
   it "shows the booking source at the left of the bar and in the popover when present" do
     render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment.with(source: "walk_in", source_label: "Walk-in")))
 

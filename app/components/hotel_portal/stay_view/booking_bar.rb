@@ -52,8 +52,8 @@ module HotelPortal
           popover.with_trigger(**trigger_attributes) do
             safe_join([
               resize_handle(:start),
-              booking_source,
               day_use_marker,
+              (booking_source unless @segment.day_use?),
               tag.span(@segment.guest_label, class: "stay-view-booking-guest-name min-w-0 flex-1 truncate"),
               resize_handle(:end)
             ].compact)
@@ -73,6 +73,7 @@ module HotelPortal
           slot: "timeline-segment",
           tone: STATUS_TONES.fetch(@segment.status, :neutral),
           emphasis: :solid,
+          day_use: @segment.day_use?.to_s,
           clipped_left: @segment.clipped_left?.to_s,
           clipped_right: @segment.clipped_right?.to_s
         }
@@ -232,7 +233,7 @@ module HotelPortal
       def day_use_marker
         return unless @segment.day_use?
 
-        tag.span(class: "inline-flex shrink-0 items-center gap-0.5 text-xs tabular-nums", data: { slot: "stay-view-day-use" }) do
+        tag.span(class: "inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold tabular-nums", data: { slot: "stay-view-day-use" }) do
           safe_join([
             helpers.app_icon("clock", class: "size-3.5", aria: { hidden: true }),
             "#{@segment.day_use_hours}h"
