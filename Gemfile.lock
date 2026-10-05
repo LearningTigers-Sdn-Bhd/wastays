@@ -332,12 +332,12 @@ GEM
       afm (>= 0.2.1, < 2)
       hashery (~> 2.0)
       ttfunk
-    pg (1.6.3)
-    pg (1.6.3-aarch64-linux)
-    pg (1.6.3-aarch64-linux-musl)
-    pg (1.6.3-arm64-darwin)
-    pg (1.6.3-x86_64-linux)
-    pg (1.6.3-x86_64-linux-musl)
+    pg (1.7.0)
+    pg (1.7.0-aarch64-linux)
+    pg (1.7.0-aarch64-linux-musl)
+    pg (1.7.0-arm64-darwin)
+    pg (1.7.0-x86_64-linux)
+    pg (1.7.0-x86_64-linux-musl)
     pgvector (0.3.3)
     pp (0.6.4)
       prettyprint
@@ -643,7 +643,7 @@ DEPENDENCIES
   pagy (~> 43.6.2)
   parallel_tests
   pdf-reader (~> 2.12)
-  pg (~> 1.1)
+  pg (~> 1.7)
   pgvector (~> 0.3.0)
   prawn (~> 2.5)
   prawn-table (~> 0.2)
