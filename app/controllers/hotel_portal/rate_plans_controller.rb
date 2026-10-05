@@ -233,6 +233,7 @@ class HotelPortal::RatePlansController < HotelPortal::SettingsBaseController
     params.require(:rate_plan).permit(
       :name,
       :description,
+      :day_use_hours,
       :room_type_id,
       :rate_plan_id,
       :base_occupancy,

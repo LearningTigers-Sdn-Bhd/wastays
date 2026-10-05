@@ -11,6 +11,14 @@ module StayView
       # the operationally-aware rooms view (see ResolveRoomCardSlots).
       occupancy_check_in = booking.actual_check_in || booking.check_in
       occupancy_check_out = booking.actual_check_out || booking.check_out
+      day_use_hours = day_use_hours_for(booking, date_window)
+      if day_use_hours
+        # A stored time reads back in UTC, whose date can differ from the
+        # property's; a short stay has to land on the property's own day.
+        zone = Time.find_zone!(date_window.time_zone_name)
+        occupancy_check_in = occupancy_check_in.in_time_zone(zone)
+        occupancy_check_out = occupancy_check_out.in_time_zone(zone)
+      end
       tracks = date_window.booking_tracks(occupancy_check_in, occupancy_check_out)
       guest_label = capabilities.view_booking? ? booking.guest_name.presence || "Guest" : "Reserved"
       primary_guest_name = capabilities.view_booking? ? booking.primary_guest_name.presence || guest_label : "Reserved"
@@ -36,6 +44,7 @@ module StayView
       dates_label = "#{booking.check_in.to_fs(:long)} to #{booking.check_out.to_fs(:long)}"
       group_label = [ group_name, group_reference ].compact_blank.join(", ")
       accessible_parts = [ guest_label, booking.status.to_s.humanize, "room #{room_label}", room_type_name, dates_label ]
+      accessible_parts << "day use #{day_use_hours} hours" if day_use_hours
       accessible_parts << "group #{group_label}" if group_label.present?
       accessible_parts << "source #{source_label}" if source_label.present?
       accessible_parts << "#{adults.to_i} adults, #{children.to_i} children" if adults.present? || children.present?
@@ -91,8 +100,21 @@ module StayView
         boat_out_type:,
         vip:,
         blacklisted:,
-        repeat:
+        repeat:,
+        day_use_hours:
       )
+    end
+
+    # Hours of a stay that arrives and leaves on the same property date, else nil.
+    def self.day_use_hours_for(booking, date_window)
+      return if booking.check_in.blank? || booking.check_out.blank?
+
+      zone = Time.find_zone!(date_window.time_zone_name)
+      arrival = booking.check_in.in_time_zone(zone)
+      departure = booking.check_out.in_time_zone(zone)
+      return unless departure > arrival && departure.to_date == arrival.to_date
+
+      ((departure - arrival) / 1.hour).round
     end
 
     def self.project_group_rooms(group_rooms, booking, capabilities)
@@ -111,6 +133,6 @@ module StayView
       end
     end
 
-    private_class_method :project_group_rooms
+    private_class_method :project_group_rooms, :day_use_hours_for
   end
 end

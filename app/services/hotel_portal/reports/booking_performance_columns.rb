@@ -9,6 +9,7 @@ module HotelPortal
         ReportColumns.column(key: "confirmation_code", label: "Confirmation code", export_labels: [ "Confirmation Code" ], pdf_label: "Confirmation", pdf_width: 76, excel_width: 20, type: :text),
         ReportColumns.column(key: "guest", label: "Guest", export_labels: [ "Guest Name" ], pdf_label: "Guest", pdf_width: 100, excel_width: 26, type: :text),
         ReportColumns.column(key: "stay", label: "Stay", export_labels: [ "Check In", "Check Out" ], pdf_label: "Stay", pdf_width: 76, excel_width: 14, type: :date),
+        ReportColumns.column(key: "stay_type", label: "Stay type", export_labels: [ "Stay Type" ], pdf_label: "Type", pdf_width: 56, excel_width: 16, type: :text),
         ReportColumns.column(key: "check_in", label: "Check-in", export_labels: [ "Check In" ], pdf_label: "Check In", pdf_width: 58, excel_width: 14, type: :date),
         ReportColumns.column(key: "check_out", label: "Check-out", export_labels: [ "Check Out" ], pdf_label: "Check Out", pdf_width: 58, excel_width: 14, type: :date),
         ReportColumns.column(key: "source", label: "Source", export_labels: [ "Source" ], pdf_label: "Source", pdf_width: 62, excel_width: 18, type: :text),
@@ -23,7 +24,7 @@ module HotelPortal
         ReportColumns.column(key: "net", label: "Net payout", export_labels: [ "Net" ], pdf_label: "Net", pdf_width: 58, excel_width: 14, type: :money),
         ReportColumns.column(key: "currency", label: "Currency", export_labels: [ "Currency" ], pdf_label: "Currency", pdf_width: 48, excel_width: 12, type: :text)
       ],
-      defaults: %w[booked_on booking guest stay source fund_collector status payment_status gross taxes commission net]
+      defaults: %w[booked_on booking guest stay stay_type source fund_collector status payment_status gross taxes commission net]
     )
   end
 end

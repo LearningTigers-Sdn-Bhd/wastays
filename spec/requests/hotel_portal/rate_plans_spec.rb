@@ -348,6 +348,16 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
     end
   end
 
+  describe 'GET /hotel/:hotel_id/rate_plans/new plan type' do
+    it 'defaults a new plan to Room and keeps the hours field hidden' do
+      get new_hotel_rate_plan_path(hotel)
+
+      page = Nokogiri::HTML(response.body)
+      expect(page.at_css('#rate-plan-type [data-value="room"]')["aria-pressed"]).to eq("true")
+      expect(page.at_css('[data-rate-plan-type-target="hoursField"]').has_attribute?("hidden")).to be true
+    end
+  end
+
   describe 'POST /hotel/:hotel_id/rate_plans' do
     it 'creates a new rate plan and configures one selected room category' do
       expect {
@@ -371,6 +381,22 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
       expect(rate_plan.room_types).to include(room_type)
       expect(rate_plan.extra_pax_charge).to eq(50.to_d)
       expect(rate_plan.room_type_rate_plans.find_by(room_type: room_type).pricing_value).to eq(120.to_d)
+    end
+
+    it 'creates a day-use plan with its block of hours' do
+      post hotel_rate_plans_path(hotel), params: {
+        rate_plan: { name: 'Day Use 6h', room_type_id: room_type.id, base_occupancy: 2, day_use_hours: 6 },
+        room_pricing: { rate_mode: "manual", default_rate: "90" }
+      }
+
+      rate_plan = RatePlan.find_by!(name: 'Day Use 6h')
+      expect(rate_plan.day_use_hours).to eq(6)
+      expect(rate_plan).to be_day_use
+      follow_redirect!
+      page = Nokogiri::HTML(response.body)
+      expect(page.at_css('#rate-plan-type [data-value="day_use"]')["aria-pressed"]).to eq("true")
+      expect(page.at_css('[data-rate-plan-type-target="hoursField"]')["hidden"]).to be_nil
+      expect(page.at_css('[data-rate-plan-type-target="hours"]')["value"]).to eq("6")
     end
 
     it 'uses a selected existing plan without changing its shared details' do

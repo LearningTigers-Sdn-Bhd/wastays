@@ -64,6 +64,11 @@ module Bookings
 
       apply_existing_guest_fields(booking, selected_guest) if selected_guest
 
+      if rate_plan.day_use?
+        day_use_error = apply_day_use_window(booking, rate_plan)
+        return OpenStruct.new(success?: false, errors: [ day_use_error ]) if day_use_error
+      end
+
       # 1. Validate Room Availability based on Grid Selection
       available_rooms = AvailableRoomNumbers.new(
         hotel: @hotel,
@@ -89,8 +94,8 @@ module Bookings
           hotel: @hotel,
           room_type: room_type,
           rate_plan: rate_plan,
-          check_in: booking.check_in,
-          check_out: booking.check_out,
+          check_in: local_date(booking.check_in),
+          check_out: local_date(booking.check_out),
           guest_country: booking.guest_country,
           manual_total_amount: booking.manual_rate_override,
           adults: booking.adults,
@@ -251,6 +256,20 @@ module Bookings
       @record_payment == "1" || @record_payment == true
     end
 
+    # A day-use plan sells a fixed block of hours: it leaves exactly
+    # `day_use_hours` after arriving, whatever departure time was typed.
+    def apply_day_use_window(booking, rate_plan)
+      booking.check_out = booking.check_in + rate_plan.day_use_hours.hours
+      return if local_date(booking.check_out) == local_date(booking.check_in)
+
+      "#{rate_plan.name} is #{rate_plan.day_use_hours} hours and must finish before midnight. Choose an earlier arrival."
+    end
+
+    # The hotel's calendar date, not the UTC date a stored time reads back as.
+    def local_date(time)
+      ScheduledStay.local_date(hotel: @hotel, value: time)
+    end
+
     def normalize_scheduled_stay!
       %i[check_in check_out].each do |kind|
         next if @params[kind].blank?
@@ -281,8 +300,8 @@ module Bookings
 
       RateOptions.new(
         room_type: room_type,
-        check_in: booking.check_in,
-        check_out: booking.check_out,
+        check_in: local_date(booking.check_in),
+        check_out: local_date(booking.check_out),
         apply_stop_sell: @apply_stop_sell_restriction,
         apply_arrival_departure: @apply_arrival_departure_restrictions,
         apply_stay_length: @apply_stay_length_restrictions,

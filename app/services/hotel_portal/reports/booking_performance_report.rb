@@ -23,10 +23,15 @@ module HotelPortal
         :booking_id, :booked_on, :booking_number, :confirmation_code, :guest_name,
         :status, :status_label, :payment_status, :payment_status_label,
         :check_in, :check_out, :source, :source_label,
-        :rate_plan_key, :rate_plan_label, :room_nights,
+        :rate_plan_key, :rate_plan_label, :room_nights, :day_use_hours,
         :fund_collector, :fund_collector_label,
         :gross, :taxes, :commission, :net, :currency
-      )
+      ) do
+        def initialize(day_use_hours: nil, **attributes) = super
+
+        def day_use? = day_use_hours.present?
+        def stay_type_label = day_use? ? "Day use · #{day_use_hours}h" : "Overnight"
+      end
       Group = Data.define(:key, :label, :rows, :count, :currency_totals) do
         def room_nights = rows.sum(&:room_nights)
       end
@@ -158,6 +163,7 @@ module HotelPortal
             rate_plan_key: rate_plans.map(&:id).join("-").presence || NO_RATE_PLAN_KEY,
             rate_plan_label: rate_plans.map(&:name).to_sentence.presence || "No rate plan",
             room_nights: booking.booking_rooms.size * booking.duration_in_nights,
+            day_use_hours: rate_plans.filter_map(&:day_use_hours).first,
             fund_collector: collector,
             fund_collector_label: collector_label(collector),
             gross: booking.total_amount.to_d,

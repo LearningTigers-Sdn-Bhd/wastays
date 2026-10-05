@@ -29,6 +29,7 @@ module Bookings
     def allowed?(rate_plan)
       return false if rate_plan.blank?
       return false unless rate_plan.bookable_by?(@audience)
+      return false unless rate_plan.day_use? == day_use_stay?
 
       !restricted?(rate_plan)
     end
@@ -41,7 +42,7 @@ module Bookings
 
       (@apply_stop_sell && stop_sell_reason(rates)) ||
         (@apply_arrival_departure && arrival_departure_reason(rates, restriction_plan)) ||
-        (@apply_stay_length && stay_length_reason(rates)) ||
+        (@apply_stay_length && !day_use_stay? && stay_length_reason(rates)) ||
         nil
     end
 
@@ -65,13 +66,18 @@ module Bookings
       {
         id: rate_plan.id,
         name: rate_plan.name,
+        day_use_hours: rate_plan.day_use_hours,
         currency: rate_plan.currency,
         total_amount: total.to_d.to_s("F")
       }
     end
 
     def eligible_plans
-      @room_type.rate_plans.for_audience(@audience).order(:name, :id).to_a
+      @room_type.rate_plans.for_audience(@audience).where(day_use_hours: day_use_stay? ? 1..24 : nil).order(:name, :id).to_a
+    end
+
+    def day_use_stay?
+      @check_in == @check_out
     end
 
     def restricted?(rate_plan)
@@ -90,6 +96,8 @@ module Bookings
     def arrival_departure_reason(rates, rate_plan)
       return "No arrivals on #{format_date(@check_in)}" if rates.find { |rate| rate.date == @check_in }&.closed_to_arrival?
 
+      return if day_use_stay?
+
       checkout_rate = @room_type.room_rates.find_by(rate_plan: rate_plan, date: @check_out)
       return "No departures on #{format_date(@check_out)}" if checkout_rate&.closed_to_departure?
 
@@ -107,7 +115,7 @@ module Bookings
     def format_date(date) = date.strftime("%-d %b")
 
     def stay_dates
-      @stay_dates ||= (@check_in...@check_out).to_a
+      @stay_dates ||= ScheduledStay.billable_dates(@check_in, @check_out)
     end
 
     def nights

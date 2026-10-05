@@ -99,7 +99,20 @@ module HotelPortal
       end
 
       def operational_metadata
-        tag.p(context_label, class: "text-xs text-muted-foreground tabular-nums")
+        tag.p(class: "flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground tabular-nums") do
+          safe_join([ day_use_badge, context_label ].compact)
+        end
+      end
+
+      def day_use_badge
+        return unless @segment.day_use?
+
+        render PanelsUI::Badge.new(
+          label: "Day use · #{@segment.day_use_hours}h",
+          variant: :info,
+          size: :sm,
+          data: { slot: "stay-view-day-use" }
+        )
       end
 
       def heading_indicators

@@ -23,7 +23,7 @@ module Bookings
     def call
       return 0 if @room_type.nil? || @check_in.nil? || @check_out.nil?
 
-      nightly = (@check_in..(@check_out - 1.day)).map do |date|
+      nightly = ScheduledStay.billable_dates(@check_in, @check_out).map do |date|
         Rates::ResolveEffectiveNightlyPrice.call(
           room_type: @room_type,
           rate_plan: @rate_plan,

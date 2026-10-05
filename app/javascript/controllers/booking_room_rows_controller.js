@@ -156,7 +156,8 @@ export default class extends Controller {
           const total = Number(rate.total_amount || 0)
           const value = String(rate.id || "")
           rateTotals[value] = total
-          return { label: `${rate.name} · ${rate.currency || "MYR"} ${total.toFixed(2)}`, value: value }
+          const hours = rate.day_use_hours ? ` (${rate.day_use_hours}h day use)` : ""
+          return { label: `${rate.name}${hours} · ${rate.currency || "MYR"} ${total.toFixed(2)}`, value: value }
         })
       )
       row.dataset.rateTotals = JSON.stringify(rateTotals)
@@ -580,8 +581,15 @@ export default class extends Controller {
     return Math.max(0, Math.ceil((finish - start) / 86400000)) || 0
   }
 
+  // Same date in and out, leaving later: a day-use stay, billed once.
+  isDayUse() {
+    const start = this.checkInTarget.value
+    const finish = this.checkOutTarget.value
+    return Boolean(start && finish) && start.slice(0, 10) === finish.slice(0, 10) && new Date(finish) > new Date(start)
+  }
+
   updateNights() {
-    this.nightsTarget.textContent = this.stayNights()
+    this.nightsTarget.textContent = this.isDayUse() ? "Day use" : this.stayNights()
   }
 
   // Mirrors ExtraCharges::ForecastQuote: a charge that is not per night is

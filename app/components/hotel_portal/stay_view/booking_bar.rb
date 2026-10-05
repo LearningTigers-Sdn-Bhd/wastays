@@ -53,6 +53,7 @@ module HotelPortal
             safe_join([
               resize_handle(:start),
               booking_source,
+              day_use_marker,
               tag.span(@segment.guest_label, class: "stay-view-booking-guest-name min-w-0 flex-1 truncate"),
               resize_handle(:end)
             ].compact)
@@ -179,8 +180,9 @@ module HotelPortal
         tag.dl(class: "grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs") do
           rows = [
             [ "Status", @segment.status.to_s.humanize ],
-            [ "Stay", "#{@segment.check_in.to_fs(:medium)} – #{@segment.check_out.to_fs(:medium)}" ]
+            [ "Stay", stay_range_text ]
           ]
+          rows << [ "Type", "Day use · #{@segment.day_use_hours} hours" ] if @segment.day_use?
           # The bar itself stays uncluttered, so the boat slots surface here --
           # they are already in the segment and in the bar's accessible label.
           rows << [ "Boat-in", boat_time(@segment.boat_in_at, @segment.boat_in_type) ] if @segment.boat_in_at || @segment.boat_in_type
@@ -189,6 +191,13 @@ module HotelPortal
           rows << [ "Group", [ @segment.group_name, @segment.group_reference ].compact_blank.join(" · ") ] if @segment.group_reference.present?
           safe_join(rows.flat_map { |label, value| [ tag.dt(label, class: "text-muted-foreground"), tag.dd(value, class: "text-foreground") ] })
         end
+      end
+
+      # A day-use stay is read as a window on one day, not as two dates.
+      def stay_range_text
+        return "#{@segment.check_in.to_fs(:medium)} – #{@segment.check_out.to_fs(:medium)}" unless @segment.day_use? && @segment.check_in_at && @segment.check_out_at
+
+        "#{@segment.check_in_at.strftime('%-d %b, %H:%M')} – #{@segment.check_out_at.strftime('%H:%M')}"
       end
 
       # Segment times are already projected into the property's zone. Matches the
@@ -217,6 +226,17 @@ module HotelPortal
               data: { slot: "stay-view-guest-status", status: status.downcase }
             )
           end)
+        end
+      end
+
+      def day_use_marker
+        return unless @segment.day_use?
+
+        tag.span(class: "inline-flex shrink-0 items-center gap-0.5 text-xs tabular-nums", data: { slot: "stay-view-day-use" }) do
+          safe_join([
+            helpers.app_icon("clock", class: "size-3.5", aria: { hidden: true }),
+            "#{@segment.day_use_hours}h"
+          ])
         end
       end
 

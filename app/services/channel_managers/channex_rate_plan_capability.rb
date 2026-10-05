@@ -19,6 +19,7 @@ module ChannelManagers
     end
 
     def call
+      return unsupported("Day-use plans are not distributed to channels") if rate_plan.day_use?
       return unsupported("#{rate_plan.kind.humanize} plans are not distributed to channels") unless distributable_kind?
 
       assignments = assignments_in_scope
