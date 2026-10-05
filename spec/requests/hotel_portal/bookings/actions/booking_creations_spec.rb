@@ -102,7 +102,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
         expect(dialog.at_css('[data-booking-room-rows-target="rangeField"]')["class"]).not_to include("hidden")
       end
 
-      it "targets today's date, in the hotel's time zone, and swaps the range for an arrival time when Day use is chosen" do
+      it "defaults the arrival to today, in the hotel's time zone, and swaps the range for an arrival date and time when Day use is chosen" do
         dialog = dialog_for(hotel_booking_action_new_booking_path(hotel, stay_type: "day_use"))
 
         expect(dialog.at_css('#stay-type [data-value="day_use"]')["aria-pressed"]).to eq("true")
@@ -112,6 +112,18 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
         expect(controller["data-booking-room-rows-day-use-date-value"]).to eq(Time.current.in_time_zone(hotel.hotel_time_zone).to_date.iso8601)
         expect(controller["data-booking-room-rows-day-use-selected-value"]).to eq("true")
         expect(dialog.at_css("input#day_use_arrival_time")["value"]).to match(/\A\d{2}:\d{2}\z/)
+        hotel_today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date.iso8601
+        expect(dialog.at_css("input#day_use_arrival_date").attributes.slice("value", "min").transform_values(&:value)).to eq("value" => hotel_today, "min" => hotel_today)
+      end
+
+      it "keeps a future arrival date when the form is re-rendered, so a day-use booking can be made ahead" do
+        future = Time.current.in_time_zone(hotel.hotel_time_zone).to_date + 9.days
+        arrival = hotel.hotel_time_zone.parse("#{future} 10:00")
+
+        dialog = dialog_for(hotel_booking_action_new_booking_path(hotel, stay_type: "day_use", booking: { check_in: arrival.iso8601, check_out: (arrival + 4.hours).iso8601 }))
+
+        expect(dialog.at_css("input#day_use_arrival_date")["value"]).to eq(future.iso8601)
+        expect(dialog.at_css("input#day_use_arrival_time")["value"]).to eq("10:00")
       end
 
       it "is not offered on a per-person hotel" do

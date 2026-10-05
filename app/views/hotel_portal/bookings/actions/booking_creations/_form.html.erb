@@ -100,13 +100,22 @@ end %>
                     </div>
                     <% if offer_day_use %>
                       <div class="<%= "col-span-2" unless quick %> <%= "hidden" unless day_use_selected %>" data-booking-room-rows-target="dayUseFields">
-                        <div class="panel-form-field" data-size="md">
-                          <label for="day_use_arrival_time" class="panel-form-field__label">Arrival time (today, <%= day_use_date.strftime("%-d %b") %>)</label>
-                          <input type="time" id="day_use_arrival_time" class="panel-input" value="<%= day_use_time %>"
-                                 data-booking-room-rows-target="arrivalTime"
-                                 data-action="change->booking-room-rows#arrivalChanged">
-                          <p class="mt-1 text-xs text-muted-foreground">Check-out follows the hours of the day-use plan you pick.</p>
+                        <div class="grid grid-cols-2 gap-x-3">
+                          <div class="panel-form-field" data-size="md">
+                            <label for="day_use_arrival_date" class="panel-form-field__label">Arrival date</label>
+                            <input type="date" id="day_use_arrival_date" class="panel-input" value="<%= day_use_date.iso8601 %>"
+                                   min="<%= hotel_now.to_date.iso8601 %>" required
+                                   data-booking-room-rows-target="arrivalDate"
+                                   data-action="change->booking-room-rows#arrivalChanged">
+                          </div>
+                          <div class="panel-form-field" data-size="md">
+                            <label for="day_use_arrival_time" class="panel-form-field__label">Arrival time</label>
+                            <input type="time" id="day_use_arrival_time" class="panel-input" value="<%= day_use_time %>" required
+                                   data-booking-room-rows-target="arrivalTime"
+                                   data-action="change->booking-room-rows#arrivalChanged">
+                          </div>
                         </div>
+                        <p class="mt-1 text-xs text-muted-foreground">Today or a future date. Check-out follows the hours of the day-use plan you pick.</p>
                       </div>
                     <% end %>
                     <div class="panel-form-field" data-size="md" data-readonly="true">

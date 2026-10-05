@@ -10,7 +10,7 @@ export default class extends Controller {
     "surchargeRow", "surchargeTotal", "surchargeTaxRow", "surchargeTaxTotal", "depositRow", "depositTotal",
     "collectedLabel", "collectedTotal", "grandTotal",
     // Day use: the date range is swapped for an arrival time on today's date.
-    "rangeField", "dayUseFields", "arrivalTime"
+    "rangeField", "dayUseFields", "arrivalDate", "arrivalTime"
   ]
   static values = {
     autoCharges: Array, availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean,
@@ -24,7 +24,7 @@ export default class extends Controller {
     this.tourismTax = 0
     this.surcharge = 0
     this.surchargeTax = 0
-    this.dayUse = this.dayUseSelectedValue && this.hasArrivalTimeTarget
+    this.dayUse = this.dayUseSelectedValue && this.hasArrivalTimeTarget && this.hasArrivalDateTarget
     if (this.dayUse) this.applyDayUseWindow()
     this.onQuoteChanged = this.onQuoteChanged.bind(this)
     this.overrideTimeouts = new Map()
@@ -73,7 +73,7 @@ export default class extends Controller {
   }
 
   // Overnight / Day use switch. Day use replaces the date range with an arrival
-  // time today; going back restores whatever range the picker holds.
+  // date and time; going back restores whatever range the picker holds.
   stayTypeChanged(event) {
     this.dayUse = event.detail.value === "day_use"
     this.rangeFieldTarget.classList.toggle("hidden", this.dayUse)
@@ -88,15 +88,16 @@ export default class extends Controller {
     this.stayChanged()
   }
 
-  // Check-in is today at the chosen time. Check-out is that plus the hours of
+  // Check-in is the chosen date (today by default) at the chosen time. Check-out is that plus the hours of
   // the day-use plan picked on a row (one hour until a plan is picked). The
   // server sets the real check-out from the plan; this keeps the form's dates
   // on one day so rate options and availability are asked the right question.
   applyDayUseWindow() {
+    const date = this.arrivalDateTarget.value || this.dayUseDateValue
     const time = this.arrivalTimeTarget.value || "09:00"
-    const start = new Date(`${this.dayUseDateValue}T${time}`)
+    const start = new Date(`${date}T${time}`)
     let end = new Date(start.getTime() + (this.selectedDayUseHours() || 1) * 3600000)
-    if (end.toDateString() !== start.toDateString()) end = new Date(`${this.dayUseDateValue}T23:59`)
+    if (end.toDateString() !== start.toDateString()) end = new Date(`${date}T23:59`)
     this.checkInTarget.value = this.localStamp(start)
     this.checkOutTarget.value = this.localStamp(end)
   }
