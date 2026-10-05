@@ -37,7 +37,7 @@ RSpec.describe "AgentPortal::Hotels", type: :request do
     end
   end
 
-  describe "GET /agent/hotels" do
+  describe "GET /partner/hotels" do
     before { sign_in_as(agent) }
 
     it "lists only the hotels the agent created" do
@@ -71,7 +71,7 @@ RSpec.describe "AgentPortal::Hotels", type: :request do
     end
   end
 
-  describe "GET /agent/hotels/new" do
+  describe "GET /partner/hotels/new" do
     before { sign_in_as(agent) }
 
     it "shows only the agent fields" do
@@ -87,7 +87,7 @@ RSpec.describe "AgentPortal::Hotels", type: :request do
     end
   end
 
-  describe "POST /agent/hotels" do
+  describe "POST /partner/hotels" do
     before { sign_in_as(agent) }
 
     it "creates the hotel with the fixed platform choices" do
@@ -198,7 +198,7 @@ RSpec.describe "AgentPortal hotel access", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(request.path).not_to include("setup_lock")
-    expect(response.body).to include("Agent portal")
+    expect(response.body).to include("Partner portal")
   end
 end
 

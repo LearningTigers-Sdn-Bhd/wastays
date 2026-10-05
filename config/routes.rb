@@ -293,7 +293,9 @@ Rails.application.routes.draw do
   end
 
   # A super agent creates hotels and opens the hotels they created.
-  scope "/agent", module: :agent_portal, as: :agent do
+  get "/agent", to: redirect("/partner")
+  get "/agent/*path", to: redirect("/partner/%{path}")
+  scope "/partner", module: :agent_portal, as: :agent do
     resources :hotels, only: [ :index, :new, :create ]
     resource :profile, only: [ :edit, :update ]
   end
