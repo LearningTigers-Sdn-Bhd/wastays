@@ -24,6 +24,7 @@ module HotelPortal
         when "guest" then row.guest_name
         when "stay"
           pdf ? "#{date(row.check_in)}\n#{date(row.check_out)}" : [ row.check_in, row.check_out ]
+        when "stay_type" then row.stay_type_label
         when "check_in" then pdf ? date(row.check_in) : row.check_in
         when "check_out" then pdf ? date(row.check_out) : row.check_out
         when "source" then row.source_label

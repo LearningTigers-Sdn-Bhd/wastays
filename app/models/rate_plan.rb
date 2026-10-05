@@ -72,10 +72,15 @@ class RatePlan < ApplicationRecord
   validates :extra_pax_charge, numericality: { greater_than_or_equal_to: 0 }
   validates :channex_children_fee, :channex_infant_fee,
     numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :day_use_hours, numericality: { only_integer: true, in: 1..24 }, allow_nil: true
+  validate :day_use_hours_locked_once_booked
+  validate :day_use_needs_per_room_selling
 
   before_validation :normalize_currency
   before_validation :inherit_sell_mode_from_hotel
 
+  scope :day_use, -> { where.not(day_use_hours: nil) }
+  scope :overnight, -> { where(day_use_hours: nil) }
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
   scope :for_audience, lambda { |audience|
@@ -127,8 +132,15 @@ class RatePlan < ApplicationRecord
     kind.in?(ANCHORED_KINDS)
   end
 
+  # A fixed-price block of hours on one date. Sold at the front desk only: the
+  # public site, travel agents and channels all sell nights.
+  def day_use?
+    day_use_hours.present?
+  end
+
   def bookable_by?(audience)
     return false if archived?
+    return false if day_use? && audience.to_sym != :staff
     return false unless kind.in?(self.class.kinds_for(audience))
     return false if audience.to_sym == :public && hidden_from_public?
 
@@ -234,6 +246,20 @@ class RatePlan < ApplicationRecord
 
   private
 
+  # A block of hours has one fixed price for the room; a per-person plan prices
+  # each guest by the night, so the two cannot describe the same plan.
+  def day_use_needs_per_room_selling
+    return unless day_use? && sell_mode == "per_person"
+
+    errors.add(:day_use_hours, "is only available when the hotel sells per room")
+  end
+
+  def day_use_hours_locked_once_booked
+    return unless persisted? && day_use_hours_changed? && booking_rooms.exists?
+
+    errors.add(:day_use_hours, "cannot change once bookings use this plan")
+  end
+
   def agency_accounts_fit_access
     return if @agency_account_ids.nil?
 
@@ -278,6 +304,7 @@ class RatePlan < ApplicationRecord
 
   def sync_with_channel_manager
     return if Thread.current[:skip_ari_sync]
+    return if day_use?
     return if hotel.preferred_channel_manager.blank?
     room_ids = room_type_rate_plans.pluck(:room_type_id)
     return if room_ids.empty?

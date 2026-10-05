@@ -176,7 +176,7 @@
                         <div class="flex items-center gap-x-2">
                           <span><%= booking_presenter.formatted_check_in_date %> – <%= booking_presenter.formatted_check_out_date %></span>
                           <span>·</span>
-                          <span><%= pluralize(booking_presenter.nights_count, "night") %></span>
+                          <span><%= booking_presenter.nights_label %></span>
                         </div>
                         <span class="text-sm font-semibold tabular-nums text-foreground"><%= booking_presenter.formatted_total_amount_dashboard %></span>
                       </div>
@@ -233,7 +233,7 @@
                         <div class="flex items-center gap-x-2">
                           <span><%= booking_presenter.formatted_check_in_date %> – <%= booking_presenter.formatted_check_out_date %></span>
                           <span>·</span>
-                          <span><%= pluralize(booking_presenter.nights_count, "night") %></span>
+                          <span><%= booking_presenter.nights_label %></span>
                         </div>
                         <span class="text-sm font-semibold tabular-nums text-foreground"><%= booking_presenter.formatted_total_amount_dashboard %></span>
                       </div>

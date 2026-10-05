@@ -26,6 +26,20 @@ RSpec.describe HotelPortal::Reports::BookingPerformanceReport do
     )
   end
 
+  it "counts a day-use booking as zero room nights and labels its stay type" do
+    room_type = create(:room_type, hotel:)
+    plan = create(:rate_plan, :custom, hotel:, room_type:, day_use_hours: 6)
+    arrival = hotel.hotel_time_zone.parse("2026-05-10 06:00")
+    booking = create(:booking, hotel:, status: "confirmed", check_in: arrival, check_out: arrival + 6.hours,
+      created_at: Time.zone.local(2026, 5, 9, 12, 0))
+    create(:booking_room, booking:, room_type:, rate_plan: plan)
+
+    row = build.rows.find { |candidate| candidate.booking_id == booking.id }
+
+    expect(row.room_nights).to eq(0)
+    expect(row.stay_type_label).to eq("Day use · 6h")
+  end
+
   it "groups by booking date and puts the newest day first" do
     expect(build.groups.map(&:label)).to eq([ "08 May 2026", "06 May 2026" ])
   end

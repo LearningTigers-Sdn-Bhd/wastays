@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_02_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -2810,6 +2810,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_060000) do
     t.decimal "child_price_multiplier", precision: 3, scale: 2, default: "1.0", null: false
     t.datetime "created_at", null: false
     t.string "currency", default: "MYR", null: false
+    t.integer "day_use_hours"
     t.text "description"
     t.decimal "extra_pax_charge", precision: 10, scale: 2, default: "0.0", null: false
     t.boolean "hidden_from_public", default: false, null: false
@@ -2823,6 +2824,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_02_060000) do
     t.datetime "updated_at", null: false
     t.index ["archived_at"], name: "index_rate_plans_on_archived_at"
     t.index ["hotel_id"], name: "index_rate_plans_on_hotel_id"
+    t.check_constraint "day_use_hours IS NULL OR day_use_hours >= 1 AND day_use_hours <= 24", name: "rate_plans_day_use_hours_range"
     t.check_constraint "ta_access::text = ANY (ARRAY['hidden'::character varying, 'all'::character varying, 'except'::character varying, 'only'::character varying]::text[])", name: "rate_plans_ta_access_check"
     t.check_constraint "ta_market::text = ANY (ARRAY['all'::character varying, 'local'::character varying, 'international'::character varying]::text[])", name: "rate_plans_ta_market_check"
   end

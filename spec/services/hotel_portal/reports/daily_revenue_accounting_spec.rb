@@ -23,6 +23,7 @@ RSpec.describe HotelPortal::Reports::DailyRevenueAccounting do
 
     expect(accounting.totals).to eq(
       accommodation: 100.to_d,
+      day_use: 0.to_d,
       room_fees: 0.to_d,
       other_charges: 25.to_d,
       tax: 8.to_d,

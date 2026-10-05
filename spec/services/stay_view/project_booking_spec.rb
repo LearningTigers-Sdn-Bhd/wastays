@@ -268,4 +268,33 @@ RSpec.describe StayView::ProjectBooking do
     expect(segment.financial_signals).to be_empty
     expect(segment.accessible_label).not_to include("MYR 240.00")
   end
+  describe "a day-use stay" do
+    def booking_between(check_in, check_out)
+      StayView::BookingRecord.new(
+        booking_room_id: 12, booking_id: 8, room_type_id: 3, room_number: "102", status: :confirmed,
+        guest_name: "Day Guest", check_in:, check_out:
+      )
+    end
+
+    it "carries its hours and lands on the property's own day" do
+      zone = Time.find_zone!(window.time_zone_name)
+      # 06:00 at the property is the previous day in UTC.
+      arrival = zone.local(2026, 7, 17, 6, 0)
+
+      segment = described_class.call(booking: booking_between(arrival.utc, (arrival + 6.hours).utc),
+        room_type_name: "Deluxe", date_window: window, capabilities:)
+
+      expect(segment).to be_day_use
+      expect(segment.day_use_hours).to eq(6)
+      expect(segment.start_track).to eq(window.booking_tracks(arrival, arrival + 6.hours).start_track)
+      expect(segment.accessible_label).to include("day use 6 hours")
+    end
+
+    it "leaves an overnight stay unmarked" do
+      segment = described_class.call(booking: booking_between(Date.new(2026, 7, 17), Date.new(2026, 7, 18)),
+        room_type_name: "Deluxe", date_window: window, capabilities:)
+
+      expect(segment).not_to be_day_use
+    end
+  end
 end

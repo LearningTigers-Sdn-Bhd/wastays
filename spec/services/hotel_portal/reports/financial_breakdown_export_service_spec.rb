@@ -74,11 +74,11 @@ RSpec.describe "Booking Performance export services" do
     expect(content).to start_with("\uFEFF")
     expect(parsed.first).to eq([
       "Booked On", "Booking Number", "Confirmation Code", "Guest Name", "Check In", "Check Out",
-      "Source", "Collected By", "Status", "Payment Status", "Gross", "Taxes", "Commission", "Net"
+      "Stay Type", "Source", "Collected By", "Status", "Payment Status", "Gross", "Taxes", "Commission", "Net"
     ])
     expect(parsed[1].values_at(1, 2, 3)).to eq([ "HTL-26100001", "WS-ABC", "'=Guest A" ])
-    expect(parsed[2].values_at(0, 10, 11, 12, 13)).to eq([ "TOTAL MYR", "300.00", "20.00", "30.00", "270.00" ])
-    expect(parsed.last.values_at(0, 10, 11, 12, 13)).to eq([ "TOTAL USD", "100.00", "8.00", "10.00", "90.00" ])
+    expect(parsed[2].values_at(0, 11, 12, 13, 14)).to eq([ "TOTAL MYR", "300.00", "20.00", "30.00", "270.00" ])
+    expect(parsed.last.values_at(0, 11, 12, 13, 14)).to eq([ "TOTAL USD", "100.00", "8.00", "10.00", "90.00" ])
   end
 
   it "uses the saved visible columns in CSV" do

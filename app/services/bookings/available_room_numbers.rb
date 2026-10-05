@@ -46,7 +46,10 @@ module Bookings
       return @availability_snapshot if defined?(@availability_snapshot)
 
       # 1. Get room numbers allowed by inventory for these dates
-      inventory_allowed_rooms = (@check_in.to_date..(@check_out.to_date - 1.day)).map do |date|
+      # A day-use stay is sold against the clock, not the night: the room is
+      # back before the next guest arrives, so only a booking that overlaps its
+      # hours (step 2) can take it out.
+      inventory_allowed_rooms = nights_to_check.map do |date|
         inv = @room_type.room_inventories.find_by(date: date)
         if inv
           if inv.status == "open"
@@ -63,7 +66,7 @@ module Bookings
       end
 
       # Intersection of all days (must be available every day of stay)
-      allowed_rooms = inventory_allowed_rooms.reduce(:&) || []
+      allowed_rooms = day_use? ? configured_rooms : (inventory_allowed_rooms.reduce(:&) || [])
 
       # 2. Find room numbers already occupied for these dates by other bookings
       occupied = @hotel.bookings.where(status: [ "confirmed", "no_show_detected", "checked_in", "due_out_detected", "checkout_required" ])
@@ -94,6 +97,16 @@ module Bookings
         occupied_numbers: occupied_numbers,
         locked_numbers: locked_numbers.map(&:to_s)
       }
+    end
+
+    def day_use?
+      ScheduledStay.day_use?(hotel: @hotel, check_in: @check_in, check_out: @check_out)
+    end
+
+    def nights_to_check
+      return [] if day_use?
+
+      (@check_in.to_date..(@check_out.to_date - 1.day)).to_a
     end
 
     def room_status_label(room_number)

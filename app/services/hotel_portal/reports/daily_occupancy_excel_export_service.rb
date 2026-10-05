@@ -3,7 +3,7 @@
 module HotelPortal
   module Reports
     class DailyOccupancyExcelExportService
-      HEADERS = [ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)", "Tax", "Total Revenue" ].freeze
+      HEADERS = [ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)", "Day Use Sold", "Day Use Revenue", "Tax", "Total Revenue" ].freeze
 
       def initialize(hotel:, report:)
         @hotel = hotel
@@ -12,14 +12,14 @@ module HotelPortal
 
       def generate
         Exports::ExcelReportBuilder.new(hotel: @hotel, title: "Daily Occupancy Report", period_label: period_label).generate do |builder|
-          sheet = builder.add_sheet(name: "Daily Occupancy", widths: [ 15, 13, 16, 14, 16, 22, 28, 14, 16 ], orientation: :landscape)
+          sheet = builder.add_sheet(name: "Daily Occupancy", widths: [ 15, 13, 16, 14, 16, 22, 28, 14, 16, 14, 16 ], orientation: :landscape)
           builder.add_header(sheet: sheet)
           builder.add_summary(sheet: sheet, metrics: summary_metrics)
           builder.add_table(
             sheet: sheet, section_title: "Daily Occupancy", headers: HEADERS,
-            rows: @report.rows.map { |row| [ row[:date], row[:rooms_sold], row[:rooms_available], row[:occupancy_rate], row[:room_revenue], row[:adr], row[:revpar], row[:tax_amount], row[:total_revenue] ] },
-            column_types: %i[date integer integer percentage money money money money money],
-            total_row: [ "TOTAL", @report.totals[:rooms_sold], @report.totals[:rooms_available], @report.totals[:occupancy_rate], @report.totals[:room_revenue], @report.totals[:adr], @report.totals[:revpar], @report.totals[:tax_amount], @report.totals[:total_revenue] ],
+            rows: @report.rows.map { |row| [ row[:date], row[:rooms_sold], row[:rooms_available], row[:occupancy_rate], row[:room_revenue], row[:adr], row[:revpar], row[:day_use_sold], row[:day_use_revenue], row[:tax_amount], row[:total_revenue] ] },
+            column_types: %i[date integer integer percentage money money money integer money money money],
+            total_row: [ "TOTAL", @report.totals[:rooms_sold], @report.totals[:rooms_available], @report.totals[:occupancy_rate], @report.totals[:room_revenue], @report.totals[:adr], @report.totals[:revpar], @report.totals[:day_use_sold], @report.totals[:day_use_revenue], @report.totals[:tax_amount], @report.totals[:total_revenue] ],
             empty_message: "No occupancy data for the selected period."
           )
         end
@@ -30,7 +30,7 @@ module HotelPortal
       def summary_metrics
         [
           [ "Rooms Sold", @report.totals[:rooms_sold], nil ], [ "Rooms Available", @report.totals[:rooms_available], nil ],
-          [ "Room Revenue", @report.totals[:room_revenue], currency ], [ "Tax", @report.totals[:tax_amount], currency ],
+          [ "Room Revenue", @report.totals[:room_revenue], currency ], [ "Day Use Revenue", @report.totals[:day_use_revenue], currency ], [ "Tax", @report.totals[:tax_amount], currency ],
           [ "Total Revenue", @report.totals[:total_revenue], currency ]
         ]
       end

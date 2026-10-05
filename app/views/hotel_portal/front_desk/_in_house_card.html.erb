@@ -1,7 +1,6 @@
 <%# locals: (booking:) %>
 <% presenter = HotelPortal::InHouseGuestPresenter.new(booking, current_user.time_zone) %>
 <% room_numbers = booking.booking_rooms.filter_map { |room| room.room_number.presence }.join(" · ").presence || "Unassigned" %>
-<% nights = booking.check_in && booking.check_out ? (booking.check_out.to_date - booking.check_in.to_date).to_i : nil %>
 <% totals = HotelPortal::FrontDesk::StayTotalsPresenter.new(booking) %>
 <article class="front-desk-stay-card min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm" data-booking-token="<%= booking.confirmation_token %>">
   <header class="flex min-w-0 items-stretch gap-2 border-b border-border p-3">
@@ -13,7 +12,7 @@
     </div>
     <%= render "record_actions", booking:, tab: "in_house" %>
   </header>
-  <div class="space-y-3 p-3"><section class="flex items-stretch gap-2 rounded-lg bg-muted px-3 py-2 text-sm"><div class="min-w-0 flex flex-1 flex-col justify-center"><p class="text-xs font-medium text-muted-foreground">Arrival</p><p class="mt-1 truncate"><%= presenter.check_in_formatted %></p></div><span class="-my-2 self-stretch border-l border-border" aria-hidden="true"></span><div class="flex shrink-0 flex-col justify-center text-center"><p class="text-xs font-medium text-muted-foreground">Stay</p><p class="mt-1 font-semibold text-foreground"><%= nights ? pluralize(nights, "night") : "—" %></p></div><span class="-my-2 self-stretch border-l border-border" aria-hidden="true"></span><div class="flex min-w-0 flex-1 flex-col justify-center text-right"><p class="text-xs font-medium text-muted-foreground">Departure</p><p class="mt-1 truncate"><%= presenter.check_out_formatted %></p></div></section>
+  <div class="space-y-3 p-3"><section class="flex items-stretch gap-2 rounded-lg bg-muted px-3 py-2 text-sm"><div class="min-w-0 flex flex-1 flex-col justify-center"><p class="text-xs font-medium text-muted-foreground">Arrival</p><p class="mt-1 truncate"><%= presenter.check_in_formatted %></p></div><span class="-my-2 self-stretch border-l border-border" aria-hidden="true"></span><div class="flex shrink-0 flex-col justify-center text-center"><p class="text-xs font-medium text-muted-foreground">Stay</p><p class="mt-1 font-semibold text-foreground"><%= booking.check_in && booking.check_out ? booking.stay_length_label : "—" %></p></div><span class="-my-2 self-stretch border-l border-border" aria-hidden="true"></span><div class="flex min-w-0 flex-1 flex-col justify-center text-right"><p class="text-xs font-medium text-muted-foreground">Departure</p><p class="mt-1 truncate"><%= presenter.check_out_formatted %></p></div></section>
     <% if show_boat_times?(current_hotel) %>
       <%= render "boat_band", booking:, kind: :out %>
     <% end %>
