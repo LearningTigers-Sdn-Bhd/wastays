@@ -55,11 +55,11 @@ module HotelPortal
     end
 
     def nights_label
-      view_context.pluralize(nights_count, "night")
+      booking.stay_length_label
     end
 
     def stay_summary
-      "#{nights_count} #{'night'.pluralize(nights_count)} · #{check_in_short}–#{check_out_short}"
+      "#{nights_label} · #{check_in_short}–#{check_out_short}"
     end
 
     def guest_count_summary

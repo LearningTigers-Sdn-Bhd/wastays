@@ -222,13 +222,17 @@ module HotelPortal
     end
 
     def nights_label
+      return booking.stay_length_label if booking.day_use?
+
       nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
       "#{nights} #{'night'.pluralize(nights)}"
     end
 
     def formatted_stay_nights
-      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
       dates = "#{booking.check_in.strftime('%d %b %Y')} - #{booking.check_out.strftime('%d %b %Y')}"
+      return "#{dates} / #{booking.stay_length_label}" if booking.day_use?
+
+      nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
       "#{dates} / #{nights} #{'Night'.pluralize(nights)}"
     end
 

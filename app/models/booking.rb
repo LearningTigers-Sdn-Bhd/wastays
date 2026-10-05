@@ -764,6 +764,14 @@ class Booking < ApplicationRecord
     Bookings::ScheduledStay.day_use?(hotel: hotel, check_in: check_in, check_out: check_out)
   end
 
+  # "2 nights", or "Day use · 5h" for a block of hours on one day.
+  def stay_length_label
+    return "Day use · #{day_use_hours}h" if day_use?
+
+    nights = duration_in_nights
+    "#{nights} #{'night'.pluralize(nights)}"
+  end
+
   def day_use_hours
     return unless day_use?
 

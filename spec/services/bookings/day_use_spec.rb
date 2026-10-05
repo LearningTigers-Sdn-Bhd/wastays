@@ -81,6 +81,22 @@ RSpec.describe "Day-use stays" do
       expect(room_type.room_inventories.where(date: today)).to all(have_attributes(quantity: room_type.quantity))
     end
 
+    it "books a day-use block on a future date at that date's rate, without touching that night's inventory" do
+      future = today + 9.days
+      create(:room_rate, room_type: room_type, rate_plan: day_use_plan, date: future, price: 120)
+      later_arrival = hotel.hotel_time_zone.parse("#{future} 10:00")
+
+      result = described_class.new(hotel: hotel, params: params.merge(check_in: later_arrival, check_out: later_arrival + 1.hour)).call
+
+      expect(result.success?).to be true
+      expect(result.booking.total_amount).to eq(120.to_d)
+      expect(result.booking.check_out).to eq(later_arrival + 6.hours)
+      expect(result.booking.status).to eq("confirmed")
+      expect(room_type.room_inventories.where(date: future)).to all(have_attributes(quantity: room_type.quantity))
+      expect(Bookings::AvailableRoomNumbers.new(hotel: hotel, room_type: room_type, check_in: later_arrival, check_out: later_arrival + 2.hours).call).not_to include("101")
+      expect(Bookings::AvailableRoomNumbers.new(hotel: hotel, room_type: room_type, check_in: arrival, check_out: arrival + 2.hours).call).to include("101")
+    end
+
     it "rejects a block that would run past midnight" do
       late = hotel.hotel_time_zone.parse("#{today} 20:00")
       result = described_class.new(hotel: hotel, params: params.merge(check_in: late, check_out: late + 1.hour)).call
@@ -108,6 +124,22 @@ RSpec.describe "Day-use stays" do
       second = described_class.new(hotel: hotel, params: params.merge(check_in: later, check_out: later + 1.hour)).call
 
       expect(second.success?).to be true
+    end
+  end
+
+  describe "the stay length label" do
+    it "reads Day use with its hours instead of 0 nights" do
+      booking = Bookings::CreateManualBooking.new(hotel: hotel, params: params).call.booking
+
+      expect(booking.stay_length_label).to eq("Day use · 6h")
+      expect(HotelPortal::BookingPresenter.new(booking, hotel).nights_label).to eq("Day use · 6h")
+      expect(booking.duration_in_nights).to eq(0)
+    end
+
+    it "keeps counting nights for an overnight stay" do
+      booking = build(:booking, hotel: hotel, check_in: today, check_out: today + 2.days)
+
+      expect(booking.stay_length_label).to eq("2 nights")
     end
   end
 
