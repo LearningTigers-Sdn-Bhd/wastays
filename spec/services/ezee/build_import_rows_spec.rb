@@ -2,7 +2,10 @@
 
 require "rails_helper"
 
-RSpec.describe Ezee::BuildImportRows do
+# The fixture's arrivals are 1-31 Oct 2026 and the importer refuses past
+# arrivals, so the spec lives on the day the report was printed instead of
+# whatever day it happens to run.
+RSpec.describe Ezee::BuildImportRows, frozen_time: -> { Time.zone.local(2026, 9, 15, 12, 0) } do
   let(:hotel) { create(:hotel, status: "live") }
   let(:fixture) { Rails.root.join("spec/fixtures/files/ezee_reservation_list_sample.xls") }
   let(:import) { hotel.reservation_imports.create!(user: create(:user, account: hotel.account), status: "draft") }

@@ -7,6 +7,23 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
   let(:start_date) { Date.new(2026, 5, 6) }
   let(:end_date) { Date.new(2026, 5, 7) }
 
+  it "reports room revenue from a day-use booking in its own column, keeping Accommodation overnight-only" do
+    room_type = create(:room_type, hotel: hotel)
+    day_use_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, day_use_hours: 6)
+    day_booking = create(:booking, hotel: hotel)
+    create(:booking_room, booking: day_booking, room_type: room_type, rate_plan: day_use_plan)
+    day_folio = create(:booking_folio, booking: day_booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: day_folio, category: "accommodation", amount: 90, posting_date: start_date)
+    night_booking = create(:booking, hotel: hotel)
+    night_folio = create(:booking_folio, booking: night_booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: night_folio, category: "accommodation", amount: 200, posting_date: start_date)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.totals).to include(accommodation: 200.to_d, day_use: 90.to_d, total_charges: 290.to_d)
+    expect(report.headers("Date")).to include("Day Use")
+  end
+
   it "aggregates daily rows and source rows from charge/adjustment transactions only" do
     booking1 = create(:booking, hotel: hotel, source: "walk_in")
     folio1 = create(:booking_folio, booking: booking1, hotel: hotel)
@@ -25,6 +42,7 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     expect(report.totals).to eq(
       booking_count: 2,
       accommodation: 300.to_d,
+      day_use: 0.to_d,
       room_fees: 0.to_d,
       other_charges: 0.to_d,
       tax: 10.to_d,
@@ -71,7 +89,7 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
       expect(row[:taxes].values.sum).to eq(row[:tax])
       expect(report.totals[:taxes]).to eq(row[:taxes])
       expect(report.source_rows.first[:taxes]).to eq(row[:taxes])
-      expect(report.values(row)).to eq([ 1, 100.to_d, 0.to_d, 50.to_d, 11.2.to_d, 5.to_d, 1.5.to_d, row[:total_charges], 0.to_d, row[:net_revenue] ])
+      expect(report.values(row)).to eq([ 1, 100.to_d, 0.to_d, 0.to_d, 50.to_d, 11.2.to_d, 5.to_d, 1.5.to_d, row[:total_charges], 0.to_d, row[:net_revenue] ])
     end
 
     it "lists each extra charge with the tax on that charge only" do

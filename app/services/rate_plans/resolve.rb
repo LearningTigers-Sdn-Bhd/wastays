@@ -7,7 +7,7 @@ module RatePlans
   class Resolve
     CREATABLE_ATTRIBUTES = %i[
       description base_occupancy extra_pax_charge single_supplement
-      child_price_multiplier channex_children_fee channex_infant_fee
+      child_price_multiplier channex_children_fee channex_infant_fee day_use_hours
       rate_plan_age_bands_attributes
     ].freeze
 

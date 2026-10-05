@@ -20,6 +20,8 @@
     <%= row.check_in.strftime("%d %b %Y") %>
     <span class="block text-xs text-muted-foreground">to <%= row.check_out.strftime("%d %b %Y") %></span>
   </td>
+<% when "stay_type" %>
+  <td class="whitespace-nowrap"><%= row.stay_type_label %></td>
 <% when "check_in" %>
   <td class="whitespace-nowrap text-muted-foreground"><%= row.check_in.strftime("%d %b %Y") %></td>
 <% when "check_out" %>

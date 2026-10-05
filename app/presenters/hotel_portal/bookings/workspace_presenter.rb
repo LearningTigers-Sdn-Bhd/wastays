@@ -181,7 +181,7 @@ module HotelPortal
       if group_context_enabled?
         [ pluralize_count(child_bookings.size, "booking"), pluralize_count(group_room_count, "room"), group_stay_summary ].join(" · ")
       else
-        [ room_summary, short_stay_range, (pluralize_count(nights_count, "night") if nights_count) ].compact_blank.join(" · ")
+        [ room_summary, short_stay_range, (stay_length_summary if nights_count) ].compact_blank.join(" · ")
       end
     end
 
@@ -996,7 +996,7 @@ module HotelPortal
           room: room&.room_number.presence || "Unassigned",
           arrival: format_stay_date(child.check_in),
           departure: format_stay_date(child.check_out),
-          nights: nights_between(child.check_in, child.check_out),
+          nights: child.day_use? ? child.stay_length_label : nights_between(child.check_in, child.check_out),
           pax: pax_label(child),
           status: presentable_badge(status_badge(child.status)),
           balance: money_for(child, child.booking_folios.sum { |folio| folio.projected_outstanding_balance.to_d })
@@ -1266,6 +1266,10 @@ module HotelPortal
 
     def can_manage_folio_windows?(user)
       user.has_permission?("manage_folio_windows", hotel: hotel)
+    end
+
+    def stay_length_summary
+      booking.stay_length_label
     end
 
     def nights_count

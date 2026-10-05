@@ -60,6 +60,22 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).to include("Your account has been suspended. Please contact support.")
     end
 
+    it "labels a day-use stay as Day use instead of 0 nights on every stay card" do
+      arrival = hotel.hotel_time_zone.parse("#{hotel_today} 09:00")
+      stay = booking(status: "confirmed", confirmation_token: "DAY-USE", check_in: arrival, check_out: arrival + 5.hours)
+      room_type = create(:room_type, hotel:)
+      plan = create(:rate_plan, :custom, hotel:, room_type:, day_use_hours: 5)
+      create(:booking_room, booking: stay, room_type:, rate_plan: plan)
+
+      %w[bookings arrivals].each do |tab|
+        get hotel_front_desk_path(hotel), params: { tab: }
+
+        expect(response.body).to include("DAY-USE")
+        expect(response.body).to include("Day use · 5h")
+        expect(response.body).not_to include("0 nights")
+      end
+    end
+
     it "does not expose another hotel's records" do
       own_booking = booking(status: "checked_in", confirmation_token: "OWN-STAY", checked_in_at: Time.current)
       other_booking = create(:booking, hotel: other_hotel, status: "checked_in", confirmation_token: "OTHER-STAY", checked_in_at: Time.current)

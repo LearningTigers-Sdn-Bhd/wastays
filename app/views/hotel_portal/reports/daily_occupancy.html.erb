@@ -41,7 +41,7 @@
           metrics: [
             { label: "Revenue per available room (RevPAR)", value: "MYR #{format_number(@report.totals[:revpar], precision: 2)}", detail: "Room revenue / rooms available" },
             { label: "Tax", value: "MYR #{format_number(@report.totals[:tax_amount], precision: 2)}", detail: "Selected period" },
-            { label: "Total revenue", value: "MYR #{format_number(@report.totals[:total_revenue], precision: 2)}", detail: "Room revenue plus tax" }
+            { label: "Total revenue", value: "MYR #{format_number(@report.totals[:total_revenue], precision: 2)}", detail: "Room and day-use revenue plus tax" }
           ]
         ) %>
   </div>
@@ -65,6 +65,8 @@
           <th scope="col" class="text-right">Room revenue</th>
           <th scope="col" class="text-right">Average daily rate (ADR)</th>
           <th scope="col" class="text-right">Revenue per available room (RevPAR)</th>
+          <th scope="col" class="text-right">Day use sold</th>
+          <th scope="col" class="text-right">Day use revenue</th>
           <th scope="col" class="text-right">Tax</th>
           <th scope="col" class="text-right">Total revenue</th>
         </tr>
@@ -80,12 +82,14 @@
               <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:room_revenue], precision: 2) %></td>
               <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:adr], precision: 2) %></td>
               <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:revpar], precision: 2) %></td>
+              <td class="text-right tabular-nums"><%= format_number(row[:day_use_sold]) %></td>
+              <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:day_use_revenue], precision: 2) %></td>
               <td class="whitespace-nowrap text-right tabular-nums">MYR <%= format_number(row[:tax_amount], precision: 2) %></td>
               <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:total_revenue], precision: 2) %></td>
             </tr>
           <% end %>
         <% else %>
-          <%= render "table_empty_state", colspan: 9, message: "No occupancy data for this selected period." %>
+          <%= render "table_empty_state", colspan: 11, message: "No occupancy data for this selected period." %>
         <% end %>
       <% end %>
     <% end %>

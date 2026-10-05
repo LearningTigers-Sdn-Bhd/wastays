@@ -29,6 +29,7 @@ module Bookings
     end
 
     def call
+      ensure_plan_fits_stay_length!
       rooms = normalized_room_items
       tax_posting_snapshot = build_tax_posting_snapshot(rooms)
       tax_lines = summarize_tax_lines(tax_posting_snapshot)
@@ -44,8 +45,21 @@ module Bookings
 
     private
 
+    def ensure_plan_fits_stay_length!
+      return if @room_items.present? || @rate_plan.blank?
+
+      day_use_stay = @check_in == @check_out
+      return if day_use_stay == @rate_plan.day_use?
+
+      raise ArgumentError, if day_use_stay
+        "A same-day stay needs a day-use rate plan."
+      else
+        "Day-use rate plans can only be booked for a single day."
+      end
+    end
+
     def stay_dates
-      @stay_dates ||= (@check_in...@check_out).to_a
+      @stay_dates ||= ScheduledStay.billable_dates(@check_in, @check_out)
     end
 
     def normalized_room_items
@@ -207,6 +221,9 @@ module Bookings
     end
 
     def room_transaction_code_tax_enabled?(rule)
+      # Tourism Tax is an overnight levy; a day-use block is exempt.
+      return false if rule.primary_tax_key == "tourism_tax" && @rate_plan&.day_use?
+
       if rule.hotel_tax.present?
         rule.hotel_tax.enabled? && rule.hotel_tax.applicable_for?(@guest_country)
       elsif rule.primary_tax_key == "sst_tax"

@@ -11,18 +11,27 @@ module HotelPortal
         "internal" => "Direct"
       }.freeze
 
+      # True when the booking's room is on a day-use rate plan.
+      DAY_USE_BOOKING_SQL = <<~SQL.squish
+        EXISTS (
+          SELECT 1 FROM booking_rooms
+          INNER JOIN rate_plans ON rate_plans.id = booking_rooms.rate_plan_id
+          WHERE booking_rooms.booking_id = bookings.id AND rate_plans.day_use_hours IS NOT NULL
+        ) AS booking_day_use
+      SQL
+
       Result = Struct.new(
         :start_date, :end_date, :totals, :rows, :source_rows, :tax_names,
         :extra_rows, :extra_totals, :extra_tax_names, keyword_init: true
       ) do
         # One column per tax, so every table and export reads its columns from here.
         def headers(label)
-          [ label, "Bookings", "Accommodation", "Room Fees", "Extra Charges", *tax_names, "Total Charges", "Adjustments", "Net Revenue" ]
+          [ label, "Bookings", "Accommodation", "Day Use", "Room Fees", "Extra Charges", *tax_names, "Total Charges", "Adjustments", "Net Revenue" ]
         end
 
         def values(row)
           [
-            row[:booking_count], row[:accommodation], row[:room_fees], row[:other_charges],
+            row[:booking_count], row[:accommodation], row[:day_use], row[:room_fees], row[:other_charges],
             *tax_names.map { |name| row[:taxes].fetch(name, 0.to_d) },
             row[:total_charges], row[:adjustments], row[:net_revenue]
           ]
@@ -52,7 +61,8 @@ module HotelPortal
                          .select(
                            "folio_transactions.*",
                            "bookings.source as booking_source",
-                           "bookings.id as booking_id"
+                           "bookings.id as booking_id",
+                           DAY_USE_BOOKING_SQL
                          )
 
         accounting = DailyRevenueAccounting.new(transactions)
@@ -94,6 +104,7 @@ module HotelPortal
         totals = {
           booking_count: transactions.map(&:booking_id).uniq.size,
           accommodation: rows.sum { |r| r[:accommodation] },
+          day_use: rows.sum { |r| r[:day_use] },
           room_fees: rows.sum { |r| r[:room_fees] },
           other_charges: rows.sum { |r| r[:other_charges] },
           tax: rows.sum { |r| r[:tax] },
@@ -164,6 +175,7 @@ module HotelPortal
           date: date,
           booking_count: stats[:booking_ids].size,
           accommodation: stats[:accommodation].round(2),
+          day_use: stats[:day_use].round(2),
           room_fees: stats[:room_fees].round(2),
           other_charges: stats[:other_charges].round(2),
           tax: stats[:tax].round(2),

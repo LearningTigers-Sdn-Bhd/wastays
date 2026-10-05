@@ -9,7 +9,31 @@
     <% end %>
   </div>
 
-  <div class="grid max-w-3xl items-start gap-4">
+  <% day_use_locked = rate_plan.persisted? && rate_plan.booking_rooms.exists? %>
+  <% offer_day_use = !current_hotel.sells_per_person? %>
+  <div class="grid max-w-3xl items-start gap-4" data-controller="rate-plan-type">
+    <% if offer_day_use %>
+    <div class="space-y-1.5">
+      <span id="rate-plan-type-label" class="panel-form-field__label">Plan type</span>
+      <%= render PanelsUI::ToggleGroup.new(
+            id: "rate-plan-type",
+            type: :single,
+            value: rate_plan.day_use? ? "day_use" : "room",
+            variant: :outline,
+            spacing: 0,
+            required: true,
+            disabled: day_use_locked,
+            name: "plan_type",
+            aria_label: "Plan type",
+            data: { action: "ui--toggle-group:change->rate-plan-type#select" }) do |group| %>
+        <% group.with_item(value: "room") { "Room" } %>
+        <% group.with_item(value: "day_use") { "Day use" } %>
+      <% end %>
+      <p class="text-xs text-muted-foreground">
+        <%= day_use_locked ? "Locked: bookings already use this plan." : "Room is the normal overnight plan. Day use sells a fixed block of hours on one day." %>
+      </p>
+    </div>
+    <% end %>
     <% if new_plan %>
       <%= hidden_field_tag "rate_plan[rate_plan_id]", params.dig(:rate_plan, :rate_plan_id), data: { rate_plan_editor_target: "selectedRatePlanId" } %>
       <%= render PanelsUI::FormField.new(form: f, attribute: :name, label: "Rate plan name", required: true,
@@ -28,6 +52,16 @@
     <%= render PanelsUI::FormField.new(form: f, attribute: :description, label: "Description",
           hint: "Shown to guests and agents when they choose a plan.") do |field| %>
       <% field.with_text_area(rows: 3, placeholder: "Pay in full at booking. No changes or refunds.") %>
+    <% end %>
+    <% if offer_day_use %>
+    <div data-rate-plan-type-target="hoursField" <%= "hidden" unless rate_plan.day_use? %>>
+      <%= render PanelsUI::FormField.new(form: f, attribute: :day_use_hours, label: "Hours in the block",
+            hint: "The room price you set is the fixed price for the whole block. Sold at the front desk only.") do |field| %>
+        <% field.with_input(type: :number, min: 1, max: 24, step: 1, inputmode: "numeric", placeholder: "6",
+             disabled: day_use_locked, data: { rate_plan_type_target: "hours" }) %>
+        <% field.with_addon(align: :inline_end) { "hours" } %>
+      <% end %>
+    </div>
     <% end %>
   </div>
 </section>

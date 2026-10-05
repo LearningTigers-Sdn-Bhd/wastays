@@ -752,7 +752,30 @@ class Booking < ApplicationRecord
   end
 
   def duration_in_nights
+    return 0 if day_use?
+
     (check_out.to_date - check_in.to_date).to_i
+  end
+
+  # Arrives and leaves on the same hotel date, for a fixed block of hours.
+  def day_use?
+    return false if check_in.blank? || check_out.blank?
+
+    Bookings::ScheduledStay.day_use?(hotel: hotel, check_in: check_in, check_out: check_out)
+  end
+
+  # "2 nights", or "Day use · 5h" for a block of hours on one day.
+  def stay_length_label
+    return "Day use · #{day_use_hours}h" if day_use?
+
+    nights = duration_in_nights
+    "#{nights} #{'night'.pluralize(nights)}"
+  end
+
+  def day_use_hours
+    return unless day_use?
+
+    ((check_out - check_in) / 1.hour).round
   end
 
   # The children's ages the room was booked with, so a stay re-priced later
@@ -891,6 +914,7 @@ class Booking < ApplicationRecord
     return unless %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required].include?(status)
     return unless new_record? || check_in_changed? || check_out_changed?
     return if new_record? && booking_rooms.target.empty?
+    return if day_use? # a day-use stay has no night to stop-sell and no departure date to close
 
     room_types = booking_rooms.map(&:room_type).compact
     return if room_types.empty?

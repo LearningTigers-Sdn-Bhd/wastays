@@ -5,6 +5,7 @@ module HotelPortal
     class DailyRevenueAccounting
       ZERO_BUCKET = {
         accommodation: 0.to_d,
+        day_use: 0.to_d,
         room_fees: 0.to_d,
         other_charges: 0.to_d,
         tax: 0.to_d,
@@ -23,7 +24,7 @@ module HotelPortal
         case transaction.transaction_type
         when "charge"
           key = case transaction.category
-          when "accommodation" then :accommodation
+          when "accommodation" then day_use_booking?(transaction) ? :day_use : :accommodation
           when "tax" then :tax
           when *ROOM_FEE_CATEGORIES then :room_fees
           else :other_charges
@@ -34,6 +35,13 @@ module HotelPortal
         else
           {}
         end
+      end
+
+      # Room revenue from a booking on a day-use rate plan is reported on its
+      # own line, so overnight Accommodation stays an overnight figure.
+      # DailyRevenueReport selects `booking_day_use` onto each transaction.
+      def day_use_booking?(transaction)
+        transaction.respond_to?(:booking_day_use) && transaction.booking_day_use == true
       end
 
       def tax_charge?(transaction)
@@ -71,7 +79,7 @@ module HotelPortal
       end
 
       def with_derived_fields(bucket)
-        total_charges = bucket.values_at(:accommodation, :room_fees, :other_charges, :tax).sum
+        total_charges = bucket.values_at(:accommodation, :day_use, :room_fees, :other_charges, :tax).sum
 
         bucket.merge(
           total_charges: total_charges,

@@ -525,6 +525,20 @@
     );
   }
 
+  /* A day-use stay is a few hours, not a night: dashed and lightly hatched so
+     it reads as a different kind of stay at a glance, at the same height as an
+     overnight bar so its text stays legible. */
+  .panel-timeline__segment[data-day-use="true"] {
+    border-style: dashed;
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0,
+      transparent 0.3rem,
+      color-mix(in oklab, var(--panel-timeline-segment-foreground) 10%, transparent) 0.3rem,
+      color-mix(in oklab, var(--panel-timeline-segment-foreground) 10%, transparent) 0.45rem
+    );
+  }
+
   .panel-timeline__segment[data-clipped-left="true"] {
     border-inline-start: 0;
     border-start-start-radius: 0;

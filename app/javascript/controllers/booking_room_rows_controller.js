@@ -8,9 +8,14 @@ export default class extends Controller {
     // Billing summary rows.
     "folioGroup", "folioNote", "autoChargeList", "roomTotal", "taxTotal", "tourismTaxRow", "tourismTaxTotal", "tourismTaxNote",
     "surchargeRow", "surchargeTotal", "surchargeTaxRow", "surchargeTaxTotal", "depositRow", "depositTotal",
-    "collectedLabel", "collectedTotal", "grandTotal"
+    "collectedLabel", "collectedTotal", "grandTotal",
+    // Day use: the date range is swapped for an arrival time on today's date.
+    "rangeField", "dayUseFields", "arrivalDate", "arrivalTime"
   ]
-  static values = { autoCharges: Array, availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean }
+  static values = {
+    autoCharges: Array, availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean,
+    dayUseDate: String, dayUseSelected: Boolean
+  }
 
   connect() {
     this.nextIndex = this.rowTargets.length
@@ -19,6 +24,8 @@ export default class extends Controller {
     this.tourismTax = 0
     this.surcharge = 0
     this.surchargeTax = 0
+    this.dayUse = this.dayUseSelectedValue && this.hasArrivalTimeTarget && this.hasArrivalDateTarget
+    if (this.dayUse) this.applyDayUseWindow()
     this.onQuoteChanged = this.onQuoteChanged.bind(this)
     this.overrideTimeouts = new Map()
     window.addEventListener("booking:quote-changed", this.onQuoteChanged)
@@ -63,6 +70,56 @@ export default class extends Controller {
     event.currentTarget.closest("[data-booking-room-rows-target~='row']").remove()
     this.updateRemoveButtons()
     this.updateTotals()
+  }
+
+  // Overnight / Day use switch. Day use replaces the date range with an arrival
+  // date and time; going back restores whatever range the picker holds.
+  stayTypeChanged(event) {
+    this.dayUse = event.detail.value === "day_use"
+    this.rangeFieldTarget.classList.toggle("hidden", this.dayUse)
+    this.dayUseFieldsTarget.classList.toggle("hidden", !this.dayUse)
+    if (this.dayUse) this.applyDayUseWindow()
+    else this.restoreRange()
+    this.stayChanged()
+  }
+
+  arrivalChanged() {
+    this.applyDayUseWindow()
+    this.stayChanged()
+  }
+
+  // Check-in is the chosen date (today by default) at the chosen time. Check-out is that plus the hours of
+  // the day-use plan picked on a row (one hour until a plan is picked). The
+  // server sets the real check-out from the plan; this keeps the form's dates
+  // on one day so rate options and availability are asked the right question.
+  applyDayUseWindow() {
+    const date = this.arrivalDateTarget.value || this.dayUseDateValue
+    const time = this.arrivalTimeTarget.value || "09:00"
+    const start = new Date(`${date}T${time}`)
+    let end = new Date(start.getTime() + (this.selectedDayUseHours() || 1) * 3600000)
+    if (end.toDateString() !== start.toDateString()) end = new Date(`${date}T23:59`)
+    this.checkInTarget.value = this.localStamp(start)
+    this.checkOutTarget.value = this.localStamp(end)
+  }
+
+  restoreRange() {
+    const picker = this.element.querySelector('[data-ui--date-time-picker-target="input"]')
+    const [start = "", end = ""] = (picker?.value || "").split("/")
+    this.checkInTarget.value = start
+    this.checkOutTarget.value = end
+  }
+
+  selectedDayUseHours() {
+    for (const row of this.rowTargets) {
+      const hours = JSON.parse(row.dataset.rateHours || "{}")[this.readValue(this.roleEl(row, "rate-plan"))]
+      if (hours) return Number(hours)
+    }
+    return null
+  }
+
+  localStamp(date) {
+    const pad = (value) => String(value).padStart(2, "0")
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
   }
 
   stayChanged() {
@@ -151,15 +208,19 @@ export default class extends Controller {
       this.setChoices(roomEl, roomChoices, roomStillAvailable ? preservedRoomNumber : "")
 
       const rateTotals = {}
+      const rateHours = {}
       const rateChoices = [{ label: "Select rate", value: "" }].concat(
         (rates.rate_options || []).map((rate) => {
           const total = Number(rate.total_amount || 0)
           const value = String(rate.id || "")
           rateTotals[value] = total
-          return { label: `${rate.name} · ${rate.currency || "MYR"} ${total.toFixed(2)}`, value: value }
+          if (rate.day_use_hours) rateHours[value] = rate.day_use_hours
+          const hours = rate.day_use_hours ? ` (${rate.day_use_hours}h day use)` : ""
+          return { label: `${rate.name}${hours} · ${rate.currency || "MYR"} ${total.toFixed(2)}`, value: value }
         })
       )
       row.dataset.rateTotals = JSON.stringify(rateTotals)
+      row.dataset.rateHours = JSON.stringify(rateHours)
       const preservedRatePlanId = String(preserved.rate_plan_id || "")
       const rateStillAvailable = rateChoices.some((choice) => choice.value === preservedRatePlanId)
       this.setChoices(rateEl, rateChoices, rateStillAvailable ? preservedRatePlanId : "")
@@ -189,6 +250,14 @@ export default class extends Controller {
     const row = event.target.closest("[data-booking-room-rows-target~='row']")
     this.clearOverride(row)
     this.recalcRow(row)
+    if (this.dayUse) this.followPlanHours()
+  }
+
+  // A day-use plan sets how long the stay is, so a different plan moves check-out.
+  followPlanHours() {
+    const before = this.checkOutTarget.value
+    this.applyDayUseWindow()
+    if (this.checkOutTarget.value !== before) this.stayChanged()
   }
 
   // Bound to the adults/children fields. Occupancy can change what a rate plan
@@ -580,8 +649,15 @@ export default class extends Controller {
     return Math.max(0, Math.ceil((finish - start) / 86400000)) || 0
   }
 
+  // Same date in and out, leaving later: a day-use stay, billed once.
+  isDayUse() {
+    const start = this.checkInTarget.value
+    const finish = this.checkOutTarget.value
+    return Boolean(start && finish) && start.slice(0, 10) === finish.slice(0, 10) && new Date(finish) > new Date(start)
+  }
+
   updateNights() {
-    this.nightsTarget.textContent = this.stayNights()
+    this.nightsTarget.textContent = this.isDayUse() ? "Day use" : this.stayNights()
   }
 
   // Mirrors ExtraCharges::ForecastQuote: a charge that is not per night is

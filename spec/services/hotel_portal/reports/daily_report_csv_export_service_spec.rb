@@ -9,6 +9,7 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     {
       booking_count: 1,
       accommodation: 480.to_d,
+      day_use: 0.to_d,
       room_fees: 0.to_d,
       other_charges: 0.to_d,
       tax: 38.40.to_d,
@@ -101,8 +102,8 @@ RSpec.describe HotelPortal::Reports::DailyReportCsvExportService do
     csv = generate("revenue", charge_register: [ charge_row ])
 
     expect(csv).to include("Daily Breakdown", "Revenue by Source", "Revenue by Extra Charge", "Revenue Register")
-    expect(csv).to include("Date,Bookings,Accommodation,Room Fees,Extra Charges,SST,Total Charges,Adjustments,Net Revenue")
-    expect(csv).to include("2026-07-21,1,480.00,0.00,0.00,38.40,518.40,-20.00,498.40")
+    expect(csv).to include("Date,Bookings,Accommodation,Day Use,Room Fees,Extra Charges,SST,Total Charges,Adjustments,Net Revenue")
+    expect(csv).to include("2026-07-21,1,480.00,0.00,0.00,0.00,38.40,518.40,-20.00,498.40")
     expect(csv).to include("Item,Count,Amount,SST,Total Incl. Tax", "Extra bed,2,80.00,6.40,86.40")
     expect(csv).to include(HotelPortal::Reports::DailyRevenueTransactionsCsvExportService::HEADERS.to_csv.strip)
     expect(csv).to include("G01,Garden Chalet,Original,480.00,38.40,518.40,MYR")
