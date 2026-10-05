@@ -22,6 +22,16 @@ end %>
 <% check_out_value = @booking.check_out&.in_time_zone(tz)&.strftime("%Y-%m-%dT%H:%M") %>
 <% stay_range_value = "#{check_in_value}/#{check_out_value}" %>
 <% currency = current_hotel.default_currency.presence || "MYR" %>
+<%# Day use is a per-room product, and "today" only makes sense for a booking that is not backdated. %>
+<% offer_day_use = !current_hotel.sells_per_person? && !backdated %>
+<% day_use_selected = offer_day_use && params[:stay_type] == "day_use" %>
+<% hotel_now = Time.current.in_time_zone(tz) %>
+<% day_use_date = day_use_selected && @booking.check_in.present? ? @booking.check_in.in_time_zone(tz).to_date : hotel_now.to_date %>
+<% day_use_time = if day_use_selected && @booking.check_in.present?
+     @booking.check_in.in_time_zone(tz).strftime("%H:%M")
+   else
+     hotel_now.change(min: (hotel_now.min / 15) * 15).strftime("%H:%M")
+   end %>
 <%# Re-render after a failed submit has to restore the rail's own state. %>
 <% security_deposit_params = params.dig(:booking, :security_deposit) %>
 <% security_deposit = security_deposit_params.respond_to?(:to_unsafe_h) ? security_deposit_params.to_unsafe_h : security_deposit_params.to_h %>
@@ -43,7 +53,9 @@ end %>
            data-booking-room-rows-price-url-value="<%= stay_price_hotel_bookings_path(current_hotel) %>"
            data-booking-room-rows-auto-charges-value="<%= auto_charge_options(current_hotel).to_json %>"
            data-booking-room-rows-auto-assign-enabled-value="<%= current_hotel.auto_assign_rooms_enabled? %>"
-           data-booking-room-rows-room-row-url-value="<%= room_row_hotel_bookings_path(current_hotel) %>">
+           data-booking-room-rows-room-row-url-value="<%= room_row_hotel_bookings_path(current_hotel) %>"
+           data-booking-room-rows-day-use-date-value="<%= day_use_date.iso8601 %>"
+           data-booking-room-rows-day-use-selected-value="<%= day_use_selected %>">
         <%= form_with model: @booking, url: form_url, local: true, class: "flex min-h-0 flex-1 flex-col", id: "manual_booking_form",
               data: { controller: "booking-guest-autofill", action: "ui:autocomplete-select->booking-guest-autofill#selectGuest" } do |f| %>
           <%# Backend param contract: the range picker feeds these hidden fields. %>
@@ -58,8 +70,26 @@ end %>
                     <h3 class="text-base font-semibold text-foreground">Stay details</h3>
                     <p class="mt-1 text-sm text-muted-foreground">When the guest stays and how the booking reached you.</p>
                   </div>
+                  <% if offer_day_use %>
+                    <div class="space-y-1.5 <%= "md:col-span-2" unless quick %>" data-role="stay-type-field">
+                      <span id="stay_type_label" class="panel-form-field__label">Stay type</span>
+                      <%= render PanelsUI::ToggleGroup.new(
+                            id: "stay-type",
+                            type: :single,
+                            value: day_use_selected ? "day_use" : "overnight",
+                            variant: :outline,
+                            spacing: 0,
+                            required: true,
+                            name: "stay_type",
+                            aria_label: "Stay type",
+                            data: { action: "ui--toggle-group:change->booking-room-rows#stayTypeChanged" }) do |group| %>
+                        <% group.with_item(value: "overnight") { "Overnight" } %>
+                        <% group.with_item(value: "day_use") { "Day use" } %>
+                      <% end %>
+                    </div>
+                  <% end %>
                   <div class="grid <%= quick ? "gap-4 md:grid-cols-2" : "grid-cols-3 gap-x-3 gap-y-4" %>" data-role="stay-window-fields">
-                    <div class="<%= "col-span-2" unless quick %>">
+                    <div class="<%= "col-span-2" unless quick %> <%= "hidden" if day_use_selected %>" data-booking-room-rows-target="rangeField">
                       <%= render PanelsUI::FormField.new(form: f, attribute: :stay_range, label: "Check-in → Check-out") do |field| %>
                         <% field.with_date_time_picker(
                              range: true,
@@ -68,6 +98,17 @@ end %>
                              data: { action: "change->booking-room-rows#rangeChanged" }) %>
                       <% end %>
                     </div>
+                    <% if offer_day_use %>
+                      <div class="<%= "col-span-2" unless quick %> <%= "hidden" unless day_use_selected %>" data-booking-room-rows-target="dayUseFields">
+                        <div class="panel-form-field" data-size="md">
+                          <label for="day_use_arrival_time" class="panel-form-field__label">Arrival time (today, <%= day_use_date.strftime("%-d %b") %>)</label>
+                          <input type="time" id="day_use_arrival_time" class="panel-input" value="<%= day_use_time %>"
+                                 data-booking-room-rows-target="arrivalTime"
+                                 data-action="change->booking-room-rows#arrivalChanged">
+                          <p class="mt-1 text-xs text-muted-foreground">Check-out follows the hours of the day-use plan you pick.</p>
+                        </div>
+                      </div>
+                    <% end %>
                     <div class="panel-form-field" data-size="md" data-readonly="true">
                       <span id="booking_nights_label" class="panel-form-field__label">Nights</span>
                       <output class="panel-input flex items-center bg-muted font-semibold"

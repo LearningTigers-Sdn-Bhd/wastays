@@ -349,6 +349,14 @@ RSpec.describe 'HotelPortal::RatePlans', type: :request do
   end
 
   describe 'GET /hotel/:hotel_id/rate_plans/new plan type' do
+    it 'does not offer day use on a per-person hotel', :per_person do
+      get new_hotel_rate_plan_path(hotel)
+
+      page = Nokogiri::HTML(response.body)
+      expect(page.at_css("#rate-plan-type")).to be_nil
+      expect(page.at_css('[data-rate-plan-type-target="hours"]')).to be_nil
+    end
+
     it 'defaults a new plan to Room and keeps the hours field hidden' do
       get new_hotel_rate_plan_path(hotel)
 

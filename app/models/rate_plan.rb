@@ -74,6 +74,7 @@ class RatePlan < ApplicationRecord
     numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :day_use_hours, numericality: { only_integer: true, in: 1..24 }, allow_nil: true
   validate :day_use_hours_locked_once_booked
+  validate :day_use_needs_per_room_selling
 
   before_validation :normalize_currency
   before_validation :inherit_sell_mode_from_hotel
@@ -244,6 +245,14 @@ class RatePlan < ApplicationRecord
   end
 
   private
+
+  # A block of hours has one fixed price for the room; a per-person plan prices
+  # each guest by the night, so the two cannot describe the same plan.
+  def day_use_needs_per_room_selling
+    return unless day_use? && sell_mode == "per_person"
+
+    errors.add(:day_use_hours, "is only available when the hotel sells per room")
+  end
 
   def day_use_hours_locked_once_booked
     return unless persisted? && day_use_hours_changed? && booking_rooms.exists?

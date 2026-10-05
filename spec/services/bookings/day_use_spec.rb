@@ -29,6 +29,13 @@ RSpec.describe "Day-use stays" do
       expect(day_use_plan.bookable_by?(:corporate)).to be false
     end
 
+    it "is not available on a per-person hotel" do
+      per_person_plan = build(:rate_plan, :custom, hotel: create(:hotel, :per_person), day_use_hours: 6)
+
+      expect(per_person_plan).not_to be_valid
+      expect(per_person_plan.errors[:day_use_hours]).to include("is only available when the hotel sells per room")
+    end
+
     it "rejects hours outside a single day" do
       expect(build(:rate_plan, :custom, day_use_hours: 0)).not_to be_valid
       expect(build(:rate_plan, :custom, day_use_hours: 25)).not_to be_valid

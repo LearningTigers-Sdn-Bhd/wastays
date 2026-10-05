@@ -87,6 +87,50 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(payment_menu["data-ui--select-menu-fixed-width-value"]).to eq("true")
     end
 
+    describe "the Day use stay type" do
+      def dialog_for(path)
+        get path, headers: { "Turbo-Frame" => "booking_action_sheet" }
+        Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
+      end
+
+      it "offers Overnight / Day use on a per-room hotel, defaulting to overnight with the arrival time hidden" do
+        dialog = dialog_for(hotel_booking_action_new_booking_path(hotel))
+
+        expect(dialog.at_css('#stay-type [data-value="overnight"]')["aria-pressed"]).to eq("true")
+        expect(dialog.at_css('#stay-type [data-value="day_use"]')["aria-pressed"]).to eq("false")
+        expect(dialog.at_css('[data-booking-room-rows-target="dayUseFields"]')["class"]).to include("hidden")
+        expect(dialog.at_css('[data-booking-room-rows-target="rangeField"]')["class"]).not_to include("hidden")
+      end
+
+      it "targets today's date, in the hotel's time zone, and swaps the range for an arrival time when Day use is chosen" do
+        dialog = dialog_for(hotel_booking_action_new_booking_path(hotel, stay_type: "day_use"))
+
+        expect(dialog.at_css('#stay-type [data-value="day_use"]')["aria-pressed"]).to eq("true")
+        expect(dialog.at_css('[data-booking-room-rows-target="rangeField"]')["class"]).to include("hidden")
+        expect(dialog.at_css('[data-booking-room-rows-target="dayUseFields"]')["class"]).not_to include("hidden")
+        controller = dialog.at_css('[data-controller="booking-room-rows"]')
+        expect(controller["data-booking-room-rows-day-use-date-value"]).to eq(Time.current.in_time_zone(hotel.hotel_time_zone).to_date.iso8601)
+        expect(controller["data-booking-room-rows-day-use-selected-value"]).to eq("true")
+        expect(dialog.at_css("input#day_use_arrival_time")["value"]).to match(/\A\d{2}:\d{2}\z/)
+      end
+
+      it "is not offered on a per-person hotel" do
+        per_person_hotel = create(:hotel, :per_person, account: hotel.account)
+        create(:user_hotel_access, user: user, hotel: per_person_hotel, role: role)
+        BusinessDates::ResetAuthority.call!(hotel: per_person_hotel, date: Date.current)
+
+        dialog = dialog_for(hotel_booking_action_new_booking_path(per_person_hotel))
+
+        expect(dialog.at_css("#stay-type")).to be_nil
+      end
+
+      it "is not offered on a backdated check-in" do
+        dialog = dialog_for(hotel_booking_action_backdated_check_in_path(hotel))
+
+        expect(dialog.at_css("#stay-type")).to be_nil
+      end
+    end
+
     it "renders the Quick Booking sheet on the right" do
       return_to = hotel_stay_view_path(hotel, view: "timeline")
       get hotel_booking_action_quick_booking_path(hotel),
