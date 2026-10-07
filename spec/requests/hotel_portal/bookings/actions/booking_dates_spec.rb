@@ -66,6 +66,157 @@ RSpec.describe "HotelPortal::Bookings::Actions booking dates", frozen_time: :bus
     expect(booking.booking_rooms.first.reload.room_number).to eq("101")
   end
 
+  it "posts missing closed-night charges when staff save the corrected dates" do
+    prepare_closed_night
+
+    patch hotel_booking_action_edit_dates_path(hotel, booking), params: {
+      booking: { check_in: Date.current - 1.day, check_out: Date.current }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include('action="complete_sheet"')
+    expect(booking.reload.booking_folio.folio_transactions.charge.pluck(:posting_date)).to eq([ Date.current - 1.day ])
+    expect(booking.booking_folio.folio_forecasted_charges.forecast).not_to exist
+  end
+
+  it "keeps the Sheet open and preserves the stay when an edit removes a posted closed night" do
+    prepare_closed_night
+    result = Bookings::UpdateStayService.new(booking: booking, user: user,
+      params: { check_in: Date.current - 1.day, check_out: Date.current }).call
+    expect(result).to be_success
+
+    patch hotel_booking_action_edit_dates_path(hotel, booking), params: {
+      booking: { check_in: Date.current, check_out: Date.current + 1.day }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Review charge correction", "Reason for correction", "An authorized manager must confirm this correction.")
+    expect(response.body).not_to include("The stay dates could not be updated.")
+    document = Nokogiri::HTML(response.body)
+    expect(document.at_css("button[type='submit']")['disabled']).to be_present
+    expect(response.body).not_to include('action="complete_sheet"')
+    expect(booking.reload.check_in.in_time_zone(hotel.hotel_time_zone).to_date).to eq(Date.current - 1.day)
+  end
+
+  it "confirms the reviewed correction in the same Sheet" do
+    prepare_posted_closed_night
+    grant_permission("manage_night_audit")
+    grant_permission("override_financial_date_lock")
+    propose_correction
+    token = Nokogiri::HTML(response.body).at_css("input[name='booking[correction_review_token]']")["value"]
+    expect(response.body).to include("Reverse", "Schedule", "Confirm correction")
+    expect(response.body).not_to include("The stay dates could not be updated.")
+
+    propose_correction(correction_reason: "Wrong arrival date", correction_review_token: token)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include('action="complete_sheet"')
+    expect(flash[:notice]).to eq("Stay dates and charges updated.")
+    expect(booking.reload.check_in.in_time_zone(hotel.hotel_time_zone).to_date).to eq(Date.current)
+    expect(booking.booking_folio.folio_transactions.adjustment.count).to eq(1)
+  end
+
+  it "shows the proposed total alongside the correction instead of the original stay value" do
+    prepare_posted_closed_night
+    patch hotel_booking_action_edit_dates_path(hotel, booking), params: {
+      booking: { check_in: Date.current, check_out: Date.current + 2.days }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:success)
+    document = Nokogiri::HTML(response.body)
+    expect(document.at_css("[data-booking-actions--stay-price-target='estimatedTotal']").text).to eq("199.98")
+    expect(document.at_css("[data-booking-actions--stay-price-target='calculationStatus']").text).to eq("Proposed estimate")
+    expect(booking.reload.total_amount).to eq("99.99".to_d)
+  end
+
+  it "retains submitted dates, reason, and review when accounting fails" do
+    prepare_posted_closed_night
+    grant_permission("manage_night_audit")
+    grant_permission("override_financial_date_lock")
+    propose_correction
+    token = Nokogiri::HTML(response.body).at_css("input[name='booking[correction_review_token]']")["value"]
+    allow(Financials::CreateJournalBatch).to receive(:call).and_raise("Journal refresh failed")
+
+    propose_correction(correction_reason: "Wrong arrival date", correction_review_token: token)
+
+    expect(response).to have_http_status(:unprocessable_content)
+    document = Nokogiri::HTML(response.body)
+    expect(document.at_css("textarea[name='booking[correction_reason]']").text.strip).to eq("Wrong arrival date")
+    expect(document.at_css("input[name='booking[check_in]']")["value"]).to eq(Date.current.to_s)
+    expect(response.body).to include("Journal refresh failed", "Confirm correction")
+    expect(response.body).not_to include('action="complete_sheet"')
+    expect(booking.reload.check_in.in_time_zone(hotel.hotel_time_zone).to_date).to eq(Date.yesterday)
+    expect(booking.booking_folio.folio_transactions.adjustment).not_to exist
+  end
+
+  it "requires a reason on the server and retains the review" do
+    prepare_posted_closed_night
+    grant_permission("manage_night_audit")
+    grant_permission("override_financial_date_lock")
+    propose_correction
+    token = Nokogiri::HTML(response.body).at_css("input[name='booking[correction_review_token]']")["value"]
+
+    propose_correction(correction_reason: " ", correction_review_token: token)
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("Reason for correction is required.", "Confirm correction")
+    expect(booking.reload.check_in.in_time_zone(hotel.hotel_time_zone).to_date).to eq(Date.yesterday)
+  end
+
+  it "reviews and confirms every selected group booking together" do
+    prepare_posted_closed_night
+    grant_permission("manage_night_audit")
+    grant_permission("override_financial_date_lock")
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    sibling = create(:booking, hotel: hotel, group_booking: group, group_position: 2,
+      status: "checked_in", check_in: booking.check_in, check_out: booking.check_out)
+    create(:booking_room, booking: sibling, room_type: room_type, rate_plan: rate_plan, room_number: "102", subtotal: room_type.base_price)
+    create(:booking_folio, hotel: hotel, booking: sibling)
+    Bookings::InventoryManager.new(sibling).deduct
+    Bookings::PostClosedStayCharges.call(booking: sibling, previous_check_in: sibling.check_in, previous_check_out: sibling.check_out, user: user)
+    group_params = { target_scope: "group", booking_ids: [ booking.id, sibling.id ] }
+    patch hotel_booking_action_edit_dates_path(hotel, booking), params: group_params.merge(
+      booking: { check_in: Date.current, check_out: Date.current + 1.day }
+    ), headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+    expect(response.body).to include(booking.reservation_reference, sibling.reservation_reference)
+    token = Nokogiri::HTML(response.body).at_css("input[name='booking[correction_review_token]']")["value"]
+
+    patch hotel_booking_action_edit_dates_path(hotel, booking), params: group_params.merge(
+      booking: { check_in: Date.current, check_out: Date.current + 1.day,
+        correction_reason: "Wrong group arrival date", correction_review_token: token }
+    ), headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include('action="complete_sheet"')
+    expect(flash[:notice]).to eq("2 bookings stay dates and charges updated.")
+    expect(booking.reload.check_in.in_time_zone(hotel.hotel_time_zone).to_date).to eq(Date.current)
+    expect(sibling.reload.check_in.in_time_zone(hotel.hotel_time_zone).to_date).to eq(Date.current)
+    expect(sibling.booking_folio.folio_transactions.adjustment.count).to eq(1)
+  end
+
+  def propose_correction(**correction)
+    patch hotel_booking_action_edit_dates_path(hotel, booking), params: {
+      booking: { check_in: Date.current, check_out: Date.current + 1.day }.merge(correction)
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+  end
+
+  def prepare_posted_closed_night
+    prepare_closed_night
+    result = Bookings::UpdateStayService.new(booking: booking, user: user,
+      params: { check_in: Date.yesterday, check_out: Date.current }).call
+    expect(result).to be_success
+  end
+
+  def prepare_closed_night
+    booking.update_column(:status, "checked_in")
+    create(:booking_folio, hotel: hotel, booking: booking)
+    create(:hotel_business_date, hotel: hotel, business_date: Date.current - 1.day, status: "closed")
+    audit = create(:night_audit, hotel: hotel, business_date: Date.current - 1.day, status: "completed")
+    create(:night_audit_financial_summary, night_audit: audit, room_revenue: 0)
+    Bookings::InventoryManager.new(booking).deduct
+  end
+
   it "shows the proposed-dates banner without mutating on a dates proposal" do
     original = [ booking.check_in, booking.check_out ]
 

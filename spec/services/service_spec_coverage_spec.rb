@@ -56,6 +56,8 @@ RSpec.describe "Service spec coverage" do
     # The folio posting the instalment services share is exercised through them:
     # a spec for it apart from a payment or refund would assert its own mock.
     "bookings/payment_instalments/folio_posting" => "bookings/payment_instalments/mark_paid_spec.rb",
+    # Historical posting is tested through the stay transaction and its rollback.
+    "bookings/post_closed_stay_charges" => "bookings/update_stay_closed_dates_spec.rb",
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",

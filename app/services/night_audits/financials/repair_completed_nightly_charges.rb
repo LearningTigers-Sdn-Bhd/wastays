@@ -25,8 +25,46 @@ module NightAudits
       validation_error = validate_context
       return failure(validation_error) if validation_error.present?
 
+      perform_repair
+    rescue StandardError => e
+      failure(e.message)
+    end
+
+    # Stay edits may add missing charges, but must not alter historical postings.
+    def call_for_stay_update
+      @stay_update = true
+      return failure("You do not have permission to update this booking.") unless allowed_actor?("manage_bookings")
+      return failure("Only in-house stays can post missing historical charges automatically.") unless @booking.status.in?(Booking::IN_HOUSE_STATUSES)
+
+      validation_error = validate_booking_context
+      return failure(validation_error) if validation_error.present?
+      return failure("Existing closed-night charges require an accounting correction.") if current_reconciliation.entries.any? { |entry| entry[:issues].any? && entry[:transactions].any? }
+
+      perform_repair
+    rescue StandardError => e
+      failure(e.message)
+    end
+
+    def call_for_stay_correction(removed_transactions: [])
+      @stay_update = true
+      @removed_transactions = removed_transactions
+      return failure("You do not have permission to update this booking.") unless allowed_actor?("manage_bookings")
+      return failure("Only in-house stays can correct historical charges here.") unless @booking.status.in?(Booking::IN_HOUSE_STATUSES)
+      return failure("Closed folios cannot be corrected through stay dates.") if @removed_transactions.any? { |transaction| !transaction.booking_folio.open? }
+
+      validation_error = validate_context
+      return failure(validation_error) if validation_error.present?
+
+      perform_repair
+    rescue StandardError => e
+      failure(e.message)
+    end
+
+    private
+
+    def perform_repair
       reconciliation = current_reconciliation
-      return success(reconciliation, already_repaired: true) if reconciliation.valid?
+      return success(reconciliation, already_repaired: true) if reconciliation.valid? && @removed_transactions.to_a.empty?
 
       repair = nil
       ActiveRecord::Base.transaction do
@@ -36,10 +74,11 @@ module NightAudits
           actor: @actor,
           reason: @reason,
           night_audit: @night_audit,
+          removed_transactions: @removed_transactions.to_a,
           posting_options: {
             posting_source: POSTING_SOURCE,
             override_night_audit: true,
-            override_closed_folio: true,
+            override_closed_folio: !@stay_update,
             correction_reason: @reason,
             correction_note: @reason,
             permission_context: @actor,
@@ -47,6 +86,7 @@ module NightAudits
           }
         )
         raise repair.error unless repair.success?
+        raise "Historical nightly charges did not reconcile." unless repair.reconciliation.valid?
 
         NightAudits::RecalculateFinancialSummary.new(
           hotel: @hotel,
@@ -67,15 +107,17 @@ module NightAudits
       failure(e.message)
     end
 
-    private
-
     def validate_context
       return "You do not have permission to manage Night Audit." unless allowed_actor?(MANAGE_PERMISSION)
       return "You do not have permission to post corrections to a closed business date." unless allowed_actor?(OVERRIDE_PERMISSION)
+      validate_booking_context
+    end
+
+    def validate_booking_context
       return "A correction reason is required." if @reason.blank?
       return "Booking does not belong to this hotel." unless @booking.hotel_id == @hotel.id
       return "Night audit must be completed before historical charges can be repaired." unless @night_audit.completed?
-      return "Booking did not occupy this business date." unless booking_stay_dates.include?(@business_date)
+      return "Booking did not occupy this business date." unless booking_stay_dates.include?(@business_date) || @removed_transactions.to_a.any?
 
       nil
     end
@@ -99,7 +141,7 @@ module NightAudits
       @current_reconciliation ||= Folios::Charges::NightlyChargeReconciliation.call(
         booking: @booking,
         business_date: @business_date,
-        allow_closed_folio: true
+        allow_closed_folio: !@stay_update
       )
     end
 

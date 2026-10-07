@@ -4,7 +4,7 @@ require "ostruct"
 
 module Bookings
   class UpdateStayService
-    def initialize(booking:, params:, user: nil, override: false, override_reason: nil)
+    def initialize(booking:, params:, user: nil, override: false, override_reason: nil, correction_context: nil)
       @booking = booking
       @hotel = booking.hotel
       @params = params.dup
@@ -17,6 +17,7 @@ module Bookings
       @user = user
       @override = override
       @override_reason = override_reason
+      @correction_context = correction_context
     end
 
     def call
@@ -30,6 +31,10 @@ module Bookings
       result = nil
 
       result = ActiveRecord::Base.transaction do
+        lock_current_business_date! if financially_relevant_change_requested?
+        @booking.lock!
+        prepare_rate_selection!
+        guard_financially_relevant_change!
         old_audit_values = audit_values
         # 1. Store old state for inventory management and change detection
         old_check_in = @booking.check_in
@@ -169,6 +174,18 @@ module Bookings
             end
           end
 
+          if dates_changing || room_type_changing || rate_plan_changing || override_changing || @correction_context
+            PostClosedStayCharges.call(
+              booking: @booking,
+              previous_check_in: old_check_in,
+              previous_check_out: old_check_out,
+              user: @user,
+              correction_context: @correction_context
+            )
+          end
+
+          next OpenStruct.new(success?: true, booking: @booking) if @correction_context&.preview?
+
           # Record Audit Log
           Bookings::RecordAuditLog.call!(
             auditable: @booking,
@@ -176,11 +193,15 @@ module Bookings
             action_type: "update",
             old_value: old_audit_values,
             new_value: audit_values,
-            reason: @override_reason.presence
+            reason: @correction_context&.reason.presence || @override_reason.presence
           )
 
           sync_guest(@booking)
-          Notifications::Dispatcher.new(event: :booking_updated, booking: @booking).call if dates_changing
+          if dates_changing
+            ActiveRecord.after_all_transactions_commit do
+              notify_stay_updated
+            end
+          end
           OpenStruct.new(success?: true, booking: @booking)
         else
           OpenStruct.new(success?: false, errors: @booking.errors.full_messages)
@@ -188,12 +209,28 @@ module Bookings
       end
       return OpenStruct.new(success?: false, errors: [ failure_error ]) if failure_error.present?
       result
+    rescue UpdateStayDates::StaleReview
+      raise
     rescue => e
       OpenStruct.new(success?: false, errors: [ e.message ])
     end
 
 
     private
+
+    def lock_current_business_date!
+      record = @hotel.hotel_business_dates.current.lock.first
+      raise "Hotel has no current accounting business date." unless record
+      return if @hotel.current_business_date_record&.id == record.id
+
+      raise "Accounting business date changed. Reload the booking and try again."
+    end
+
+    def notify_stay_updated
+      Notifications::Dispatcher.new(event: :booking_updated, booking: @booking).call
+    rescue StandardError => e
+      Rails.logger.error("Failed to dispatch stay update for booking #{@booking.id}: #{e.message}")
+    end
 
     FINANCIALLY_RELEVANT_FIELDS = %w[
       check_in check_out total_amount manual_rate_override tax_lines tax_posting_snapshot

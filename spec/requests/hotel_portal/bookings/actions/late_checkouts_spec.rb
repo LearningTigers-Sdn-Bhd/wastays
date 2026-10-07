@@ -35,6 +35,8 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
 
   before do
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+    create(:hotel_business_date, hotel: hotel, business_date: Date.yesterday, status: "closed")
+    create(:night_audit, hotel: hotel, business_date: Date.yesterday, status: "completed")
     grant_permission(role, "manage_bookings")
     grant_permission(role, "post_folio_charges")
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
@@ -143,7 +145,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_sheet"')
       expect(response.body).to include('target="booking_action_sheet"')
-      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.reload.status).to eq("checkout_required")
       expect(flash[:notice]).to eq("Late checkout charge applied.")
     end
 
@@ -167,7 +169,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
 
       expect(response).to have_http_status(:success)
-      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.reload.status).to eq("checkout_required")
       expect(booking.check_out).to be_within(1.second).of(new_check_out)
       expect(booking.booking_folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
       expect(flash[:notice]).to eq("Late checkout resolved without charge.")
@@ -190,7 +192,7 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
 
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "booking_details"))
       expect(flash[:notice]).to eq("Late checkout charge applied.")
-      expect(booking.reload.status).to eq("checked_in")
+      expect(booking.reload.status).to eq("checkout_required")
     end
 
     it "completes into the secondary frame when submitted stacked" do
@@ -226,8 +228,8 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
       expect(response).to have_http_status(:success)
       expect(response.body).to include('action="complete_sheet"')
       expect(flash[:notice]).to eq("2 bookings resolved for late checkout.")
-      expect(booking.reload.status).to eq("checked_in")
-      expect(sibling.reload.status).to eq("checked_in")
+      expect(booking.reload.status).to eq("checkout_required")
+      expect(sibling.reload.status).to eq("checkout_required")
     end
 
     it "blocks late checkout without manage_bookings permission" do
