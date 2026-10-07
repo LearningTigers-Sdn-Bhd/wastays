@@ -2903,14 +2903,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.string "agency_name"
     t.decimal "amount_paid", precision: 10, scale: 2
     t.date "arrival"
-    t.datetime "booked_at"
     t.string "boat_in_time"
     t.string "boat_in_type"
     t.string "boat_out_time"
     t.string "boat_out_type"
+    t.datetime "booked_at"
     t.string "booked_by"
-    t.string "booking_status", default: "confirmed", null: false
     t.bigint "booking_id"
+    t.string "booking_status", default: "confirmed", null: false
     t.integer "children", default: 0, null: false
     t.datetime "created_at", null: false
     t.date "departure"
