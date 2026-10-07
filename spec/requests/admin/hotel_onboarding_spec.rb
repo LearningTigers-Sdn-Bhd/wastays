@@ -140,8 +140,8 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
       expect(document.at_css(".panel-page")["class"]).to include("panel-page--full-height")
       expect(tab_content["class"]).to include("min-h-0", "flex-1", "overflow-y-auto")
       expect(metrics.map { |metric| metric.text.squish }).to eq([
-        "Required setup 8 of 8 Complete",
-        "Optional decisions 3 of 4 1 deferred",
+        "Required setup 7 of 7 Complete",
+        "Optional decisions 4 of 5 1 deferred",
         "Rooms 4 1 room type",
         "Rate coverage 100% Through 12 Aug 2027"
       ])
@@ -236,8 +236,8 @@ RSpec.describe "Admin::HotelOnboarding", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(metric_text).to eq([
-        "Required setup 0 of 8 8 remaining",
-        "Optional decisions 0 of 4 0 deferred",
+        "Required setup 0 of 7 7 remaining",
+        "Optional decisions 0 of 5 0 deferred",
         "Rooms 0 0 room types",
         "Rate coverage Not supplied No coverage date"
       ])

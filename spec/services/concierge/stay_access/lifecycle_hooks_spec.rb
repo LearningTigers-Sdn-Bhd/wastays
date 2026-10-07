@@ -47,10 +47,11 @@ RSpec.describe "Concierge stay access lifecycle" do
     end
   end
 
-  describe "check-in through Bookings::TransitionStatus" do
+  describe "check-in through Bookings::TransitionStatus", frozen_time: Time.utc(2026, 10, 7, 17) do
     let(:room_type) { create(:room_type, hotel: hotel) }
     let(:confirmed) do
-      create(:booking, hotel: hotel, status: "confirmed", guest_email: "siti@example.com")
+      create(:booking, hotel: hotel, status: "confirmed", guest_email: "siti@example.com",
+        check_in: hotel.current_business_date, check_out: hotel.current_business_date + 1.day)
     end
 
     it "creates the record and queues the mail" do

@@ -3,10 +3,13 @@
 require "rails_helper"
 
 RSpec.describe Bookings::ProcessLateCheckout do
+  include HotelTimeHelpers
+
   let(:hotel) { create(:hotel) }
+  let(:today) { hotel_today(hotel) }
   let(:user) { create(:user, :superadmin) }
   let(:room_type) { create(:room_type, hotel: hotel, quantity: 10) }
-  let(:booking) { create(:booking, hotel: hotel, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day) }
+  let(:booking) { create(:booking, hotel: hotel, status: "checked_in", check_in: today, check_out: today + 1.day) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type, room_number: "101") }
   let!(:folio) { Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user) }
 
@@ -15,7 +18,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
   end
 
   it "updates the checkout period, posts a charge, and resolves the booking" do
-    new_check_out = Date.current + 2.days
+    new_check_out = today + 2.days
 
     result = described_class.call(
       booking: booking,
@@ -31,7 +34,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
   end
 
   it "updates the checkout period and resolves the booking without a charge" do
-    new_check_out = Date.current + 2.days
+    new_check_out = today + 2.days
 
     result = described_class.call(
       booking: booking,
@@ -71,7 +74,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { resolution: "waive", check_out: (Date.current + 2.days).to_s }
+      params: { resolution: "waive", check_out: (today + 2.days).to_s }
     )
 
     expect(result).to be_success
@@ -82,14 +85,14 @@ RSpec.describe Bookings::ProcessLateCheckout do
     result = described_class.call(
       booking: booking,
       user: user,
-      params: { resolution: "reject", check_out: (Date.current + 2.days).to_s }
+      params: { resolution: "reject", check_out: (today + 2.days).to_s }
     )
 
     expect(result).to be_success
     expect(result).not_to be_charged
     expect(result).to be_rejected
     expect(booking.reload.status).to eq("checkout_required")
-    expect(booking.check_out.to_date).to eq(Date.current + 1.day)
+    expect(booking.check_out.to_date).to eq(today + 1.day)
     expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
   end
 
@@ -109,11 +112,11 @@ RSpec.describe Bookings::ProcessLateCheckout do
   end
 
   it "allows a later Night Audit to post normal charges after the stay is extended" do
-    next_business_date = Date.current + 1.day
+    next_business_date = today + 1.day
     described_class.call(
       booking: booking,
       user: user,
-      params: { resolution: "charge", amount: "150.00", check_out: (Date.current + 2.days).to_s }
+      params: { resolution: "charge", amount: "150.00", check_out: (today + 2.days).to_s }
     )
     audit = create(:night_audit, hotel: hotel, business_date: next_business_date, status: "running", performed_by_user: user)
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: next_business_date)
@@ -240,13 +243,13 @@ RSpec.describe Bookings::ProcessLateCheckout do
 
   describe "an overdue departure" do
     before do
-      BusinessDates::ResetAuthority.call!(hotel:, date: Date.current)
+      BusinessDates::ResetAuthority.call!(hotel:, date: today)
       booking.update!(
-        check_in: hotel.hotel_time_zone.local(Date.current.year, Date.current.month, Date.current.day, 15) - 1.day,
-        check_out: hotel.hotel_time_zone.local(Date.current.year, Date.current.month, Date.current.day, 12)
+        check_in: hotel.hotel_time_zone.local(today.year, today.month, today.day, 15) - 1.day,
+        check_out: hotel.hotel_time_zone.local(today.year, today.month, today.day, 12)
       )
-      create(:hotel_business_date, hotel:, business_date: Date.current - 1.day, status: "closed", closed_at: Time.current)
-      create(:night_audit, hotel:, business_date: Date.current - 1.day, status: "completed")
+      create(:hotel_business_date, hotel:, business_date: today - 1.day, status: "closed", closed_at: Time.current)
+      create(:night_audit, hotel:, business_date: today - 1.day, status: "completed")
     end
 
     %w[charge waive].each do |resolution|
@@ -295,7 +298,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
       original_checkout = booking.check_out
 
       result = described_class.call(booking:, user:, params: {
-        resolution: "charge", amount: "0", check_out: (Date.current + 2.days).to_s
+        resolution: "charge", amount: "0", check_out: (today + 2.days).to_s
       })
 
       expect(result).not_to be_success
@@ -309,7 +312,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
         instance_double(Bookings::UpdateStayService, call: OpenStruct.new(success?: false, errors: [ "Date amendment failed" ]))
       )
       result = described_class.call(booking:, user:, params: {
-        resolution: "charge", amount: "50.00", check_out: (Date.current + 2.days).to_s
+        resolution: "charge", amount: "50.00", check_out: (today + 2.days).to_s
       })
 
       expect(result).not_to be_success
