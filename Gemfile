@@ -6,7 +6,7 @@ gem "friendly_id", "~> 5.7"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use postgresql as the database for Active Record
-gem "pg", "~> 1.1"
+gem "pg", "~> 1.7"
 gem "neighbor", "~> 1.2"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
@@ -55,10 +55,10 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 2.0"
+gem "image_processing", "~> 2.2"
 # image_processing 2.0 no longer bundles a backend; the vips processor needs this
 gem "ruby-vips", "~> 2.0", require: false
-gem "pagy", "~> 43.6.2"
+gem "pagy", "~> 43.7.0"
 gem "commonmarker", "~> 2.8"
 gem "rqrcode", "~> 2.2"
 gem "prawn", "~> 2.5"
@@ -108,7 +108,7 @@ group :development do
 end
 
 gem "openssl", "~> 4.0"
-gem "aws-sdk-s3", "~> 1.225"
+gem "aws-sdk-s3", "~> 1.233"
 gem "nokogiri", ">= 1.19.3"
 
 gem "roo", "~> 3.0"
