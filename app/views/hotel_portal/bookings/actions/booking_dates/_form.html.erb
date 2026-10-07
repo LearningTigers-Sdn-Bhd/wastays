@@ -1,8 +1,8 @@
 <% group = @booking.group_booking_id? %>
 <% target_presenter = HotelPortal::BookingLifecycleTargetPresenter.new(booking: @booking, action: :amend_stay) %>
 <% currency = @booking.currency.presence || current_hotel.default_currency.presence || "MYR" %>
-<% current_room_total = @room&.subtotal.to_d %>
-<% current_tax_total = @current_tax_total || Booking.non_tourism_tax_total_for(@booking.tax_lines) %>
+<% current_room_total = @proposed_room_total || @room&.subtotal.to_d %>
+<% current_tax_total = @proposed_tax_total || @current_tax_total || Booking.non_tourism_tax_total_for(@booking.tax_lines) %>
 <% check_in_date = @check_in_date || @check_in_value.to_s.split("T").first %>
 <% check_out_date = @check_out_date || @check_out_value.to_s.split("T").first %>
 
@@ -83,15 +83,53 @@
               </div>
             </section>
 
+            <% if @correction_review.present? %>
+              <section aria-labelledby="charge-correction-heading" class="space-y-4 rounded-md border border-border bg-muted p-4" role="status" aria-live="polite">
+                <div>
+                  <h3 id="charge-correction-heading" class="text-base font-semibold">Review charge correction</h3>
+                  <p class="mt-1 text-sm text-muted-foreground">These dates affect charges already posted. Review the correction and give a reason to continue.</p>
+                  <% if @correction_review_message.present? %><p class="mt-2 text-sm text-muted-foreground"><%= @correction_review_message %></p><% end %>
+                </div>
+                <% @correction_review.each do |review| %>
+                  <div class="space-y-2 text-sm">
+                    <p class="font-medium"><%= review[:reference] %></p>
+                    <p class="text-muted-foreground">
+                      <%= review[:old_dates].map { |date| l(Time.iso8601(date).in_time_zone(current_hotel.hotel_time_zone).to_date, format: :long) }.join(" – ") %>
+                      → <%= review[:new_dates].map { |date| l(Time.iso8601(date).in_time_zone(current_hotel.hotel_time_zone).to_date, format: :long) }.join(" – ") %>
+                    </p>
+                    <ul class="space-y-2">
+                      <% review[:actions].each do |action| %>
+                        <li class="flex items-start justify-between gap-4">
+                          <span><%= { "reverse" => "Reverse", "post" => "Post", "schedule" => "Schedule" }.fetch(action[:action]) %> · <%= l(Date.iso8601(action[:date]), format: :long) %> · <%= action[:description] %></span>
+                          <span class="shrink-0 font-medium"><%= review[:currency] %> <%= number_with_precision(action[:amount], precision: 2, delimiter: ",") %></span>
+                        </li>
+                      <% end %>
+                    </ul>
+                  </div>
+                <% end %>
+                <%= hidden_field_tag "booking[correction_review_token]", @correction_review_token %>
+                <%= render PanelsUI::FormField.new(form: form, attribute: :correction_reason, label: "Reason for correction", required: true) do |field| %>
+                  <% field.with_text_area(value: params.dig(:booking, :correction_reason), rows: 3) %>
+                <% end %>
+                <% unless @correction_allowed %>
+                  <p class="text-sm text-muted-foreground">An authorized manager must confirm this correction.</p>
+                <% end %>
+              </section>
+            <% elsif params.dig(:booking, :correction_reason).present? %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :correction_reason, label: "Reason for correction") do |field| %>
+                <% field.with_text_area(value: params.dig(:booking, :correction_reason), rows: 3) %>
+              <% end %>
+            <% end %>
+
             <section aria-labelledby="estimated-value-heading" class="space-y-3">
               <div class="flex items-center justify-between gap-3">
                 <h3 id="estimated-value-heading" class="text-base font-semibold">Estimated value</h3>
-                <p class="text-xs text-muted-foreground" role="status" aria-live="polite" data-booking-actions--stay-price-target="calculationStatus">Current estimate</p>
+                <p class="text-xs text-muted-foreground" role="status" aria-live="polite" data-booking-actions--stay-price-target="calculationStatus"><%= @proposed_total_amount ? "Proposed estimate" : "Current estimate" %></p>
               </div>
               <dl class="divide-y divide-border rounded-md border border-border text-sm">
                 <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Room</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="roomTotal"><%= number_with_precision(current_room_total, precision: 2, delimiter: ",") %></span></dd></div>
                 <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="text-muted-foreground">Taxes & charges</dt><dd class="font-medium text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="taxTotal"><%= number_with_precision(current_tax_total, precision: 2, delimiter: ",") %></span></dd></div>
-                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@booking.total_amount, precision: 2, delimiter: ",") %></span></dd></div>
+                <div class="flex items-center justify-between gap-4 px-4 py-3"><dt class="font-medium text-foreground">Estimated total</dt><dd class="font-semibold text-foreground"><%= currency %> <span data-booking-actions--stay-price-target="estimatedTotal"><%= number_with_precision(@proposed_total_amount || @booking.total_amount, precision: 2, delimiter: ",") %></span></dd></div>
               </dl>
               <p class="text-xs text-muted-foreground">Future forecasted charges are recalculated. Charges already posted to a folio remain financial records.</p>
             </section>
@@ -101,7 +139,7 @@
 
         <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
           <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
-          <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, disabled: @correction_review.present? && !@correction_allowed, data: { turbo_submits_with: "Saving…" }) do %><%= @correction_review.present? ? "Confirm correction" : "Save changes" %><% end %>
         </div>
       <% end %>
     <% end %>

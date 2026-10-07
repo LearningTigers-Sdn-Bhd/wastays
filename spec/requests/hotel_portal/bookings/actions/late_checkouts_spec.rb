@@ -35,6 +35,8 @@ RSpec.describe "HotelPortal::Bookings::Actions late checkouts", frozen_time: :bu
 
   before do
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+    create(:hotel_business_date, hotel: hotel, business_date: Date.yesterday, status: "closed")
+    create(:night_audit, hotel: hotel, business_date: Date.yesterday, status: "completed")
     grant_permission(role, "manage_bookings")
     grant_permission(role, "post_folio_charges")
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
