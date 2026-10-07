@@ -237,4 +237,85 @@ RSpec.describe Bookings::ProcessLateCheckout do
     expect(result.error).to eq("Choose how to resolve this late checkout.")
     expect(booking.reload.status).to eq("due_out_detected")
   end
+
+  describe "an overdue departure" do
+    before do
+      BusinessDates::ResetAuthority.call!(hotel:, date: Date.current)
+      booking.update!(
+        check_in: hotel.hotel_time_zone.local(Date.current.year, Date.current.month, Date.current.day, 15) - 1.day,
+        check_out: hotel.hotel_time_zone.local(Date.current.year, Date.current.month, Date.current.day, 12)
+      )
+      create(:hotel_business_date, hotel:, business_date: Date.current - 1.day, status: "closed", closed_at: Time.current)
+      create(:night_audit, hotel:, business_date: Date.current - 1.day, status: "completed")
+    end
+
+    %w[charge waive].each do |resolution|
+      [ nil, :unchanged, :past ].each do |checkout|
+        it "requires checkout after #{resolution} with a #{checkout || 'blank'} checkout date" do
+          params = { resolution:, amount: "50.00" }
+          params[:check_out] = booking.check_out.iso8601 if checkout == :unchanged
+          params[:check_out] = (booking.check_out - 1.hour).iso8601 if checkout == :past
+          expect(HousekeepingTasks::RestoreLateCheckoutRoomStatuses).not_to receive(:new)
+
+          result = described_class.call(booking:, user:, params:)
+
+          expect(result).to be_success
+          expect(result).not_to be_rejected
+          expect(booking.reload.status).to eq("checkout_required")
+          expect(folio.folio_transactions.where(category: "late_checkout_charge").sum(:amount)).to eq(resolution == "charge" ? 50 : 0)
+          log = BookingAuditLog.where(auditable: booking, action_type: "status_change").last
+          expect(log.metadata).to include("event" => "reject_late_checkout", "reason" => "Checkout remains overdue after late checkout #{resolution}.")
+        end
+      end
+    end
+
+    it "rolls back the fee when the business date is unavailable" do
+      allow_any_instance_of(Hotel).to receive(:current_business_date).and_return(nil)
+
+      result = described_class.call(booking:, user:, params: { resolution: "charge", amount: "50.00" })
+
+      expect(result).not_to be_success
+      expect(result.error).to eq("Hotel business date is unavailable.")
+      expect(booking.reload.status).to eq("due_out_detected")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+    end
+
+    it "rolls back the fee when the status transition fails" do
+      allow(Bookings::TransitionStatus).to receive(:new).and_return(double(call: OpenStruct.new(success?: false, error: "Transition failed")))
+
+      result = described_class.call(booking:, user:, params: { resolution: "charge", amount: "50.00" })
+
+      expect(result).not_to be_success
+      expect(result.error).to eq("Transition failed")
+      expect(booking.reload.status).to eq("due_out_detected")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+    end
+
+    it "rolls back the date amendment when the charge fails" do
+      original_checkout = booking.check_out
+
+      result = described_class.call(booking:, user:, params: {
+        resolution: "charge", amount: "0", check_out: (Date.current + 2.days).to_s
+      })
+
+      expect(result).not_to be_success
+      expect(booking.reload.check_out).to eq(original_checkout)
+      expect(booking.status).to eq("due_out_detected")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+    end
+
+    it "stops before posting a charge when the date amendment fails" do
+      allow(Bookings::UpdateStayService).to receive(:new).and_return(
+        instance_double(Bookings::UpdateStayService, call: OpenStruct.new(success?: false, errors: [ "Date amendment failed" ]))
+      )
+      result = described_class.call(booking:, user:, params: {
+        resolution: "charge", amount: "50.00", check_out: (Date.current + 2.days).to_s
+      })
+
+      expect(result).not_to be_success
+      expect(result.error).to eq("Date amendment failed")
+      expect(booking.reload.status).to eq("due_out_detected")
+      expect(folio.folio_transactions.where(category: "late_checkout_charge")).to be_empty
+    end
+  end
 end
