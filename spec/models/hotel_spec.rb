@@ -1,6 +1,21 @@
 require 'rails_helper'
 
 RSpec.describe Hotel, type: :model do
+  describe "#ready_for_review?" do
+    it "accepts a property with rooms and complete inventory without photos" do
+      hotel = create(:hotel, address: "12 Beach Road")
+      create(:room_type, hotel: hotel, quantity: 1)
+      allow(hotel).to receive(:setup_coverage).and_return(instance_double(Rates::SetupCoverage::Result, complete?: true))
+
+      expect(hotel.photos).not_to be_attached
+      expect(hotel).not_to be_property_photos_ready
+      expect(hotel).to be_ready_for_review
+
+      hotel.address = nil
+      expect(hotel).not_to be_ready_for_review
+    end
+  end
+
   describe 'associations' do
     it { should belong_to(:account) }
     it { should have_many(:user_hotel_accesses).dependent(:destroy) }

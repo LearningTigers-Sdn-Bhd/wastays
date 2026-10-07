@@ -38,6 +38,61 @@ RSpec.describe "Onboarding property and team services" do
     expect(hotel.business_ends_at.strftime("%H:%M")).to eq("01:30")
   end
 
+  describe "optional property photos" do
+    before do
+      Onboarding::InitializeProgress.new(hotel: hotel).call
+      hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "complete")
+    end
+
+    def save_photos(complete: true)
+      Onboarding::SavePropertyPhotos.new(hotel: hotel, actor: actor, complete: complete).call
+    end
+
+    it "leaves drafts unresolved and the team step locked" do
+      result = save_photos(complete: false)
+
+      expect(result).to be_success
+      expect(result.section).to have_attributes(state: "in_progress", skipped_at: nil, completed_at: nil)
+      expect(result.section.decision_metadata).to eq("source" => "property_photos")
+      expect(Onboarding::NavigationState.new(hotel: hotel).call.fetch("team_setup").available).to be(false)
+    end
+
+    it "enforces the profile prerequisite even when no photos are added" do
+      hotel.onboarding_sections.find_by!(section_key: "property_profile").update!(state: "not_started")
+
+      result = save_photos
+
+      expect(result).not_to be_success
+      expect(result.error).to include("prerequisite")
+      expect(result.section.reload.state).to eq("not_started")
+    end
+
+    it "completes a skipped step when photos are later attached without a featured photo" do
+      expect(save_photos).to be_success
+      hotel.photos.attach(
+        io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")),
+        filename: "property.jpg", content_type: "image/jpeg"
+      )
+      expect(hotel.featured_photo_attachment_id).to be_nil
+
+      result = save_photos
+
+      expect(result).to be_success
+      expect(result.section).to have_attributes(state: "complete", completed_at: be_present, skipped_at: nil)
+      expect(result.section.decision_metadata).to eq("source" => "property_photos")
+    end
+
+    it "requires an explicit decision but treats no photos as an informational warning" do
+      readiness = Onboarding::Readiness.new(hotel: hotel).call
+      expect(readiness.blocking_issues).to include(have_attributes(section_key: "property_photos", code: :decision_missing))
+
+      expect(save_photos).to be_success
+      readiness = Onboarding::Readiness.new(hotel: hotel.reload).call
+      expect(readiness.blocking_issues.map(&:section_key)).not_to include("property_photos")
+      expect(readiness.warnings).to include(have_attributes(section_key: "property_photos", code: :deferred))
+    end
+  end
+
   # The step used to carry a checkbox saying the owner had read the presets. The
   # fingerprint is what that click was really for, so saving the step writes it
   # with no checkbox to tick.

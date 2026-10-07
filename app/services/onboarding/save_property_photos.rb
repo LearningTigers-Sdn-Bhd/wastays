@@ -3,7 +3,7 @@
 module Onboarding
   # The photos step has no form of its own: photos are already uploaded by the
   # time this runs, because the upload sheet commits them as they are chosen.
-  # All this records is whether the property has met the one requirement.
+  # Continuing records either uploaded photos or the decision to add none now.
   class SavePropertyPhotos
     Result = ApplicationResult.define(:section)
 
@@ -14,30 +14,33 @@ module Onboarding
     end
 
     def call
-      if @complete && !@hotel.property_photos_ready?
-        return failure("Upload at least one photo of the property before continuing.")
+      state = if !@complete
+        "in_progress"
+      elsif @hotel.photos.attached?
+        "complete"
+      else
+        "skipped"
       end
 
-      transition(@complete ? "complete" : "in_progress")
+      transition(state)
     end
 
     private
 
     def transition(state)
+      metadata = { source: "property_photos" }
+      metadata[:decision] = "no_photos_now" if state == "skipped"
+
       result = UpdateSection.new(
         hotel: @hotel,
         section_key: "property_photos",
         state: state,
         actor: @actor,
-        metadata: { source: "property_photos" }
+        metadata: metadata
       ).call
       return Result.failure(result.error, section: result.section) unless result.success?
 
       Result.success(section: result.section)
-    end
-
-    def failure(message)
-      Result.failure(message, section: @hotel.onboarding_sections.find_by(section_key: "property_photos"))
     end
   end
 end
