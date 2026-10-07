@@ -1,39 +1,46 @@
 <section aria-labelledby="ota-logins-heading" class="space-y-4">
-  <div>
-    <h2 id="ota-logins-heading" class="text-base font-semibold text-foreground">Recorded OTA Logins</h2>
-    <p class="mt-2 text-sm text-muted-foreground">These details were provided during onboarding. Passwords are never shown in the hotel portal.</p>
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h2 id="ota-logins-heading" class="text-base font-semibold text-foreground">Recorded OTA Logins</h2>
+      <p class="mt-1 text-sm text-muted-foreground">Passwords are never shown in the hotel portal.</p>
+    </div>
+    <%= render PanelsUI::Button.new(href: hotel_new_ota_login_path(current_hotel), size: :sm, class: "shrink-0 self-start", data: { turbo_frame: "settings_action_sheet" }) do %>
+      <%= app_icon "plus", class: "size-4", aria: { hidden: true } %>
+      Add OTA Login
+    <% end %>
   </div>
 
-  <% if @ota_credentials.any? %>
-    <%= render PanelsUI::Table.new(caption: "OTA logins", header_style: :sentence) do |table| %>
-      <% table.with_header do %>
+  <%= render PanelsUI::Table.new(caption: "OTA logins", header_style: :sentence, wrapper_class: "rounded-lg border border-border bg-card") do |table| %>
+    <% table.with_header do %>
+      <tr>
+        <th scope="col">Channel</th>
+        <th scope="col">Property ID</th>
+        <th scope="col">Username</th>
+        <th scope="col">Password on file</th>
+        <th scope="col">Market manager</th>
+        <th scope="col">Phone</th>
+        <th scope="col">Email</th>
+        <th scope="col">Processing status</th>
+      </tr>
+    <% end %>
+    <% table.with_body do %>
+      <% if @ota_credentials.empty? %>
         <tr>
-          <th scope="col">Channel</th>
-          <th scope="col">Property ID</th>
-          <th scope="col">Username</th>
-          <th scope="col">Password on file</th>
-          <th scope="col">Market manager</th>
-          <th scope="col">Phone</th>
-          <th scope="col">Email</th>
-          <th scope="col">Processing status</th>
+          <td colspan="8" class="h-40 text-center text-sm text-muted-foreground">No OTA logins added yet.</td>
         </tr>
       <% end %>
-      <% table.with_body do %>
-        <% @ota_credentials.each do |credential| %>
-          <tr>
-            <th scope="row"><%= credential.channel_name %></th>
-            <td><%= credential.property_code.presence || "—" %></td>
-            <td><%= credential.username.presence || "—" %></td>
-            <td><%= credential.password_saved? ? "On file" : "Not provided" %></td>
-            <td><%= credential.market_manager_name.presence || "—" %></td>
-            <td><%= credential.market_manager_phone.presence || "—" %></td>
-            <td><%= credential.market_manager_email.presence || "—" %></td>
-            <td><%= credential.status.humanize %></td>
-          </tr>
-        <% end %>
+      <% @ota_credentials.each do |credential| %>
+        <tr>
+          <th scope="row"><%= credential.channel_name %></th>
+          <td><%= credential.property_code.presence || "—" %></td>
+          <td><%= credential.username.presence || "—" %></td>
+          <td><%= credential.password_saved? ? "On file" : "Not provided" %></td>
+          <td><%= credential.market_manager_name.presence || "—" %></td>
+          <td><%= credential.market_manager_phone.presence || "—" %></td>
+          <td><%= credential.market_manager_email.presence || "—" %></td>
+          <td><%= credential.status.humanize %></td>
+        </tr>
       <% end %>
     <% end %>
-  <% else %>
-    <p class="text-sm text-muted-foreground">No OTA logins were provided during onboarding.</p>
   <% end %>
 </section>
