@@ -100,7 +100,10 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(document.at_css("#ota-logins-heading").text).to eq("Recorded OTA Logins")
       expect(document.at_css("#hotel-breadcrumb").text).to include("OTA Logins")
       expect(document.at_css("[data-testid='settings-tabs'] a[aria-current='page']").text.squish).to eq("OTA Logins")
-      expect(document.text).to include("No OTA logins were provided during onboarding.")
+      expect(document.css("table thead th").size).to eq(8)
+      expect(document.at_css("table tbody td[colspan='8']").text).to eq("No OTA logins added yet.")
+      expect(document.at_css("a[href='#{hotel_new_ota_login_path(hotel)}']").text.squish).to eq("Add OTA Login")
+      expect(document.at_css("a[href='#{hotel_new_ota_login_path(hotel)}']")["data-turbo-frame"]).to eq("settings_action_sheet")
       expect(document.at_css("section[aria-labelledby='ota-logins-heading']").css("form")).to be_empty
     end
 
