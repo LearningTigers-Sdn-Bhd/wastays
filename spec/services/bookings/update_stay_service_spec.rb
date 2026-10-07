@@ -21,13 +21,17 @@ RSpec.describe Bookings::UpdateStayService do
     expect(room_type.room_inventories.find_by(date: Date.current + 1.day).quantity).to eq(9)
   end
 
-  it "dispatches booking_updated when stay dates are changed" do
+  it "dispatches booking_updated after the stay transaction commits" do
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
 
+    callback = nil
+    allow(ActiveRecord).to receive(:after_all_transactions_commit) { |&block| callback = block }
     params = { check_in: Date.current + 1.day, check_out: Date.current + 2.days }
     described_class.new(booking: booking, params: params).call
 
+    expect(Notifications::Dispatcher).not_to have_received(:new)
+    callback.call
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_updated, booking: booking)
     expect(dispatcher).to have_received(:call)
   end

@@ -7,18 +7,19 @@ module Folios
     class RepairNightlyChargeReconciliation
       Result = ApplicationResult.define(:reconciliation, :reversed_transactions, :posted_transactions, :operation_key)
 
-      def self.call(booking:, reconciliation:, actor:, reason:, night_audit:, posting_options: {})
+      def self.call(booking:, reconciliation:, actor:, reason:, night_audit:, posting_options: {}, removed_transactions: [])
         new(
           booking: booking,
           reconciliation: reconciliation,
           actor: actor,
           reason: reason,
           night_audit: night_audit,
-          posting_options: posting_options
+          posting_options: posting_options,
+          removed_transactions: removed_transactions
         ).call
       end
 
-      def initialize(booking:, reconciliation:, actor:, reason:, night_audit:, posting_options: {})
+      def initialize(booking:, reconciliation:, actor:, reason:, night_audit:, posting_options: {}, removed_transactions: [])
         @booking = booking
         @reconciliation = reconciliation
         @actor = actor
@@ -26,16 +27,26 @@ module Folios
         @night_audit = night_audit
         @business_date = night_audit.business_date.to_date
         @posting_options = posting_options
+        @removed_transactions = removed_transactions
         @operation_key = SecureRandom.uuid
         @reversed_transactions = []
         @posted_transactions = []
       end
 
       def call
-        return success_result if @reconciliation.valid?
+        return success_result if @reconciliation.valid? && @removed_transactions.empty?
 
         @booking.with_lock do
           ActiveRecord::Base.transaction do
+            @removed_transactions.each do |transaction|
+              raise "Removed charge does not belong to this booking and audit date." unless transaction.booking_folio.booking_id == @booking.id && transaction.posting_date == @business_date
+              raise "Removed charge is already reversed." if transaction.voided_by_transaction_id.present?
+              key = transaction.metadata["nightly_charge_key"].presence || transaction.metadata["reconciles_nightly_charge_key"].presence ||
+                (transaction.catch_up_key.presence || transaction.metadata["catch_up_key"].presence)&.delete_prefix("catch_up:")
+              _, _, kind, identity = key.to_s.split(":", 4)
+              raise "Only nightly room and tax charges can be removed through stay correction." unless transaction.charge? && kind.in?(%w[accommodation tax])
+              reverse_transaction!(transaction, { nightly_charge_key: key, line: { charge_kind: kind, identity: identity } })
+            end
             @reconciliation.entries.each { |entry| repair_entry!(entry) }
             record_operation_log!
           end

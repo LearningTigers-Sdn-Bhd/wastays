@@ -98,7 +98,8 @@ module Folios
       def transactions_by_key
         @transactions_by_key ||= active_nightly_transactions.group_by do |transaction|
           transaction.metadata["nightly_charge_key"].presence ||
-            transaction.metadata["reconciles_nightly_charge_key"].presence
+            transaction.metadata["reconciles_nightly_charge_key"].presence ||
+            (transaction.catch_up_key.presence || transaction.metadata["catch_up_key"].presence)&.delete_prefix("catch_up:")
         end
       end
 
@@ -110,7 +111,7 @@ module Folios
           .charge
           .where(voided_by_transaction_id: nil)
           .where(
-            "folio_transactions.metadata ? 'nightly_charge_key' OR folio_transactions.metadata ? 'reconciles_nightly_charge_key'"
+            "folio_transactions.metadata ? 'nightly_charge_key' OR folio_transactions.metadata ? 'reconciles_nightly_charge_key' OR folio_transactions.catch_up_key IS NOT NULL OR folio_transactions.metadata ? 'catch_up_key'"
           )
           .to_a
       end
