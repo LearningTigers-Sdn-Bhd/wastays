@@ -8,10 +8,11 @@ require "rails_helper"
 # (folio screen, AR invoice screen) need deeper view assertions - not covered
 # here; see the test plan's §12 "Not covered" note.
 RSpec.describe "Per-pax reports" do
+  include HotelTimeHelpers
   include_context "per-pax resort"
 
   let(:staff) { create(:user, account: hotel.account) }
-  let(:business_date) { Date.current }
+  let(:business_date) { hotel_today(hotel) }
 
   def book_check_in_and_post(plan:, adults:, relationship:, actor:, nights: 1, guest_country: nil)
     params = {
@@ -56,7 +57,7 @@ RSpec.describe "Per-pax reports" do
   it "V10: Booking Performance counts and totals a per-pax TA booking under its source" do
     book_check_in_and_post(plan: std_plan, adults: 2, relationship: ta_a, actor: ta_a_user)
 
-    bookings = Booking.for_financial_breakdown(hotel, business_date, business_date, nil)
+    bookings = Booking.for_financial_breakdown(hotel, Date.current, Date.current, nil)
     report = HotelPortal::Reports::BookingPerformanceReport.new(
       hotel: hotel, bookings: bookings, group_by: "source", date_preset: "custom"
     )
@@ -81,7 +82,7 @@ RSpec.describe "Per-pax reports" do
     fb_bookings = [ book.call(fb_plan, 3), book.call(fb_plan, 1) ]
     prm_booking = book.call(prm_plan, 2)
 
-    bookings = Booking.for_financial_breakdown(hotel, business_date, business_date, nil)
+    bookings = Booking.for_financial_breakdown(hotel, Date.current, Date.current, nil)
     report = HotelPortal::Reports::BookingPerformanceReport.new(
       hotel: hotel, bookings: bookings, group_by: "rate_plan", date_preset: "custom"
     )

@@ -177,7 +177,7 @@ RSpec.describe "HotelPortal agent payments panel", type: :request do
 
     def reopen(**params)
       post reopen_agent_instalment_hotel_booking_workspace_path(hotel, booking), params: {
-        instalment_id: deposit.id, due_on: 5.days.from_now.to_date.iso8601
+        instalment_id: deposit.id, due_on: 5.days.from_now.in_time_zone(hotel.hotel_time_zone).to_date.iso8601
       }.merge(params)
     end
 

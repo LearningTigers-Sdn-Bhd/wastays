@@ -7,6 +7,7 @@ require "rails_helper"
 # pass (per_pax_ta_booking_lifecycle_spec.rb) deferred.
 # docs/wastays/per-pax-ta-reservations-test-plan-2026-09-25.md §7.8-7.9.
 RSpec.describe "Per-pax night audit and checkout" do
+  include HotelTimeHelpers
   include_context "per-pax resort"
 
   let(:staff) do
@@ -61,7 +62,7 @@ RSpec.describe "Per-pax night audit and checkout" do
 
   # L4: night audit posts each night at the snapshot's price
   it "L4: night audit posts each night's charge at the nightly_rate_snapshot amount" do
-    business_date = Date.current
+    business_date = hotel_today(hotel)
     booking = check_in!(book(plan: fb_plan, adults: 2, nights: 3, check_in: business_date))
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
     snapshot = booking.booking_rooms.first.nightly_rate_snapshot
@@ -83,7 +84,7 @@ RSpec.describe "Per-pax night audit and checkout" do
   # the handoff doc's "Open decision #5" already flagged and decided not to
   # automate - confirmed here at the data level, not just by reading the code.
   it "L6 (RECORDED): extending past a posted night leaves the folio charge frozen but rebuilds the snapshot underneath it" do
-    business_date = Date.current
+    business_date = hotel_today(hotel)
     booking = check_in!(book(plan: fb_plan, adults: 2, nights: 2, check_in: business_date))
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
     post_night!(business_date) # posts night 1 at the un-discounted 2-night rate (500)
@@ -108,7 +109,7 @@ RSpec.describe "Per-pax night audit and checkout" do
   # L9: early checkout charges every unused night at its booked (already
   # discounted) rate - the "strict/non-refundable" policy from the handoff doc.
   it "L9: an early checkout on night 2 of an FB 2A 3-night stay charges the unused night at its discounted rate" do
-    business_date = Date.current
+    business_date = hotel_today(hotel)
     booking = check_in!(book(plan: fb_plan, adults: 2, nights: 3, check_in: business_date))
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
     snapshot = booking.booking_rooms.first.nightly_rate_snapshot
@@ -135,7 +136,7 @@ RSpec.describe "Per-pax night audit and checkout" do
 
   # L10: direct-bill checkout goes to AR, not the guest's own payment
   it "L10: checking out a direct-bill (TA-B) stay creates an AR invoice for the discounted total, no payment required" do
-    business_date = Date.current
+    business_date = hotel_today(hotel)
     booking = check_in!(book(plan: std_plan, adults: 2, nights: 1, check_in: business_date, relationship: ta_b, actor: ta_b_user))
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
     post_night!(business_date)
@@ -158,7 +159,7 @@ RSpec.describe "Per-pax night audit and checkout" do
 
   # L11: a standard (TA-A) stay settles at checkout, no AR invoice
   it "L11: checking out a standard (TA-A) stay with the balance already paid creates no AR invoice" do
-    business_date = Date.current
+    business_date = hotel_today(hotel)
     booking = check_in!(book(plan: std_plan, adults: 2, nights: 1, check_in: business_date))
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
     post_night!(business_date)

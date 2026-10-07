@@ -3,6 +3,7 @@ require "rails_helper"
 # The two ends of the stay link: check-in creates and mails it, and a status
 # change that ends the stay revokes it.
 RSpec.describe "Concierge stay access lifecycle" do
+  include HotelTimeHelpers
   let(:hotel) { create(:hotel, status: "live") }
   let(:booking) do
     create(:booking, hotel: hotel, status: "checked_in", guest_email: "ahmad@example.com")
@@ -50,7 +51,8 @@ RSpec.describe "Concierge stay access lifecycle" do
   describe "check-in through Bookings::TransitionStatus" do
     let(:room_type) { create(:room_type, hotel: hotel) }
     let(:confirmed) do
-      create(:booking, hotel: hotel, status: "confirmed", guest_email: "siti@example.com")
+      create(:booking, hotel: hotel, status: "confirmed", guest_email: "siti@example.com",
+        check_in: hotel_today(hotel), check_out: hotel_today(hotel) + 1.day)
     end
 
     it "creates the record and queues the mail" do
