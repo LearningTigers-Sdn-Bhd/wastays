@@ -21,13 +21,25 @@ module NightAudits
         private
 
         def outstanding_at_checkout?(booking)
-          return false unless booking.booking_folio
           return false if booking.status == "no_show"
 
           departure_date = Bookings::ScheduledStay.local_date(hotel: @context.hotel, value: booking.check_out)
           return false unless departure_date == @context.business_date || booking.status == "completed"
 
-          @folio_state.outstanding_balance(booking.booking_folio) != 0.to_d
+          booking.booking_folios.any? do |folio|
+            balance = @folio_state.outstanding_balance(folio)
+            !balance.zero? && !direct_bill_transferred?(folio, balance)
+          end
+        end
+
+        def direct_bill_transferred?(folio, balance)
+          return false unless folio.closed? && folio.payer_type == "company" && balance.positive?
+
+          receivable = folio.receivable
+          receivable.present? && !receivable.void? &&
+            receivable.hotel_id == folio.hotel_id &&
+            receivable.hotel_corporate_account_id == folio.hotel_corporate_account_id &&
+            receivable.currency == folio.currency && receivable.amount.to_d == balance
         end
       end
     end

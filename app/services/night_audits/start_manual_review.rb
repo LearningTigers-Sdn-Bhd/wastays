@@ -29,7 +29,7 @@ module NightAudits
       return failure(unclosable_message) unless @hotel.can_audit_date?(@business_date)
 
       audit = claim_manual_preparation
-      return failure("Night Audit review cannot start while the audit is #{audit.status}.", night_audit: audit) unless audit.preparing?
+      return failure("Night Audit review cannot start while the audit is #{audit.status}.", night_audit: audit) unless audit.preparing? || audit.blocked?
 
       due_outs = NightAudits::DetectDueOuts.call(night_audit: audit, user: @actor)
       missed_arrivals = NightAudits::DetectMissedArrivals.call(night_audit: audit, user: @actor)
@@ -60,28 +60,40 @@ module NightAudits
 
       record.with_lock do
         record.reload
-        unless record.current? && record.open? && record.business_date == @business_date
-          raise HotelBusinessDate::InvalidTransition, "Business date must be current and open to start Night Audit review."
+        unless record.current? && record.business_date == @business_date && record.allows_blocker_resolution?
+          raise HotelBusinessDate::InvalidTransition, "Business date must be current and open or blocked to start Night Audit review."
+        end
+
+        @business_date_record = record
+        if record.audit_blocked?
+          audit = @hotel.night_audits.find_by!(business_date: @business_date)
+          unless audit.blocked?
+            raise HotelBusinessDate::InvalidTransition, "Night Audit review cannot start while the audit is #{audit.status}."
+          end
+          return audit
         end
 
         prepared = NightAudits::StartPreparation.call(hotel: @hotel, business_date: @business_date, trigger_mode: "manual")
         audit = prepared.night_audit
-        audit.update!(trigger_mode: "manual", performed_by_user: @actor) if audit.preparing?
+        unless audit.preparing?
+          raise HotelBusinessDate::InvalidTransition, "Night Audit review cannot start while the audit is #{audit.status}."
+        end
+        audit.update!(trigger_mode: "manual", performed_by_user: @actor)
         audit
       end
     end
 
     def refresh_snapshot!(audit, due_outs:, missed_arrivals:, failures:)
-      evaluation = NightAudits::Evaluate.new(hotel: @hotel, business_date: @business_date, phase: :pre_close).call
+      phase = audit.blocked? ? :post_close : :pre_close
+      evaluation = NightAudits::Evaluate.new(hotel: @hotel, business_date: @business_date, phase: phase).call
       blocked_details = evaluation[:blocked_details].deep_dup
       failures.any? ? blocked_details["detection_failures"] = failures : blocked_details.delete("detection_failures")
       evaluation = evaluation.merge(blocked_details: blocked_details)
 
-      audit.update!(
-        blocked_details: blocked_details,
-        exceptions: evaluation[:exceptions],
-        summary: audit.summary.to_h.merge(
-          evaluation[:summary],
+      Resolutions::RefreshSnapshot.call!(
+        night_audit: audit,
+        business_date_record: @business_date_record,
+        evaluation: evaluation.merge(summary: evaluation[:summary].merge(
           "manual_review" => {
             "started_by_user_id" => @actor.id,
             "started_at" => Time.current.iso8601,
@@ -89,7 +101,7 @@ module NightAudits
             "missed_arrivals_detected_count" => missed_arrivals.detected_count,
             "detection_failure_count" => failures.size
           }
-        )
+        ))
       )
       evaluation
     end
