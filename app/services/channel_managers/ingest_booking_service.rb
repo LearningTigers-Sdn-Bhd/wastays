@@ -73,7 +73,7 @@ module ChannelManagers
         booking.assign_attributes(
           guest_name: @data[:guest_details][:name],
           guest_email: @data[:guest_details][:email],
-          guest_phone: @data[:guest_details][:phone],
+          guest_phone: guest_phone_for(booking),
           guest_country: @data[:guest_details][:country],
           guest_home_address: @data[:guest_details][:home_address] || @data[:guest_details][:address],
           guest_city: @data[:guest_details][:city],
@@ -152,6 +152,15 @@ module ChannelManagers
       }
       metadata["currency_conversion"] = @data[:currency_conversion] if @data[:currency_conversion].present?
       metadata
+    end
+
+    # Booking.com and other channels may withhold the guest's phone. Keep the
+    # one we already hold, and otherwise mark it uncaptured per reservation so
+    # unrelated guests are not merged on a shared blank.
+    def guest_phone_for(booking)
+      @data[:guest_details][:phone].presence ||
+        booking.guest_phone.presence ||
+        "#{Guest::PHONE_NOT_CAPTURED} #{@data[:external_reference]}"
     end
 
     def duplicate_or_older_revision?(booking)

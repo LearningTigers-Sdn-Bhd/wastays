@@ -69,7 +69,10 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
 
       # Extract Channex Webhook IDs
       if path.include?("webhooks/channex")
-        channex_id = payload[:params]["id"] || payload[:params].dig("payload", "revision_id")
+        # `payload` is a list for `ari` events (and Channex's test message), a hash otherwise
+        channex_payload = payload[:params]["payload"]
+        channex_payload = {} unless channex_payload.is_a?(Hash)
+        channex_id = payload[:params]["id"] || channex_payload["revision_id"] || channex_payload["booking_revision_id"]
         tags << "channex_id:#{channex_id}" if channex_id.present?
       end
     end

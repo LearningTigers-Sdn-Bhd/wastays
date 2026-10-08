@@ -736,7 +736,9 @@ module ChannelManagers
 
       return full_name if full_name.present?
 
-      attributes.dig("customer", "name").to_s.strip.presence || "Guest"
+      name = [ attributes.dig("customer", "name"), attributes.dig("customer", "surname") ]
+        .map { |part| part.to_s.strip }.reject(&:blank?).join(" ")
+      name.presence || "Guest"
     end
 
     def provider_name

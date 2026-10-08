@@ -254,13 +254,22 @@ module ChannelManagers
       room && room.room_type_id == unit[:room_type]&.id && room.rate_plan_id == unit[:rate_plan]&.id
     end
 
+    # Booking.com and other channels may withhold the guest's phone. Keep the
+    # one we already hold, and otherwise mark it uncaptured per reservation so
+    # unrelated guests are not merged on a shared blank.
+    def guest_phone_for(booking)
+      @data[:guest_details][:phone].presence ||
+        booking&.guest_phone.presence ||
+        "#{Guest::PHONE_NOT_CAPTURED} #{@data[:external_reference]}"
+    end
+
     def child_attributes(group, booking, unit, check_in, check_out, child_status, position)
       {
         group_booking: group,
         group_position: position,
         guest_name: @data[:guest_details][:name],
         guest_email: @data[:guest_details][:email],
-        guest_phone: @data[:guest_details][:phone],
+        guest_phone: guest_phone_for(booking),
         guest_country: @data[:guest_details][:country],
         guest_home_address: @data[:guest_details][:home_address] || @data[:guest_details][:address],
         guest_city: @data[:guest_details][:city],

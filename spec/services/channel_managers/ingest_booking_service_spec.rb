@@ -87,6 +87,28 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(other_booking.reload.guest_name).to eq("Other tenant")
   end
 
+  context "when the channel does not share the guest's phone" do
+    it "creates the booking with a per-reservation placeholder phone" do
+      data = booking_data.deep_merge(guest_details: { phone: nil })
+
+      result = described_class.new(booking_data: data).call
+
+      expect(result).to be_success, result.message
+      expect(result.booking.guest_phone).to eq("#{Guest::PHONE_NOT_CAPTURED} EXT123")
+      expect(Guest.displayable_phone(result.booking.guest_phone)).to be_nil
+    end
+
+    it "keeps the phone already on the booking when a later revision omits it" do
+      described_class.new(booking_data: booking_data).call
+      modification = booking_data.deep_merge(guest_details: { phone: nil }, revision_number: 2)
+
+      result = described_class.new(booking_data: modification).call
+
+      expect(result).to be_success, result.message
+      expect(result.booking.reload.guest_phone).to eq("123")
+    end
+  end
+
   it "rolls back the booking when required connections cannot be initialized" do
     allow(ChannelManagers::InitializeBookingConnections).to receive(:call!).and_raise("folio initialization failed")
 
@@ -414,6 +436,15 @@ RSpec.describe ChannelManagers::IngestBookingService do
       expect(result.bookings.map { |booking| booking.booking_rooms.count }).to eq([ 1, 1 ])
       expect(result.bookings).to all(have_attributes(channel_manager_reference: nil, external_reference: nil))
       expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
+    end
+
+    it "creates every room's booking when the channel does not share the guest's phone" do
+      data = multi_room_data.deep_merge(guest_details: { phone: nil })
+
+      result = described_class.new(booking_data: data).call
+
+      expect(result.success?).to be(true), result.message
+      expect(result.bookings.map(&:guest_phone)).to all(eq("#{Guest::PHONE_NOT_CAPTURED} EXT123"))
     end
 
     it "converts OTA money and records the source values on the group audit" do

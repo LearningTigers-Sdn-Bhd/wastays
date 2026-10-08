@@ -317,6 +317,25 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
       expect(result[:guest_details][:name]).to eq("John Doe")
     end
+
+    it "joins Channex's name and surname when PersonName is absent" do
+      payload = {
+        "data" => {
+          "id" => "bk_124",
+          "status" => "new",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "amount" => "100.00",
+          "currency" => "MYR",
+          "customer" => { "name" => "Henry", "surname" => "Tan" },
+          "rooms" => []
+        }
+      }
+
+      result = adapter.ingest_booking(payload: payload, require_property_binding: false)
+
+      expect(result[:guest_details][:name]).to eq("Henry Tan")
+    end
   end
 
   describe "#settlement mapping" do
