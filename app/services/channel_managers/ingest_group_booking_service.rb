@@ -270,6 +270,7 @@ module ChannelManagers
         guest_name: @data[:guest_details][:name],
         guest_email: @data[:guest_details][:email],
         guest_phone: guest_phone_for(booking),
+        special_requests: @data[:special_requests].presence || booking&.special_requests,
         guest_country: @data[:guest_details][:country],
         guest_home_address: @data[:guest_details][:home_address] || @data[:guest_details][:address],
         guest_city: @data[:guest_details][:city],

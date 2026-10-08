@@ -353,6 +353,40 @@ RSpec.describe ChannelManagers::ChannexAdapter do
 
       expect(result[:guest_details][:name]).to eq("Henry Tan")
     end
+
+    context "when Booking.com names a room guest other than the booker" do
+      let(:payload) do
+        {
+          "data" => {
+            "id" => "bk_125",
+            "status" => "new",
+            "arrival_date" => Date.current.to_s,
+            "departure_date" => (Date.current + 1.day).to_s,
+            "amount" => "100.00",
+            "currency" => "MYR",
+            "customer" => { "name" => "Henry", "surname" => "Tan" },
+            "notes" => "Request 1 pillow if can.\nSmoking Preference: Smoking",
+            "rooms" => [ { "room_type_id" => "ch_rt_guest", "guests" => [ { "name" => "Henryz", "surname" => "Tanz" } ] } ]
+          }
+        }
+      end
+
+      before { create(:channel_mapping, mappable: room_type, provider: "channex", external_id: "ch_rt_guest") }
+
+      it "names the booking after the room guest" do
+        result = adapter.ingest_booking(payload: payload, require_property_binding: false)
+
+        expect(result[:guest_details][:name]).to eq("Henryz Tanz")
+      end
+
+      it "carries the channel notes and the booker into special requests" do
+        result = adapter.ingest_booking(payload: payload, require_property_binding: false)
+
+        expect(result[:special_requests]).to eq(
+          "Request 1 pillow if can.\nSmoking Preference: Smoking\nBooked by: Henry Tan"
+        )
+      end
+    end
   end
 
   describe "#settlement mapping" do

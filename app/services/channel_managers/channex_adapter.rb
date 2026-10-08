@@ -452,7 +452,7 @@ module ChannelManagers
         check_in: safe_parse_date(check_in),
         check_out: safe_parse_date(check_out),
         guest_details: {
-          name: extract_guest_name(attributes),
+          name: extract_room_guest_name(attributes) || extract_guest_name(attributes),
           email: attributes.dig("customer", "email") || attributes.dig("customer", "mail"),
           phone: attributes.dig("customer", "phone") || attributes.dig("customer", "Telephone", "@PhoneNumber"),
           country: attributes.dig("customer", "country")
@@ -464,6 +464,7 @@ module ChannelManagers
         total_amount: financials[:breakdown_complete] ? financials[:gross_amount] : nil,
         currency: financials[:currency] || valid_currency(attributes["currency"]),
         source: attributes["ota_name"] || "channex",
+        special_requests: special_requests_for(attributes),
         settlement: settlement,
         financials: financials
       }
@@ -739,6 +740,24 @@ module ChannelManagers
       name = [ attributes.dig("customer", "name"), attributes.dig("customer", "surname") ]
         .map { |part| part.to_s.strip }.reject(&:blank?).join(" ")
       name.presence || "Guest"
+    end
+
+    # The guest staying, which Booking.com lets the booker set apart from
+    # themselves. The front desk checks in this person, not the booker.
+    def extract_room_guest_name(attributes)
+      guest = Array(attributes["rooms"]).first.to_h["guests"].to_a.first.to_h
+      [ guest["name"], guest["surname"] ].map { |part| part.to_s.strip }.reject(&:blank?).join(" ").presence
+    end
+
+    # Channex's notes carry the guest's request plus the meal plan, smoking
+    # preference and payment collection it adds. When the room guest is not the
+    # booker, the booker is noted so their contact details still make sense.
+    def special_requests_for(attributes)
+      booker = extract_guest_name(attributes)
+      room_guest = extract_room_guest_name(attributes)
+      booker_line = "Booked by: #{booker}" if room_guest.present? && room_guest != booker
+
+      [ attributes["notes"].to_s.strip.presence, booker_line ].compact.join("\n").presence
     end
 
     def provider_name

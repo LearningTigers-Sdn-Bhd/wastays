@@ -54,7 +54,8 @@ module ChannelManagers
           return OpenStruct.new(success?: true, booking: booking, message: "Duplicate or older revision ignored")
         end
 
-        incoming_status = resolved_status(effective_check_in, effective_check_out)
+        held_rooms = is_existing_booking && inventory_held_status?(previous_status) ? rooms_held_by(booking) : {}
+        incoming_status = resolved_status(effective_check_in, effective_check_out, held_rooms)
         incoming_status = "no_show_detected" if previous_status == "no_show_detected" && incoming_status == "confirmed"
 
         if is_existing_booking && previous_status != incoming_status
@@ -74,6 +75,7 @@ module ChannelManagers
           guest_name: @data[:guest_details][:name],
           guest_email: @data[:guest_details][:email],
           guest_phone: guest_phone_for(booking),
+          special_requests: @data[:special_requests].presence || booking.special_requests,
           guest_country: @data[:guest_details][:country],
           guest_home_address: @data[:guest_details][:home_address] || @data[:guest_details][:address],
           guest_city: @data[:guest_details][:city],
@@ -195,19 +197,33 @@ module ChannelManagers
         @hotel.bookings.new(channel_manager_reference: @data[:channel_manager_reference])
     end
 
-    def inventory_insufficient?(check_in, check_out)
+    # The rooms this booking already holds, by [room_type_id, date]. A revision
+    # gives them back before taking its new ones, so they count as available
+    # when the revision is checked; otherwise a booking holding the last room
+    # would read itself as an overbooking.
+    def rooms_held_by(booking)
+      return {} if booking.day_use? || booking.check_in.blank? || booking.check_out.blank?
+
+      stay_dates = (booking.check_in.to_date...booking.check_out.to_date).to_a
+      booking.booking_rooms.each_with_object(Hash.new(0)) do |room, held|
+        stay_dates.each { |date| held[[ room.room_type_id, date ]] += 1 }
+      end
+    end
+
+    def inventory_insufficient?(check_in, check_out, held_rooms = {})
       (check_in.to_date...check_out.to_date).each do |date|
         @data[:rooms].each do |room_item|
           inventory = room_item[:room_type].room_inventories.lock.find_by(date: date)
-          return true if !inventory || inventory.quantity < room_item[:quantity]
+          available = inventory&.quantity.to_i + held_rooms.fetch([ room_item[:room_type].id, date ], 0)
+          return true if !inventory || available < room_item[:quantity]
         end
       end
       false
     end
 
-    def resolved_status(check_in, check_out)
+    def resolved_status(check_in, check_out, held_rooms = {})
       return @data[:status] if @data[:status] == "cancelled"
-      return "overbooked" if inventory_insufficient?(check_in, check_out)
+      return "overbooked" if inventory_insufficient?(check_in, check_out, held_rooms)
 
       @data[:status]
     end

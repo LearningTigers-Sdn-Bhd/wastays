@@ -37,6 +37,7 @@ module ChannelManagers
     def ensure_primary_guest!
       existing = @booking.booking_guests.find_by(role: "primary")
       if existing
+        refresh_channel_profile_name!(existing.guest)
         BookingGuests::CapturePrimaryStay.call(booking_guest: existing)
         return existing
       end
@@ -45,6 +46,19 @@ module ChannelManagers
       booking_guest = @booking.booking_guests.create!(guest:, is_primary: true)
       BookingGuests::CapturePrimaryStay.call(booking_guest: booking_guest)
       booking_guest
+    end
+
+    # A later revision may name the guest differently. Follow it only on a
+    # profile this channel created for this booking alone and nobody has
+    # completed since, so a staff-edited or shared profile is never renamed.
+    def refresh_channel_profile_name!(guest)
+      name = @guest_details[:name].to_s.strip
+      return if guest.nil? || name.blank? || guest.name == name
+      return unless guest.metadata.to_h["profile_source"] == "channel_manager"
+      return unless guest.metadata.to_h["profile_incomplete"]
+      return if guest.booking_guests.where.not(booking_id: @booking.id).exists?
+
+      guest.update!(name: name)
     end
 
     def find_guest

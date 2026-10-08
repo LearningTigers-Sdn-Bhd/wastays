@@ -109,6 +109,49 @@ RSpec.describe ChannelManagers::IngestBookingService do
     end
   end
 
+  it "keeps a booking that holds the last room confirmed when a later revision changes the guest" do
+    room_type.room_inventories.update_all(quantity: 1)
+    described_class.new(booking_data: booking_data).call
+    modification = booking_data.deep_merge(guest_details: { name: "Johnny Doe" }, revision_number: 2)
+
+    result = described_class.new(booking_data: modification).call
+
+    expect(result).to be_success, result.message
+    expect(result.booking.reload.status).to eq("confirmed")
+    expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
+  end
+
+  it "refreshes special requests from each revision" do
+    described_class.new(booking_data: booking_data.merge(special_requests: "Request 1 pillow")).call
+    modification = booking_data.merge(special_requests: "Request 1 pillow if can.", revision_number: 2)
+
+    result = described_class.new(booking_data: modification).call
+
+    expect(result).to be_success, result.message
+    expect(result.booking.reload.special_requests).to eq("Request 1 pillow if can.")
+  end
+
+  it "renames the guest profile it created when a later revision changes the guest" do
+    described_class.new(booking_data: booking_data).call
+    modification = booking_data.deep_merge(guest_details: { name: "Johnny Doe" }, revision_number: 2)
+
+    result = described_class.new(booking_data: modification).call
+
+    expect(result).to be_success, result.message
+    expect(result.booking.reload.primary_guest.name).to eq("Johnny Doe")
+  end
+
+  it "leaves a guest profile shared with other bookings untouched" do
+    first = described_class.new(booking_data: booking_data).call.booking
+    other = create(:booking, hotel: hotel, guest_email: "john@example.com")
+    other.booking_guests.create!(guest: first.primary_guest, is_primary: true)
+    modification = booking_data.deep_merge(guest_details: { name: "Johnny Doe" }, revision_number: 2)
+
+    described_class.new(booking_data: modification).call
+
+    expect(first.reload.primary_guest.name).to eq("John Doe")
+  end
+
   it "rolls back the booking when required connections cannot be initialized" do
     allow(ChannelManagers::InitializeBookingConnections).to receive(:call!).and_raise("folio initialization failed")
 
