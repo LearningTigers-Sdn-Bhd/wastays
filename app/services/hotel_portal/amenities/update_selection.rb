@@ -32,7 +32,7 @@ module HotelPortal
       # structure. ProfileForm ran this sync while it owned the field, so the
       # sheet runs it too.
       def sync_channel_structure
-        return if hotel.preferred_channel_manager.blank? || hotel.channel_mapping.blank?
+        return if !hotel.channel_manager_enabled? || hotel.channel_mapping.blank?
 
         ChannelManagers::SyncStructureJob.perform_later("Hotel", hotel.id, "sync")
       end

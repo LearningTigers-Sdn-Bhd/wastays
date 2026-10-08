@@ -67,7 +67,7 @@ module HotelOps
         end
 
         # Trigger ARI Sync if CM is connected
-        if @hotel.preferred_channel_manager.present?
+        if @hotel.channel_manager_enabled?
           ChannelManagers::SyncJob.perform_later(
             @hotel.id,
             @start_date,

@@ -91,7 +91,7 @@ class RoomTypeRatePlan < ApplicationRecord
 
   def trigger_ari_sync
     return if Thread.current[:skip_ari_sync]
-    return if room_type.hotel.preferred_channel_manager.blank?
+    return unless room_type.hotel.channel_manager_enabled?
 
     ChannelManagers::SyncRatePlanAri.call(rate_plan: rate_plan, room_type_ids: [ room_type_id ])
   end

@@ -10,7 +10,7 @@ module ChannelManagers
 
     def perform(hotel_id, date, type: nil, room_type_id: nil, rate_plan_id: nil)
       hotel = Hotel.find_by(id: hotel_id)
-      return if hotel.nil? || hotel.preferred_channel_manager.blank?
+      return if hotel.nil? || !hotel.channel_manager_enabled?
 
       changed_date = date.to_date
       window_key = "#{WINDOW_KEY_PREFIX}:#{hotel_id}"

@@ -6,7 +6,7 @@ module ChannelManagers
     def perform(hotel_id, start_date, end_date, sync_availability: true, sync_rates: true, sync_restrictions: true, room_type_ids: nil, rate_plan_ids: nil, rate_plan_fields: nil)
       hotel = Hotel.find(hotel_id)
       return if hotel.training_mode?
-      return if hotel.preferred_channel_manager.blank?
+      return unless hotel.channel_manager_enabled?
 
       # Clear cached connected channels to ensure fresh sync data
       Rails.cache.delete("channex:channels:#{hotel.id}")

@@ -11,7 +11,7 @@ module ChannelManagers
 
     def perform(hotel_id)
       hotel = Hotel.find_by(id: hotel_id)
-      return if hotel.nil? || hotel.preferred_channel_manager.blank?
+      return if hotel.nil? || !hotel.channel_manager_enabled?
 
       window_key = "#{WINDOW_KEY_PREFIX}:#{hotel_id}"
       scheduled_key = "#{SCHEDULED_KEY_PREFIX}:#{hotel_id}"

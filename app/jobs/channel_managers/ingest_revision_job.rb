@@ -67,6 +67,7 @@ module ChannelManagers
           end
 
           Rails.logger.error("Channel Manager Ack Failed for ID #{revision_id}: #{ack_response}")
+          report_failure("Ack failed for revision #{revision_id}: #{ack_response}", hotel, revision_id)
         else
           Rails.logger.info("Channel Manager: Acknowledged revision #{revision_id}")
         end
@@ -79,10 +80,23 @@ module ChannelManagers
           raise ChannelManagers::IngestBookingService::UnprocessableBooking,
             "Revision #{revision_id} for hotel #{hotel.id}: #{result.message}"
         end
+
+        report_failure("Revision #{revision_id} for hotel #{hotel.id}: #{result.message}", hotel, revision_id)
       end
     end
 
     private
+
+    # Channex stops re-serving an unacked revision after ~30 minutes, so a
+    # failure that only reaches the log can turn into a silently lost booking.
+    def report_failure(message, hotel, revision_id)
+      Rails.error.report(
+        ChannelManagers::IngestBookingService::UnprocessableBooking.new(message),
+        handled: true,
+        severity: :error,
+        context: { hotel_id: hotel.id, revision_id: revision_id, operation: "channex_ingest_revision" }
+      )
+    end
 
     def apply_settlement(result, settlement)
       if result.respond_to?(:bookings) && result.bookings.present?

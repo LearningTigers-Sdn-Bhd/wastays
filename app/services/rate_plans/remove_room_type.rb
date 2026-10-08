@@ -48,7 +48,7 @@ module RatePlans
 
     def enqueue_channel_delete(options)
       return if options.blank?
-      return if rate_plan.hotel.preferred_channel_manager.blank?
+      return unless rate_plan.hotel.channel_manager_enabled?
       return unless rate_plan.channex_syncable?
 
       ChannelManagers::SyncStructureJob.perform_later("RoomTypeRatePlan", nil, "delete", options)

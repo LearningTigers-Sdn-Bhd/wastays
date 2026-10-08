@@ -10,7 +10,7 @@ module ChannelManagers
 
     def call
       return OpenStruct.new(success?: false, message: "Channel publishing is unavailable while this property is in training.") if @hotel.training_mode?
-      return OpenStruct.new(success?: false, message: "Channel manager not selected") if @hotel.preferred_channel_manager.blank?
+      return OpenStruct.new(success?: false, message: "Channel manager not selected") unless @hotel.channel_manager_enabled?
 
       # We use 500 days as per Channex Certification requirements
       start_date = Date.current
