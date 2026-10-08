@@ -89,5 +89,23 @@ RSpec.describe HotelPortal::DashboardStats, type: :service do
       expect(snapshot.length).to eq(7)
       expect(snapshot.first).to include(date: Date.current, total: 10, sold: 2, percent: 20)
     end
+
+    # 02:00 in Kuala Lumpur is still the previous day in UTC.
+    it "starts on the hotel's today and counts the nights it is booked for" do
+      hotel.update!(time_zone: "Kuala Lumpur")
+      zone = hotel.hotel_time_zone
+      room_type = create(:room_type, hotel: hotel, quantity: 10)
+
+      travel_to zone.local(2026, 10, 9, 2, 0) do
+        booking = create(:booking, hotel: hotel, status: "confirmed",
+                                   check_in: zone.local(2026, 10, 9, 14), check_out: zone.local(2026, 10, 10, 12))
+        create(:booking_room, booking: booking, room_type: room_type)
+
+        snapshot = stats.occupancy_snapshot
+
+        expect(snapshot.first).to include(date: Date.new(2026, 10, 9), sold: 1)
+        expect(snapshot.second).to include(date: Date.new(2026, 10, 10), sold: 0)
+      end
+    end
   end
 end

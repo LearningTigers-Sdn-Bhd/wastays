@@ -90,9 +90,13 @@ module HotelPortal
       # what is left to sell, already net of every booking, so dividing sales
       # by it ran past 100% (4/1) as soon as a day started selling.
       total_inventory = @hotel.room_types.sum(:quantity)
+      zone = @hotel.hotel_time_zone
+      today = zone.today
 
-      (Date.current..(Date.current + (days - 1).days)).map do |date|
-        rooms_sold = @hotel.bookings.revenue_generating.where(":date >= check_in::date AND :date < check_out::date", date: date).count
+      (today..(today + (days - 1).days)).map do |date|
+        # The hotel's dates, not UTC's: Date.current started the week on
+        # yesterday until 08:00 in Kuala Lumpur.
+        rooms_sold = @hotel.bookings.revenue_generating.occupying_night_on(date, zone).count
         {
           date: date,
           total: total_inventory,
