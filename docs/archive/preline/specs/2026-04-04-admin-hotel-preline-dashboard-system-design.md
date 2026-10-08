@@ -1,5 +1,8 @@
 # Admin + Hotel Preline Dashboard System Design
 
+> **Historical Preline plan:** retained as a record of the April 2026 design and delivery work.
+> The current portal contract is `DESIGN.md`; shared portal behavior belongs to PanelsUI. Do not execute this plan as a new task.
+
 Date: 2026-04-04
 Project: WAStays
 

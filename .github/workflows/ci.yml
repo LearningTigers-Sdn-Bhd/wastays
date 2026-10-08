@@ -70,7 +70,7 @@ jobs:
         shard: [ 1, 2, 3, 4 ]
     env:
       # Browser/system specs (spec/system) are intentionally excluded from CI and
-      # run locally only (bin/test system or bin/ci) — see docs/CODEBASE_MAP.md
+      # run locally only (bin/test system or bin/ci) — see docs/archive/CODEBASE_MAP.md
       # ("CI" / "GitHub Actions"). This job only runs the non-browser suite.
       PARALLEL_TEST_PROCESSORS: 3
       SHARD_COUNT: 4

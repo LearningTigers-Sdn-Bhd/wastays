@@ -4,7 +4,7 @@ Last reviewed against the product on 2026-08-10.
 
 Who this is for: anyone who explains, tests, or supports room and rate setup.
 The implementation details are in
-`docs/rate-plan-and-inventory-handover.md`.
+`docs/rates/rate-plan-and-inventory-handover.md`.
 
 ## The two places to remember
 

@@ -1,5 +1,8 @@
 # Legacy Tailwind Classes in Role-Panel Pages
 
+> **Historical audit:** counts, findings, and completion notes retain their original dates.
+> Recheck the current templates before treating an item as outstanding. Use `DESIGN.md` for current portal rules.
+
 Last audited: 2026-07-12
 
 ## Purpose

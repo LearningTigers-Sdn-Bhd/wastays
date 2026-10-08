@@ -4,6 +4,9 @@ Status: In progress
 Started: 2026-08-27
 Last updated: 2026-08-28
 
+Component paths were corrected against the local checkout on 2026-10-09.
+Milestone status and validation results retain their original dates.
+
 ## Progress
 
 | Milestone | Status |
@@ -550,8 +553,8 @@ WAStays does not connect to WhatsApp directly. The Relay receives a WAStays webh
 - `app/presenters/concierge/chat_input_presenter.rb`
 - `app/services/concierge/send_booking_magic_link.rb`
 - `app/services/guests/magic_links/issue.rb`
-- `app/components/public_ui/chat/secure_input.rb`
-- `app/components/public_ui/chat/quick_replies.rb`
+- `app/components/guest_ui/chat/secure_input.rb`
+- `app/components/guest_ui/chat/quick_replies.rb`
 - `config/initializers/rack_attack.rb`
 
 ### Deferred WhatsApp delivery
@@ -562,7 +565,7 @@ WAStays does not connect to WhatsApp directly. The Relay receives a WAStays webh
 - `app/services/notifications/payload_builders/`
 - `app/models/notification_config.rb`
 - `app/models/notification_delivery.rb`
-- `docs/whatsapp-relay-contract.md`
+- `docs/integrations/whatsapp-relay-contract.md`
 
 ## Out of scope
 

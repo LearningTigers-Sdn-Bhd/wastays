@@ -8,7 +8,7 @@ When running the full test suite or large domains (especially using `parallel_te
 ## Proposed Options
 
 ### 1. Enhanced End-of-Run Digest in `bin/test`
-[`bin/test`](file:///Users/orsontamin/Code/Jesselton-Pixel/wastays/bin/test) already includes a `print_failure_digest` helper (lines 600–664) that parses the combined test output. It currently caps output at 5 failures and truncates lines to 47 characters.
+`bin/test` already includes a `print_failure_digest` helper that parses the combined test output. It currently caps output at 5 failures and truncates lines to 47 characters.
 
 #### Recommended Enhancements:
 - **Uncap the failure list**: Display all failing examples, not just the first 5.
@@ -23,10 +23,10 @@ When running the full test suite or large domains (especially using `parallel_te
 ---
 
 ### 2. RSpec Native Status Persistence (`--only-failures`)
-Enable example status persistence in [`spec/spec_helper.rb`](file:///Users/orsontamin/Code/Jesselton-Pixel/wastays/spec/spec_helper.rb):
+Example status persistence is already enabled in `spec/spec_helper.rb`:
 ```ruby
 RSpec.configure do |config|
-  config.example_status_persistence_file_path = "tmp/rspec_examples.txt"
+  config.example_status_persistence_file_path = "spec/examples.txt"
 end
 ```
 
@@ -37,12 +37,12 @@ end
   bundle exec rspec --only-failures
   bundle exec rspec --next-failure
   ```
-- Git-ignored by default under `tmp/`.
+- The configured status file is `spec/examples.txt`. The remaining proposals do not change this setting.
 
 ---
 
 ### 3. Machine-Readable JSON Export
-Configure a secondary formatter in [`.rspec`](file:///Users/orsontamin/Code/Jesselton-Pixel/wastays/.rspec) or for CI/local debugging scripts:
+Configure a secondary formatter in `.rspec` or for CI/local debugging scripts:
 ```text
 --format progress
 --format json --out tmp/rspec_failures.json
