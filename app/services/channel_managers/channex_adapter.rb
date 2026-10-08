@@ -172,8 +172,8 @@ module ChannelManagers
         }
       }
       if capability.flattened?
-        payload[:rate_plan][:children_fee] = format_money(rate_plan.channex_children_fee)
-        payload[:rate_plan][:infant_fee] = format_money(rate_plan.channex_infant_fee)
+        payload[:rate_plan][:children_fee] = format_money(rate_plan.channex_children_fee || 0)
+        payload[:rate_plan][:infant_fee] = format_money(rate_plan.channex_infant_fee || 0)
       end
 
       response = if mapping.external_id.to_s.start_with?("pending")
@@ -975,7 +975,12 @@ module ChannelManagers
             }
 
             if final_sync_rates
-              val_data[:rate] = resolved_rates_by_date.fetch(date)
+              rate_val = resolved_rates_by_date.fetch(date)
+              if rate_plan.sell_mode == "per_person"
+                val_data[:rates] = rate_val.map { |occ, amt| { occupancy: occ, rate: amt } }
+              else
+                val_data[:rate] = rate_val
+              end
             end
 
             if final_sync_restrictions
@@ -1044,12 +1049,19 @@ module ChannelManagers
 
                   if final_sync_rates
                     base_rate = resolved_rates_by_date[date]
-                    val_data[:rate] = channel_rate_value(
-                      base_rate,
-                      override: override,
-                      derived_setting: derived_setting_for(channel["id"]),
-                      per_person: rate_plan.sell_mode == "per_person"
-                    ) if base_rate
+                    if base_rate
+                      adj_rate = channel_rate_value(
+                        base_rate,
+                        override: override,
+                        derived_setting: derived_setting_for(channel["id"]),
+                        per_person: rate_plan.sell_mode == "per_person"
+                      )
+                      if rate_plan.sell_mode == "per_person"
+                        val_data[:rates] = adj_rate.map { |occ, amt| { occupancy: occ, rate: amt } }
+                      else
+                        val_data[:rate] = adj_rate
+                      end
+                    end
                   end
 
                   if final_sync_restrictions

@@ -92,6 +92,23 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(adapter.sync_rate_plan(rate_plan)).to eq("ch_rp_person")
     end
 
+    it 'syncs an age-banded rate plan with defaulted 0.00 child and infant fees when nil', :per_person do
+      rate_plan = create(:rate_plan, :age_banded, hotel: hotel, room_type: room_type)
+      rate_plan.update_columns(channex_children_fee: nil, channex_infant_fee: nil)
+      assignment = rate_plan.room_type_rate_plans.find_by!(room_type: room_type)
+      assignment.occupancy_prices.create!(adults: 1, price: 100)
+      assignment.occupancy_prices.create!(adults: 2, price: 200)
+
+      expect(client_double).to receive(:post).with("/rate_plans", {
+        rate_plan: hash_including(
+          children_fee: "0.00",
+          infant_fee: "0.00"
+        )
+      }).and_return({ "data" => { "id" => "ch_rp_age_banded" } })
+
+      expect(adapter.sync_rate_plan(rate_plan)).to eq("ch_rp_age_banded")
+    end
+
     it 'still syncs a per_room rate plan (regression guard)' do
       rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
 
