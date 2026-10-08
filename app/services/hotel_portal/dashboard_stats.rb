@@ -86,12 +86,12 @@ module HotelPortal
         end
         end
     def occupancy_snapshot(days: 7)
-      (Date.current..(Date.current + (days - 1).days)).map do |date|
-        # Correctly sum the quantity column from room_inventories
-        total_inventory = @hotel.room_types.joins(:room_inventories)
-                                .where(room_inventories: { date: date })
-                                .sum("room_inventories.quantity")
+      # The hotel's physical rooms, not room_inventories.quantity: that is
+      # what is left to sell, already net of every booking, so dividing sales
+      # by it ran past 100% (4/1) as soon as a day started selling.
+      total_inventory = @hotel.room_types.sum(:quantity)
 
+      (Date.current..(Date.current + (days - 1).days)).map do |date|
         rooms_sold = @hotel.bookings.revenue_generating.where(":date >= check_in::date AND :date < check_out::date", date: date).count
         {
           date: date,
