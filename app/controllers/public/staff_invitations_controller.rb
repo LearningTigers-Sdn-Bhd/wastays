@@ -19,15 +19,25 @@ module Public
     def update
       return redirect_unavailable unless @invitation&.pending?
 
-      user = User.find_by(email: @invitation.email)
-      return redirect_corporate_collision if user&.corporate?
-      return redirect_partner_collision if user&.super_agent?
+      # Match direct addition's lock order and hold both through user creation.
+      # A cancelled invite must not create a login or change hotel access.
+      @invitation.hotel.with_lock do
+        @invitation.with_lock do
+          return redirect_unavailable unless @invitation.pending?
 
-      if user
-        accept_invitation_for(user)
-      else
-        create_user_and_accept_invitation
+          user = User.find_by(email: @invitation.email)
+          return redirect_corporate_collision if user&.corporate?
+          return redirect_partner_collision if user&.super_agent?
+
+          if user
+            accept_invitation_for(user)
+          else
+            create_user_and_accept_invitation
+          end
+        end
       end
+    rescue ActiveRecord::RecordNotFound
+      redirect_unavailable
     end
 
     private

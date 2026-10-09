@@ -8,14 +8,15 @@
       <h1 class="text-base font-semibold tracking-tight text-foreground">Staff Management</h1>
       <p class="mt-1 text-sm text-muted-foreground">Manage access levels and roles for your hotel team.</p>
     </div>
-    <%= render PanelsUI::Button.new(
-          href: new_hotel_user_path(current_hotel),
-          size: :sm,
-          class: "w-full sm:w-auto",
-          data: { turbo_frame: "settings_action_sheet" }) do %>
-      <%= app_icon "user-plus", class: "size-4", aria: { hidden: "true" } %>
-      <span>Invite Staff</span>
-    <% end %>
+    <div class="flex flex-col gap-2 sm:flex-row">
+      <%= render PanelsUI::Button.new(label: "Invite Staff", href: new_hotel_user_path(current_hotel),
+            variant: :secondary, size: :sm, data: { turbo_frame: "settings_action_sheet" }) %>
+      <%= render PanelsUI::Button.new(href: new_hotel_staff_addition_path(current_hotel),
+            size: :sm, data: { turbo_frame: "settings_action_sheet" }) do %>
+        <%= app_icon "user-plus", class: "size-4", aria: { hidden: "true" } %>
+        <span>Add Staff</span>
+      <% end %>
+    </div>
   </div>
 
   <% if @presenter.invitations? %>
@@ -120,13 +121,16 @@
           <tr>
             <td colspan="4" class="h-40 text-center">
               <p class="font-medium text-foreground">No staff have access yet.</p>
-              <p class="mt-1 text-muted-foreground">Invite a team member to give them access to this property.</p>
-              <div class="mt-4">
+              <p class="mt-1 text-muted-foreground">Add or invite a team member to give them access to this property.</p>
+              <div class="mt-4 flex flex-wrap justify-center gap-2">
                 <%= render PanelsUI::Button.new(
                       label: "Invite Staff",
                       href: new_hotel_user_path(current_hotel),
+                      variant: :secondary,
                       size: :sm,
                       data: { turbo_frame: "settings_action_sheet" }) %>
+                <%= render PanelsUI::Button.new(label: "Add Staff", href: new_hotel_staff_addition_path(current_hotel),
+                      size: :sm, data: { turbo_frame: "settings_action_sheet" }) %>
               </div>
             </td>
           </tr>

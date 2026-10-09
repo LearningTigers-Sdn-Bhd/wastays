@@ -39,6 +39,7 @@ RSpec.describe "HotelPortal::Users", type: :request do
       get hotel_users_path(hotel)
 
       expect(response.body).to include("No staff have access yet")
+      expect(response.body).to include("Add Staff", "Invite Staff", new_hotel_staff_addition_path(hotel), new_hotel_user_path(hotel))
       expect(response.body).not_to include(partner.name, partner.email)
     end
 
@@ -115,6 +116,7 @@ RSpec.describe "HotelPortal::Users", type: :request do
       get hotel_users_path(hotel)
       expect(response).to have_http_status(:success)
       expect(response.body).to include("Staff Management")
+      expect(response.body).to include("Add Staff", "Invite Staff", new_hotel_staff_addition_path(hotel), new_hotel_user_path(hotel))
     end
 
     context "an invitation queued during onboarding that was never emailed" do

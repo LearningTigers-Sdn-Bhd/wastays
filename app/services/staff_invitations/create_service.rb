@@ -17,6 +17,14 @@ module StaffInvitations
     end
 
     def call
+      # Share direct staff addition's lock so a concurrent invite cannot be
+      # issued after eligibility was checked but before access was granted.
+      @hotel.with_lock { issue_invitation }
+    end
+
+    private
+
+    def issue_invitation
       invitation = build_invitation
 
       if (message = rejection)
@@ -41,8 +49,6 @@ module StaffInvitations
       StaffInvitationMailer.invite(invitation, token).deliver_later
       Result.success(invitation: invitation)
     end
-
-    private
 
     # Reuses the outstanding invitation for this email so a re-invite refreshes
     # the token and expiry rather than stacking duplicates.

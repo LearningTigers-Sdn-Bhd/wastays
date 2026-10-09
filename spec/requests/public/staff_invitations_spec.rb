@@ -64,6 +64,33 @@ RSpec.describe "Public::StaffInvitations", type: :request do
   end
 
   describe "PATCH /staff-invitations/:token" do
+    it "rejects an obsolete link after direct staff addition without changing the selected role" do
+      role = create(:role, account: invitation.account)
+      result = StaffAccesses::CreateService.new(hotel: invitation.hotel, email: invitation.email,
+        name: "Direct Staff", role: role).call
+      expect(result.success?).to be(true)
+
+      patch staff_invitation_path(token), params: { user: {} }
+
+      expect(response).to redirect_to(login_path)
+      expect(result.access.reload.role).to eq(role)
+    end
+
+    it "handles cancellation between finding the invitation and acquiring its lock" do
+      allow(StaffInvitation).to receive(:find_by_token).with(token).and_return(invitation)
+      allow(invitation).to receive(:with_lock).and_wrap_original do |lock, &block|
+        StaffInvitation.find(invitation.id).destroy!
+        lock.call(&block)
+      end
+
+      expect {
+        patch staff_invitation_path(token), params: { user: { name: "Stale Staff", password: "password123", password_confirmation: "password123" } }
+      }.not_to change(User, :count)
+
+      expect(response).to redirect_to(login_path)
+      expect(flash[:alert]).to eq("This invitation is invalid or has expired.")
+    end
+
     it "creates a new staff user and grants hotel access" do
       expect {
         patch staff_invitation_path(token), params: {

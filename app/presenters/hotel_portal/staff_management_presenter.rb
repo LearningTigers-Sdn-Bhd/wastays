@@ -20,7 +20,8 @@ module HotelPortal
       :deletable,
       :status_path,
       :edit_path,
-      :delete_path
+      :delete_path,
+      :temporary_password_path
     )
 
     InvitationRow = Data.define(
@@ -97,8 +98,22 @@ module HotelPortal
         deletable: may_delete? && !own_row && !sole_manager,
         status_path: routes.status_hotel_user_path(hotel, access),
         edit_path: routes.edit_hotel_user_path(hotel, access),
-        delete_path: routes.hotel_user_path(hotel, access)
+        delete_path: routes.hotel_user_path(hotel, access),
+        temporary_password_path: temporary_password_path(access)
       )
+    end
+
+    def temporary_password_path(access)
+      return unless may_reveal_password?
+      return unless StaffAccesses::RevealTemporaryPassword.available?(access: access, hotel: hotel)
+
+      routes.hotel_user_temporary_password_path(hotel, access)
+    end
+
+    def may_reveal_password?
+      return @may_reveal_password if defined?(@may_reveal_password)
+
+      @may_reveal_password = current_user.has_permission?("manage_users", hotel: hotel)
     end
 
     # Spelled out rather than left to a disabled control, so the switch never
