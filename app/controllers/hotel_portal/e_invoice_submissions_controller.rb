@@ -170,6 +170,11 @@ module HotelPortal
     end
 
     def retry
+      if @submission.ar_invoice_correction
+        result = ArInvoices::RetryCorrection.call(correction: @submission.ar_invoice_correction)
+        return redirect_to hotel_e_invoice_submission_path(current_hotel, @submission),
+          **(result.success? ? { notice: "Correction documents queued." } : { alert: result.error })
+      end
       unless @submission.retryable?
         return redirect_to hotel_e_invoice_submission_path(current_hotel, @submission),
           alert: "This e-invoice cannot be retried right now."

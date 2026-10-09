@@ -9,12 +9,12 @@ module Folios
       PERMISSION = "manage_folio_windows"
       DIRECT_BILL_SETTLEMENT = "direct_bill"
 
-      def self.call(folio:, user:, reason: nil, settlement_method: nil, credit_override: false, credit_override_reason: nil)
+      def self.call(folio:, user:, reason: nil, settlement_method: nil, credit_override: false, credit_override_reason: nil, send_documents: false)
         new(folio: folio, user: user, reason: reason, settlement_method: settlement_method,
-          credit_override: credit_override, credit_override_reason: credit_override_reason).call
+          credit_override: credit_override, credit_override_reason: credit_override_reason, send_documents: send_documents).call
       end
 
-      def initialize(folio:, user:, reason: nil, settlement_method: nil, credit_override: false, credit_override_reason: nil)
+      def initialize(folio:, user:, reason: nil, settlement_method: nil, credit_override: false, credit_override_reason: nil, send_documents: false)
         @folio = folio
         @booking = folio.booking
         @hotel = folio.hotel
@@ -23,6 +23,7 @@ module Folios
         @settlement_method = settlement_method.to_s
         @credit_override = ActiveModel::Type::Boolean.new.cast(credit_override)
         @credit_override_reason = credit_override_reason.to_s.strip
+        @send_documents = send_documents
       end
 
       def call
@@ -34,6 +35,9 @@ module Folios
           return failure("Voided folios cannot be closed.") if @folio.voided?
           return failure("Cannot close a folio with pending upcoming charges.") if @folio.projected_forecasts.exists?
 
+          if @folio.ar_invoice_corrections.editing.exists?
+            NightAudits::OperationalChangeGuard.call!(hotel: @hotel, action: :close_folio)
+          end
           balance = @folio.outstanding_balance.to_d
           direct_bill = direct_bill_settlement?
           hotel_corporate_account&.lock! if direct_bill
@@ -41,12 +45,17 @@ module Folios
           return failure(validation_error) if validation_error.present?
 
           @folio.update!(status: "closed", closed_at: Time.current, closed_by: @user)
-          document = Folios::Lifecycle::IssueClosingDocument.call!(
-            folio: @folio,
-            settlement_method: (DIRECT_BILL_SETTLEMENT if direct_bill),
-            balance:,
-            user: @user
-          )
+          document = if @folio.ar_invoice_corrections.editing.exists?
+            receivable = ArInvoices::CompleteCorrection.call!(folio: @folio, user: @user, send_documents: @send_documents)
+            Folios::Lifecycle::IssueClosingDocument::Outcome.new(invoice: receivable&.invoice, receivable: receivable)
+          else
+            Folios::Lifecycle::IssueClosingDocument.call!(
+              folio: @folio,
+              settlement_method: (DIRECT_BILL_SETTLEMENT if direct_bill),
+              balance:,
+              user: @user
+            )
+          end
           ar_invoice = document.receivable
           FolioOperationLog.create!(
             hotel: @hotel,
@@ -60,7 +69,7 @@ module Folios
             reason: @reason,
             metadata: close_metadata(ar_invoice)
           )
-          record_direct_bill_audit_event!(ar_invoice, balance) if direct_bill
+          record_direct_bill_audit_event!(ar_invoice, balance) if direct_bill && ar_invoice
         end
 
         success(@folio)
@@ -74,7 +83,7 @@ module Folios
       private
 
       def direct_bill_settlement?
-        @settlement_method == DIRECT_BILL_SETTLEMENT
+        @settlement_method == DIRECT_BILL_SETTLEMENT || @folio.ar_invoice_corrections.editing.exists?
       end
 
       def validate_standard_close(balance)
@@ -88,6 +97,18 @@ module Folios
         return "Direct Bill settlement requires a Corporate Account." if hotel_corporate_account.blank?
         return "Corporate Account must be active for Direct Bill settlement." unless hotel_corporate_account.active?
         return "Direct Bill is not enabled for this Corporate Account." unless hotel_corporate_account.direct_bill_enabled?
+        if @folio.ar_invoice_corrections.editing.exists?
+          return "A corrected AR folio cannot have a negative balance." if balance.negative?
+          original = @folio.ar_invoice
+          pending = [ balance - original.paid_amount.to_d, 0.to_d ].max - original.outstanding_amount.to_d
+          authorization = ArInvoices::AuthorizeCreditExposure.call(
+            hotel_corporate_account: hotel_corporate_account, pending_amount: pending,
+            pending_currency: @folio.currency, user: @user,
+            override: @credit_override, override_reason: @credit_override_reason
+          )
+          return authorization.error unless authorization.success?
+          return nil
+        end
         return "Direct Bill settlement requires a positive folio balance." unless balance.positive?
         return "AR invoice already exists for this folio." if @folio.ar_invoice.present?
 

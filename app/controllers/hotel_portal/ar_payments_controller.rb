@@ -104,7 +104,7 @@ module HotelPortal
       return ArInvoice.none if @hotel_corporate_account.blank?
 
       current_hotel.ar_invoices
-        .with_open_balance
+        .with_open_balance.allocatable
         .where(hotel_corporate_account: @hotel_corporate_account)
         .includes(:booking_folio)
         .order(due_on: :asc, invoice_number: :asc)

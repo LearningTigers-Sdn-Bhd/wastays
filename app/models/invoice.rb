@@ -6,12 +6,13 @@ class Invoice < ApplicationRecord
   MUTABLE_FIELDS = %w[state current_revision_number updated_at].freeze
 
   belongs_to :hotel
-  belongs_to :booking_folio
+  belongs_to :booking_folio, inverse_of: :invoice
   belongs_to :issued_by, class_name: "User", optional: true
   has_many :revisions, -> { order(:revision_number) },
     class_name: "InvoiceRevision",
     dependent: :restrict_with_error,
     inverse_of: :invoice
+  has_many :e_invoice_submissions, dependent: :restrict_with_error
   has_one :receivable, dependent: :restrict_with_error, inverse_of: :invoice
 
   enum :kind, KINDS.index_by(&:itself), prefix: true, validate: true
@@ -20,7 +21,7 @@ class Invoice < ApplicationRecord
   validates :invoice_number, :invoice_year, :invoice_reference, :issued_on, :issued_at, presence: true
   validates :invoice_number, uniqueness: { scope: [ :hotel_id, :kind, :invoice_year ] }
   validates :invoice_reference, uniqueness: { scope: :hotel_id }
-  validates :booking_folio_id, uniqueness: true
+  validates :booking_folio_id, uniqueness: { conditions: -> { where.not(state: "voided") } }, unless: :voided?
   validates :current_revision_number, numericality: { only_integer: true, greater_than: 0 }
   validates :metadata, exclusion: { in: [ nil ] }
   validate :folio_matches_hotel

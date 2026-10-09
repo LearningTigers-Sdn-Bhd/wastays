@@ -325,6 +325,17 @@ module Reports
       def notes
         rows = []
         rows << superseded_note if revised?
+        if direct_bill? && receivable&.void?
+          correction = ArInvoiceCorrection.find_by(original_receivable_id: receivable.id)
+          if correction
+            replacement = correction.replacement_receivable&.formatted_invoice_number
+            rows << "Canceled by #{correction.credit_reference}.#{replacement ? " Replaced by #{replacement}." : " No replacement invoice is due."}"
+          end
+        end
+        if direct_bill?
+          submission = invoice_document.e_invoice_submissions.where(status: "valid", document_type: "01").first
+          rows << "LHDN UUID: #{submission.uuid}" if submission
+        end
         rows << "SST is not applied on top of Tourism Tax." if sst_present? && tourism_tax_present?
         rows << "Service Charge is shown separately from government tax." if service_charge_present?
         rows
@@ -395,12 +406,18 @@ module Reports
       # colour only while money is still owed.
       def settled? = balance.zero?
 
-      def balance_label = settled? ? "Balance settled" : "Balance due"
+      def balance_label
+        return "Original invoice balance" if direct_bill? && receivable&.void?
+
+        settled? ? "Balance settled" : "Balance due"
+      end
 
       # The first thing a reader looks for, answered beside the invoice number rather than
       # eight inches down the page. Read from the issued figures like every other total on
       # the document, so a reprint cannot change what it says.
       def status_badge
+        return { label: "Canceled", variant: :danger } if direct_bill? && receivable&.void?
+
         settled? ? { label: "Settled", variant: :positive } : { label: "Balance due", variant: :warning }
       end
 
@@ -491,7 +508,7 @@ module Reports
 
       def validate_invoice!
         return if @revision_number.present?
-        return if direct_bill? && invoice_document.finalized?
+        return if direct_bill? && (invoice_document.finalized? || invoice_document.voided? || invoice_document.under_correction?)
         return if folio.closed? && invoice_document.finalized?
 
         raise UnavailableError, "Invoice is unavailable while the folio is open or under correction."
