@@ -460,6 +460,9 @@ module ChannelManagers
         check_out: safe_parse_date(check_out),
         guest_details: {
           name: extract_room_guest_name(attributes) || extract_guest_name(attributes),
+          # Whose email and phone these are, so a guest profile is only matched
+          # on them when the booker is the one staying.
+          booker_name: extract_guest_name(attributes),
           email: attributes.dig("customer", "email") || attributes.dig("customer", "mail"),
           phone: attributes.dig("customer", "phone") || attributes.dig("customer", "Telephone", "@PhoneNumber"),
           country: attributes.dig("customer", "country")

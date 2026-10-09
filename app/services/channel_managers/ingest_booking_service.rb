@@ -48,6 +48,7 @@ module ChannelManagers
         previous_check_in = booking.check_in
         previous_check_out = booking.check_out
         previous_status = booking.status
+        previous_guest_name = booking.guest_name if is_existing_booking
 
         # 1. Revision Check: Ignore older or duplicate revisions
         if is_existing_booking && duplicate_or_older_revision?(booking)
@@ -102,7 +103,8 @@ module ChannelManagers
           persist_financial_snapshot!(booking)
           ChannelManagers::InitializeBookingConnections.call!(
             booking: booking,
-            guest_details: @data[:guest_details]
+            guest_details: @data[:guest_details],
+            previous_guest_name: previous_guest_name
           )
           release_detected_no_show_rooms(booking) if previous_status == "no_show_detected" && booking.status == "cancelled"
 

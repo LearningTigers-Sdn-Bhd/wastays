@@ -220,6 +220,7 @@ module ChannelManagers
       current_children = pairs.each_with_index.map do |(booking, unit), index|
         booking ||= group.bookings.build(hotel: @hotel)
         previous_status = booking.status if booking.persisted?
+        previous_guest_name = booking.guest_name if booking.persisted?
         child_status = resolved_child_status(previous_status, incoming_status)
         assign_status_transition!(booking, previous_status, child_status)
         booking.assign_attributes(child_attributes(group, booking, unit, check_in, check_out, child_status, index + 1))
@@ -230,7 +231,8 @@ module ChannelManagers
         sync_room!(booking, unit)
         ChannelManagers::InitializeBookingConnections.call!(
           booking: booking,
-          guest_details: @data[:guest_details]
+          guest_details: @data[:guest_details],
+          previous_guest_name: previous_guest_name
         )
         release_detected_no_show_rooms(booking) if previous_status == "no_show_detected" && booking.status == "cancelled"
         booking
