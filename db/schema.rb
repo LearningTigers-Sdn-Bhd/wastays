@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -90,6 +90,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.index ["key"], name: "index_app_configs_on_key", unique: true
   end
 
+  create_table "ar_invoice_corrections", force: :cascade do |t|
+    t.bigint "booking_folio_id", null: false
+    t.bigint "closed_by_id"
+    t.datetime "completed_at"
+    t.jsonb "corrected_snapshot", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.string "credit_reference"
+    t.text "error_message"
+    t.bigint "hotel_id", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.bigint "opened_by_id", null: false
+    t.bigint "original_receivable_id", null: false
+    t.jsonb "original_snapshot", default: {}, null: false
+    t.text "reason", null: false
+    t.bigint "replacement_receivable_id"
+    t.boolean "send_documents", default: false, null: false
+    t.string "status", default: "editing", null: false
+    t.datetime "updated_at", null: false
+    t.index ["booking_folio_id"], name: "idx_ar_corrections_unresolved_folio", unique: true, where: "((status)::text = ANY ((ARRAY['editing'::character varying, 'processing'::character varying, 'failed'::character varying])::text[]))"
+    t.index ["booking_folio_id"], name: "index_ar_invoice_corrections_on_booking_folio_id"
+    t.index ["closed_by_id"], name: "index_ar_invoice_corrections_on_closed_by_id"
+    t.index ["hotel_id", "credit_reference"], name: "index_ar_invoice_corrections_on_hotel_id_and_credit_reference", unique: true
+    t.index ["hotel_id"], name: "index_ar_invoice_corrections_on_hotel_id"
+    t.index ["opened_by_id"], name: "index_ar_invoice_corrections_on_opened_by_id"
+    t.index ["original_receivable_id"], name: "index_ar_invoice_corrections_on_original_receivable_id"
+    t.index ["replacement_receivable_id"], name: "index_ar_invoice_corrections_on_replacement_receivable_id"
+    t.check_constraint "status::text = ANY (ARRAY['editing'::character varying, 'processing'::character varying, 'failed'::character varying, 'completed'::character varying, 'unchanged'::character varying]::text[])", name: "ar_correction_status_allowed"
+  end
+
   create_table "ar_invoices", force: :cascade do |t|
     t.decimal "amount", precision: 10, scale: 2, null: false
     t.bigint "booking_folio_id", null: false
@@ -108,7 +137,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.decimal "paid_amount", precision: 10, scale: 2, default: "0.0", null: false
     t.string "status", default: "open", null: false
     t.datetime "updated_at", null: false
-    t.index ["booking_folio_id"], name: "index_ar_invoices_on_booking_folio_id", unique: true
+    t.index ["booking_folio_id"], name: "idx_ar_invoices_current_folio", unique: true, where: "((status)::text <> 'void'::text)"
     t.index ["hotel_corporate_account_id", "status"], name: "index_ar_invoices_on_hotel_corporate_account_id_and_status"
     t.index ["hotel_corporate_account_id"], name: "index_ar_invoices_on_hotel_corporate_account_id"
     t.index ["hotel_id", "invoice_reference"], name: "index_ar_invoices_on_hotel_id_and_invoice_reference", unique: true, where: "(invoice_reference IS NOT NULL)"
@@ -1070,18 +1099,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
   end
 
   create_table "e_invoice_submissions", force: :cascade do |t|
+    t.bigint "ar_invoice_correction_id"
     t.bigint "booking_id"
     t.jsonb "buyer_snapshot", default: {}, null: false
     t.datetime "cancelled_at"
     t.boolean "consolidated", default: false, null: false
     t.uuid "consolidation_batch_id"
     t.datetime "created_at", null: false
+    t.jsonb "document_payload", default: {}, null: false
     t.string "document_scenario", default: "guest_invoice", null: false
     t.string "document_type", default: "01", null: false
     t.jsonb "error_details", default: {}
     t.string "fund_collector", default: "wastays", null: false
     t.bigint "hotel_id", null: false
     t.string "internal_id"
+    t.bigint "invoice_id"
     t.string "long_id"
     t.string "original_invoice_internal_id"
     t.string "ota_source_key"
@@ -1101,12 +1133,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.datetime "updated_at", null: false
     t.string "uuid"
     t.datetime "validated_at"
-    t.index ["booking_id", "document_scenario", "document_type"], name: "index_e_invoice_submissions_on_booking_scenario_type", unique: true, where: "((status)::text <> 'cancelled'::text)"
+    t.index ["ar_invoice_correction_id", "document_type"], name: "idx_e_invoice_correction_type", unique: true, where: "(ar_invoice_correction_id IS NOT NULL)"
+    t.index ["ar_invoice_correction_id"], name: "index_e_invoice_submissions_on_ar_invoice_correction_id"
+    t.index ["booking_id", "document_scenario", "document_type"], name: "index_e_invoice_submissions_on_booking_scenario_type", unique: true, where: "(((status)::text <> 'cancelled'::text) AND (ar_invoice_correction_id IS NULL))"
     t.index ["booking_id"], name: "index_e_invoice_submissions_on_booking_id"
     t.index ["consolidation_batch_id"], name: "index_e_invoice_submissions_on_consolidation_batch_id"
     t.index ["fund_collector"], name: "index_e_invoice_submissions_on_fund_collector"
     t.index ["hotel_id", "ota_source_key", "period_start"], name: "index_e_invoice_submissions_on_ota_commission_period", unique: true, where: "(((document_scenario)::text = 'ota_commission_self_billed'::text) AND ((status)::text <> 'cancelled'::text))"
     t.index ["hotel_id"], name: "index_e_invoice_submissions_on_hotel_id"
+    t.index ["invoice_id"], name: "index_e_invoice_submissions_on_invoice_id"
     t.index ["payout_batch_id"], name: "index_e_invoice_submissions_on_payout_batch_id"
     t.index ["status", "consolidated", "payment_concluded_at"], name: "index_e_invoice_submissions_on_status_consolidated_payment"
     t.index ["status"], name: "index_e_invoice_submissions_on_status"
@@ -2155,7 +2190,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.jsonb "metadata", default: {}, null: false
     t.string "state", default: "finalized", null: false
     t.datetime "updated_at", null: false
-    t.index ["booking_folio_id"], name: "index_invoices_on_booking_folio_id", unique: true
+    t.index ["booking_folio_id"], name: "idx_invoices_current_folio", unique: true, where: "((state)::text <> 'voided'::text)"
     t.index ["hotel_id", "invoice_reference"], name: "idx_invoices_reference", unique: true
     t.index ["hotel_id", "kind", "invoice_year", "invoice_number"], name: "idx_invoices_kind_year_number", unique: true
     t.index ["hotel_id"], name: "index_invoices_on_hotel_id"
@@ -3322,6 +3357,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.string "name"
     t.string "password_digest"
     t.string "role"
+    t.text "temporary_password"
+    t.bigint "temporary_password_hotel_id"
     t.string "time_zone", default: "Kuala Lumpur", null: false
     t.datetime "updated_at", null: false
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
@@ -3329,6 +3366,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.index ["account_id"], name: "index_users_on_unique_corporate_account", unique: true, where: "((role)::text = 'corporate'::text)"
     t.index ["agent_code"], name: "index_users_on_agent_code", unique: true
     t.index ["last_seen_at"], name: "index_users_on_last_seen_at"
+    t.index ["temporary_password_hotel_id"], name: "index_users_on_temporary_password_hotel_id"
   end
 
   create_table "webhook_endpoints", force: :cascade do |t|
@@ -3355,6 +3393,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ar_invoice_corrections", "ar_invoices", column: "original_receivable_id"
+  add_foreign_key "ar_invoice_corrections", "ar_invoices", column: "replacement_receivable_id"
+  add_foreign_key "ar_invoice_corrections", "booking_folios"
+  add_foreign_key "ar_invoice_corrections", "hotels"
+  add_foreign_key "ar_invoice_corrections", "users", column: "closed_by_id"
+  add_foreign_key "ar_invoice_corrections", "users", column: "opened_by_id"
   add_foreign_key "ar_invoices", "booking_folios"
   add_foreign_key "ar_invoices", "hotel_corporate_accounts"
   add_foreign_key "ar_invoices", "hotels"
@@ -3472,8 +3516,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
   add_foreign_key "deposits", "transaction_codes"
   add_foreign_key "deposits", "users", column: "received_by_id"
   add_foreign_key "e_invoice_settings", "hotels"
+  add_foreign_key "e_invoice_submissions", "ar_invoice_corrections"
   add_foreign_key "e_invoice_submissions", "bookings"
   add_foreign_key "e_invoice_submissions", "hotels"
+  add_foreign_key "e_invoice_submissions", "invoices"
   add_foreign_key "e_invoice_submissions", "payout_batches"
   add_foreign_key "exchange_rates", "users", column: "created_by_id"
   add_foreign_key "features", "feature_groups"
@@ -3705,5 +3751,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
   add_foreign_key "user_roles", "roles"
   add_foreign_key "user_roles", "users"
   add_foreign_key "users", "accounts"
+  add_foreign_key "users", "hotels", column: "temporary_password_hotel_id"
   add_foreign_key "webhook_endpoints", "hotels"
 end

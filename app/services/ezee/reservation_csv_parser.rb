@@ -10,7 +10,7 @@ module Ezee
   # carries a real guest name, a separate Business Source (the agency or
   # channel), a per-row status, and the staff's remarks on the same row. Money
   # is per room per night -- eZee has no per-person model -- so the stay total is
-  # rate x nights. See docs/ezee-reservation-import.md, "Reservation CSV".
+  # rate x nights. See docs/integrations/ezee-reservation-import.md, "Reservation CSV".
   class ReservationCsvParser
     REQUIRED_HEADERS = [
       "Res. No", "Guest", "Room", "Rate(RM)", "Arrival", "Departure", "Nights",

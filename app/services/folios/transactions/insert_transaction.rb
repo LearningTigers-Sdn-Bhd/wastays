@@ -23,6 +23,13 @@ module Folios
         @booking_folio.with_lock do
           @booking_folio.reload
 
+          if @booking_folio.receivable_history.exists?
+            return failure("Reopen the AR folio for correction before changing its charges.") unless @booking_folio.ar_invoice_corrections.editing.exists?
+            if @transaction_type == "payment" || @options[:reversal_of_transaction]&.payment?
+              return failure("Record company payments through Accounts Receivable. Existing folio payments cannot change during AR correction.")
+            end
+          end
+
           override_error = validate_override_context
           return failure(override_error) if override_error.present?
 

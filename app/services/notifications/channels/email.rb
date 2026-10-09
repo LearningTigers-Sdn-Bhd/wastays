@@ -14,6 +14,7 @@ module Notifications
         "agent_payment_rejected" => :agent_payment_rejected,
         "agent_booking_released" => :agent_booking_released,
         "invoice_package" => :invoice_package,
+        "ar_invoice_correction" => :ar_invoice_correction,
         "guest_registration_card" => :guest_registration_card
       }.freeze
 

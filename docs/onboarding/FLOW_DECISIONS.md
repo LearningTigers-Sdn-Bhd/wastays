@@ -4,7 +4,8 @@
 
 Agreed product decisions for the integrated admin-created hotel onboarding flow.
 
-This document defines the intended product behaviour. It does not describe the current implementation.
+This document records product decisions. Lifecycle and invitation timing were checked against the current implementation on 2026-10-09.
+See `CURRENT_BEHAVIOR.md` for the checked behavior; other sections retain their authored decisions.
 
 ## Objective
 
@@ -13,21 +14,22 @@ Separate account provisioning from operational hotel setup:
 - An admin creates the account and chooses platform-level commercial settings.
 - The hotel owner completes operational setup in a dedicated onboarding experience.
 - An admin reviews the completed setup before the hotel becomes live.
-- Staff do not enter the application until setup has been submitted.
+- New staff invitations are sent after the property launches.
 
 ## Hotel lifecycle
 
-Use four hotel lifecycle states:
+Use five hotel lifecycle states:
 
 ```text
-setup -> pending_review -> live -> suspended
+setup -> pending_review -> ready_to_launch -> live -> suspended
 ```
 
 | Status | Meaning |
 |---|---|
 | `setup` | The hotel exists, but operational onboarding is incomplete. |
 | `pending_review` | The owner submitted onboarding and the hotel is awaiting admin review. |
-| `live` | The hotel was approved and normal operations and booking eligibility are enabled. |
+| `ready_to_launch` | Admin review approved the setup; the owner must choose whether to keep or reset training activity before launch. |
+| `live` | The launch decision completed and normal operations and booking eligibility are enabled. |
 | `suspended` | Hotel access and booking eligibility are disabled. |
 
 Onboarding page progress is not encoded in the hotel status. Each onboarding section separately records one of:
@@ -139,7 +141,7 @@ plan-gated settings features after launch.
 
 The lower half is the draft staff table. The owner enters email addresses and
 assigns preset roles. These records stay drafts throughout setup, and invitations
-are sent only after onboarding is successfully submitted. Invitation acceptance
+are sent only after the property successfully launches. Invitation acceptance
 does not block admin review or launch.
 
 Continuing with an empty table records `no_additional_staff` and completes the
@@ -271,7 +273,7 @@ Payment methods follow extra charges because a surcharge may reference an extra-
 
 The owner may prepare corporate account invitations and initial credit terms or explicitly choose `Configure later`.
 
-External acceptance does not block onboarding or launch. Any invitation requested during onboarding is queued until submission.
+External acceptance does not block onboarding or launch. Any invitation requested during onboarding waits until launch.
 
 #### 11. Channel manager — optional
 
@@ -314,9 +316,8 @@ On successful submission:
 2. Create the immutable submission snapshot and durable delivery effects.
 3. Change the hotel to `pending_review` and record the audit event in the same transaction.
 4. Make onboarding read-only until changes are requested.
-5. After commit, process queued staff/corporate invitations and notify the assigned
-   salesperson plus superadmins. Delivery failures remain retryable and do not undo the
-   submission.
+5. After commit, notify the administrators selected by `Onboarding::DeliveryRecipients.admins_for`.
+   Staff and corporate invitations wait until launch. Delivery failures remain retryable and do not undo the submission.
 
 ## Admin review
 
@@ -331,18 +332,25 @@ The admin can:
 - Notify the owner and resume them at the affected section.
 - Keep the earlier submission as immutable history; do not delete or resend invitations.
 
-### Approve & go live
+### Approve setup
 
 - Run final server-side readiness validation.
 - Compare the current configuration digest with the submitted snapshot and block approval
   if the property changed after submission.
-- Change the hotel to `live`.
-- Enable normal hotel portal access.
-- Enable booking eligibility and normal scheduled operations.
-- Retain the approved snapshot as the read-only onboarding summary.
+- Change the hotel to `ready_to_launch`.
+- Notify the owner that a launch decision is required.
+- Retain the approved submission snapshot.
+
+### Owner launch decision
+
+- Choose whether to keep training activity or reset it.
+- Complete any requested reset before launch.
+- Compare setup with the approved snapshot and recheck one year of rates and availability.
+- Change the hotel to `live` through `Onboarding::CompleteTraining`.
+- Queue staff and corporate invitations, owner approval notifications, and the linked agent notification.
 
 Training sessions remain visible and manageable in admin review but are informational and
-never block submission or launch. OTA review shows channel names and credential presence
+do not replace the required owner launch decision. OTA review shows channel names and credential presence
 only, never usernames or passwords.
 
 ### Suspend

@@ -22,7 +22,7 @@ class Receivable < ApplicationRecord
 
   validates :invoice_id, uniqueness: true, allow_nil: true
   validates :invoice_number, presence: true, uniqueness: { scope: [ :hotel_id, :invoice_year ] }
-  validates :booking_folio_id, uniqueness: true
+  validates :booking_folio_id, uniqueness: { conditions: -> { where.not(status: "void") } }, unless: :void?
   validates :amount, presence: true, numericality: { greater_than: 0 }
   validates :paid_amount, :outstanding_amount, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :currency, :issued_on, :due_on, presence: true
@@ -35,6 +35,7 @@ class Receivable < ApplicationRecord
   before_validation :assign_invoice_reference
 
   scope :with_open_balance, -> { where.not(status: %w[paid void]).where(arel_table[:outstanding_amount].gt(0)) }
+  scope :allocatable, -> { left_joins(:invoice).where("invoices.id IS NULL OR invoices.state = ?", "finalized") }
   scope :due_before, ->(date) { where(arel_table[:due_on].lt(date)) }
 
   def overdue_as_of?(date = Date.current)

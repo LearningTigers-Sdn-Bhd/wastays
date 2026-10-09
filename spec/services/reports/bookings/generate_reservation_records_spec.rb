@@ -92,6 +92,38 @@ RSpec.describe Reports::Bookings::GenerateReservationRecords do
     expect(records).not_to respond_to(:hotel_contact_line)
   end
 
+  context "with configured extra charges" do
+    before do
+      folio = create(:booking_folio, booking:, hotel:)
+      create(:folio_forecasted_charge, booking_folio: folio, charge_kind: "extra_charge",
+        amount: 20, description: "Jetty fee")
+      create(:folio_forecasted_charge, booking_folio: folio, charge_kind: "extra_charge_tax",
+        identity: "jetty:sst", amount: 1.60, description: "SST on jetty fee")
+    end
+
+    it "keeps extras out of the default reservation records used by confirmations and vouchers" do
+      expect(records.total_due).to eq(648.to_d)
+      expect(records.charge_rows.map(&:description)).not_to include("Jetty fee", "SST on jetty fee")
+    end
+
+    it "includes extras, taxes and the updated amount in words when opted in" do
+      summary = described_class.new(booking:, include_extra_charges: true).call
+      expect(summary.total_due).to eq(669.60.to_d)
+      expect(summary.charge_rows.sum(0.to_d, &:gross)).to eq(summary.total_due)
+      expect(summary.summary_rows.map(&:label)).to include("Extra charges", "Taxes on extra charges")
+      expect(summary.total_in_words).to eq("Six hundred and sixty-nine ringgit and sixty sen only")
+      expect(booking.reload.total_amount).to eq(648.to_d)
+    end
+
+    it "still reports a genuine overpayment after including the extra charges" do
+      create(:folio_transaction, booking_folio: booking.booking_folio, transaction_type: "payment", category: "booking_payment", amount: 700)
+      summary = described_class.new(booking:, include_extra_charges: true).call
+
+      expect(summary.balance).to eq(-30.40.to_d)
+      expect(summary.summary_rows.last).to have_attributes(label: "Credit balance", amount: 30.40.to_d)
+    end
+  end
+
   it "always provides an address entry when the guest address is blank" do
     booking.update!(guest_home_address: nil)
 

@@ -8,6 +8,7 @@ module HotelPortal
 
         before_action :set_mode, only: :show
         before_action :set_booking_guest, if: -> { action_name == "show" && @mode != "add" }
+        before_action :ensure_guests_addable!, if: -> { action_name == "show" && @mode == "add" }
         before_action :set_removal_guest, only: :remove
         before_action :set_primary_candidate, only: :set_primary
 
@@ -42,6 +43,14 @@ module HotelPortal
           @mode = params[:mode].presence_in(MODES)
           @mode = "add" if params[:mode].blank?
           raise ActiveRecord::RecordNotFound unless @mode
+        end
+
+        # The buttons are hidden for other statuses; this keeps a stale sheet or
+        # a hand-built request from adding to a cancelled or no-show booking.
+        def ensure_guests_addable!
+          return if @booking.status.in?(Booking::GUEST_ADDABLE_STATUSES)
+
+          complete_action(alert: "Guests cannot be added to a #{@booking.status.humanize.downcase} booking.")
         end
 
         def set_booking_guest

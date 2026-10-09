@@ -8,7 +8,8 @@ RSpec.describe "Public::Concierge::Stays features", type: :request do
   let(:room_type) { create(:room_type, hotel: hotel) }
   let(:booking) do
     create(:booking, hotel: hotel, status: "checked_in", total_amount: 500.0,
-      currency: "MYR", guest_name: "Ahmad Zulkifli", guest_email: "ahmad@example.com")
+      currency: "MYR", guest_name: "Ahmad Zulkifli", guest_email: "ahmad@example.com",
+      check_in: hotel_today(hotel), check_out: hotel_today(hotel) + 1.day)
   end
   let(:stay_access) { create(:concierge_stay_access, hotel: hotel, booking: booking) }
   let(:args) { [ hotel.unique_id, hotel.public_id, stay_access.stay_access_id ] }

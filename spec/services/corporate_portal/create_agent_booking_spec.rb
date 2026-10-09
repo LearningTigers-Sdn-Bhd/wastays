@@ -120,12 +120,12 @@ RSpec.describe CorporatePortal::CreateAgentBooking do
     # having had a chance to pay.
     it "still gives an agent time on a booking taken after today's check-in time" do
       relationship.update!(agent_payment_hold_hours: 1)
-      arrival = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: Date.current, kind: :check_in)
+      arrival = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: hotel.current_business_date, kind: :check_in)
 
       travel_to(arrival + 1.hour) do
         result = call(
           [ [ { name: "Ada Lim", phone: "+60123456789" } ] ],
-          { check_in: Date.current.to_s, check_out: (Date.current + 2).to_s }
+          { check_in: arrival.to_date.to_s, check_out: (arrival.to_date + 2).to_s }
         )
 
         expect(result).to be_success

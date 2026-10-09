@@ -222,6 +222,7 @@ RSpec.describe "Onboarding review across days" do
   let(:actor) { create(:user, account: hotel.account) }
   let(:reviewer) { create(:user, :superadmin) }
   let(:room) { create(:room_type, hotel:, quantity: 3, base_price: 120) }
+  let(:upload_photos) { true }
   let(:submitted_end) { Date.new(2027, 9, 19) }
   let(:submission) { Onboarding::SubmitOnboarding.call(hotel:, actor:, idempotency_key: "dated-review").submission }
 
@@ -235,8 +236,10 @@ RSpec.describe "Onboarding review across days" do
       hotel.account.roles.find_by(slug:) || create(:role, account: hotel.account, slug:)
     end
     create(:user_hotel_access, hotel:, user: actor, role: roles.first)
-    hotel.photos.attach(io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")), filename: "property.jpg", content_type: "image/jpeg")
-    hotel.update!(featured_photo_attachment_id: hotel.photos.attachments.sole.id)
+    if upload_photos
+      hotel.photos.attach(io: File.open(Rails.root.join("spec/fixtures/files/sample_image.jpg")), filename: "property.jpg", content_type: "image/jpeg")
+      hotel.update!(featured_photo_attachment_id: hotel.photos.attachments.sole.id)
+    end
     create(:hotel_transaction_configuration, hotel:) unless hotel.hotel_transaction_configuration
     create(:hotel_payment_method, hotel:)
     Onboarding::InitializeProgress.new(hotel:).call
@@ -258,8 +261,31 @@ RSpec.describe "Onboarding review across days" do
     end)
     allow(Onboarding::DispatchPendingDeliveriesJob).to receive(:perform_later)
     allow(ChannelManagers::SyncJob).to receive(:perform_later)
+    unless upload_photos
+      expect(Onboarding::SavePropertyPhotos.new(hotel:, actor:, complete: true).call).to be_success
+    end
     expect(Onboarding::Readiness.new(hotel:).call).to have_attributes(ready: true)
     expect(submission).to be_present
+  end
+
+  context "without property photos" do
+    let(:upload_photos) { false }
+
+    it "submits, approves, and launches with the no-photos decision" do
+      expect(hotel.photos).not_to be_attached
+      expect(hotel.status).to eq("pending_review")
+      expect(submission.snapshot.dig("property", "photo_count")).to eq(0)
+      original = submission.snapshot.deep_dup
+
+      expect(Onboarding::ApproveOnboarding.call(hotel:, actor: reviewer)).to be_success
+      expect(Onboarding::CompleteTraining.call(hotel:, actor:, decision: "keep")).to be_success
+
+      expect(hotel.reload.status).to eq("live")
+      expect(hotel.onboarding_sections.find_by!(section_key: "property_photos").state).to eq("skipped")
+      expect(submission.reload.snapshot).to eq(original)
+      expect(Onboarding::Readiness.new(hotel:).call.warnings)
+        .to include(have_attributes(section_key: "property_photos", code: :deferred))
+    end
   end
 
   it "approves yesterday's submission and preserves submitted evidence" do

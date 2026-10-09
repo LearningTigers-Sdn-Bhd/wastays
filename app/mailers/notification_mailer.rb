@@ -100,6 +100,20 @@ class NotificationMailer < ApplicationMailer
     )
   end
 
+  def ar_invoice_correction(delivery)
+    assign_delivery(delivery)
+    @correction = ArInvoiceCorrection.where(hotel: delivery.hotel).find(@payload.fetch(:correction_id))
+    raise ArgumentError, "Correction documents are not ready." unless @correction.completed?
+
+    attachments["#{@correction.credit_reference}.pdf"] = Reports::AccountsReceivable::GenerateCorrectionCredit.new(correction: @correction).generate
+    replacement = @correction.replacement_receivable
+    raise Notifications::InvoiceDelivery::UnavailableError, "A newer correction has replaced these documents." if replacement&.void?
+    if replacement
+      attachments["#{replacement.formatted_invoice_number}.pdf"] = Reports::AccountsReceivable::GenerateInvoice.new(invoice: replacement).generate
+    end
+    mail(to: @payload.fetch(:recipient_email), subject: "Corrected invoice from #{@payload[:hotel_name]}")
+  end
+
   def invoice_package(delivery)
     assign_delivery(delivery)
     group = Notifications::InvoiceDelivery.load!(delivery:)

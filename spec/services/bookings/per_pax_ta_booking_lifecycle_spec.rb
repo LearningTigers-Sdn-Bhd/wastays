@@ -13,6 +13,7 @@ require "rails_helper"
 # L5/L6/L7's re-pricing-on-extend/shorten mechanics for a per-pax plan are
 # already covered by per_pax_channel_parity_spec.rb (X5) and this file (L5/L7).
 RSpec.describe "Per-pax TA booking lifecycle" do
+  include HotelTimeHelpers
   include_context "per-pax resort"
 
   let(:check_in) { Date.current + 20 }
@@ -48,9 +49,9 @@ RSpec.describe "Per-pax TA booking lifecycle" do
 
   # L3: check-in carries guests over; price unchanged
   it "L3: checking in a TA booking leaves the price unchanged" do
-    booking = book(plan: fb_plan, adults: 2, nights: 2, check_in: Date.current)
+    booking = book(plan: fb_plan, adults: 2, nights: 2, check_in: hotel_today(hotel))
     staff = create(:user, account: hotel.account)
-    BusinessDates::ResetAuthority.call!(hotel: hotel, date: Date.current)
+    BusinessDates::ResetAuthority.call!(hotel: hotel, date: hotel_today(hotel))
     original_total = booking.total_amount
 
     result = Bookings::ProcessCheckIn.new(
@@ -106,7 +107,7 @@ RSpec.describe "Per-pax TA booking lifecycle" do
 
   # L12: no-show
   it "L12: a no-show is finalized with a charge and the agency stays attached" do
-    business_date = Date.current
+    business_date = hotel_today(hotel)
     booking = book(plan: fb_plan, adults: 2, nights: 2, check_in: business_date)
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
     staff = create(:user, account: hotel.account)
@@ -124,7 +125,7 @@ RSpec.describe "Per-pax TA booking lifecycle" do
 
   # L13: hotel cancels a paid TA booking
   it "L13: the hotel can cancel a TA booking directly, releasing its inventory" do
-    business_date = Date.current
+    business_date = hotel_today(hotel)
     booking = book(plan: fb_plan, adults: 2, nights: 2, check_in: business_date)
     BusinessDates::ResetAuthority.call!(hotel: hotel, date: business_date)
     staff = create(:user, account: hotel.account)

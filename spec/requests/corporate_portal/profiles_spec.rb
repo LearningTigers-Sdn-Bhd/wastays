@@ -34,4 +34,34 @@ RSpec.describe "CorporatePortal::Profiles", type: :request do
 
     expect(response.body).to include("Billing address missing")
   end
+
+  it "lets the account holder change their temporary password" do
+    hotel = create(:hotel)
+    user.update!(temporary_password: "password123", temporary_password_hotel: hotel)
+    patch corporate_profile_path, params: { user: {
+      current_password: "password123", password: "personal-password", password_confirmation: "personal-password"
+    } }
+    expect(response).to redirect_to(corporate_profile_path)
+    expect(user.reload.temporary_password).to be_nil
+    expect(user.authenticate("personal-password")).to eq(user)
+  end
+
+  it "retains credentials and shows an error for an incorrect current password" do
+    user.update!(temporary_password: "password123", temporary_password_hotel: create(:hotel))
+    patch corporate_profile_path, params: { user: {
+      current_password: "wrong", password: "personal-password", password_confirmation: "personal-password"
+    } }
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("Current password is not correct")
+    expect(response.body).not_to include("personal-password", "value=\"wrong\"")
+    expect(user.reload.temporary_password).to eq("password123")
+  end
+
+  it "does not accept identity changes through the password endpoint" do
+    original_email = user.email
+    patch corporate_profile_path, params: { user: {
+      current_password: "password123", password: "personal-password", password_confirmation: "personal-password", email: "other@example.com"
+    } }
+    expect(user.reload.email).to eq(original_email)
+  end
 end

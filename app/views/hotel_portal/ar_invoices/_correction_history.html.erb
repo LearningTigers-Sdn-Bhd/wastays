@@ -1,0 +1,30 @@
+<% corrections = folio.ar_invoice_corrections.includes(:original_receivable, :replacement_receivable).order(created_at: :desc) %>
+<% if corrections.any? %>
+  <div class="space-y-3 border-b border-border px-5 py-4 text-sm" aria-label="Invoice correction history">
+    <% corrections.each do |correction| %>
+      <div class="space-y-1">
+        <p class="font-medium"><%= correction.editing? ? "Under correction" : "Invoice correction · #{correction.status.humanize}" %></p>
+        <p>
+          Original: <%= link_to correction.original_receivable.formatted_invoice_number, hotel_ar_invoice_path(current_hotel, correction.original_receivable), class: "underline" %>
+          <% if correction.replacement_receivable %>
+            · Replacement: <%= link_to correction.replacement_receivable.formatted_invoice_number, hotel_ar_invoice_path(current_hotel, correction.replacement_receivable), class: "underline" %>
+          <% end %>
+        </p>
+        <p class="text-muted-foreground"><%= correction.reason %></p>
+        <% if correction.credit_reference %>
+          <%= link_to "Credit note #{correction.credit_reference}", credit_hotel_ar_invoice_correction_path(current_hotel, correction), class: "underline", target: "_blank", rel: "noopener" %>
+        <% end %>
+        <% if correction.processing? %><p>Preparing corrected documents. LHDN validation may still be pending.</p><% end %>
+        <% if correction.error_message.present? %><p class="text-warning-foreground"><%= correction.error_message %></p><% end %>
+        <% delivery = NotificationDelivery.find_by(idempotency_key: "ar_correction:#{correction.id}") %>
+        <% if delivery %><p>Delivery: <%= delivery.status.humanize %><%= " · #{delivery.error_message}" if delivery.error_message.present? %></p><% end %>
+        <% if current_user.has_permission?("manage_folio_windows", hotel: current_hotel) && correction.completed? && !correction.replacement_receivable&.void? %>
+          <%= button_to "Send corrected documents", hotel_ar_invoice_correction_path(current_hotel, correction), method: :patch, params: { send_documents: "1" }, class: "underline" %>
+        <% end %>
+        <% if current_user.has_permission?("manage_folio_windows", hotel: current_hotel) && correction.failed? %>
+          <%= button_to "Retry correction documents", hotel_ar_invoice_correction_path(current_hotel, correction), method: :patch, class: "underline" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

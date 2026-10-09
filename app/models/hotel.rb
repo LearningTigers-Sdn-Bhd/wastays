@@ -582,7 +582,7 @@ class Hotel < ApplicationRecord
   end
 
   def ready_for_review?
-    property_profile_ready? && property_photos_ready? && rooms_ready? && inventory_ready?
+    property_profile_ready? && rooms_ready? && inventory_ready?
   end
 
   def property_profile_ready?

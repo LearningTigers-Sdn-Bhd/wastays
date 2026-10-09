@@ -196,23 +196,33 @@ RSpec.describe "Hotel onboarding shell", type: :request do
       document = response.parsed_body
       expect(document.css("h1").map { |heading| heading.text.strip }).to eq([ "Property photos" ])
       expect(document.at_css(".panel-empty-state__title").text.squish).to eq("No photos yet")
+      expect(document.text).to include("Optional", "Photos are optional and can be added later.")
+      expect(document.text).not_to include("At least one is needed")
       # The step heading is the shell's, and the empty state owns the only
       # upload button on the page while the album is empty.
       expect(document.css("h2").map { |heading| heading.text.strip }).not_to include("Property photos")
       expect(document.css("button[commandfor='hotel-photo-upload-sheet']").size).to eq(1)
     end
 
-    it "will not advance until the property has a photo" do
+    it "records no photos for now and advances to the team step" do
       patch hotel_onboarding_section_path(hotel, section_key: "property_photos"),
             params: { navigation_action: "save_continue" }
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Upload at least one photo")
-      expect(hotel.onboarding_sections.find_by!(section_key: "property_photos").state).to eq("not_started")
+      expect(response).to redirect_to(hotel_onboarding_section_path(hotel, section_key: "team_setup"))
+      expect(hotel.onboarding_sections.find_by!(section_key: "property_photos")).to have_attributes(
+        state: "skipped", skipped_at: be_present,
+        decision_metadata: { "source" => "property_photos", "decision" => "no_photos_now" }
+      )
+      expect(hotel.onboarding_audit_events.order(:id).last).to have_attributes(
+        event_type: "skipped", section_key: "property_photos",
+        metadata: { "source" => "property_photos", "decision" => "no_photos_now" }
+      )
+
+      get hotel_onboarding_section_path(hotel, section_key: "team_setup")
+      expect(response).to have_http_status(:ok)
     end
 
-    # The owner is never asked to nominate a featured photo, so one photo has to
-    # be enough on its own to satisfy the step.
+    # Uploading a photo still selects a featured photo automatically.
     it "advances on a single photo, which features itself" do
       attach_photo
 

@@ -8,7 +8,7 @@ module Onboarding
       Section.new(key: "property_profile", phase: "property", required: true, route_name: "property_profile", prerequisites: []),
       # Photos stand apart from the profile fields: they upload on their own as
       # soon as they are chosen, rather than being saved by the profile form.
-      Section.new(key: "property_photos", phase: "property", required: true, route_name: "property_photos", prerequisites: [ "property_profile" ]),
+      Section.new(key: "property_photos", phase: "property", required: false, route_name: "property_photos", prerequisites: [ "property_profile" ]),
       # Roles and staff were two steps. The roles half had nothing to do but tick
       # a box, so the two now share one page. See LEGACY_KEYS for the old routes.
       Section.new(key: "team_setup", phase: "team", required: true, route_name: "team_setup", prerequisites: [ "property_photos" ]),

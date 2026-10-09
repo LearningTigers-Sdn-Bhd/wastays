@@ -50,11 +50,9 @@ export default class extends Controller {
     })
   }
 
-  // The select menu is a progressive enhancement over a real <select>, which
-  // carries the value and emits a bubbling change when the styled menu syncs
-  // back to it.
+  // Radio cards emit a native bubbling change when the relationship changes.
   get relationshipControl() {
-    return this.element.querySelector('select[name$="[relationship_type]"]')
+    return this.element.querySelector('input[type="radio"][name$="[relationship_type]"]:checked')
   }
 
   // The switch posts an unchecked companion under the same name, so the visible

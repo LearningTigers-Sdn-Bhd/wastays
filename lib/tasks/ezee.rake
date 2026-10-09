@@ -32,7 +32,7 @@ namespace :ezee do
     hotel.sell_mode = "per_room"
     # Tourism tax stays enabled because the property really does charge it. The
     # importer leaves guest_country blank, which is what keeps it off imported
-    # bookings -- see docs/ezee-reservation-import.md section 2.2. Disabling it
+    # bookings -- see docs/integrations/ezee-reservation-import.md section 2.2. Disabling it
     # here would hide a regression in that behaviour.
     hotel.tourism_tax_enabled = true
     hotel.tourism_tax_amount = 10.0

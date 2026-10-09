@@ -15,7 +15,7 @@ module HotelPortal
 
     SECTION_CONTENT = {
       "property_profile" => [ "Property profile", "Add the identity, location, contact details, amenities, and policies guests need." ],
-      "property_photos" => [ "Property photos", "Upload the photos guests will see. At least one is needed; the first becomes the featured photo, and you can change which one that is at any time." ],
+      "property_photos" => [ "Property photos", "Add photos for guests to see. Photos are optional and can be added later." ],
       "team_setup" => [ "Team Management", "Review the roles your team will use, then list who needs access and under which role. Nothing is sent now. Invitations are created only after onboarding is successfully submitted." ],
       "taxes_fees" => [ "Taxes and fees", "Confirm statutory taxes and configure any mandatory property fees." ],
       "room_revenue" => [ "Room revenue", "Set how room sales post and which taxes and policies apply." ],

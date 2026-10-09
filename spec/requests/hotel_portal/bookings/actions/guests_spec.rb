@@ -56,6 +56,30 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(booking.booking_guests.find_by!(is_primary: false).guest.name).to eq("Added Guest")
   end
 
+  it "adds a guest to a checked-out booking" do
+    booking.update_columns(status: "completed")
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
+      params: { guest: { name: "Late Registration", country: "Malaysia", document_type: "passport", date_of_birth: "1993-04-05" } },
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:success)
+    expect(booking.booking_guests.find_by!(is_primary: false).guest.name).to eq("Late Registration")
+  end
+
+  it "refuses to add a guest to a cancelled booking" do
+    booking.update_columns(status: "cancelled")
+
+    get hotel_booking_action_manage_guest_path(hotel, booking, mode: "add")
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
+    expect(flash[:alert]).to eq("Guests cannot be added to a cancelled booking.")
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
+      params: { guest: { name: "Too Late", country: "Malaysia", document_type: "passport", date_of_birth: "1993-04-05" } }
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
+    expect(booking.booking_guests.where(is_primary: false)).not_to exist
+  end
+
   it "saves the tax number on a new guest record" do
     post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
       params: { guest: {

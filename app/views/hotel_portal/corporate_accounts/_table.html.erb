@@ -66,7 +66,12 @@
         <% end %>
 
         <% presenter.paginated_rows.each do |row| %>
-          <tr data-testid="<%= row.dom_id %>">
+          <tr data-testid="<%= row.dom_id %>" role="link" tabindex="0"
+            class="cursor-pointer focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/20"
+            aria-label="Edit <%= row.account_name %>"
+            data-controller="clickable-row"
+            data-clickable-row-url-value="<%= edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath) %>"
+            data-action="click->clickable-row#visit keydown->clickable-row#visitFromKeyboard">
             <%= render "hotel_portal/corporate_accounts/row_identity", row: row %>
             <td class="font-mono text-xs font-semibold text-foreground"><%= row.agent_code.presence || "—" %></td>
             <td class="text-muted-foreground">
@@ -80,29 +85,7 @@
                             exposure: row.credit_exposure, direct_bill: row.direct_bill? %></td>
             <td><%= render PanelsUI::Badge.new(label: row.status_label, variant: row.status_variant, indicator: true) %></td>
             <td class="text-muted-foreground"><%= row.created_on_label %></td>
-            <td class="text-right">
-              <%# An account the importer created has nobody able to sign in to it. %>
-              <% if row.relationship.unclaimed? %>
-                <%= render PanelsUI::Button.new(
-                  as: :a,
-                  href: new_hotel_corporate_account_path(current_hotel, hotel_corporate_account_id: row.relationship.id, return_to: request.fullpath),
-                  variant: :secondary,
-                  size: :sm,
-                  data: { testid: "external-account-invite-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
-                  <%= cached_icon "mail", class: "size-3.5", aria: { hidden: true } %>
-                  Invite contact
-                <% end %>
-              <% end %>
-              <%= render PanelsUI::Button.new(
-                as: :a,
-                href: edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath),
-                variant: :secondary,
-                size: :sm,
-                data: { testid: "external-account-edit-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
-                <%= cached_icon "square-pen", class: "size-3.5", aria: { hidden: true } %>
-                Edit
-              <% end %>
-            </td>
+            <td class="text-right"><%= render "hotel_portal/corporate_accounts/account_actions", row: row %></td>
           </tr>
         <% end %>
       <% end %>

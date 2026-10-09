@@ -1,8 +1,7 @@
 <%# app/views/hotel_portal/dashboard/_onboarding_wizard.html.erb %>
 
-<%# Setup splits the property profile and its photos across two steps; this tile
-    summarises both, so it only turns green once each one is done. %>
-<% profile_ready = @current_hotel.property_profile_ready? && @current_hotel.property_photos_ready? %>
+<%# Photos are optional, so this tile reflects the property details alone. %>
+<% profile_ready = @current_hotel.property_profile_ready? %>
 
 <div class="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-6 shadow-sm mb-8">
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -33,7 +32,7 @@
       </div>
       <div>
         <p class="text-sm font-bold <%= profile_ready ? 'text-emerald-900' : 'text-foreground' %>">Property Profile</p>
-        <p class="text-xs text-muted-foreground mb-2">Address, contact, and photos.</p>
+        <p class="text-xs text-muted-foreground mb-2">Address and contact details. Photos are optional.</p>
         <%= link_to "Edit Profile", edit_hotel_profile_path(@current_hotel), class: "text-xs font-bold text-brand-primary hover:underline" %>
       </div>
     </div>
