@@ -3,13 +3,14 @@ module ChannelManagers
     queue_as :default
     retry_on Channex::Client::RetryableRequestError, wait: :polynomially_longer, attempts: 8
 
+    # One push per hotel at a time: two overlapping pushes can land out of
+    # order, leaving the older snapshot on the OTAs.
+    limits_concurrency to: 1, key: ->(hotel_id, *) { hotel_id }, duration: 10.minutes
+
     def perform(hotel_id, start_date, end_date, sync_availability: true, sync_rates: true, sync_restrictions: true, room_type_ids: nil, rate_plan_ids: nil, rate_plan_fields: nil)
       hotel = Hotel.find(hotel_id)
       return if hotel.training_mode?
       return unless hotel.channel_manager_enabled?
-
-      # Clear cached connected channels to ensure fresh sync data
-      Rails.cache.delete("channex:channels:#{hotel.id}")
 
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
       result = adapter.push_ari(

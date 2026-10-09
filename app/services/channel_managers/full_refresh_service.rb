@@ -12,6 +12,10 @@ module ChannelManagers
       return OpenStruct.new(success?: false, message: "Channel publishing is unavailable while this property is in training.") if @hotel.training_mode?
       return OpenStruct.new(success?: false, message: "Channel manager not selected") unless @hotel.channel_manager_enabled?
 
+      # A full refresh is the moment to pick up newly connected OTAs; routine
+      # pushes reuse the cached channel list.
+      Rails.cache.delete("channex:channels:#{@hotel.id}")
+
       # We use 500 days as per Channex Certification requirements
       start_date = Date.current
       end_date = start_date + 499.days

@@ -22,7 +22,7 @@ module ChannelManagers
       end
 
       begin
-        ChannelManagers::SyncJob.perform_now(
+        ChannelManagers::SyncJob.perform_later(
           hotel_id,
           start_date,
           end_date,

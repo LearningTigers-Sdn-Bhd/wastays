@@ -44,6 +44,11 @@ RSpec.describe ChannelManagers::SyncJob, type: :job do
       .to have_enqueued_job(described_class).with(hotel.id, range.first, range.last)
   end
 
+  it "runs one push per hotel at a time" do
+    expect(described_class.concurrency_limit).to eq(1)
+    expect(described_class.new(hotel.id, range.first, range.last, sync_rates: false).concurrency_key).to end_with("/#{hotel.id}")
+  end
+
   it "accepts partial and availability-only outcomes" do
     [ :partial_success, :availability_only ].each do |status|
       allow(adapter).to receive(:push_ari).and_return(ChannelManagers::SyncResult.build(status, status.to_s))

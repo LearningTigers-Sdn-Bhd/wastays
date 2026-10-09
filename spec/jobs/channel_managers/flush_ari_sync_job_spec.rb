@@ -26,7 +26,7 @@ RSpec.describe ChannelManagers::FlushAriSyncJob, type: :job do
     })
     Rails.cache.write("channex:ari:scheduled:#{hotel.id}", true)
 
-    expect(ChannelManagers::SyncJob).to receive(:perform_now).with(
+    expect(ChannelManagers::SyncJob).to receive(:perform_later).with(
       hotel.id,
       Date.new(2026, 5, 10),
       Date.new(2026, 5, 12),
@@ -49,7 +49,7 @@ RSpec.describe ChannelManagers::FlushAriSyncJob, type: :job do
       ChannelManagers::BufferAriSyncJob.perform_now(hotel.id, Date.new(2026, 11, 5), type: :availability, room_type_id: 1)
       clear_enqueued_jobs
 
-      allow(ChannelManagers::SyncJob).to receive(:perform_now) do
+      allow(ChannelManagers::SyncJob).to receive(:perform_later) do
         ChannelManagers::BufferAriSyncJob.perform_now(hotel.id, Date.new(2026, 11, 20), type: :availability, room_type_id: 2)
       end
 
@@ -65,7 +65,7 @@ RSpec.describe ChannelManagers::FlushAriSyncJob, type: :job do
   context "when the push fails" do
     it "puts the changes back for the retry" do
       ChannelManagers::BufferAriSyncJob.perform_now(hotel.id, Date.new(2026, 11, 5), type: :availability, room_type_id: 1)
-      allow(ChannelManagers::SyncJob).to receive(:perform_now).and_raise(ActiveRecord::ConnectionTimeoutError)
+      allow(ChannelManagers::SyncJob).to receive(:perform_later).and_raise(ActiveRecord::ConnectionTimeoutError)
 
       expect { described_class.perform_now(hotel.id) }.to raise_error(ActiveRecord::ConnectionTimeoutError)
 

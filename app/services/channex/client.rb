@@ -24,6 +24,10 @@ module Channex
     end
 
     def post(path, body = {})
+      unless AriRateLimiter.allow?(path, body)
+        return { error: "Channex rate limit reached for #{path}", status: "429", details: "throttled before sending", retryable: true }
+      end
+
       uri = URI("#{@base_url}#{path}")
       request = Net::HTTP::Post.new(uri)
       request.body = body.to_json if body.present?
