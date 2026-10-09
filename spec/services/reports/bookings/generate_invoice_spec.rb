@@ -155,6 +155,7 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
         expect(text).to include("Page 1 of")
         expect(text).not_to include("Printed by: F. Suhaila")
         expect(text).not_to include("Guest Name:")
+        expect(text).not_to include("Guest name")
         expect(text).not_to include("MYR 100.00")
       end
     end
@@ -341,11 +342,39 @@ RSpec.describe ::Reports::Bookings::GenerateInvoice do
       Invoices::Finalize.call!(folio: corporate_folio, issued_by: nil, balance: 0)
       relationship.corporate_account.update!(name: "Renamed Events")
       terms.update!(purchase_order_reference: "PO-CHANGED", authorization_reference: "AUTH-CHANGED")
+      booking.update!(guest_name: "Changed Guest")
+      corporate_folio.booking.reload
 
       text = pdf_text(described_class.new(folio: corporate_folio).generate)
 
       expect(text).to include("FOLIO INVOICE", "BILL TO (PAYER)", "Acme Events", "Company", "PO-CASH-42", "AUTH-CASH-9")
-      expect(text).not_to include("Renamed Events", "PO-CHANGED", "AUTH-CHANGED")
+      expect(text).to include("STAY DETAILS", "Guest name", "John Doe")
+      expect(text).not_to include("Renamed Events", "PO-CHANGED", "AUTH-CHANGED", "Changed Guest")
+    end
+
+    it "renders a long guest name alongside stay details on a direct bill invoice" do
+      guest_name = "Alexandra Catherine Elizabeth Montgomery Wellington"
+      booking.update!(guest_name:)
+      relationship = create(:hotel_corporate_account,
+        hotel:,
+        corporate_account: create(:account, :corporate, name: "Acme Travel"),
+        account_type: "travel_agent",
+        relationship_type: "direct_bill")
+      corporate_folio = create(:booking_folio, :secondary,
+        booking:,
+        hotel:,
+        hotel_corporate_account: relationship,
+        status: "closed")
+      receivable = create(:ar_invoice,
+        booking_folio: corporate_folio,
+        hotel_corporate_account: relationship,
+        metadata: { "document_snapshot" => Invoices::Snapshot.call(folio: corporate_folio) })
+
+      text = pdf_text(described_class.new(invoice: receivable.invoice).generate)
+
+      expect(text).to include("ACCOUNTS RECEIVABLE INVOICE", "BILL TO (PAYER)", "Acme Travel", "Guest name")
+      expect(text.gsub(/\s+/, " ")).to include(guest_name)
+      expect(text).to include("Confirm no.", "BK-778291", "412 / Deluxe King", "Arrival", "Departure", "Charges", "Summary (MYR)")
     end
   end
 

@@ -261,13 +261,15 @@ module Reports
       end
 
       def stay_detail_entries
-        [
+        entries = [
           [ "Booking ref", snapshot_or_live("booking", "reservation_reference") { booking.formatted_reservation_number } ],
           [ "Confirm no.", snapshot_or_live("booking", "confirmation_token") { booking.confirmation_token } ],
           [ "Room / type", room_summary ],
           [ "Arrival", format_datetime(snapshot_or_live("booking", "check_in") { booking.check_in }) ],
           [ "Departure", format_datetime(snapshot_or_live("booking", "check_out") { booking.check_out }) ]
         ]
+        entries.prepend([ "Guest name", snapshot_or_live("booking", "guest_name") { booking.guest_name } ]) if corporate_payer?
+        entries
       end
 
       # The frame draws the masthead from whatever answers to these, so an issued invoice
