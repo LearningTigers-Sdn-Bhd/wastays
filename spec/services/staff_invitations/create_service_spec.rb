@@ -112,6 +112,30 @@ RSpec.describe StaffInvitations::CreateService do
     expect(result.error).to eq("This email belongs to a corporate account. Use a separate staff email.")
   end
 
+  it "rejects a normalized partner email without creating an invitation or sending mail" do
+    partner = create(:user, :super_agent)
+    result = nil
+
+    expect {
+      result = service(email: "  #{partner.email.upcase}  ").call
+    }.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq(StaffInvitation::PARTNER_INVITATION_ERROR)
+    expect(result.invitation).not_to be_persisted
+  end
+
+  it "preserves an old partner invitation when re-inviting" do
+    invitation = service.call.invitation
+    create(:user, :super_agent, email: invitation.email)
+    attributes = invitation.attributes
+
+    result = service.call
+
+    expect(result.success?).to be(false)
+    expect(invitation.reload.attributes).to eq(attributes)
+  end
+
   it "rejects a user who already has active access to the property" do
     existing = create(:user, account: account, email: "on.staff@example.com")
     create(:user_hotel_access, user: existing, hotel: hotel, role: role)

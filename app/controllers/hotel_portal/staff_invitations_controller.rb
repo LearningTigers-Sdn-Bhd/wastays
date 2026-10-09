@@ -50,7 +50,7 @@ module HotelPortal
     end
 
     def set_invitation
-      @invitation = current_hotel.staff_invitations.pending.find(params[:id])
+      @invitation = current_hotel.staff_invitations.excluding_partners.pending.find(params[:id])
     end
 
     def available_roles

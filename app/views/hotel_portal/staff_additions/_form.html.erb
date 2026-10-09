@@ -1,0 +1,59 @@
+<div data-controller="ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(id: "add-staff-sheet", side: :right, size: :md,
+    title: "Add Staff", description: "Give a staff member access without sending an invitation.", body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with scope: :staff_addition, id: "add-staff-form",
+        url: (@lookup_ready ? hotel_staff_addition_path(current_hotel) : lookup_hotel_staff_addition_path(current_hotel)),
+        class: "space-y-5 p-4" do |form| %>
+        <% if @errors.any? %>
+          <%= render PanelsUI::Alert.new(tone: :destructive, title: "Staff member could not be added", role: :alert) do |alert| %>
+            <% alert.with_description do %><%= @errors.to_sentence %><% end %>
+          <% end %>
+        <% end %>
+
+        <%= render PanelsUI::FormField.new(form: form, attribute: :email, label: "Login email",
+          hint: "An existing staff login from this hotel account can be linked to this property.",
+          required: true, readonly: @lookup_ready) do |field| %>
+          <% field.with_input(type: :email, value: @attributes[:email], autocomplete: "email", placeholder: "staff@example.com") %>
+        <% end %>
+
+        <% if @lookup_ready %>
+          <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Full name",
+            required: @existing_user.nil?, readonly: @existing_user.present?) do |field| %>
+            <% field.with_input(value: @existing_user ? @existing_user.name : @attributes[:name],
+              autocomplete: "name", placeholder: "Aisha Rahman") %>
+          <% end %>
+          <p class="text-sm text-muted-foreground">
+            <% if @existing_user %>
+              This existing staff login will be linked to this property. Its name, email, and password will stay the same.
+            <% else %>
+              A temporary password will be generated after you add this staff member.
+            <% end %>
+          </p>
+
+          <%= render PanelsUI::FormField.new(form: form, attribute: :role_id, label: "Assigned role",
+            hint: "This role controls what they can see and do at this specific property.", required: true) do |field| %>
+            <% field.with_select_menu(available_roles.map { |role| { label: role.name, value: role.id } },
+              selected: @attributes[:role_id], prompt: "Select a role", required: true) %>
+          <% end %>
+
+          <% if @outstanding_invitation %>
+            <%= render PanelsUI::Alert.new(tone: :warning, title: "Outstanding invitation") do |alert| %>
+              <% alert.with_description do %>Adding this staff member will cancel their outstanding invitation.<% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% sheet.with_footer do %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
+        data: { action: "click->ui--sheet#close" }) do %>Cancel<% end %>
+      <% if @lookup_ready %>
+        <%= render PanelsUI::Button.new(as: :a, href: new_hotel_staff_addition_path(current_hotel), variant: :ghost, size: :sm,
+          data: { turbo_frame: turbo_frame_request_id.presence || "settings_action_sheet" }) do %>Change email<% end %>
+      <% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: "add-staff-form", size: :sm,
+        data: { turbo_submits_with: "Please wait…" }) do %><%= @lookup_ready ? "Add staff" : "Continue" %><% end %>
+    <% end %>
+  <% end %>
+</div>
