@@ -1,7 +1,7 @@
 module ChannelManagers
   class SyncJob < ApplicationJob
     queue_as :default
-    retry_on Channex::Client::RetryableRequestError, wait: :exponentially_longer, attempts: 8
+    retry_on Channex::Client::RetryableRequestError, wait: :polynomially_longer, attempts: 8
 
     def perform(hotel_id, start_date, end_date, sync_availability: true, sync_rates: true, sync_restrictions: true, room_type_ids: nil, rate_plan_ids: nil, rate_plan_fields: nil)
       hotel = Hotel.find(hotel_id)

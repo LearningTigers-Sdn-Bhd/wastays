@@ -37,6 +37,13 @@ RSpec.describe ChannelManagers::SyncJob, type: :job do
     expect { perform }.to raise_error(Channex::Client::RetryableRequestError, "HTTP 503")
   end
 
+  it "re-enqueues itself with a backoff when Channex answers 429" do
+    allow(adapter).to receive(:push_ari).and_raise(Channex::Client::RetryableRequestError, "HTTP 429")
+
+    expect { described_class.perform_now(hotel.id, range.first, range.last) }
+      .to have_enqueued_job(described_class).with(hotel.id, range.first, range.last)
+  end
+
   it "accepts partial and availability-only outcomes" do
     [ :partial_success, :availability_only ].each do |status|
       allow(adapter).to receive(:push_ari).and_return(ChannelManagers::SyncResult.build(status, status.to_s))

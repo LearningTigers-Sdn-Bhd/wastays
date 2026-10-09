@@ -1,7 +1,7 @@
 module ChannelManagers
   class IngestRevisionJob < ApplicationJob
     queue_as :default
-    retry_on Channex::Client::RetryableRequestError, wait: :exponentially_longer, attempts: 8
+    retry_on Channex::Client::RetryableRequestError, wait: :polynomially_longer, attempts: 8
 
     def perform(hotel_id, revision_id)
       hotel = Hotel.find(hotel_id)
