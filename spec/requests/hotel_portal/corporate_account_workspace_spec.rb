@@ -93,6 +93,8 @@ RSpec.describe "HotelPortal::CorporateAccountWorkspace", type: :request do
     expect(row["tabindex"]).to eq("0")
     expect(row["data-action"]).to include("keydown->clickable-row#visitFromKeyboard")
     expect(row["data-clickable-row-url-value"]).to include("/edit")
+    account_link = row.at_css('th[scope="row"] a')
+    expect(account_link["href"]).to eq(edit_hotel_corporate_account_path(hotel, relationship, return_to: hotel_corporate_accounts_path(hotel)))
     edit = row.at_css("[data-testid='external-account-edit-#{relationship.id}']")
     expect(edit["data-turbo-frame"]).to eq("_top")
   end

@@ -5,25 +5,25 @@
   </div>
   <%= form.fields_for :corporate_account, @corporate_account do |account_form| %>
     <%= render PanelsUI::FormField.new(form: account_form, attribute: :name, label: "Company name") do |field| %>
-      <% field.with_input(required: true, autocomplete: "organization") %>
+      <% field.with_input(required: true, autocomplete: "organization", placeholder: "e.g. Acme Travel") %>
     <% end %>
   <% end %>
   <div class="grid gap-4 sm:grid-cols-2">
     <%= render PanelsUI::FormField.new(form: form, attribute: :contact_email, label: "Contact email") do |field| %>
-      <% field.with_input(type: :email, value: @relationship.effective_contact_email, autocomplete: "email") %>
+      <% field.with_input(type: :email, value: @relationship.effective_contact_email, autocomplete: "email", placeholder: "e.g. billing@company.com") %>
     <% end %>
     <%= render PanelsUI::FormField.new(form: form, attribute: :contact_phone, label: "Contact phone") do |field| %>
-      <% field.with_input(type: :tel, autocomplete: "tel") %>
+      <% field.with_input(type: :tel, autocomplete: "tel", placeholder: "e.g. +60 12-345 6789") %>
     <% end %>
     <%= render PanelsUI::FormField.new(form: form, attribute: :tin, label: "Tax identification number (TIN)", hint: "Needed for LHDN e-invoices this company can claim.") do |field| %>
-      <% field.with_input(autocomplete: "off", data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
+      <% field.with_input(autocomplete: "off", placeholder: "Enter the company's TIN", data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
     <% end %>
     <%= render PanelsUI::FormField.new(form: form, attribute: :brn, label: "Business registration number") do |field| %>
-      <% field.with_input(autocomplete: "off", data: { tin_validation_target: "idValue", action: "blur->tin-validation#check" }) %>
+      <% field.with_input(autocomplete: "off", placeholder: "Enter the business registration number", data: { tin_validation_target: "idValue", action: "blur->tin-validation#check" }) %>
     <% end %>
     <p class="text-xs text-muted-foreground sm:col-span-2" data-tin-validation-target="feedback" hidden></p>
     <%= render PanelsUI::FormField.new(form: form, attribute: :sst_registration_number, label: "SST registration number") do |field| %>
-      <% field.with_input(autocomplete: "off") %>
+      <% field.with_input(autocomplete: "off", placeholder: "Enter the SST registration number") %>
     <% end %>
   </div>
 </section>
@@ -36,10 +36,10 @@
     <%= form.fields_for :corporate_user, @corporate_user do |user_form| %>
       <div class="grid gap-4 sm:grid-cols-2">
         <%= render PanelsUI::FormField.new(form: user_form, attribute: :name, label: "Contact person") do |field| %>
-          <% field.with_input(required: true, autocomplete: "name") %>
+          <% field.with_input(required: true, autocomplete: "name", placeholder: "e.g. Alex Tan") %>
         <% end %>
         <%= render PanelsUI::FormField.new(form: user_form, attribute: :email, label: "Login email") do |field| %>
-          <% field.with_input(type: :email, required: true, autocomplete: "email") %>
+          <% field.with_input(type: :email, required: true, autocomplete: "email", placeholder: "e.g. agent@company.com") %>
         <% end %>
       </div>
     <% end %>
@@ -48,14 +48,14 @@
   <% end %>
   <div class="grid gap-4 sm:grid-cols-2">
     <%= render PanelsUI::FormField.new(form: form, attribute: :account_type, label: "Account type") do |field| %>
-      <% field.with_select_menu(HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } }, selected: @relationship.account_type) %>
+      <% field.with_select_menu(HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } }, selected: @relationship.account_type, prompt: "Select an account type") %>
     <% end %>
     <%= render PanelsUI::FormField.new(form: form, attribute: :market, label: "Market",
       hint: "Local agents are offered local rates; international agents are offered international rates. With no market set, only rates open to both are available.") do |field| %>
       <% field.with_select_menu([ { label: "Not set", value: "" } ] + HotelCorporateAccount::MARKETS.map { |market| { label: HotelCorporateAccount::MARKET_LABELS.fetch(market), value: market } }, selected: @relationship.market.to_s) %>
     <% end %>
-    <%= render PanelsUI::FormField.new(form: form, attribute: :agent_code, label: "Account code") do |field| %>
-      <% field.with_input(readonly: true) %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :agent_code, label: "Account code", readonly: true) do |field| %>
+      <% field.with_input(placeholder: "Assigned automatically") %>
     <% end %>
   </div>
 </section>

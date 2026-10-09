@@ -93,6 +93,11 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     expect(relationship.reload.payment_terms_days).to eq(45)
     click_link "Back to accounts"
     expect(page).to have_current_path(hotel_corporate_accounts_path(hotel, account_type: "government"), ignore_query: false)
+    account_link = find("[data-testid='external-account-row-#{relationship.id}'] th a")
+    account_link.hover
+    expect(page.evaluate_script("window.getComputedStyle(arguments[0]).textDecorationLine", account_link)).to eq("underline")
+    account_link.click
+    expect(page).to have_css("[data-testid='corporate-account-workspace']")
   end
 
   it "suspends an account from the workspace More menu" do
