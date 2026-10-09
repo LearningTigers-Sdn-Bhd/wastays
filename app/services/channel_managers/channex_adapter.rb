@@ -1034,6 +1034,11 @@ module ChannelManagers
               end
             end
 
+            # The fields that changed may have no value on this row (the same
+            # plan on another room type, say). An entry with nothing in it
+            # tells Channex nothing, so it isn't sent.
+            next if val_data.except(:property_id, :rate_plan_id).empty?
+
             if current_range.nil?
               current_range = val_data.merge(date_from: date.to_s, date_to: date.to_s)
             elsif current_range.except(:date_from, :date_to) == val_data && Date.parse(current_range[:date_to]) + 1.day == date

@@ -237,6 +237,23 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(client_double).not_to have_received(:post)
     end
 
+    it 'leaves out a date whose changed field has no value' do
+      rate_plan.room_rates.find_by!(date: start_date).update_columns(stop_sell: true)
+      allow(client_double).to receive(:post).with("/availability", anything).and_return({ "data" => { "id" => "task_1" } })
+
+      expect(client_double).to receive(:post).with("/restrictions", {
+        values: [
+          { property_id: "ch_prop_123", rate_plan_id: "ch_rp_123", date_from: start_date.to_s, date_to: start_date.to_s, stop_sell: 1 }
+        ]
+      }).and_return({ "data" => { "id" => "task_2" } })
+
+      adapter.push_ari(
+        date_range: (start_date..end_date), sync_availability: false, sync_rates: false, sync_restrictions: true,
+        rate_plan_ids: { rate_plan.id.to_s => { "min" => start_date.to_s, "max" => end_date.to_s } },
+        rate_plan_fields: { rate_plan.id.to_s => [ "stop_sell" ] }
+      )
+    end
+
     it 'tells the OTAs a closed date has nothing for sale' do
       room_type.room_inventories.find_by!(date: start_date + 1.day).update!(status: "closed")
       allow(client_double).to receive(:post).with("/restrictions", anything).and_return({ "data" => { "id" => "task_2" } })
