@@ -11,6 +11,7 @@ module Public
 
       @existing_user = User.find_by(email: @invitation.email)
       return redirect_corporate_collision if @existing_user&.corporate?
+      return redirect_partner_collision if @existing_user&.super_agent?
 
       @user = User.new(email: @invitation.email, name: @invitation.name)
     end
@@ -20,6 +21,7 @@ module Public
 
       user = User.find_by(email: @invitation.email)
       return redirect_corporate_collision if user&.corporate?
+      return redirect_partner_collision if user&.super_agent?
 
       if user
         accept_invitation_for(user)
@@ -50,6 +52,10 @@ module Public
       @invitation.accept!(user)
       sign_in_user(user)
       redirect_to invitation_destination, notice: "Welcome to #{@invitation.hotel.name}."
+    rescue ActiveRecord::RecordInvalid => e
+      raise unless e.record.errors[:base].include?(StaffInvitation::PARTNER_INVITATION_ERROR)
+
+      redirect_partner_collision
     end
 
     def invitation_destination
@@ -67,6 +73,10 @@ module Public
 
     def redirect_unavailable
       redirect_to login_path, alert: "This invitation is invalid or has expired."
+    end
+
+    def redirect_partner_collision
+      redirect_to login_path, alert: StaffInvitation::PARTNER_INVITATION_ERROR
     end
 
     def redirect_corporate_collision

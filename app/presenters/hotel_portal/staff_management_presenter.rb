@@ -71,12 +71,13 @@ module HotelPortal
 
     def accesses
       hotel.user_hotel_accesses
+           .excluding_partners
            .includes(:user, role: :permissions)
            .in_directory_order
     end
 
     def invitations
-      hotel.staff_invitations.listable.includes(:role, :invited_by_user).order(created_at: :desc)
+      hotel.staff_invitations.excluding_partners.listable.includes(:role, :invited_by_user).order(created_at: :desc)
     end
 
     def staff_row(access)
@@ -114,7 +115,7 @@ module HotelPortal
         id: invitation.id,
         email: invitation.email,
         role_name: invitation.role&.name,
-        invited_by: invitation.invited_by_user.name,
+        invited_by: invitation.invited_by_user.super_agent? ? "WAStays partner" : invitation.invited_by_user.name,
         # "Pending" is a claim about the invitee — they were asked and have not
         # answered. Someone listed during setup with the send switch off has not
         # been asked, so the row says so rather than blaming them for silence.

@@ -54,6 +54,7 @@ module StaffInvitations
 
     def rejection
       return "Email and role are required." if @email.blank? || @role.blank?
+      return StaffInvitation::PARTNER_INVITATION_ERROR if invitee&.super_agent?
       return "This email belongs to a corporate account. Use a separate staff email." if invitee&.corporate?
       return "This user already has active access to this property." if already_has_access?
 

@@ -6,6 +6,45 @@ RSpec.describe "Public::StaffInvitations", type: :request do
   let(:token) { "accept-token" }
   let!(:invitation) { create(:staff_invitation, email: "newstaff@example.com", token_digest: StaffInvitation.digest(token)) }
 
+  context "an existing invitation for a partner account" do
+    let!(:partner) { create(:user, :super_agent, email: invitation.email) }
+
+    it "rejects the acceptance form without exposing the account" do
+      get staff_invitation_path(token)
+
+      expect(response).to redirect_to(login_path)
+      expect(flash[:alert]).to eq(StaffInvitation::PARTNER_INVITATION_ERROR)
+      expect(invitation.reload).not_to be_accepted
+    end
+
+    [ nil, 1.day.ago ].each do |deactivated_at|
+      it "rejects acceptance while preserving #{deactivated_at ? 'revoked' : 'active'} access" do
+        access = create(:user_hotel_access, user: partner, hotel: invitation.hotel,
+                                           role: create(:role, account: invitation.account), deactivated_at: deactivated_at)
+        access_attributes = access.attributes
+        invitation_attributes = invitation.attributes
+
+        expect {
+          patch staff_invitation_path(token), params: { user: {} }
+        }.not_to change(UserHotelAccess, :count)
+
+        expect(response).to redirect_to(login_path)
+        expect(flash[:alert]).to eq(StaffInvitation::PARTNER_INVITATION_ERROR)
+        expect(access.reload.attributes).to eq(access_attributes)
+        expect(invitation.reload.attributes).to eq(invitation_attributes)
+      end
+    end
+
+    it "does not create hotel access for a partner" do
+      expect {
+        patch staff_invitation_path(token), params: { user: {} }
+      }.not_to change(UserHotelAccess, :count)
+
+      expect(response).to redirect_to(login_path)
+      expect(invitation.reload).not_to be_accepted
+    end
+  end
+
   describe "GET /staff-invitations/:token" do
     it "renders the acceptance form" do
       get staff_invitation_path(token)
@@ -88,6 +127,23 @@ RSpec.describe "Public::StaffInvitations", type: :request do
       expect(response).to redirect_to(login_path)
       expect(flash[:alert]).to include("corporate account")
       expect(corporate_user.reload).to be_corporate
+    end
+
+    it "redirects without granting access if the recipient becomes a partner during acceptance" do
+      user = create(:user, email: invitation.email, account: invitation.account)
+      allow(StaffInvitation).to receive(:find_by_token).with(token).and_return(invitation)
+      allow(invitation).to receive(:accept!).and_wrap_original do |accept, invitee|
+        user.update!(role: "super_agent")
+        accept.call(invitee)
+      end
+
+      expect {
+        patch staff_invitation_path(token), params: { user: {} }
+      }.not_to change(UserHotelAccess, :count)
+
+      expect(response).to redirect_to(login_path)
+      expect(flash[:alert]).to eq(StaffInvitation::PARTNER_INVITATION_ERROR)
+      expect(invitation.reload).not_to be_accepted
     end
   end
 end

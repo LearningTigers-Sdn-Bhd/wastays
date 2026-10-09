@@ -15,6 +15,101 @@ RSpec.describe "HotelPortal::Users", type: :request do
     sign_in_as(user)
   end
 
+  context "partner accounts" do
+    let(:partner) { create(:user, :super_agent, name: "Hidden Partner") }
+    let(:partner_role) { create(:role, account: account, slug: "general_manager", name: "General Manager") }
+    let!(:partner_access) { create(:user_hotel_access, user: partner, hotel: hotel, role: partner_role) }
+
+    it "excludes active and revoked partners while keeping normal staff" do
+      revoked_partner = create(:user, :super_agent, name: "Revoked Partner")
+      create(:user_hotel_access, user: revoked_partner, hotel: hotel, role: role, deactivated_at: 1.day.ago)
+
+      get hotel_users_path(hotel)
+
+      expect(response.body).to include(CGI.escapeHTML(user.name), user.email)
+      expect(response.body).not_to include(partner.name, partner.email, revoked_partner.name, revoked_partner.email)
+      expect(partner_access.reload).to be_active
+      expect(partner_access.role).to eq(partner_role)
+    end
+
+    it "shows the staff empty state when only partners have access" do
+      user.user_hotel_accesses.find_by!(hotel: hotel).destroy!
+      sign_in_as(create(:user, :superadmin))
+
+      get hotel_users_path(hotel)
+
+      expect(response.body).to include("No staff have access yet")
+      expect(response.body).not_to include(partner.name, partner.email)
+    end
+
+    it "hides old sent and unsent partner invitations" do
+      sent = create(:staff_invitation, account: account, hotel: hotel, role: role, invited_by_user: user)
+      held = create(:staff_invitation, :held, account: account, hotel: hotel, role: role, invited_by_user: user)
+      create(:user, :super_agent, email: sent.email)
+      create(:user, :super_agent, email: held.email)
+
+      get hotel_users_path(hotel)
+
+      expect(response.body).not_to include(sent.email, held.email, "Pending Invitations")
+      expect(StaffInvitation.exists?(sent.id)).to be(true)
+      expect(StaffInvitation.exists?(held.id)).to be(true)
+    end
+
+    it "shows a generic inviter label for real staff invited by a partner" do
+      invitation = create(:staff_invitation, account: account, hotel: hotel, role: role, invited_by_user: partner)
+
+      get hotel_users_path(hotel)
+
+      expect(response.body).to include(invitation.email, "WAStays partner")
+      expect(response.body).not_to include(partner.name, partner.email)
+    end
+
+    it "rejects a normalized partner email without sending an invitation" do
+      expect {
+        post hotel_users_path(hotel), params: { email: "  #{partner.email.upcase}  ", role_id: partner_role.id }
+      }.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include(StaffInvitation::PARTNER_INVITATION_ERROR)
+      expect(hotel.staff_invitations).to be_empty
+      expect(partner_access.reload).to be_active
+    end
+
+    [ "staff manager", "platform admin" ].each do |actor|
+      context "as a #{actor}" do
+        before { sign_in_as(create(:user, :superadmin)) } if actor == "platform admin"
+
+        [ "active", "revoked" ].each do |status|
+          context "with #{status} partner access" do
+            before { partner_access.deactivate! } if status == "revoked"
+
+            %i[edit update revoke reactivate delete].each do |action|
+              it "returns 404 for #{action} without changing access" do
+                attributes = partner_access.reload.attributes
+
+                case action
+                when :edit
+                  get edit_hotel_user_path(hotel, partner_access)
+                when :update
+                  patch hotel_user_path(hotel, partner_access), params: { user_hotel_access: { role_id: partner_role.id } }
+                when :revoke
+                  patch status_hotel_user_path(hotel, partner_access), params: { active: "0" }
+                when :reactivate
+                  patch status_hotel_user_path(hotel, partner_access), params: { active: "1" }
+                when :delete
+                  delete hotel_user_path(hotel, partner_access)
+                end
+
+                expect(response).to have_http_status(:not_found)
+                expect(partner_access.reload.attributes).to eq(attributes)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
   describe "GET /hotel/:hotel_id/staff" do
     it "renders the staff index" do
       get hotel_users_path(hotel)
