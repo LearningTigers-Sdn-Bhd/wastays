@@ -121,14 +121,20 @@ RSpec.describe ChannelManagers::IngestBookingService do
     expect(room_type.room_inventories.order(:date).pluck(:quantity)).to eq([ 0, 0 ])
   end
 
-  it "refreshes special requests from each revision" do
-    described_class.new(booking_data: booking_data.merge(special_requests: "Request 1 pillow")).call
-    modification = booking_data.merge(special_requests: "Request 1 pillow if can.", revision_number: 2)
+  it "refreshes the OTA notes from each revision but never the staff remark" do
+    first = described_class.new(booking_data: booking_data.merge(channel_notes: "Request 1 pillow")).call
+    expect(first.booking.reload).to have_attributes(channel_notes: "Request 1 pillow", special_requests: "Request 1 pillow")
+
+    first.booking.update!(special_requests: "VIP, late check-in arranged")
+    modification = booking_data.merge(channel_notes: "Request 1 pillow if can.", revision_number: 2)
 
     result = described_class.new(booking_data: modification).call
 
     expect(result).to be_success, result.message
-    expect(result.booking.reload.special_requests).to eq("Request 1 pillow if can.")
+    expect(result.booking.reload).to have_attributes(
+      channel_notes: "Request 1 pillow if can.",
+      special_requests: "VIP, late check-in arranged"
+    )
   end
 
   it "renames the guest profile it created when a later revision changes the guest" do

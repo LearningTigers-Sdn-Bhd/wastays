@@ -403,10 +403,10 @@ RSpec.describe ChannelManagers::ChannexAdapter do
         expect(result[:guest_details][:name]).to eq("Henryz Tanz")
       end
 
-      it "carries the channel notes and the booker into special requests" do
+      it "carries the channel notes and the booker into the OTA notes" do
         result = adapter.ingest_booking(payload: payload, require_property_binding: false)
 
-        expect(result[:special_requests]).to eq(
+        expect(result[:channel_notes]).to eq(
           "Request 1 pillow if can.\nSmoking Preference: Smoking\nBooked by: Henry Tan"
         )
       end

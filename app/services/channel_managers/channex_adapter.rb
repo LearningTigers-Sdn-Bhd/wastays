@@ -474,7 +474,7 @@ module ChannelManagers
         total_amount: financials[:breakdown_complete] ? financials[:gross_amount] : nil,
         currency: financials[:currency] || valid_currency(attributes["currency"]),
         source: attributes["ota_name"] || "channex",
-        special_requests: special_requests_for(attributes),
+        channel_notes: channel_notes_for(attributes),
         settlement: settlement,
         financials: financials
       }
@@ -762,7 +762,7 @@ module ChannelManagers
     # Channex's notes carry the guest's request plus the meal plan, smoking
     # preference and payment collection it adds. When the room guest is not the
     # booker, the booker is noted so their contact details still make sense.
-    def special_requests_for(attributes)
+    def channel_notes_for(attributes)
       booker = extract_guest_name(attributes)
       room_guest = extract_room_guest_name(attributes)
       booker_line = "Booked by: #{booker}" if room_guest.present? && room_guest != booker

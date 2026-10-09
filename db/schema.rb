@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -588,6 +588,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.text "cancellation_policy_snapshot"
     t.jsonb "cancellation_policy_snapshot_data", default: {}, null: false
     t.string "channel_manager_reference"
+    t.text "channel_notes"
     t.datetime "check_in", null: false
     t.datetime "check_out", null: false
     t.datetime "checked_in_at"

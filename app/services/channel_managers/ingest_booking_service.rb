@@ -76,7 +76,7 @@ module ChannelManagers
           guest_name: @data[:guest_details][:name],
           guest_email: @data[:guest_details][:email],
           guest_phone: guest_phone_for(booking),
-          special_requests: @data[:special_requests].presence || booking.special_requests,
+          channel_notes: @data[:channel_notes],
           guest_country: @data[:guest_details][:country],
           guest_home_address: @data[:guest_details][:home_address] || @data[:guest_details][:address],
           guest_city: @data[:guest_details][:city],
@@ -97,6 +97,10 @@ module ChannelManagers
           payment_status: payment_status_for(booking),
           fund_collector: fund_collector_for(booking)
         )
+
+        # The OTA's notes seed the staff remark once. After that the remark is
+        # the desk's, and later revisions only update channel_notes.
+        booking.special_requests = @data[:channel_notes] unless is_existing_booking
 
         if booking.save
           sync_rooms(booking) unless preserve_incomplete_cancellation_projection?
