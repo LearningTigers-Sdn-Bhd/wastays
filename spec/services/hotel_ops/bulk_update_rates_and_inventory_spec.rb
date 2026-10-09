@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rails_helper"
 
 RSpec.describe HotelOps::BulkUpdateRatesAndInventory do
@@ -34,5 +36,24 @@ RSpec.describe HotelOps::BulkUpdateRatesAndInventory do
     ).call
 
     expect(result[:success]).to be(true)
+  end
+
+  context "when the hotel is connected to Channex" do
+    let(:hotel) { create(:hotel, preferred_channel_manager: "channex") }
+
+    it "queues one push for a close, not another per saved row" do
+      create(:room_inventory, room_type: room_type, date: Date.current, quantity: 3, status: "open")
+
+      ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+      described_class.new(
+        hotel: hotel, room_type_ids: [ room_type.id ], start_date: Date.current, end_date: Date.current,
+        status: "closed", user: user
+      ).call
+
+      queued = ActiveJob::Base.queue_adapter.enqueued_jobs.map { |job| job["job_class"] }
+      expect(queued.count("ChannelManagers::SyncJob")).to eq(1)
+      expect(queued).not_to include("ChannelManagers::BufferAriSyncJob")
+    end
   end
 end

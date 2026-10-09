@@ -16,6 +16,7 @@ module HotelOps
     end
 
     def call
+      skip_was = Thread.current[:skip_ari_sync]
       Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
         # Sync rate plan currency with the update currency if they differ
@@ -67,7 +68,7 @@ module HotelOps
     rescue => e
       { success: false, error: e.message }
     ensure
-      Thread.current[:skip_ari_sync] = nil
+      Thread.current[:skip_ari_sync] = skip_was
     end
   end
 end
