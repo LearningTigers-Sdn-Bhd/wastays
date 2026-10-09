@@ -497,6 +497,9 @@ Rails.application.routes.draw do
         constraints: { filename: /[^\/]+\.pdf/ }
       get "agent-summary/:filename", to: "ar_invoices#aging_summary_pdf",
         constraints: { filename: /[^\/]+\.pdf/ }
+      resources :ar_invoice_corrections, only: [ :update ], path: "invoice-corrections" do
+        get :credit, on: :member
+      end
       resources :ar_invoices, only: [ :index, :show ], path: "invoices" do
         get :pdf, on: :member
       end

@@ -15,9 +15,12 @@ class BookingFolio < ApplicationRecord
   has_many :channel_settlement_allocations, dependent: :restrict_with_error
   has_many :channel_settlements, through: :channel_settlement_allocations
   has_many :folio_forecasted_charges, dependent: :destroy
-  has_one :ar_invoice, dependent: :restrict_with_error
-  has_one :invoice, dependent: :restrict_with_error
-  has_one :receivable, class_name: "Receivable", dependent: :restrict_with_error
+  has_many :invoice_history, class_name: "Invoice", dependent: :restrict_with_error
+  has_many :receivable_history, class_name: "Receivable", dependent: :restrict_with_error
+  has_many :ar_invoice_corrections, dependent: :restrict_with_error
+  has_one :ar_invoice, -> { where.not(status: "void") }, dependent: :restrict_with_error
+  has_one :invoice, -> { where.not(state: "voided") }, inverse_of: :booking_folio, dependent: :restrict_with_error
+  has_one :receivable, -> { where.not(status: "void") }, class_name: "Receivable", dependent: :restrict_with_error
   has_many :receipts, through: :folio_transactions
   has_many :target_folio_routing_rules, class_name: "FolioRoutingRule", foreign_key: :target_folio_id, dependent: :restrict_with_error
   has_many :deposit_movements, dependent: :restrict_with_error
@@ -44,6 +47,7 @@ class BookingFolio < ApplicationRecord
   validate :ota_payer_requires_ota_billing_party
   validate :company_payer_requires_active_hotel_corporate_account
   validate :closed_folio_reopen_must_be_authorized
+  validate :issued_ar_identity_is_immutable
   validate :last_primary_folio_cannot_be_unset
   validate :closed_folio_fields_are_restricted, on: :update
   before_validation :assign_defaults
@@ -267,6 +271,14 @@ class BookingFolio < ApplicationRecord
     end
 
     errors.add(:hotel_corporate_account, "must be active") unless hotel_corporate_account.active?
+  end
+
+  def issued_ar_identity_is_immutable
+    return unless persisted? && receivable_history.exists?
+
+    %w[hotel_corporate_account_id booking_billing_party_id payer_type payer_id folio_type currency].each do |field|
+      errors.add(field, "cannot change after a Direct Bill invoice is issued") if will_save_change_to_attribute?(field)
+    end
   end
 
   def closed_folio_reopen_must_be_authorized

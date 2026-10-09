@@ -163,6 +163,58 @@ RSpec.describe Reports::Bookings::GenerateFolioRecords do
     # The folio number already carries the account reference, so the invoice prints one.
     expect(records.invoice_detail_entries.map(&:first)).not_to include("Account ref")
     expect(records.stay_detail_entries).to include([ "Confirm no.", "BK-778291" ], [ "Room / type", "412 / Deluxe King" ])
+    expect(records.stay_detail_entries.map(&:first)).not_to include("Guest name")
+  end
+
+  context "with a travel agent payer" do
+    let(:relationship) do
+      create(:hotel_corporate_account,
+        hotel:,
+        corporate_account: create(:account, :corporate, name: "Acme Travel"),
+        account_type: "travel_agent")
+    end
+    let(:folio) do
+      create(:booking_folio, :secondary,
+        booking:,
+        hotel:,
+        hotel_corporate_account: relationship,
+        status: "closed")
+    end
+
+    it "names the guest first in stay details and keeps the agent as payer" do
+      expect(records.stay_detail_entries.first).to eq([ "Guest name", "John Doe" ])
+      expect(records.bill_to_entries).to include([ "Payer", "Acme Travel" ])
+      expect(records.party_blocks.first[:heading]).to eq("Bill to (payer)")
+    end
+
+    it "keeps the issued guest name when the booking name changes" do
+      booking.update!(guest_name: "Changed Guest")
+      folio.booking.reload
+
+      expect(records.stay_detail_entries.first).to eq([ "Guest name", "John Doe" ])
+    end
+
+    it "uses the booking name when an older snapshot lacks the guest-name key" do
+      revision = folio.invoice.current_revision
+      snapshot = revision.snapshot.deep_dup
+      snapshot.fetch("booking").delete("guest_name")
+      allow(revision).to receive(:snapshot).and_return(snapshot)
+      allow(folio.invoice).to receive(:current_revision).and_return(revision)
+      booking.update!(guest_name: "Current Guest")
+      folio.booking.reload
+
+      expect(records.stay_detail_entries.first).to eq([ "Guest name", "Current Guest" ])
+    end
+
+    it "preserves a blank saved guest name instead of using the current name" do
+      revision = folio.invoice.current_revision
+      snapshot = revision.snapshot.deep_dup
+      snapshot.fetch("booking")["guest_name"] = nil
+      allow(revision).to receive(:snapshot).and_return(snapshot)
+      allow(folio.invoice).to receive(:current_revision).and_return(revision)
+
+      expect(records.stay_detail_entries.first).to eq([ "Guest name", nil ])
+    end
   end
 
   # The address is the one field that follows the guest record. A wrong address is a

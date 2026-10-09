@@ -356,7 +356,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       expect(booking.reload.primary_guest.date_of_birth).to eq(Date.new(1994, 8, 21))
     end
 
-    it "fails cleanly when passport date of birth is missing" do
+    it "completes registration when passport date of birth is missing" do
       post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",
@@ -373,8 +373,9 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         }
       }
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Date of birth is required for passport guests")
+      expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
+      expect(booking.reload.pre_checkin_status).to eq("completed")
+      expect(booking.reload.primary_guest.date_of_birth).to be_nil
     end
 
     it "submit_check_in re-renders with error when guest fields missing" do
