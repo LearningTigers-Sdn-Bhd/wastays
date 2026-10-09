@@ -9,6 +9,11 @@ module ChannelManagers
   # a 1-30 Nov Agoda close-out overlaps a push for 10 Nov. Every rule the push
   # touches is replaced, so the rebuild widens to cover those rules in full
   # rather than shrinking the close-out to the pushed dates.
+  #
+  # Rules a hotel makes by hand on the inventory dashboard are also titled
+  # "PMS Override" by default, but they belong to ChannelAvailabilityRule
+  # records and sync on their own. Their Channex ids come in as
+  # owned_rule_ids and are never touched here.
   class ChannexAvailabilityRules
     TITLE = "PMS Override"
     PAGE_LIMIT = 100
@@ -18,10 +23,11 @@ module ChannelManagers
 
     # external_room_type_ids maps our room type ids to their Channex ids, for
     # the room types this push covers.
-    def initialize(client:, property_id:, external_room_type_ids:)
+    def initialize(client:, property_id:, external_room_type_ids:, owned_rule_ids: [])
       @client = client
       @property_id = property_id
       @external_room_type_ids = external_room_type_ids
+      @owned_rule_ids = owned_rule_ids.to_set
     end
 
     def call(date_range)
@@ -140,6 +146,7 @@ module ChannelManagers
     def parse_rule(rule)
       attributes = rule["attributes"] || {}
       return unless attributes["title"] == TITLE
+      return if @owned_rule_ids.include?(rule["id"])
 
       start_date = Date.parse(attributes["start_date"].to_s)
       end_date = Date.parse(attributes["end_date"].to_s)

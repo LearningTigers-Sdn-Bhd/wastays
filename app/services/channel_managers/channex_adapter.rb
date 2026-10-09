@@ -1419,7 +1419,8 @@ module ChannelManagers
       ChannexAvailabilityRules.new(
         client: client,
         property_id: property_id,
-        external_room_type_ids: external_room_type_ids
+        external_room_type_ids: external_room_type_ids,
+        owned_rule_ids: @hotel.channel_availability_rules.where.not(external_id: nil).pluck(:external_id)
       ).call(date_range)
     end
   end

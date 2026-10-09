@@ -80,6 +80,17 @@ RSpec.describe ChannelManagers::ChannexAvailabilityRules do
     expect(client).not_to have_received(:post)
   end
 
+  it "leaves alone a rule the hotel made by hand on the dashboard" do
+    ChannelRoomRate.create!(room_type: room_type, channel_id: "other-channel", date: Date.new(2026, 12, 1), stop_sell: true)
+    allow(client).to receive(:get).and_return(list(rule("hand-made", Date.new(2026, 11, 9), Date.new(2026, 11, 11))))
+
+    described_class.new(
+      client: client, property_id: "prop-1", external_room_type_ids: { room_type.id => "ch-rt-1" }, owned_rule_ids: [ "hand-made" ]
+    ).call(Date.new(2026, 11, 10)..Date.new(2026, 11, 10))
+
+    expect(client).not_to have_received(:delete)
+  end
+
   it "makes no calls for a hotel that never set a per-OTA override" do
     allow(client).to receive(:get)
 
