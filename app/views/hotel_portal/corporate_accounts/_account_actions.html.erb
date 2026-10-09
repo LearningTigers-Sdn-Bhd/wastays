@@ -1,0 +1,18 @@
+<% relationship = row.relationship %>
+<% corporate_user = relationship.corporate_account.users.find(&:corporate?) %>
+<%= render PanelsUI::DropdownMenu.new(id: "external-account-actions-#{row.id}", placement: :bottom_end, class: "w-56") do |menu| %>
+  <% menu.with_trigger(variant: :secondary, size: :sm, aria_label: "More actions for #{row.account_name}") do %>
+    More
+    <%= cached_icon "chevron-down", class: "size-3.5", aria: { hidden: true } %>
+  <% end %>
+  <% menu.with_item(href: edit_hotel_corporate_account_path(current_hotel, relationship, return_to: request.fullpath),
+    data: { testid: "external-account-edit-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>Edit<% end %>
+  <% if CorporateAccounts::RevealTemporaryPassword.available?(user: corporate_user, hotel: current_hotel) %>
+    <% menu.with_item(href: hotel_corporate_account_temporary_password_path(current_hotel, relationship, return_to: request.fullpath),
+      data: { turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>Show temporary password<% end %>
+  <% end %>
+  <% if relationship.unclaimed? %>
+    <% menu.with_item(href: new_hotel_corporate_account_path(current_hotel, hotel_corporate_account_id: relationship.id, return_to: request.fullpath),
+      data: { testid: "external-account-invite-#{row.id}", turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>Invite contact<% end %>
+  <% end %>
+<% end %>

@@ -31,13 +31,13 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
       expect(terms).to be_present
       # The controller finds the relationship select by name, and disables the
       # named controls inside the terms block. Both have to be where it looks.
-      expect(section.at_css('select[name$="[relationship_type]"]')).to be_present
+      expect(section.at_css('input[type="radio"][name$="[relationship_type]"]')).to be_present
       expect(terms.css("input[name], select[name]").map { |node| node["name"] })
         .to include(a_string_including("credit_currency"),
                     a_string_including("credit_limit"),
                     a_string_including("payment_terms_days"))
       # The relationship select must sit outside the block it controls.
-      expect(terms.at_css('select[name$="[relationship_type]"]')).to be_nil
+      expect(terms.at_css('input[type="radio"][name$="[relationship_type]"]')).to be_nil
     end
 
     it "drops the terms tail and the credit figure from a standard account" do
@@ -181,8 +181,20 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response.body).to include("Invite external account")
     expect(response.body).to include("Corporate contact email")
     expect(response.body).not_to include("Company name")
+    expect(response.parsed_body.at_css('input[type="radio"][value="direct_bill"]')["checked"]).to be_present
     # DESIGN.md 6: portal forms use SelectMenu, never a native select.
     expect(Nokogiri::HTML(response.body).css("select:not([data-ui--select-menu-target]):not([data-ui--combobox-target])")).to be_empty
+  end
+
+  it "offers separate creation forms and reveals temporary credentials only on request" do
+    corporate_user = create(:user, :corporate, temporary_password: "password123", temporary_password_hotel: hotel)
+    create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account)
+    get hotel_corporate_accounts_path(hotel)
+    expect(response.body).to include("Add / Invite", "Invite account", "Add account", "More", "Show temporary password")
+    expect(response.body).not_to include("password123")
+    corporate_user.update!(temporary_password: nil, temporary_password_hotel: nil)
+    get hotel_corporate_accounts_path(hotel)
+    expect(response.body).not_to include("Show temporary password")
   end
 
   it "renders the edit form in the sheet frame" do

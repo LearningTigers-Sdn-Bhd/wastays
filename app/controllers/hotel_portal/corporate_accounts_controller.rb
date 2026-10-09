@@ -21,7 +21,7 @@ module HotelPortal
 
     def new
       @corporate_invitation = current_hotel.corporate_invitations.build(
-        relationship_type: "standard",
+        relationship_type: "direct_bill",
         credit_currency: current_hotel.default_currency,
         hotel_corporate_account: claimable_relationship
       )
