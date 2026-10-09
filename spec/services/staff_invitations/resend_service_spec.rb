@@ -12,6 +12,17 @@ RSpec.describe StaffInvitations::ResendService do
   subject { described_class.new(invitation, user) }
 
   describe '#call' do
+    it 'refuses an old partner invitation without changing it or sending mail' do
+      create(:user, :super_agent, email: invitation.email)
+      attributes = invitation.attributes
+      result = nil
+
+      expect { result = subject.call }.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+
+      expect(result).to be(false)
+      expect(invitation.reload.attributes).to eq(attributes)
+    end
+
     it 'refreshes the invitation token and sends an email' do
       old_digest = invitation.token_digest
 

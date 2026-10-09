@@ -15,8 +15,13 @@ class OnboardingStaffDraft < ApplicationRecord
                     uniqueness: { scope: :hotel_id, case_sensitive: false }
   validate :role_belongs_to_hotel_account
   validate :role_is_seeded_preset
+  validate :recipient_is_not_partner
 
   private
+
+  def recipient_is_not_partner
+    errors.add(:base, StaffInvitation::PARTNER_INVITATION_ERROR) if User.super_agents.exists?(email: email)
+  end
 
   def normalize_attributes
     self.name = name.to_s.strip.presence

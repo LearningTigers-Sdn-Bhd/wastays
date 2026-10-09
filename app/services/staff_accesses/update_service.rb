@@ -37,6 +37,7 @@ module StaffAccesses
     private
 
     def rejection
+      return "Partner access cannot be changed through Staff Management." if @access.user.super_agent?
       return "You cannot change your own access." if own_access?
       return lockout_message if lockout?
 

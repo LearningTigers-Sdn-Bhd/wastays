@@ -979,6 +979,10 @@ Rails.application.routes.draw do
         # row; #update owns the role. DELETE is a permanent removal.
         resources :users, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "staff" do
           patch :status, on: :member
+          resource :temporary_password, only: :show, controller: "staff_passwords"
+        end
+        resource :staff_addition, path: "staff-addition", only: [ :new, :create ] do
+          post :lookup
         end
         resources :staff_invitations, path: "staff-invitations", only: [ :edit, :update, :destroy ] do
           post :resend, on: :member
