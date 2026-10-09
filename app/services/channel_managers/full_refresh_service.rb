@@ -16,8 +16,10 @@ module ChannelManagers
       # pushes reuse the cached channel list.
       Rails.cache.delete("channex:channels:#{@hotel.id}")
 
-      # We use 500 days as per Channex Certification requirements
-      start_date = Date.current
+      # We use 500 days as per Channex Certification requirements. The window
+      # opens on the hotel's today: the 2 am refresh in Kuala Lumpur runs while
+      # it is still yesterday in UTC.
+      start_date = @hotel.hotel_time_zone.today
       end_date = start_date + 499.days
 
       ChannelManagers::SyncJob.perform_later(

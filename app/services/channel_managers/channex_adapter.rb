@@ -57,7 +57,7 @@ module ChannelManagers
       retirement = retire_unsupported_mappings(
         client,
         property_id,
-        Date.current..(Date.current + 499.days)
+        @hotel.hotel_time_zone.today..(@hotel.hotel_time_zone.today + 499.days)
       )
       unless retirement[:ok]
         return failure(retirement[:message], warnings: retirement[:warnings], task_ids: { restrictions: retirement[:task_id] })

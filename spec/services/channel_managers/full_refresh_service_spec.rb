@@ -19,6 +19,16 @@ RSpec.describe ChannelManagers::FullRefreshService do
       service.call
     end
 
+    it "opens the window on the hotel's today, not UTC's, at the 2 am refresh",
+       frozen_time: Time.find_zone("Asia/Kuala_Lumpur").local(2026, 11, 10, 2, 0) do
+      hotel.update!(time_zone: "Asia/Kuala_Lumpur")
+
+      expect(ChannelManagers::SyncJob).to receive(:perform_later)
+        .with(hotel.id, Date.new(2026, 11, 10), Date.new(2026, 11, 10) + 499.days, anything)
+
+      service.call
+    end
+
     it 'does not publish channel data while the property is in training' do
       hotel.update!(status: "pending_review", training_started_at: Time.current)
 
