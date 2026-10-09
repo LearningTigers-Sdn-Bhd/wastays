@@ -1,8 +1,9 @@
 <%= turbo_frame_tag HotelPortal::CorporateAccountsController::WORKSPACE_FRAME, class: "flex min-h-0 flex-1 flex-col" do %>
   <header class="flex shrink-0 flex-wrap items-start justify-between gap-3 px-5 py-3">
     <div class="flex min-w-0 items-start gap-3">
-      <%= render PanelsUI::Button.new(as: :a, href: @return_to, variant: :secondary, size: :sm,
-        aria_label: "Back to external accounts", data: { turbo_frame: "_top" }) do %>
+      <%= link_to @return_to,
+        class: "mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        aria: { label: "Back to external accounts" }, data: { turbo_frame: "_top" } do %>
         <%= cached_icon "arrow-left", class: "size-4", aria: { hidden: true } %>
       <% end %>
       <div class="min-w-0 space-y-1">
