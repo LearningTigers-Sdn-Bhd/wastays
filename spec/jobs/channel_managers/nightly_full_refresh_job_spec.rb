@@ -12,9 +12,22 @@ RSpec.describe ChannelManagers::NightlyFullRefreshJob, type: :job do
 
   it "queues a full refresh for each provisioned Channex hotel" do
     hotel = connected_hotel
+    today = hotel.hotel_time_zone.today
 
     expect { described_class.perform_now }
-      .to have_enqueued_job(ChannelManagers::SyncJob).with(hotel.id, Date.current, Date.current + 499.days, hash_including(sync_availability: true, sync_rates: true))
+      .to have_enqueued_job(ChannelManagers::SyncJob).with(hotel.id, today, today + 499.days, hash_including(sync_availability: true, sync_rates: true))
+  end
+
+  it "spaces the hotels' refreshes a few seconds apart", frozen_time: Time.zone.local(2026, 11, 9, 18, 0) do
+    first = connected_hotel
+    second = connected_hotel
+
+    ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+    described_class.perform_now
+
+    scheduled = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |job| job["job_class"] == "ChannelManagers::SyncJob" }
+      .to_h { |job| [ job["arguments"].first, job[:at] ] }
+    expect(scheduled[second.id] - scheduled[first.id]).to be_within(0.01).of(5)
   end
 
   it "skips hotels with no channel manager, or one that is only 'undecided'" do

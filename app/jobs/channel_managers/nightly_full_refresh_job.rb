@@ -7,13 +7,17 @@ module ChannelManagers
   class NightlyFullRefreshJob < ApplicationJob
     queue_as :default
 
+    # Channex asks for a few seconds between properties rather than every
+    # property's full sync landing at once.
+    GAP_BETWEEN_HOTELS = 5.seconds
+
     def perform
       queued = 0
 
       Hotel.where(preferred_channel_manager: SyncOrchestrator::ADAPTERS.keys).includes(:channel_mapping).find_each do |hotel|
         next unless ConnectionState.provisioned?(hotel)
 
-        result = FullRefreshService.new(hotel: hotel).call
+        result = FullRefreshService.new(hotel: hotel, wait: GAP_BETWEEN_HOTELS * queued).call
         if result.success?
           queued += 1
         else

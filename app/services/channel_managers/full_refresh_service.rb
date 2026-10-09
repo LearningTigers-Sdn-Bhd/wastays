@@ -4,8 +4,10 @@ require "ostruct"
 
 module ChannelManagers
   class FullRefreshService
-    def initialize(hotel:)
+    # wait delays the push, so a batch of hotels can be spread out.
+    def initialize(hotel:, wait: nil)
       @hotel = hotel
+      @wait = wait
     end
 
     def call
@@ -22,7 +24,7 @@ module ChannelManagers
       start_date = @hotel.hotel_time_zone.today
       end_date = start_date + 499.days
 
-      ChannelManagers::SyncJob.perform_later(
+      ChannelManagers::SyncJob.set(wait: @wait).perform_later(
         @hotel.id,
         start_date,
         end_date,
