@@ -24,7 +24,8 @@ module ChannelManagers
       start_date = @hotel.hotel_time_zone.today
       end_date = start_date + 499.days
 
-      ChannelManagers::SyncJob.set(wait: @wait).perform_later(
+      job = @wait ? ChannelManagers::SyncJob.set(wait: @wait) : ChannelManagers::SyncJob
+      job.perform_later(
         @hotel.id,
         start_date,
         end_date,
