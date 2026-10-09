@@ -18,6 +18,13 @@ RSpec.describe "HotelPortal::CorporateAccountPasswords", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.headers["Cache-Control"]).to include("no-store")
     expect(response.body).to include(corporate_user.email, "password123", "external_account_sheet")
+    document = response.parsed_body
+    message = document.at_css('textarea[data-clipboard-target="source"]')
+    expect(message["readonly"]).to be_present
+    expect(message.text).to include("1. Open #{login_url}", "2. Sign in", "Login email: #{corporate_user.email}",
+      "Temporary password: password123", "3. Open Profile", "Change password")
+    expect(document.css('[data-clipboard-target="source"]').length).to eq(1)
+    expect(document.css('[data-action="clipboard#copy"]').length).to eq(1)
   end
 
   it "rejects cross-hotel relationships and passwords created elsewhere" do
