@@ -79,48 +79,55 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     expect(CorporateInvitation.find_by!(email: "billing@example.com").relationship_type).to eq("direct_bill")
   end
 
-  it "edits an account through the sheet and returns to the filtered index" do
-    # Direct bill, because payment terms only exist on an account that is
-    # invoiced -- the sheet hides them on a standard relationship.
+  it "opens an account from its row and saves billing in the workspace" do
     relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "government",
-                                                    relationship_type: "direct_bill", payment_terms_days: 14)
-
+      relationship_type: "direct_bill", payment_terms_days: 14)
     visit hotel_corporate_accounts_path(hotel, account_type: "government")
-    within("[data-testid='external-account-row-#{relationship.id}']") { click_button "More" }
-    find("[data-testid='external-account-edit-#{relationship.id}']", visible: :all).click
+    find("[data-testid='external-account-row-#{relationship.id}']").click
 
-    expect(page).to have_css("dialog#external-account-sheet[open]")
-    within("dialog#external-account-sheet") do
-      fill_in "Payment terms (days)", with: "45"
-      click_in_overlay "Save changes"
-    end
-
-    expect(page).to have_no_css("dialog#external-account-sheet", wait: 5)
+    expect(page).to have_css("[data-testid='corporate-account-workspace']")
+    expect(page).to have_no_css("dialog#external-account-sheet")
+    fill_in "Payment terms (days)", with: "45"
+    click_button "Save changes"
+    expect(page).to have_field("Payment terms (days)", with: "45")
     expect(relationship.reload.payment_terms_days).to eq(45)
-    # complete_sheet hard-navigates, so the filter has to survive in the destination.
+    click_link "Back to accounts"
     expect(page).to have_current_path(hotel_corporate_accounts_path(hotel, account_type: "government"), ignore_query: false)
   end
 
-  it "suspends an account from the sheet footer" do
+  it "suspends an account from the workspace More menu" do
     relationship = create(:hotel_corporate_account, hotel: hotel)
-
     visit hotel_corporate_accounts_path(hotel)
     within("[data-testid='external-account-row-#{relationship.id}']") { click_button "More" }
-    find("[data-testid='external-account-edit-#{relationship.id}']", visible: :all).click
-
-    expect(page).to have_css("dialog#external-account-sheet[open]")
-    find("[data-testid='external-account-suspend-#{relationship.id}']").click
-
-    # The confirm dialog stacks above the already-modal sheet, so Capybara's
-    # visibility check cannot see it — drive it through the overlay helper.
-    expect(page).to have_css("dialog#turbo-confirm-dialog", visible: :all)
+    click_link "Edit"
+    expect(page).to have_css("[data-testid='corporate-account-workspace']")
+    within("turbo-frame#corporate_account_workspace") { click_button "More" }
+    click_button "Suspend account"
+    expect(page).to have_css("dialog#turbo-confirm-dialog[open]")
     click_in_overlay find("#turbo-confirm-button", visible: :all)
-
-    # Suspending confirms, posts, and closes the sheet from a stream — three
-    # round trips, which outlast the default wait when this file shares the
-    # machine with another browser worker.
-    expect(page).to have_no_css("dialog#external-account-sheet", wait: 15)
+    expect(page).to have_content("Suspended")
     expect(relationship.reload).to be_suspended
+    expect(page).to have_css("[data-testid='corporate-account-workspace']")
+  end
+
+  it "saves company details and billing address through separate workspace tabs" do
+    corporate_user = create(:user, :corporate)
+    relationship = create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account)
+    visit edit_hotel_corporate_account_path(hotel, relationship)
+    click_link "Company details"
+    fill_in "Company name", with: "Updated Agency"
+    fill_in "Contact person", with: "Updated Contact"
+    click_button "Save changes"
+    expect(page).to have_field("Company name", with: "Updated Agency")
+    expect(page).to have_css("h1", text: "Updated Agency")
+    click_link "Billing address"
+    fill_in "Address line 1", with: "12 Jalan Lintas"
+    fill_in "City", with: "Kota Kinabalu"
+    click_button "Save changes"
+    expect(page).to have_field("City", with: "Kota Kinabalu")
+    expect(relationship.reload.billing_city).to eq("Kota Kinabalu")
+    click_link "Manage billing"
+    expect(page).to have_checked_field("Standard — Settle by checkout")
   end
 
   it "lists invitations and accounts in one table and narrows both by search" do
