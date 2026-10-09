@@ -5,6 +5,8 @@ class User < ApplicationRecord
   ROLES = %w[superadmin super_agent admin hotel_staff salesperson corporate].freeze
 
   has_secure_password
+  encrypts :temporary_password
+  belongs_to :temporary_password_hotel, class_name: "Hotel", optional: true
   has_many :owner_password_resets, dependent: :delete_all
 
   has_many :user_hotel_accesses, dependent: :destroy
