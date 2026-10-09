@@ -265,7 +265,7 @@ Rails.application.routes.draw do
 
   scope "/corporate", module: :corporate_portal, as: :corporate do
     get "dashboard", to: "dashboard#index", as: :dashboard
-    resource :profile, only: [ :show ]
+    resource :profile, only: [ :show, :update ]
     resources :hotel_relationships, only: [ :edit, :update ], path: "linked-hotels"
     # An agent booking a stay for a guest at a hotel this account is linked to.
     # Cancelling is its own resource rather than #destroy: the booking is not
@@ -481,7 +481,11 @@ Rails.application.routes.draw do
 
     resource :property_policy, only: [ :edit, :update ]
     scope "accounts-receivable" do
+      resource :corporate_account_addition, only: [ :new, :create ], path: "corporate-accounts/add" do
+        post :lookup
+      end
       resources :corporate_accounts, only: [ :index, :new, :create, :edit, :update ], path: "corporate-accounts" do
+        resource :temporary_password, only: :show, controller: "corporate_account_passwords"
         member do
           patch :suspend
           patch :reactivate

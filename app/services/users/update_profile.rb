@@ -13,16 +13,21 @@ module Users
 
     # Returns true when saved. On false, the errors are on the user.
     def call
-      current_password = @params.delete(:current_password)
-      wrong_password = @params[:password].present? && !@user.authenticate(current_password.to_s)
-      @user.assign_attributes(@params)
+      @user.with_lock do
+        current_password = @params.delete(:current_password)
+        wrong_password = @params[:password].present? && !@user.authenticate(current_password.to_s)
+        @user.assign_attributes(@params)
+        if wrong_password
+          @user.errors.add(:current_password, "is not correct")
+          return false
+        end
 
-      if wrong_password
-        @user.errors.add(:current_password, "is not correct")
-        return false
+        if @params[:password].present?
+          @user.temporary_password = nil
+          @user.temporary_password_hotel = nil
+        end
+        @user.save
       end
-
-      @user.save
     end
   end
 end

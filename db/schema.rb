@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -3322,6 +3322,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.string "name"
     t.string "password_digest"
     t.string "role"
+    t.text "temporary_password"
+    t.bigint "temporary_password_hotel_id"
     t.string "time_zone", default: "Kuala Lumpur", null: false
     t.datetime "updated_at", null: false
     t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
@@ -3329,6 +3331,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
     t.index ["account_id"], name: "index_users_on_unique_corporate_account", unique: true, where: "((role)::text = 'corporate'::text)"
     t.index ["agent_code"], name: "index_users_on_agent_code", unique: true
     t.index ["last_seen_at"], name: "index_users_on_last_seen_at"
+    t.index ["temporary_password_hotel_id"], name: "index_users_on_temporary_password_hotel_id"
   end
 
   create_table "webhook_endpoints", force: :cascade do |t|
@@ -3705,5 +3708,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_05_020000) do
   add_foreign_key "user_roles", "roles"
   add_foreign_key "user_roles", "users"
   add_foreign_key "users", "accounts"
+  add_foreign_key "users", "hotels", column: "temporary_password_hotel_id"
   add_foreign_key "webhook_endpoints", "hotels"
 end

@@ -1,0 +1,67 @@
+<div data-controller="ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(id: "external-account-add-sheet", side: :right, size: :lg,
+    title: "Add account", description: "Link an existing account or create one with a temporary password.", body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <%= form_with scope: :corporate_account_addition,
+        url: (@lookup_ready ? hotel_corporate_account_addition_path(current_hotel) : lookup_hotel_corporate_account_addition_path(current_hotel)),
+        class: "flex h-full min-h-0 flex-col" do |form| %>
+        <%= hidden_field_tag :return_to, @return_to %>
+        <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+          <% if @relationship.errors.any? %>
+            <%= render PanelsUI::Alert.new(tone: :destructive, title: "Account could not be added") do |alert| %>
+              <% alert.with_description do %><%= @relationship.errors.full_messages.to_sentence %><% end %>
+            <% end %>
+          <% end %>
+          <section class="space-y-4">
+            <h3 class="text-sm font-semibold text-foreground">Account contact</h3>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :email, label: "Login email",
+              hint: "An existing Corporate login will be linked to this hotel.") do |field| %>
+              <% field.with_input(type: :email, value: @attributes[:email], required: true, readonly: @lookup_ready,
+                autocomplete: "email", placeholder: "billing@company.com") %>
+            <% end %>
+            <% if @lookup_ready %>
+              <% if @existing_user %>
+                <%= render PanelsUI::Alert.new(tone: :info, title: @existing_user.account.name) do |alert| %>
+                  <% alert.with_description do %>This existing account will be linked to this hotel. Its company details and password will stay the same.<% end %>
+                <% end %>
+              <% else %>
+                <%= render PanelsUI::FormField.new(form: form, attribute: :account_name, label: "Company name") do |field| %>
+                  <% field.with_input(value: @attributes[:account_name], required: true, autocomplete: "organization") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form: form, attribute: :name, label: "Contact person") do |field| %>
+                  <% field.with_input(value: @attributes[:name], required: true, autocomplete: "name") %>
+                <% end %>
+                <p class="text-xs text-muted-foreground">A temporary password will be generated after you add this account.</p>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :account_type, label: "Account type") do |field| %>
+                <% field.with_select_menu(HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } }, selected: @relationship.account_type) %>
+              <% end %>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :market, label: "Market",
+                hint: "Local agents see local rates; international agents see international rates.") do |field| %>
+                <% field.with_select_menu([ { label: "Not set", value: "" } ] + HotelCorporateAccount::MARKETS.map { |market| { label: HotelCorporateAccount::MARKET_LABELS.fetch(market), value: market } }, selected: @relationship.market.to_s) %>
+              <% end %>
+            <% end %>
+          </section>
+          <% if @lookup_ready %>
+            <div class="border-t border-border pt-5" data-controller="corporate-billing-terms" data-action="change->corporate-billing-terms#refresh">
+              <%= render "hotel_portal/corporate_accounts/billing_terms_fields", form: form,
+                relationship_type: @relationship.relationship_type, credit_currency: @relationship.credit_currency,
+                credit_limit: @relationship.credit_limit, payment_terms_days: @relationship.payment_terms_days,
+                record: @relationship, agent_booking_enabled: @relationship.agent_booking_enabled,
+                agent_payment_hold_default: current_hotel.agent_payment_hold_label,
+                hint: "These terms apply to this account at this hotel." %>
+            </div>
+          <% end %>
+        </div>
+        <div class="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-muted/50 px-4 py-3">
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
+          <% if @lookup_ready %>
+            <%= render PanelsUI::Button.new(as: :a, href: new_hotel_corporate_account_addition_path(current_hotel, return_to: @return_to), variant: :secondary,
+              data: { turbo_frame: turbo_frame_request_id.presence || HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>Change email<% end %>
+          <% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Please wait…" }) do %><%= @lookup_ready ? "Add account" : "Continue" %><% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

@@ -1,8 +1,15 @@
 <%# Account name over its contact email. The email is the identity for an invitation,
     which has no account name until the recipient accepts. %>
-<th scope="row" class="max-w-xs min-w-0">
+<th scope="row" class="group max-w-xs min-w-0">
   <div class="truncate font-semibold text-foreground" title="<%= row.account_name %>">
-    <%= row.account_name.presence || "—" %>
+    <% if row.pending? %>
+      —
+    <% else %>
+      <%= link_to row.account_name,
+        edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath),
+        class: "decoration-muted-foreground underline-offset-4 group-hover:underline focus-visible:underline",
+        data: { turbo_frame: "_top" } %>
+    <% end %>
   </div>
   <div class="truncate text-xs font-normal text-muted-foreground" title="<%= row.contact_email %>">
     <%= row.contact_email.presence || "—" %>
