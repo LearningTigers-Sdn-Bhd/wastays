@@ -288,6 +288,13 @@ module ChannelManagers
       property_id = mapping_for(@hotel).external_id
       task_ids = {}
 
+      endpoints = []
+      endpoints << "/availability" if sync_availability
+      endpoints << "/restrictions" if sync_rates || sync_restrictions
+      unless Channex::AriRateLimiter.room_for?(property_id, endpoints)
+        raise Channex::Client::RetryableRequestError, "Channex rate budget spent this minute for #{endpoints.join(' and ')}"
+      end
+
       if sync_availability
         availability_result = push_availability(client, property_id, date_range, room_type_ids: room_type_ids)
         unless availability_result[:ok]
@@ -1420,7 +1427,8 @@ module ChannelManagers
         client: client,
         property_id: property_id,
         external_room_type_ids: external_room_type_ids,
-        owned_rule_ids: @hotel.channel_availability_rules.where.not(external_id: nil).pluck(:external_id)
+        owned_rule_ids: @hotel.channel_availability_rules.where.not(external_id: nil).pluck(:external_id),
+        today: @hotel.hotel_time_zone.today
       ).call(date_range)
     end
   end

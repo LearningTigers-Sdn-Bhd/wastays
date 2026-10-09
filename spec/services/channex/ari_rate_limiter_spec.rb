@@ -32,6 +32,14 @@ RSpec.describe Channex::AriRateLimiter do
     end
   end
 
+  it "reports room only when every endpoint a push needs has budget left", frozen_time: Time.zone.local(2026, 11, 1, 10, 0, 5) do
+    5.times { described_class.allow?("/restrictions", body("prop-1")) }
+
+    expect(described_class.room_for?("prop-1", [ "/availability" ])).to be(true)
+    expect(described_class.room_for?("prop-1", [ "/availability", "/restrictions" ])).to be(false)
+    expect(described_class.allow?("/availability", body("prop-1"))).to be(true) # checking spent nothing
+  end
+
   it "never limits calls outside the ARI endpoints" do
     expect(Array.new(10) { described_class.allow?("/channel_availability_rules", {}) }).to all(be(true))
   end

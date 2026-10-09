@@ -4,7 +4,10 @@ module ChannelManagers
   class FlushAriSyncJob < ApplicationJob
     queue_as :default
 
-    retry_on Channex::Client::RetryableRequestError, wait: :polynomially_longer, attempts: 8
+    # The flush only hands its changes to SyncJob, so what can fail here is
+    # that hand-off. Retrying re-claims the outbox the failure put back;
+    # without it those changes would sit unsent until they expired.
+    retry_on ActiveJob::EnqueueError, ActiveRecord::ActiveRecordError, wait: :polynomially_longer, attempts: 5
 
     def perform(hotel_id)
       hotel = Hotel.find_by(id: hotel_id)
@@ -22,7 +25,7 @@ module ChannelManagers
       end
 
       begin
-        ChannelManagers::SyncJob.perform_later(
+        enqueued = ChannelManagers::SyncJob.perform_later(
           hotel_id,
           start_date,
           end_date,
@@ -33,6 +36,7 @@ module ChannelManagers
           rate_plan_ids: window["rate_plan_windows"],
           rate_plan_fields: window["rate_plan_fields"]
         )
+        raise ActiveJob::EnqueueError, "SyncJob was not enqueued for hotel #{hotel_id}" unless enqueued
       rescue StandardError
         outbox.restore(window)
         raise

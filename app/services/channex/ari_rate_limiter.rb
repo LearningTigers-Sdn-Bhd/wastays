@@ -19,9 +19,21 @@ module Channex
       property_id = property_id_in(body)
       return true if property_id.blank?
 
-      key = "channex:ari_rate:#{property_id}:#{path}:#{Time.current.to_i / 60}"
-      Rails.cache.increment(key, 1, expires_in: 2.minutes).to_i <= CALLS_PER_MINUTE
+      Rails.cache.increment(budget_key(property_id, path), 1, expires_in: 2.minutes).to_i <= CALLS_PER_MINUTE
     end
+
+    # True when every one of paths still has budget this minute. Spends
+    # nothing: a push checks before sending anything, so a call throttled
+    # half-way through doesn't make the retry re-send (and re-spend) the
+    # calls that already went out.
+    def self.room_for?(property_id, paths)
+      paths.all? { |path| Rails.cache.read(budget_key(property_id, path)).to_i < CALLS_PER_MINUTE }
+    end
+
+    def self.budget_key(property_id, path)
+      "channex:ari_rate:#{property_id}:#{path}:#{Time.current.to_i / 60}"
+    end
+    private_class_method :budget_key
 
     def self.property_id_in(body)
       value = Array(body.is_a?(Hash) ? (body[:values] || body["values"]) : nil).first

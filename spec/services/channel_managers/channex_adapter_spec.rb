@@ -228,6 +228,15 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(result.success?).to be true
     end
 
+    it 'sends nothing when the restrictions budget is spent, so the retry re-sends nothing twice' do
+      allow(Channex::AriRateLimiter).to receive(:room_for?).with("ch_prop_123", [ "/availability", "/restrictions" ]).and_return(false)
+      allow(client_double).to receive(:post)
+
+      expect { adapter.push_ari(date_range: (start_date..end_date)) }
+        .to raise_error(Channex::Client::RetryableRequestError, /budget/)
+      expect(client_double).not_to have_received(:post)
+    end
+
     it 'tells the OTAs a closed date has nothing for sale' do
       room_type.room_inventories.find_by!(date: start_date + 1.day).update!(status: "closed")
       allow(client_double).to receive(:post).with("/restrictions", anything).and_return({ "data" => { "id" => "task_2" } })

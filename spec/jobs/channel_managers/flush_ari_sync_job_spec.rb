@@ -36,7 +36,7 @@ RSpec.describe ChannelManagers::FlushAriSyncJob, type: :job do
       room_type_ids: {},
       rate_plan_ids: {},
       rate_plan_fields: {}
-    )
+    ).and_return(true)
 
     described_class.perform_now(hotel.id)
 
@@ -51,6 +51,7 @@ RSpec.describe ChannelManagers::FlushAriSyncJob, type: :job do
 
       allow(ChannelManagers::SyncJob).to receive(:perform_later) do
         ChannelManagers::BufferAriSyncJob.perform_now(hotel.id, Date.new(2026, 11, 20), type: :availability, room_type_id: 2)
+        true
       end
 
       described_class.perform_now(hotel.id)
@@ -62,15 +63,26 @@ RSpec.describe ChannelManagers::FlushAriSyncJob, type: :job do
     end
   end
 
-  context "when the push fails" do
-    it "puts the changes back for the retry" do
+  context "when handing the changes to SyncJob fails" do
+    before do
       ChannelManagers::BufferAriSyncJob.perform_now(hotel.id, Date.new(2026, 11, 5), type: :availability, room_type_id: 1)
+      clear_enqueued_jobs
+    end
+
+    it "puts the changes back and retries the flush" do
       allow(ChannelManagers::SyncJob).to receive(:perform_later).and_raise(ActiveRecord::ConnectionTimeoutError)
 
-      expect { described_class.perform_now(hotel.id) }.to raise_error(ActiveRecord::ConnectionTimeoutError)
+      expect { described_class.perform_now(hotel.id) }.to have_enqueued_job(described_class).with(hotel.id)
 
       window = Rails.cache.read("channex:ari:window:#{hotel.id}")
       expect(window["room_type_windows"]).to eq("1" => { "min" => "2026-11-05", "max" => "2026-11-05" })
+    end
+
+    it "treats a refused enqueue the same way" do
+      allow(ChannelManagers::SyncJob).to receive(:perform_later).and_return(false)
+
+      expect { described_class.perform_now(hotel.id) }.to have_enqueued_job(described_class).with(hotel.id)
+      expect(Rails.cache.read("channex:ari:window:#{hotel.id}")).to be_present
     end
   end
 end
