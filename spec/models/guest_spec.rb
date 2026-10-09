@@ -28,20 +28,22 @@ RSpec.describe Guest, type: :model do
       expect(record).to be_valid
     end
 
-    it 'requires date_of_birth for reporting guests who are non-Malaysian' do
+    it 'allows a blank date_of_birth for non-Malaysian national ID guests' do
       record = build(:guest, date_of_birth: nil, country: 'Singapore', document_type: 'ic')
 
-      record.validate
-
-      expect(record.errors[:date_of_birth]).to include('is required for passport guests')
+      expect(record).to be_valid
     end
 
-    it 'requires date_of_birth for passport guests' do
+    it 'allows a blank date_of_birth for Malaysian passport guests' do
       record = build(:guest, date_of_birth: nil, country: 'Malaysia', document_type: 'passport')
 
-      record.validate
+      expect(record).to be_valid
+    end
 
-      expect(record.errors[:date_of_birth]).to include('is required for passport guests')
+    it 'allows a blank date_of_birth for non-Malaysian passport guests' do
+      record = build(:guest, date_of_birth: nil, country: 'Singapore', document_type: 'passport')
+
+      expect(record).to be_valid
     end
 
     it 'rejects date_of_birth on or after today' do

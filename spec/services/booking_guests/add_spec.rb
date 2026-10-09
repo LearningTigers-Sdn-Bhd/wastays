@@ -24,6 +24,14 @@ RSpec.describe BookingGuests::Add do
     expect(BookingAuditLog.where(auditable: booking, action_type: "guest_added")).to exist
   end
 
+  it "adds a non-Malaysian passport guest without a date of birth" do
+    result = described_class.call(booking:, attributes: attributes.merge(country: "Singapore", date_of_birth: nil), actor:)
+
+    expect(result).to be_success
+    expect(result.guest.date_of_birth).to be_nil
+    expect(result.booking_guest.date_of_birth_snapshot).to be_nil
+  end
+
   it "returns validation errors without creating a booking guest" do
     result = described_class.call(booking:, attributes: attributes.merge(name: ""), actor:)
 
