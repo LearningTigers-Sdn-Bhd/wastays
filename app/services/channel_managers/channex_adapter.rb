@@ -864,10 +864,12 @@ module ChannelManagers
           is_full_sync = room_type_ids.nil?
           next if inventory.nil? && !is_full_sync
 
+          # A closed date keeps its count of free rooms for when it reopens,
+          # but nothing on it is for sale.
           val_data = {
             property_id: property_id,
             room_type_id: ext_rt_id,
-            availability: inventory&.quantity || 0
+            availability: inventory.nil? || inventory.status == "closed" ? 0 : inventory.quantity
           }
 
           if current_range.nil?

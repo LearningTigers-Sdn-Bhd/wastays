@@ -228,6 +228,21 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(result.success?).to be true
     end
 
+    it 'tells the OTAs a closed date has nothing for sale' do
+      room_type.room_inventories.find_by!(date: start_date + 1.day).update!(status: "closed")
+      allow(client_double).to receive(:post).with("/restrictions", anything).and_return({ "data" => { "id" => "task_2" } })
+
+      expect(client_double).to receive(:post).with("/availability", {
+        values: [
+          { property_id: "ch_prop_123", room_type_id: "ch_rt_123", date_from: start_date.to_s, date_to: start_date.to_s, availability: 10 },
+          { property_id: "ch_prop_123", room_type_id: "ch_rt_123", date_from: (start_date + 1.day).to_s, date_to: (start_date + 1.day).to_s, availability: 0 },
+          { property_id: "ch_prop_123", room_type_id: "ch_rt_123", date_from: end_date.to_s, date_to: end_date.to_s, availability: 10 }
+        ]
+      }).and_return({ "data" => { "id" => "task_1" } })
+
+      adapter.push_ari(date_range: (start_date..end_date))
+    end
+
     it 'provides full snapshot including defaults for missing records during full sync' do
       rate_plan.room_rates.destroy_all
       room_type.room_inventories.destroy_all
