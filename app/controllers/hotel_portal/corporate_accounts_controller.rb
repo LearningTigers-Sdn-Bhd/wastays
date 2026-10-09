@@ -1,15 +1,13 @@
 # frozen_string_literal: true
 
 module HotelPortal
-  # External accounts index plus the Sheet-based invite and edit forms.
-  #
-  # Routes stay REST; only the rendering and completion contract are Sheet-based.
-  # On failure the form is re-rendered into the sheet frame so submitted values
-  # survive — the operator has to be able to correct an address in place.
+  # External accounts index, invitation sheet, and tabbed account workspace.
   class CorporateAccountsController < HotelPortal::FinancialsBaseController
     include SheetActionCompletion
 
     SHEET_FRAME = "external_account_sheet"
+    WORKSPACE_FRAME = "corporate_account_workspace"
+    WORKSPACE_TABS = { "manage_billing" => "Manage billing", "company_details" => "Company details", "billing_address" => "Billing address" }.freeze
 
     before_action :authorize_manage_corporate_accounts!
     before_action :set_relationship, only: %i[edit update suspend reactivate]
@@ -46,28 +44,71 @@ module HotelPortal
     end
 
     def edit
-      render :edit, layout: false
+      prepare_workspace
+      render_workspace
     end
 
     def update
-      if @relationship.update(relationship_params)
-        complete_action(notice: "#{@relationship.corporate_account.name} updated.")
+      result = CorporateAccounts::Update.call(relationship: @relationship, relationship_attributes: relationship_params,
+        account_attributes: company_params[:corporate_account] || {}, user_attributes: company_params[:corporate_user] || {})
+      if result.success?
+        redirect_to workspace_path, notice: "#{result.account.name} updated.", status: :see_other
       else
-        render_failure("hotel_portal/corporate_accounts/relationship_form")
+        @corporate_account = result.account
+        @corporate_user = result.user
+        @relationship.errors.add(:base, result.error)
+        prepare_workspace
+        render_workspace(status: :unprocessable_content)
       end
     end
 
     def suspend
       @relationship.suspend!
-      complete_action(notice: "#{@relationship.corporate_account.name} suspended.")
+      complete_relationship_action(notice: "#{@relationship.corporate_account.name} suspended.")
     end
 
     def reactivate
       @relationship.reactivate!
-      complete_action(notice: "#{@relationship.corporate_account.name} reactivated.")
+      complete_relationship_action(notice: "#{@relationship.corporate_account.name} reactivated.")
     end
 
     private
+
+    def prepare_workspace
+      @active_tab = WORKSPACE_TABS.key?(params[:tab].to_s) ? params[:tab].to_s : "manage_billing"
+      @corporate_account ||= @relationship.corporate_account
+      @corporate_user ||= @corporate_account.users.find(&:corporate?)
+      override_breadcrumbs(
+        { label: "Accounts receivable" },
+        { label: "External accounts", path: hotel_corporate_accounts_path(current_hotel) },
+        { label: @corporate_account.name }
+      )
+    end
+
+    def render_workspace(status: :ok)
+      if turbo_frame_request_id == WORKSPACE_FRAME
+        render partial: "hotel_portal/corporate_accounts/workspace", formats: :html, status: status
+      else
+        render :edit, formats: :html, status: status
+      end
+    end
+
+    def workspace_path
+      tab = WORKSPACE_TABS.key?(params[:tab].to_s) ? params[:tab] : "manage_billing"
+      edit_hotel_corporate_account_path(current_hotel, @relationship, tab: tab, return_to: @return_to)
+    end
+
+    def complete_relationship_action(notice:)
+      if turbo_frame_request_id == SHEET_FRAME
+        complete_action(notice: notice)
+      else
+        redirect_to workspace_path, notice: notice, status: :see_other
+      end
+    end
+
+    def company_params
+      params.require(:hotel_corporate_account).permit(corporate_account: [ :name ], corporate_user: [ :name, :email ])
+    end
 
     def complete_action(notice:)
       complete_sheet_action(destination: @return_to, notice: notice, frame: requesting_sheet_frame)
@@ -100,7 +141,7 @@ module HotelPortal
     end
 
     def set_relationship
-      @relationship = current_hotel.hotel_corporate_accounts.find(params[:id])
+      @relationship = current_hotel.hotel_corporate_accounts.includes(corporate_account: :users).find(params[:id])
     end
 
     # The account an invitation would claim, when the sheet was opened from one.

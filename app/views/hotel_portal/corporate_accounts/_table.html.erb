@@ -66,7 +66,11 @@
         <% end %>
 
         <% presenter.paginated_rows.each do |row| %>
-          <tr data-testid="<%= row.dom_id %>">
+          <tr data-testid="<%= row.dom_id %>" role="link" tabindex="0"
+            aria-label="Edit <%= row.account_name %>"
+            data-controller="clickable-row"
+            data-clickable-row-url-value="<%= edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath) %>"
+            data-action="click->clickable-row#visit keydown->clickable-row#visitFromKeyboard">
             <%= render "hotel_portal/corporate_accounts/row_identity", row: row %>
             <td class="font-mono text-xs font-semibold text-foreground"><%= row.agent_code.presence || "—" %></td>
             <td class="text-muted-foreground">

@@ -1,0 +1,61 @@
+<section class="space-y-4">
+  <div>
+    <h2 class="text-sm font-semibold text-foreground">Profile</h2>
+    <p class="text-xs text-muted-foreground">The company name is shared across linked hotels. Contact and tax details below apply to this hotel.</p>
+  </div>
+  <%= form.fields_for :corporate_account, @corporate_account do |account_form| %>
+    <%= render PanelsUI::FormField.new(form: account_form, attribute: :name, label: "Company name") do |field| %>
+      <% field.with_input(required: true, autocomplete: "organization") %>
+    <% end %>
+  <% end %>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%= render PanelsUI::FormField.new(form: form, attribute: :contact_email, label: "Contact email") do |field| %>
+      <% field.with_input(type: :email, value: @relationship.effective_contact_email, autocomplete: "email") %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :contact_phone, label: "Contact phone") do |field| %>
+      <% field.with_input(type: :tel, autocomplete: "tel") %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :tin, label: "Tax identification number (TIN)", hint: "Needed for LHDN e-invoices this company can claim.") do |field| %>
+      <% field.with_input(autocomplete: "off", data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :brn, label: "Business registration number") do |field| %>
+      <% field.with_input(autocomplete: "off", data: { tin_validation_target: "idValue", action: "blur->tin-validation#check" }) %>
+    <% end %>
+    <p class="text-xs text-muted-foreground sm:col-span-2" data-tin-validation-target="feedback" hidden></p>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :sst_registration_number, label: "SST registration number") do |field| %>
+      <% field.with_input(autocomplete: "off") %>
+    <% end %>
+  </div>
+</section>
+<section class="space-y-4 border-t border-border pt-5">
+  <div>
+    <h2 class="text-sm font-semibold text-foreground">Account</h2>
+    <p class="text-xs text-muted-foreground">The contact person and login email are shared across linked hotels. Account type and market apply to this hotel.</p>
+  </div>
+  <% if @corporate_user %>
+    <%= form.fields_for :corporate_user, @corporate_user do |user_form| %>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= render PanelsUI::FormField.new(form: user_form, attribute: :name, label: "Contact person") do |field| %>
+          <% field.with_input(required: true, autocomplete: "name") %>
+        <% end %>
+        <%= render PanelsUI::FormField.new(form: user_form, attribute: :email, label: "Login email") do |field| %>
+          <% field.with_input(type: :email, required: true, autocomplete: "email") %>
+        <% end %>
+      </div>
+    <% end %>
+  <% else %>
+    <p class="text-sm text-muted-foreground">This account has no login yet. Use Invite contact to give its contact access.</p>
+  <% end %>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%= render PanelsUI::FormField.new(form: form, attribute: :account_type, label: "Account type") do |field| %>
+      <% field.with_select_menu(HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } }, selected: @relationship.account_type) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :market, label: "Market",
+      hint: "Local agents are offered local rates; international agents are offered international rates. With no market set, only rates open to both are available.") do |field| %>
+      <% field.with_select_menu([ { label: "Not set", value: "" } ] + HotelCorporateAccount::MARKETS.map { |market| { label: HotelCorporateAccount::MARKET_LABELS.fetch(market), value: market } }, selected: @relationship.market.to_s) %>
+    <% end %>
+    <%= render PanelsUI::FormField.new(form: form, attribute: :agent_code, label: "Account code") do |field| %>
+      <% field.with_input(readonly: true) %>
+    <% end %>
+  </div>
+</section>
