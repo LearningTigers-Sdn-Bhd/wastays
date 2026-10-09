@@ -23,11 +23,12 @@ module ChannelManagers
 
     # external_room_type_ids maps our room type ids to their Channex ids, for
     # the room types this push covers.
-    def initialize(client:, property_id:, external_room_type_ids:, owned_rule_ids: [])
+    def initialize(client:, property_id:, external_room_type_ids:, owned_rule_ids: [], today: Date.current)
       @client = client
       @property_id = property_id
       @external_room_type_ids = external_room_type_ids
       @owned_rule_ids = owned_rule_ids.to_set
+      @today = today
     end
 
     def call(date_range)
@@ -67,22 +68,35 @@ module ChannelManagers
       external_id = @external_room_type_ids.fetch(room_type_id)
       own_rules = rules.select { |rule| rule.channel_ids.include?(channel_id) && rule.room_type_ids.include?(external_id) }
       span = span_covering(date_range, own_rules)
+      replaced = own_rules.select { |rule| rule.dates.overlaps?(span) }
 
-      overrides = ChannelRoomRate.where(room_type_id: room_type_id, channel_id: channel_id, rate_plan_id: nil, date: span)
+      # Past nights are no use to an OTA, and a rule starting in the past
+      # risks being refused, so the rebuild starts no earlier than today.
+      overrides = ChannelRoomRate.where(
+        room_type_id: room_type_id, channel_id: channel_id, rate_plan_id: nil, date: [ span.begin, @today ].max..span.end
+      )
 
-      own_rules.select { |rule| rule.dates.overlaps?(span) }.each do |rule|
+      # New rules go up before the old ones come down: if Channex refuses one,
+      # the old rule stays and keeps its dates closed rather than leaving a gap.
+      created = rule_specs(overrides).map do |spec|
+        create_rule(channel_id: channel_id, external_id: external_id, **spec)
+      end
+      if created.any?(&:nil?)
+        Rails.logger.warn("Channex availability rules kept #{replaced.size} old rule(s) after a refused create property_id=#{@property_id}")
+        return
+      end
+
+      replaced.each do |rule|
         request(:delete, "/channel_availability_rules/#{rule.id}", context: "delete rule #{rule.id}")
       end
+    end
 
-      date_ranges(overrides.select(&:stop_sell).map(&:date)).each do |dates|
-        create_rule(type: "close_out", channel_id: channel_id, external_id: external_id, dates: dates)
+    def rule_specs(overrides)
+      close_outs = date_ranges(overrides.select(&:stop_sell).map(&:date)).map { |dates| { type: "close_out", dates: dates } }
+      allotments = overrides.select { |o| o.availability.present? && !o.stop_sell }.group_by(&:availability).flat_map do |value, rows|
+        date_ranges(rows.map(&:date)).map { |dates| { type: "max_availability", value: value.to_i, dates: dates } }
       end
-
-      overrides.select { |o| o.availability.present? && !o.stop_sell }.group_by(&:availability).each do |value, rows|
-        date_ranges(rows.map(&:date)).each do |dates|
-          create_rule(type: "max_availability", value: value.to_i, channel_id: channel_id, external_id: external_id, dates: dates)
-        end
-      end
+      close_outs + allotments
     end
 
     # Grows the window until no rule it overlaps reaches past it, since each of

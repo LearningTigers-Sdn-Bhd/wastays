@@ -16,8 +16,10 @@ RSpec.describe ChannelManagers::ChannexAvailabilityRules do
     end
   end
 
-  def sync(date_range)
-    described_class.new(client: client, property_id: "prop-1", external_room_type_ids: { room_type.id => "ch-rt-1" }).call(date_range)
+  def sync(date_range, today: Date.new(2026, 10, 1))
+    described_class.new(
+      client: client, property_id: "prop-1", external_room_type_ids: { room_type.id => "ch-rt-1" }, today: today
+    ).call(date_range)
   end
 
   def close_agoda(dates)
@@ -85,10 +87,35 @@ RSpec.describe ChannelManagers::ChannexAvailabilityRules do
     allow(client).to receive(:get).and_return(list(rule("hand-made", Date.new(2026, 11, 9), Date.new(2026, 11, 11))))
 
     described_class.new(
-      client: client, property_id: "prop-1", external_room_type_ids: { room_type.id => "ch-rt-1" }, owned_rule_ids: [ "hand-made" ]
+      client: client, property_id: "prop-1", external_room_type_ids: { room_type.id => "ch-rt-1" },
+      owned_rule_ids: [ "hand-made" ], today: Date.new(2026, 10, 1)
     ).call(Date.new(2026, 11, 10)..Date.new(2026, 11, 10))
 
     expect(client).not_to have_received(:delete)
+  end
+
+  it "keeps the old rule when Channex refuses its replacement" do
+    november = Date.new(2026, 11, 1)..Date.new(2026, 11, 30)
+    close_agoda(november)
+    allow(client).to receive(:get).and_return(list(rule("r1", november.first, november.last)))
+    allow(client).to receive(:post).and_return({ error: "Channel Manager API error: 422", retryable: false })
+
+    sync(Date.new(2026, 11, 10)..Date.new(2026, 11, 10))
+
+    expect(client).not_to have_received(:delete)
+  end
+
+  it "rebuilds a close-out from today when it started in the past" do
+    november = Date.new(2026, 11, 1)..Date.new(2026, 11, 30)
+    close_agoda(november)
+    allow(client).to receive(:get).and_return(list(rule("r1", november.first, november.last)))
+
+    sync(Date.new(2026, 11, 10)..Date.new(2026, 11, 10), today: Date.new(2026, 11, 10))
+
+    expect(created_rules).to eq([
+      { type: "close_out", start_date: "2026-11-10", end_date: "2026-11-30", affected_channels: [ agoda ] }
+    ])
+    expect(client).to have_received(:delete).with("/channel_availability_rules/r1")
   end
 
   it "makes no calls for a hotel that never set a per-OTA override" do
