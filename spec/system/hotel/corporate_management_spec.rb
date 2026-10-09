@@ -166,7 +166,17 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     end
     expect(page).to have_css("dialog#external-account-credentials[open]")
     within("dialog#external-account-credentials") do
-      expect(page).to have_content("added@example.com")
+      message = find_field("Message to send")
+      expect(message.value).to include("added@example.com", "1. Open", "2. Sign in", "3. Open Profile")
+      page.execute_script(<<~JS)
+        Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
+          value: { writeText(text) { window.copiedAccountAccessMessage = text; return Promise.resolve(); } }
+        });
+      JS
+      click_in_overlay "Copy message"
+      expect(page).to have_button("Copied")
+      expect(page.evaluate_script("window.copiedAccountAccessMessage")).to eq(message.value)
       click_in_overlay "Done"
     end
     corporate_user = User.find_by!(email: "added@example.com")
@@ -176,7 +186,7 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     within("[data-testid='external-account-row-#{relationship.id}']") { click_button "More" }
     click_link "Show temporary password"
     within("dialog#external-account-credentials") do
-      expect(page).to have_content(corporate_user.temporary_password)
+      expect(find_field("Message to send").value).to include(corporate_user.temporary_password)
     end
   end
 
