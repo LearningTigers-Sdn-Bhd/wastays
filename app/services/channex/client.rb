@@ -6,7 +6,9 @@ module Channex
     class RetryableRequestError < StandardError; end
 
     STAGING_URL = "https://staging.channex.io/api/v1".freeze
-    PRODUCTION_URL = "https://channex.io/api/v1".freeze
+    # The API lives on app.channex.io; channex.io itself is the marketing site
+    # and answers every API path with an HTML 404.
+    PRODUCTION_URL = "https://app.channex.io/api/v1".freeze
 
     def initialize(api_key: nil, environment: nil)
       @api_key = api_key || AppConfig.get("channex_api_key")

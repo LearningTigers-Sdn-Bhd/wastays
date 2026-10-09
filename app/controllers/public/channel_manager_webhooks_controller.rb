@@ -7,8 +7,14 @@ module Public
     BOOKING_EVENTS = %w[booking booking_new booking_modification booking_cancellation].freeze
     NON_ACKED_BOOKING_EVENT = "non_acked_booking"
 
+    # Problems Channex wants a person to look at: a booking it couldn't match
+    # to our rooms or rates (left unfixed, these oversell), or an OTA rejecting
+    # a sync or a rate.
+    ALERT_EVENTS = %w[booking_unmapped_room booking_unmapped_rate sync_error rate_error].freeze
+
     # Reported when Channex says a revision went 30 minutes without an ack.
     UnackedRevisionError = Class.new(StandardError)
+    ChannelAlertError = Class.new(StandardError)
 
     skip_before_action :verify_authenticity_token
     skip_before_action :authenticate_user! if respond_to?(:authenticate_user!)
@@ -23,10 +29,16 @@ module Public
         enqueue_revision(payload)
       elsif event_type == NON_ACKED_BOOKING_EVENT
         report_non_acked_booking(payload)
+      elsif ALERT_EVENTS.include?(event_type)
+        report_channel_alert(event_type, payload)
       else
         # Other event types we might not care about yet
         head :ok
       end
+    rescue JSON::ParserError
+      # Retrying a body we can't read never helps, and a 5xx makes Channex
+      # resend it 11 times over the next day.
+      head :bad_request
     rescue => e
       Rails.logger.error "Channel Manager Webhook Error: #{e.message}"
       head :internal_server_error
@@ -75,6 +87,28 @@ module Public
         }
       )
       ChannelManagers::IngestRevisionJob.perform_later(mapping.mappable_id, revision_id) if revision_id.present?
+      head :ok
+    end
+
+    def report_channel_alert(event_type, payload)
+      data = payload["payload"] || {}
+      mapping = hotel_mapping_for(payload["property_id"] || data["property_id"])
+      return head :ok unless mapping
+
+      Rails.error.report(
+        ChannelAlertError.new("Channex #{event_type} for hotel #{mapping.mappable_id}"),
+        handled: true,
+        severity: :error,
+        context: {
+          hotel_id: mapping.mappable_id,
+          event: event_type,
+          booking_id: data["booking_id"],
+          revision_id: data["booking_revision_id"],
+          channel: data["channel_name"] || data["channel"],
+          error_type: data["error_type"],
+          operation: "channex_channel_alert"
+        }.compact
+      )
       head :ok
     end
 

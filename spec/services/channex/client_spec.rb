@@ -15,6 +15,15 @@ RSpec.describe Channex::Client do
     end
   end
 
+  describe 'production' do
+    it 'talks to the app.channex.io API host' do
+      stub_request(:get, "https://app.channex.io/api/v1/properties").to_return(status: 200, body: { data: [] }.to_json)
+
+      response = described_class.new(api_key: api_key, environment: "production").get('/properties')
+      expect(response['data']).to eq([])
+    end
+  end
+
   describe '#post' do
     it 'makes a POST request with correct body' do
       payload = { property: { name: 'Test' } }

@@ -140,5 +140,41 @@ RSpec.describe "Public::ChannelManagerWebhooks", type: :request do
         expect(response).to have_http_status(:ok)
       end
     end
+
+    describe "alerts Channex wants a person to look at" do
+      before { allow(AppConfig).to receive(:get).with("channex_webhook_token").and_return(nil) }
+
+      it "reports a booking Channex could not map to our rooms" do
+        expect(Rails.error).to receive(:report).with(
+          an_instance_of(Public::ChannelManagerWebhooksController::ChannelAlertError),
+          hash_including(context: hash_including(hotel_id: hotel.id, event: "booking_unmapped_room", revision_id: "rev_9"))
+        )
+
+        post_webhook(event: "booking_unmapped_room", property_id: "ch_prop_123", payload: { booking_id: "b_9", booking_revision_id: "rev_9" })
+
+        expect(response).to have_http_status(:ok)
+      end
+
+      %w[booking_unmapped_rate sync_error rate_error].each do |event|
+        it "reports #{event}" do
+          expect(Rails.error).to receive(:report).with(
+            an_instance_of(Public::ChannelManagerWebhooksController::ChannelAlertError),
+            hash_including(context: hash_including(event: event))
+          )
+
+          post_webhook(event: event, property_id: "ch_prop_123", payload: { channel_name: "Agoda", error_type: "general_error" })
+
+          expect(response).to have_http_status(:ok)
+        end
+      end
+    end
+
+    it "answers 400 to a body that isn't JSON, so Channex stops resending it" do
+      allow(AppConfig).to receive(:get).with("channex_webhook_token").and_return(nil)
+
+      post "/webhooks/channex", params: "{not json", headers: json_headers
+
+      expect(response).to have_http_status(:bad_request)
+    end
   end
 end
