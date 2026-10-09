@@ -67,6 +67,7 @@
 
         <% presenter.paginated_rows.each do |row| %>
           <tr data-testid="<%= row.dom_id %>" role="link" tabindex="0"
+            class="cursor-pointer focus-visible:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/20"
             aria-label="Edit <%= row.account_name %>"
             data-controller="clickable-row"
             data-clickable-row-url-value="<%= edit_hotel_corporate_account_path(current_hotel, row.relationship, return_to: request.fullpath) %>"
