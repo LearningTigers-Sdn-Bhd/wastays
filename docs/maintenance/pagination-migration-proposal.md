@@ -1,12 +1,15 @@
 # Pagination migration proposal
 
+> **Delivery record:** migration steps and validation results retain their original dates and versions.
+> The dependency summary reflects the current Gemfile; completed migration steps are not new work.
+
 Date: September 6, 2026
 
 Status: The Pagy migration is implemented across all portals. Kaminari and its custom templates are removed.
 
 ## Recommendation
 
-Use Pagy 43.6.2 for all portal pagination while keeping the established user behavior.
+Use the installed Pagy 43 API for portal pagination while keeping the established user behavior.
 
 All migrated pages use the compact shadcn Nova style through `PanelsUI::Pagination`.
 
@@ -18,19 +21,19 @@ This estimate covers implementation, regression tests, fixes, and acceptance che
 
 ## Version and compatibility
 
-The project currently uses Pagy 43.6.2, Ruby 3.4.7, and Rails 8.1.3.1.
+The current Gemfile and lockfile specify Pagy 43.7.0. The original migration targeted Pagy 43.6.2; its release notes and validation records below describe that version.
 
 This proposal targets the new Pagy 43 API, not an older Pagy version. Pagy 43.6.2 was released on August 24, 2026.
 
 Pagy 43.6.2 requires Ruby 3.3 or later. The project's Ruby version meets that requirement. Focused and non-browser suites support application compatibility.
 
-The proposed dependency is:
+The current dependency is:
 
 ```ruby
-gem "pagy", "~> 43.6.2"
+gem "pagy", "~> 43.7.0"
 ```
 
-This constraint permits patch updates within version 43.6. Version 43.6.2 fixes an array-pagination overflow issue relevant to this project.
+This constraint permits patch updates within version 43.7. The original migration selected 43.6.2 for its array-pagination overflow fix.
 
 The current API uses `Pagy::Method` and `pagy(:offset, collection, ...)`. Pagination metadata and displayed records are separate objects.
 
@@ -243,7 +246,7 @@ Default to rendering the single-page state. Callers that currently hide it pass 
 
 Use Pagy's page-series support and `page_url` for page calculations and URLs. Use Rails tag helpers to escape attributes.
 
-The installed 43.6.2 code exposes `series` as a protected method. The component isolates access through `send(:series, slots: 9)`.
+The 43.6.2 code used during the migration exposes `series` as a protected method. The component isolates access through `send(:series, slots: 9)`.
 
 Component tests cover this version-specific dependency. Page URLs use the public `page_url` helper.
 

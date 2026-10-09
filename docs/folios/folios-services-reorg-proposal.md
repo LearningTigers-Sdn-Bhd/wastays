@@ -482,7 +482,7 @@ grate, that is cheap evidence against the full seven.
 
 ### The verb glossary — do this now, it is free
 
-**Done (PR 1): `docs/folios-service-verbs.md`.**
+**Done (PR 1): `docs/folios/folios-service-verbs.md`.**
 
 `generate` · `sync` · `refresh` · `calculate` · `reconcile` · `process` had no
 written distinction. One page of documentation makes every future naming

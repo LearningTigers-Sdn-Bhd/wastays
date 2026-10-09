@@ -1,7 +1,7 @@
 # Folio service verbs
 
 > Status: **Active convention.** Written as PR 1 of
-> `docs/folios-services-reorg-proposal.md`.
+> `docs/folios/folios-services-reorg-proposal.md`.
 > Scope: `app/services/folios/`, now foldered by family (PR 10). The old
 > top-level `app/services/folio_routing/` is `Folios::Routing`.
 

@@ -12,7 +12,7 @@ It reproduces the real file's layout exactly -- BIFF .xls, Crystal Reports
 banner, 48 columns of merged-cell offsets, remark rows, and the Group Total /
 Summary Report footer that the parser uses as its verification anchor.
 
-Deliberate edge cases are documented in docs/ezee-reservation-import.md; keep
+Deliberate edge cases are documented in docs/integrations/ezee-reservation-import.md; keep
 them when regenerating.
 
 Requires xlwt (writes BIFF):   pip install xlwt

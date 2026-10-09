@@ -1,26 +1,29 @@
 # Onboarding phase handoffs — shared context
 
+> **Historical phase handoffs:** these briefs describe the delivery work recorded in August 2026.
+> Start with `../CURRENT_BEHAVIOR.md` for the current lifecycle. These records do not authorize a new implementation task.
+
 Read this file first, then the handoff for the phase you are implementing. Each phase is
 designed to be picked up by a fresh session with no prior conversation history.
 
-Authoritative sources, in order:
+Sources used during the recorded phase work, in order:
 
 1. `docs/onboarding/FLOW_DECISIONS.md` — product behaviour
 2. `docs/onboarding/DESIGN_DECISIONS.md` — presentation
 3. `DESIGN.md` (root) — portal UI contract, PanelsUI components, semantic tokens
 4. `docs/onboarding/PLAN.md` — phase scope and deliverables
-5. `docs/onboarding/IMPLEMENTATION_MAP.md` — verified inventory of existing domain code
+5. `docs/onboarding/IMPLEMENTATION_MAP.md` — historical Phase 0 inventory
 
-`CLAUDE.md` rules apply throughout: business logic in `app/services/<domain>/`, one
-verb-named class per file; reuse before adding; align on approach before writing code.
+Follow your local assistant instructions when present.
+These handoffs supply phase history and decisions; the current request determines the work to perform.
 
 ## Status as of 2026-08-13
 
 Phases 0–11 are implemented. Phase 12 is the next slice; do not broaden the pending-review
 write guard into full setup-hotel portal enforcement without the Phase 12 rollout work.
 
-**Start at `REMAINING_WORK.md`** — it is the verified state of the branch and the scope of
-phases 12–13, and it supersedes any phase file it disagrees with.
+`REMAINING_WORK.md` records the branch state and the scope of phases 12–13 at that date.
+For current lifecycle and invitation timing, use `../CURRENT_BEHAVIOR.md` and the current services.
 
 | Phase | Sections | State |
 |---|---|---|

@@ -1,10 +1,12 @@
 # Onboarding — remaining work handover
 
 Verified against the code on `feat/onboarding-shell` on 2026-08-13, after phases 12–13
-(`af9a06a1b` … `d43c8b914`). This is the current handoff; older phase proposals are
-historical when they disagree with it.
+(`af9a06a1b` … `d43c8b914`). This records the handoff at that date. Later behavior is summarized in
+`../CURRENT_BEHAVIOR.md`; rollout and validation notes below remain dated records.
 
-## Current status
+Lifecycle and invitation notes were corrected against the local checkout on 2026-10-09.
+
+## Delivery status recorded in August 2026
 
 | Phase | Scope | State |
 |---|---|---|
@@ -41,7 +43,7 @@ Read `PHASE_10_REVIEW_SUBMISSION.md` and `PHASE_11_ADMIN_REVIEW.md` for full con
   blocks every non-GET request except `HotelPortal::UserProfilesController` and
   `HotelPortal::OnboardingSubmissionsController`. Reads stay reachable; so does logout,
   which is not a hotel-portal controller.
-- Training is visible but independent and never blocks launch.
+- Training appointments remain visible. Launch requires the owner's keep/reset decision through `Onboarding::CompleteTraining`.
 - The approved snapshot remains immutable after launch.
 - `Admin::CompleteOnboarding`, dashboard direct submission, tracker completion, and legacy
   completion routes were removed. Generic approval is only for suspended reactivation.
@@ -54,8 +56,8 @@ stale.
 
 ## Phase 13 — legacy cleanup (done)
 
-`Hotel::STATUSES` is now exactly `setup`, `pending_review`, `live`, `suspended`, and the
-model validates against it, so the legacy vocabulary cannot come back.
+`Hotel::STATUSES` currently contains `setup`, `pending_review`, `ready_to_launch`, `live`, and `suspended`.
+The model validates against this list; approval and launch are separate transitions.
 `NormalizeHotelLifecycleStatuses` backfilled `hotels.status` and
 `hotels.pre_suspension_status` together — the suspend/reactivate round trip stashes a raw
 status in the latter. It reports its row counts, is idempotent, and is deliberately
@@ -83,7 +85,7 @@ per status, no overlap.
   `Onboarding::ResumePageResolver`'s section. That resolver is the single source of "where
   did they leave off"; do not add a second rule.
 - Everyone else lands on `HotelPortal::SetupLocksController#show`. That path is close to
-  unreachable now that invitations wait for approval; it exists for staff accounts that
+  unreachable now that invitations wait for launch; it exists for staff accounts that
   predate the change.
 - Superadmins are exempt so they can inspect a property mid-setup.
 - `SETUP_LOCK_EXEMPT` lists what stays reachable: onboarding, submissions, sessions, the
@@ -100,8 +102,9 @@ pending-review rows were normalized rather than grandfathered.
 
 ## Invitation timing
 
-Staff and corporate invitations are created on **approval**, not submission
-(`CreateDeliveries.for_approval`). Submitting notifies administrators only. Inviting at
+Staff and corporate invitations are queued on **launch**, not submission or admin approval.
+`Onboarding::CompleteTraining` calls `CreateDeliveries.for_approval` after the transition to `live`.
+Submitting notifies administrators only; approval notifies owners that a launch decision is required. Inviting at
 submission meant a reviewer who requested changes had already introduced people to a
 property that was not open. Draft-level idempotency is unchanged, so a resubmitted property
 still invites each contact exactly once.

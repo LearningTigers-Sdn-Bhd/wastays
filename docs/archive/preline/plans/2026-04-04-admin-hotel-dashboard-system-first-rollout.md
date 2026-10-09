@@ -1,5 +1,8 @@
 # Admin + Hotel Dashboard System First Rollout Implementation Plan
 
+> **Historical Preline plan:** retained as a record of the April 2026 design and delivery work.
+> The current portal contract is `DESIGN.md`; shared portal behavior belongs to PanelsUI. Do not execute this plan as a new task.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Define the first shared Preline-based dashboard primitives and refactor the admin and hotel dashboard home pages to use them.

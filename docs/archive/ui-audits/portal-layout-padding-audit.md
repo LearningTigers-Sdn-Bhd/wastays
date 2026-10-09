@@ -1,5 +1,8 @@
 # Portal Layout Padding Audit
 
+> **Historical audit:** counts, findings, and completion notes retain their original dates.
+> Recheck the current templates before treating an item as outstanding. Use `DESIGN.md` for current portal rules.
+
 Research snapshot for the layout padding normalization phase. Covers all four
 role portals: **admin**, **hotel**, **corporate**, **guest**. No code changes —
 inventory + root-cause only.
