@@ -1411,89 +1411,16 @@ module ChannelManagers
     end
 
     def sync_channel_availability_rules(client, property_id, date_range, room_type_ids)
-      overrides = ChannelRoomRate.where(
-        room_type_id: room_type_ids,
-        rate_plan_id: nil,
-        date: date_range
-      )
-
-      overrides.group_by { |o| [ o.room_type_id, o.channel_id ] }.each do |(room_type_id, channel_id), chan_overrides|
-        room_type = RoomType.find(room_type_id)
-        ext_rt_id = mapping_for(room_type).external_id
-        next if ext_rt_id.to_s.start_with?("pending")
-
-        # 1. Clean up existing rules for this room/channel in this range to avoid duplicates
-        existing_rules = client.get("/channel_availability_rules", { "filter" => { "property_id" => property_id } }) rescue {}
-        if existing_rules["data"].is_a?(Array)
-          existing_rules["data"].each do |rule|
-            attr = rule["attributes"] || {}
-            if attr["title"] == "PMS Override" && attr["affected_channels"]&.include?(channel_id) && attr["affected_room_types"]&.include?(ext_rt_id)
-              r_start = Date.parse(attr["start_date"]) rescue nil
-              r_end = Date.parse(attr["end_date"]) rescue nil
-              if r_start && r_end && (r_start..r_end).overlaps?(date_range)
-                client.delete("/channel_availability_rules/#{rule['id']}") rescue nil
-              end
-            end
-          end
-        end
-
-        # 2. Push contiguous close_out rules
-        close_out_dates = chan_overrides.select(&:stop_sell).map(&:date).sort
-        group_dates_into_ranges(close_out_dates).each do |range|
-          client.post("/channel_availability_rules", {
-            channel_availability_rule: {
-              title: "PMS Override",
-              type: "close_out",
-              affected_channels: [ channel_id ],
-              affected_room_types: [ ext_rt_id ],
-              days: [ "mo", "tu", "we", "th", "fr", "sa", "su" ],
-              start_date: range.first.to_s,
-              end_date: range.last.to_s,
-              property_id: property_id
-            }
-          }) rescue nil
-        end
-
-        # 3. Push contiguous max_availability rules (allotments)
-        max_avail_overrides = chan_overrides.select { |o| o.availability.present? && !o.stop_sell }
-        max_avail_overrides.group_by(&:availability).each do |avail_value, overrides_with_val|
-          avail_dates = overrides_with_val.map(&:date).sort
-          group_dates_into_ranges(avail_dates).each do |range|
-            client.post("/channel_availability_rules", {
-              channel_availability_rule: {
-                title: "PMS Override",
-                type: "max_availability",
-                value: avail_value.to_i,
-                affected_channels: [ channel_id ],
-                affected_room_types: [ ext_rt_id ],
-                days: [ "mo", "tu", "we", "th", "fr", "sa", "su" ],
-                start_date: range.first.to_s,
-                end_date: range.last.to_s,
-                property_id: property_id
-              }
-            }) rescue nil
-          end
-        end
+      external_room_type_ids = @hotel.room_types.where(id: room_type_ids).each_with_object({}) do |room_type, ids|
+        external_id = mapping_for(room_type).external_id
+        ids[room_type.id] = external_id unless external_id.to_s.start_with?("pending")
       end
-    end
 
-    def group_dates_into_ranges(dates)
-      return [] if dates.empty?
-      ranges = []
-      start_date = dates.first
-      prev_date = dates.first
-
-      dates[1..].each do |d|
-        if d == prev_date + 1.day
-          prev_date = d
-        else
-          ranges << (start_date..prev_date)
-          start_date = d
-          prev_date = d
-        end
-      end
-      ranges << (start_date..prev_date)
-      ranges
+      ChannexAvailabilityRules.new(
+        client: client,
+        property_id: property_id,
+        external_room_type_ids: external_room_type_ids
+      ).call(date_range)
     end
   end
 end
