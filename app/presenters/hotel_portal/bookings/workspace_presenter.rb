@@ -2184,7 +2184,7 @@ module HotelPortal
     # Each group carries its own add action so it targets that child booking
     # rather than whichever child happens to be selected.
     def add_guest_path_for(child)
-      return unless child.status.in?(%w[confirmed checked_in])
+      return unless child.status.in?(Booking::GUEST_ADDABLE_STATUSES)
 
       Rails.application.routes.url_helpers.hotel_booking_action_manage_guest_path(
         hotel, child, mode: "add", return_to: close_drawer_path

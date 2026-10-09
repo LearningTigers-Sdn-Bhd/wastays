@@ -1372,6 +1372,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
 
       expect(add_guest_in.call(first_child)["href"]).to include(first_child.id.to_s)
+
+      first_child.update_column(:status, "completed")
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
+
+      expect(add_guest_in.call(first_child)["href"]).to include(first_child.id.to_s)
     end
 
     it "falls back to the first folio and guest when the first child has no primary entities" do
