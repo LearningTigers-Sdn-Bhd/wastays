@@ -50,10 +50,11 @@ module HotelPortal
       end
 
       def transaction_entries
-        transactions = FolioTransaction.joins(booking_folio: :booking)
+        transactions = FolioTransaction.joins(:source_booking)
           .left_outer_joins(:reversal_of_transaction)
           .where(bookings: { hotel_id: @hotel.id })
           .where(posting_date: @start_date..@end_date)
+          .where("COALESCE(folio_transactions.metadata->>'internal_folio_movement', 'false') != 'true'")
           .select(
             "folio_transactions.*",
             "bookings.confirmation_token AS booking_confirmation_token",

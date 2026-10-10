@@ -49,6 +49,7 @@ module Folios
             description: description,
             posting_date: charge_record.posting_date,
             options: {
+              source_booking: @booking,
               override_night_audit: true,
               correction_reason: "late_checkin_correction",
               correction_note: description,
@@ -112,6 +113,7 @@ module Folios
             posting_date: date,
             catch_up_key: charge_key,
             options: {
+              source_booking: @booking,
               override_night_audit: true,
               correction_reason: "late_checkin_catch_up",
               correction_note: description,
@@ -169,6 +171,7 @@ module Folios
             posting_date: date,
             catch_up_key: charge_key,
             options: {
+              source_booking: @booking,
               override_night_audit: true,
               correction_reason: "late_checkin_catch_up",
               correction_note: description,
@@ -201,7 +204,7 @@ module Folios
         # Check both standard audit keys and catch-up keys to be safe
         nightly_key = charge_key.sub("catch_up:", "")
         FolioTransaction.joins(:booking_folio)
-          .where(booking_folios: { booking_id: @booking.id })
+          .where(source_booking_id: @booking.id)
           .charge
           .where("catch_up_key = :charge_key OR metadata->>'catch_up_key' = :charge_key OR metadata->>'nightly_charge_key' = :nightly_key", charge_key: charge_key, nightly_key: nightly_key)
           .where(voided_by_transaction_id: nil)

@@ -125,6 +125,7 @@ module Folios
         )
 
         @options.merge(
+          source_booking: original.source_booking,
           metadata: metadata,
           reversal_of_transaction: original,
           correction_reason: @correction_reason,

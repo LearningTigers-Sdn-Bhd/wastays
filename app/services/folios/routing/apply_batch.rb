@@ -4,6 +4,8 @@
 module Folios
   module Routing
     class ApplyBatch
+      include Authorizable
+
       def self.call(booking:, actor:, routes:, confirmation:, forecast_confirmation: nil, reason:, idempotency_key:)
         new(booking:, actor:, routes:, confirmation:, forecast_confirmation:, reason:, idempotency_key:).call
       end
@@ -25,6 +27,9 @@ module Folios
         child_changes = change_set.child_changes
         tax_changes = change_set.tax_changes
         all_changes = change_set.all_changes
+        if all_changes.any? { |change| change[:folio]&.booking_id != @booking.id }
+          return failure("You do not have permission to manage group billing routes.") unless actor_permits?(@actor, "manage_folio_movements", hotel: @booking.hotel)
+        end
         impacts = impacts_for(all_changes)
         upcoming = upcoming_impact(all_changes, tax_changes)
         if impacts.any? && !@confirmation.in?(%w[existing_and_future future_only])
@@ -39,7 +44,16 @@ module Folios
 
         moved = []
         FolioRoutingRule.transaction do
-          @booking.lock!
+          @booking.group_booking&.lock!
+          Folios::DestinationPolicy.bookings(booking: @booking).order(:id).lock.load
+          matrix_folios = Folios::DestinationPolicy.folios(booking: @booking).to_a
+          matrix_folios.sort_by(&:id).each(&:lock!)
+          @booking.reload
+          @change_set = nil
+          return failure(change_set.error) unless change_set.valid?
+          changes = change_set.changes
+          child_changes = change_set.child_changes
+          tax_changes = change_set.tax_changes
           batch = @booking.billing_route_batches.find_by(idempotency_key: @idempotency_key)
           return Folios::Routing::BatchResult.success(transactions: []) if batch&.completed_at?
           batch ||= @booking.billing_route_batches.create!(hotel: @booking.hotel, actor: @actor, idempotency_key: @idempotency_key)
@@ -78,6 +92,8 @@ module Folios
         Folios::Routing::BatchResult.success(transactions: moved)
       rescue ActiveRecord::RecordInvalid => e
         failure(e.record.errors.full_messages.to_sentence)
+      rescue StandardError => e
+        failure(e.message)
       end
 
       def self.preview(booking:, routes:)
@@ -107,7 +123,7 @@ module Folios
 
       def impacts_for(changes)
         changes.filter_map do |change|
-          temporary_rule = change[:row].rule || @booking.folio_routing_rules.build(
+          temporary_rule = change[:row].rule || FolioRoutingRule.new(booking: @booking,
             hotel: @booking.hotel, transaction_code: change[:row].code, target_folio: change[:folio], source_type: "booking"
           )
           temporary_rule.target_folio = change[:folio]
@@ -146,7 +162,7 @@ module Folios
       def upcoming_impact(changes, tax_changes)
         return { count: 0, amount: 0.to_d } if changes.empty? && tax_changes.empty?
 
-        forecasts = FolioForecastedCharge.forecast.where(booking_folio_id: @booking.booking_folios.select(:id))
+        forecasts = FolioForecastedCharge.forecast.where(source_booking_id: @booking.id)
         { count: forecasts.count, amount: forecasts.sum(:amount) }
       end
 

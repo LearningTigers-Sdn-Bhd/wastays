@@ -37,7 +37,7 @@ module Folios
       def scheduled_extra_charge_lines
         FolioForecastedCharge.joins(:booking_folio)
           .includes(:booking_folio)
-          .where(booking_folios: { booking_id: @booking.id })
+          .where(source_booking_id: @booking.id)
           .scheduled_extra_charges
           .where(status: %w[forecast actualized], stay_date: @business_date)
           .order(:id)
@@ -65,7 +65,11 @@ module Folios
         key = nightly_charge_key(line)
         route = resolve_route(line)
         transactions = transactions_by_key[key] || []
-        valid_transactions = transactions.select { |transaction| transaction_matches?(transaction, line, route) }
+        valid_transactions = if movement_group_valid?(transactions, line)
+          transactions
+        else
+          transactions.select { |transaction| transaction_matches?(transaction, line, route) }
+        end
 
         {
           line: line,
@@ -107,7 +111,7 @@ module Folios
         FolioTransaction
           .joins(:booking_folio)
           .includes(:booking_folio, :transaction_code)
-          .where(booking_folios: { booking_id: @booking.id })
+          .where(source_booking_id: @booking.id)
           .charge
           .where(voided_by_transaction_id: nil)
           .where(
@@ -117,6 +121,8 @@ module Folios
       end
 
       def issues_for(line, key, route, transactions, valid_transactions)
+        return [] if route.success? && movement_group_valid?(transactions, line)
+
         issue_types = []
         issue_types << "unresolved_route" unless route.success?
         issue_types << "missing" if transactions.empty?
@@ -159,6 +165,34 @@ module Folios
         mismatches << "transaction_code_mismatch" unless transaction.transaction_code_id == line[:transaction_code]&.id
         mismatches << "misrouted" unless route.success? && transaction.booking_folio_id == route.folio&.id
         mismatches
+      end
+
+      def movement_group_valid?(transactions, line)
+        return false if transactions.empty?
+        roots = transactions.map { |transaction| movement_root(transaction) }
+        return false if roots.any?(&:nil?) || roots.map(&:id).uniq.size != 1
+
+        root = roots.first
+        root.source_booking_id == @booking.id && root.amount.to_d == line[:amount].to_d &&
+          transactions.sum(&:amount) == line[:amount].to_d &&
+          transactions.all? { |row| row.category == line[:category] && row.transaction_code_id == line[:transaction_code]&.id }
+      end
+
+      def movement_root(transaction)
+        return unless transaction.moved_from_transaction_id || transaction.split_from_transaction_id
+
+        visited = Set.new
+        current = transaction
+        while (parent = current.moved_from_transaction || current.split_from_transaction)
+          return if visited.include?(current.id) || parent.voided_by_transaction_id.blank?
+          unless FolioOperationLog.where(operation_key: current.operation_key, operation_type: %w[move_transaction split_transaction]).exists?
+            return visited.any? ? current : nil
+          end
+
+          visited << current.id
+          current = parent
+        end
+        current
       end
 
       def serialize_transaction(transaction)

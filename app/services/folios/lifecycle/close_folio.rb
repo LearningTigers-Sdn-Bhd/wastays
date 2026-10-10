@@ -31,6 +31,8 @@ module Folios
 
         @folio.with_lock do
           @folio.reload
+          route_error = Folios::Lifecycle::IncomingRouteBlocker.call(folio: @folio)
+          return failure(route_error) if route_error
           return failure("Folio is already closed.") if @folio.closed?
           return failure("Voided folios cannot be closed.") if @folio.voided?
           return failure("Cannot close a folio with pending upcoming charges.") if @folio.projected_forecasts.exists?

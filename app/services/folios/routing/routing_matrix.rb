@@ -28,19 +28,20 @@ module Folios
       end
 
       def parties
-        @parties ||= booking.booking_billing_parties.active
+        @parties ||= BookingBillingParty.where(booking_id: Folios::DestinationPolicy.bookings(booking: booking).select(:id)).active
           .includes(:booking_folios, :booking_guest, hotel_corporate_account: :corporate_account)
           .order(:party_kind, :id).to_a
       end
 
       def folios
-        @folios ||= booking.booking_folios.includes(:booking_billing_party).order(:folio_sequence, :id).to_a
+        @folios ||= Folios::DestinationPolicy.folios(booking: booking)
+          .includes(booking_billing_party: [ :booking, { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ]).to_a
       end
 
       private
 
       def primary_folio
-        @primary_folio ||= booking.booking_folio || folios.first
+        @primary_folio ||= booking.booking_folio || folios.find { |folio| folio.booking_id == booking.id }
       end
 
       def rules_by_code
