@@ -73,6 +73,7 @@ module Folios
             description: @description,
             posting_date: @posting_date,
             options: @options.merge(
+              source_booking: @folio.booking,
               metadata: staff_metadata.merge(
                 posting_source: @options[:posting_source].presence || "staff",
                 posted_from: "booking_show",

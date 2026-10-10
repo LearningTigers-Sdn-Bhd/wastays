@@ -2,6 +2,13 @@ require "rails_helper"
 
 RSpec.describe "Service spec coverage" do
   GROUPED_SERVICE_SPECS = {
+    "folios/reads/projected_forecasts" => "folios/group_folio_movements_spec.rb",
+    "concerns/folios/movement_locking" => "folios/group_folio_movements_spec.rb",
+    "folios/destination_policy" => "folios/group_folio_movements_spec.rb",
+    "folios/transactions/movement_policy" => "folios/group_folio_movements_spec.rb",
+    "folios/transfer_folios" => "folios/group_folio_movements_spec.rb",
+    "folios/payments/reallocate_payment" => "folios/group_folio_movements_spec.rb",
+    "folios/lifecycle/incoming_route_blocker" => "folios/group_folio_movements_spec.rb",
     # Corrections are exercised through the folio lifecycle and document pipeline.
     "ar_invoices/start_correction" => "ar_invoices/folio_correction_spec.rb",
     "ar_invoices/complete_correction" => "ar_invoices/folio_correction_spec.rb",

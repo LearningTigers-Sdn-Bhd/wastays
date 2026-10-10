@@ -54,9 +54,10 @@ module HotelPortal
       end
 
       def call
-        transactions = FolioTransaction.joins(booking_folio: :booking)
+        transactions = FolioTransaction.joins(:source_booking)
                          .where(bookings: { hotel_id: @hotel.id })
                          .where(posting_date: @start_date..@end_date)
+          .where("COALESCE(folio_transactions.metadata->>'internal_folio_movement', 'false') != 'true'")
                          .where(transaction_type: %w[charge adjustment])
                          .select(
                            "folio_transactions.*",

@@ -1,0 +1,52 @@
+<% taxes = @entry_presenter.taxes(row) %>
+<% surcharges = @entry_presenter.surcharges(row) %>
+<% error = @row_errors[row.id] %>
+<div class="space-y-3 py-3 first:pt-0 last:pb-0" data-folio-transfer-row-id="<%= row.id %>">
+  <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+    <div class="min-w-0">
+      <% if selectable %>
+        <%= render PanelsUI::Checkbox.new(name: "folio_transfer[transaction_ids][]", id: "folio-transfer-entry-#{row.id}", value: row.id,
+              checked: !receiving && Array(@draft["transaction_ids"]).include?(row.id.to_s), disabled: receiving || error.present?,
+              label: row.description, description: error.presence || (row.payment? ? "Payment credit · moves this credit without collecting or refunding money." : @entry_presenter.surcharge?(row) ? "Surcharge · select separately from the payment." : "Charge"),
+              aria: { describedby: [ "folio-transfer-amount-#{row.id}", ("folio-transfer-taxes-#{row.id}" if taxes.any?) ].compact.join(" ") },
+              data: { folio_transfer_target: "entry", action: "folio-transfer#entryChanged", charge: row.charge?, eligible: error.blank? }) %>
+      <% else %>
+        <p class="text-sm font-medium"><%= row.description %></p>
+        <p class="mt-1 text-xs text-muted-foreground"><%= row.payment? ? "Payment credit" : "Charge" %> · <%= ::Folios::DestinationPolicy.label(row.booking_folio) %></p>
+      <% end %>
+    </div>
+    <span id="folio-transfer-amount-<%= row.id %>" class="shrink-0 text-sm font-medium tabular-nums <%= 'pl-6 sm:pl-0' if selectable %>"><%= row.currency %> <%= format_number(row.amount, precision: 2) %></span>
+  </div>
+  <% if taxes.any? %>
+    <div id="folio-transfer-taxes-<%= row.id %>" class="space-y-2 rounded-md bg-muted/50 p-3 <%= 'ml-6' if selectable %>" data-folio-transfer-attached-taxes>
+      <p class="text-xs font-medium text-muted-foreground"><%= selectable ? "Taxes included when this charge is selected" : "Included taxes" %></p>
+      <dl class="space-y-2 text-sm">
+        <% taxes.each do |tax| %>
+          <div class="flex items-start justify-between gap-3" data-folio-transfer-tax-id="<%= tax.id %>">
+            <dt class="min-w-0"><%= @entry_presenter.tax_label(tax) %>
+              <% if tax.booking_folio_id != row.booking_folio_id %><span class="block text-xs text-muted-foreground">From <%= tax.booking_folio.folio_reference_display %></span><% end %>
+            </dt>
+            <dd class="shrink-0 tabular-nums"><%= tax.currency %> <%= format_number(tax.amount, precision: 2) %></dd>
+          </div>
+        <% end %>
+        <div class="flex items-start justify-between gap-3 border-t border-border pt-2 font-medium">
+          <dt>Charge + tax</dt>
+          <dd class="shrink-0 tabular-nums"><%= row.currency %> <%= format_number(@entry_presenter.total_with_taxes(row), precision: 2) %></dd>
+        </div>
+      </dl>
+    </div>
+  <% end %>
+  <% if surcharges.any? %>
+    <div class="space-y-3 rounded-md border border-border p-3 <%= 'ml-6' if selectable %>" data-folio-transfer-related-surcharges>
+      <div class="space-y-1">
+        <p class="text-sm font-medium">Related surcharge</p>
+        <% if selectable %><p class="text-xs text-muted-foreground">Select it separately to move it with the payment.</p><% end %>
+      </div>
+      <div class="divide-y divide-border">
+        <% surcharges.each do |surcharge| %>
+          <%= render "hotel_portal/folios/actions/transfers/entry", row: surcharge, selectable: selectable, receiving: receiving %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

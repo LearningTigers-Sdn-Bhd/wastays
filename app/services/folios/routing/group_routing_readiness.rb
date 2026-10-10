@@ -40,9 +40,9 @@ module Folios
 
       def booking_status(booking)
         matrix = matrix_for(booking)
-        if matrix.parties.none?
+        if matrix.parties.none? { |party| party.booking_id == booking.id }
           BookingStatus.new(booking: booking, ready: false, reason: "No billing party assigned")
-        elsif matrix.folios.none?(&:open?)
+        elsif matrix.folios.none? { |folio| folio.booking_id == booking.id && folio.open? }
           BookingStatus.new(booking: booking, ready: false, reason: "No open folio")
         else
           BookingStatus.new(booking: booking, ready: true, reason: nil)

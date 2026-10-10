@@ -24,7 +24,7 @@ module Folios
       def eligible_transactions
         scope = FolioTransaction
           .joins(:booking_folio)
-          .where(booking_folios: { booking_id: @rule.booking_id })
+          .where(source_booking_id: @rule.booking_id)
           .where(transaction_type: "charge", transaction_code_id: @rule.transaction_code_id)
           .where(voided_by_transaction_id: nil, reversal_of_transaction_id: nil)
           .where.not(booking_folio_id: @rule.target_folio_id)

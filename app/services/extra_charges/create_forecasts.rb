@@ -113,6 +113,7 @@ module ExtraCharges
 
     def create_forecast!(folio_id:, date:, kind:, identity:, amount:, description:, metadata:)
       FolioForecastedCharge.create!(
+        source_booking: @booking,
         booking_folio_id: folio_id,
         stay_date: date,
         charge_kind: kind,

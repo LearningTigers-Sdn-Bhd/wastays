@@ -81,7 +81,7 @@ module Bookings
         expected_ids = report.entries.flat_map { |entry| entry[:transactions].map(&:id) }
         removed = posted.reject { |transaction| expected_ids.include?(transaction.id) }
         reverse = removed + report.entries.flat_map do |entry|
-          entry[:transactions] - [ entry[:valid_transactions].min_by(&:id) ]
+          entry[:issues].empty? ? [] : entry[:transactions] - [ entry[:valid_transactions].min_by(&:id) ]
         end
         if reverse.any? { |transaction| !transaction.category.in?(%w[accommodation tax]) || !charge_key(transaction).split(":", 4)[2].in?(%w[accommodation tax]) }
           raise "These changes affect charges that require a separate folio correction. Only nightly room and tax charges can be corrected here."
@@ -105,7 +105,7 @@ module Bookings
         end
         reversed + replacements
       end
-      forecasts = FolioForecastedCharge.where(booking_folio_id: @booking.booking_folios.select(:id))
+      forecasts = FolioForecastedCharge.where(source_booking_id: @booking.id)
         .nightly_financial.forecast.order(:stay_date, :charge_kind, :identity)
       actions += forecasts.filter_map do |forecast|
         next unless forecast.stay_date >= @hotel.current_business_date
@@ -136,7 +136,7 @@ module Bookings
 
     def nightly_transactions
       FolioTransaction.joins(:booking_folio)
-        .where(booking_folios: { booking_id: @booking.id })
+        .where(source_booking_id: @booking.id)
         .charge.where(voided_by_transaction_id: nil)
         .where("metadata ? 'nightly_charge_key' OR metadata ? 'reconciles_nightly_charge_key' OR catch_up_key IS NOT NULL OR metadata ? 'catch_up_key'")
     end
