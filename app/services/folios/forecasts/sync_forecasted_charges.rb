@@ -57,7 +57,7 @@ module Folios
           next if actualized_forecast_exists?(line)
           next if active_forecast_exists?(line, target_folio)
 
-          target_folio.folio_forecasted_charges.create!(line.slice(:stay_date, :charge_kind, :identity, :amount, :description, :metadata))
+          target_folio.folio_forecasted_charges.create!(line.slice(:stay_date, :charge_kind, :identity, :amount, :description, :metadata).merge(source_booking: @booking))
         end
       end
 
@@ -71,6 +71,7 @@ module Folios
 
       def active_forecast_exists?(line, folio)
         folio.folio_forecasted_charges.forecast.exists?(
+          source_booking_id: @booking.id,
           stay_date: line[:stay_date],
           charge_kind: line[:charge_kind],
           identity: line[:identity]
@@ -109,7 +110,7 @@ module Folios
         )
 
         FolioTransaction.joins(:booking_folio)
-          .where(booking_folios: { booking_id: @booking.id })
+          .where(source_booking_id: @booking.id)
           .where(
             "metadata->>'nightly_charge_key' = :nightly_key OR metadata->>'reconciles_nightly_charge_key' = :nightly_key OR catch_up_key = :catch_up_key OR metadata->>'catch_up_key' = :catch_up_key",
             nightly_key: nightly_key,
@@ -140,7 +141,7 @@ module Folios
       end
 
       def booking_forecasts
-        FolioForecastedCharge.where(booking_folio_id: booking_folios.map(&:id))
+        FolioForecastedCharge.where(source_booking_id: @booking.id)
       end
 
       def booking_folios

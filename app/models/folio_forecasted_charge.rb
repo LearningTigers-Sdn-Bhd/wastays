@@ -1,4 +1,8 @@
 class FolioForecastedCharge < ApplicationRecord
+  belongs_to :source_booking, class_name: "Booking"
+  before_validation :assign_source_booking, on: :create
+  validate :source_booking_matches_hotel
+
   belongs_to :booking_folio
   belongs_to :actualizing_transaction, class_name: "FolioTransaction", optional: true
 
@@ -28,5 +32,16 @@ class FolioForecastedCharge < ApplicationRecord
 
   def self.supersede_all!
     forecast.update_all(status: "superseded")
+  end
+  private
+
+  def assign_source_booking
+    self.source_booking ||= booking_folio&.booking
+  end
+
+  def source_booking_matches_hotel
+    return if source_booking.blank? || booking_folio.blank? || source_booking.hotel_id == booking_folio.hotel_id
+
+    errors.add(:source_booking, "must belong to the same hotel")
   end
 end

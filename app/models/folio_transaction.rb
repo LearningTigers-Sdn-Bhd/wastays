@@ -30,6 +30,10 @@ class FolioTransaction < ApplicationRecord
     }
   }.freeze
 
+  belongs_to :source_booking, class_name: "Booking"
+  before_validation :assign_source_booking, on: :create
+  validate :source_booking_matches_hotel
+
   belongs_to :booking_folio
   belongs_to :transaction_code, optional: true
   belongs_to :night_audit, optional: true
@@ -131,6 +135,16 @@ class FolioTransaction < ApplicationRecord
 
   private
 
+  def assign_source_booking
+    self.source_booking ||= booking_folio&.booking
+  end
+
+  def source_booking_matches_hotel
+    return if source_booking.blank? || booking_folio.blank? || source_booking.hotel_id == booking_folio.hotel_id
+
+    errors.add(:source_booking, "must belong to the same hotel")
+  end
+
   def snapshot_transaction_code
     return if transaction_code.blank?
 
@@ -221,7 +235,7 @@ class FolioTransaction < ApplicationRecord
       errors.add(attribute, "can't reference itself")
     elsif same_folio && booking_folio_id.present? && reference.booking_folio_id != booking_folio_id
       errors.add(attribute, "must belong to the same folio")
-    elsif !same_folio && booking_folio&.booking_id.present? && reference.booking_folio&.booking_id != booking_folio.booking_id
+    elsif !same_folio && booking_folio&.booking_id.present? && !Folios::DestinationPolicy.related?(booking_folio.booking, reference.booking_folio&.booking)
       errors.add(attribute, "must belong to the same booking")
     end
   end

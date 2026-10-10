@@ -161,6 +161,7 @@ module HotelPortal
           .left_outer_joins(:transaction_code)
           .where(bookings: { hotel_id: @hotel.id })
           .where(posting_date: @start_date..@end_date)
+          .where("COALESCE(folio_transactions.metadata->>'internal_folio_movement', 'false') != 'true'")
         scope = scope.where(id: @transaction_ids) unless @transaction_ids.nil?
         scope.includes(
             :transaction_code,

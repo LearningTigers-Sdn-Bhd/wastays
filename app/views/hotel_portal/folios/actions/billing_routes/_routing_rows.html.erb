@@ -6,11 +6,17 @@
 <% draft ||= {} %>
 <% folio_choices = matrix.folios.map do |folio|
      {
-       label: folio.display_option_label,
+       label: ::Folios::DestinationPolicy.label(folio),
        value: folio.id,
        party_id: folio.booking_billing_party_id.to_s,
        disabled: !folio.open?
      }
+   end %>
+
+<% party_choices = matrix.parties.map do |party|
+     party_folio = matrix.folios.find { |folio| folio.booking_billing_party_id == party.id }
+     label = party_folio && party_folio.booking_id != booking.id ? "#{party_folio.booking.formatted_reservation_number} · #{party.display_name}" : party.display_name
+     { label: label, value: party.id, disabled: party.booking_folios.none? }
    end %>
 
 <% matrix.rows.each do |row| %>
@@ -37,7 +43,7 @@
       <%= render PanelsUI::FormField.new(form: form, attribute: party_attribute,
             label: "Billing party for #{row.code.code}", label_hidden: true, size: :sm) do |field| %>
         <% field.with_select_menu(
-             matrix.parties.map { |party| { label: party.display_name, value: party.id, disabled: party.booking_folios.none? } }.presence ||
+             party_choices.presence ||
                [ { label: "No billing party available", value: "", disabled: true } ],
              selected: selected_party_id,
              prompt: (current_party_id.blank? ? "Unassigned — add or reconcile a folio" : nil),
@@ -96,7 +102,7 @@
                          [
                            { label: "Follow parent", value: "inherit" },
                            { label: "Keep in Guest Primary Folio", value: "guest_primary_folio", disabled: guest_primary_folio_id.blank? }
-                         ] + matrix.parties.map { |party| { label: party.display_name, value: "party:#{party.id}", disabled: party.booking_folios.none? } },
+                         ] + party_choices.map { |choice| choice.merge(value: "party:#{choice[:value]}") },
                          selected: child_choice,
                          size: :sm,
                          data: { action: action_for.call("change->billing-routes#childChoiceChanged"), billing_routes_target: "childChoice" }) %>

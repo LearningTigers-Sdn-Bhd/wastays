@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_10_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1246,14 +1246,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
     t.string "description", null: false
     t.string "identity", null: false
     t.jsonb "metadata", default: {}, null: false
+    t.bigint "source_booking_id", null: false
     t.string "status", default: "forecast", null: false
     t.date "stay_date", null: false
     t.datetime "updated_at", null: false
     t.index ["actualizing_transaction_id"], name: "index_folio_forecasted_charges_on_actualizing_transaction_id"
-    t.index ["booking_folio_id", "charge_kind", "identity", "stay_date"], name: "idx_forecasted_charges_on_unique_forecast", unique: true, where: "((status)::text = 'forecast'::text)"
     t.index ["booking_folio_id", "status"], name: "index_folio_forecasted_charges_on_booking_folio_id_and_status"
     t.index ["booking_folio_id", "stay_date"], name: "idx_on_booking_folio_id_stay_date_5ee8190530"
     t.index ["booking_folio_id"], name: "index_folio_forecasted_charges_on_booking_folio_id"
+    t.index ["source_booking_id", "booking_folio_id", "charge_kind", "identity", "stay_date"], name: "idx_forecasts_source_folio_identity", unique: true, where: "((status)::text = 'forecast'::text)"
+    t.index ["source_booking_id"], name: "index_folio_forecasted_charges_on_source_booking_id"
   end
 
   create_table "folio_operation_logs", force: :cascade do |t|
@@ -1328,6 +1330,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
     t.datetime "posted_at"
     t.date "posting_date", null: false
     t.bigint "reversal_of_transaction_id"
+    t.bigint "source_booking_id", null: false
     t.bigint "split_from_transaction_id"
     t.string "transaction_code_code_snapshot"
     t.bigint "transaction_code_id"
@@ -1353,12 +1356,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
     t.index ["parent_transaction_id"], name: "index_folio_transactions_on_parent_transaction_id"
     t.index ["posting_date"], name: "index_folio_transactions_on_posting_date"
     t.index ["reversal_of_transaction_id"], name: "index_folio_transactions_on_reversal_of_transaction_id"
+    t.index ["source_booking_id"], name: "index_folio_transactions_on_source_booking_id"
     t.index ["split_from_transaction_id"], name: "index_folio_transactions_on_split_from_transaction_id"
     t.index ["transaction_code_id"], name: "index_folio_transactions_on_transaction_code_id"
     t.index ["transaction_type"], name: "index_folio_transactions_on_transaction_type"
     t.index ["transfer_group_id"], name: "index_folio_transactions_on_transfer_group_id"
     t.index ["user_id"], name: "index_folio_transactions_on_user_id"
     t.index ["voided_by_transaction_id"], name: "index_folio_transactions_on_voided_by_transaction_id"
+  end
+
+  create_table "folio_transfer_batches", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.bigint "hotel_id", null: false
+    t.string "idempotency_key", null: false
+    t.string "request_fingerprint", null: false
+    t.jsonb "result_transaction_ids", default: [], null: false
+    t.datetime "updated_at", null: false
+    t.index ["hotel_id", "idempotency_key"], name: "index_folio_transfer_batches_on_hotel_id_and_idempotency_key", unique: true
+    t.index ["hotel_id"], name: "index_folio_transfer_batches_on_hotel_id"
   end
 
   create_table "group_billing_change_batches", force: :cascade do |t|
@@ -3532,6 +3548,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
   add_foreign_key "financial_audit_events", "payment_transactions"
   add_foreign_key "financial_audit_events", "refund_requests"
   add_foreign_key "folio_forecasted_charges", "booking_folios"
+  add_foreign_key "folio_forecasted_charges", "bookings", column: "source_booking_id"
   add_foreign_key "folio_forecasted_charges", "folio_transactions", column: "actualizing_transaction_id"
   add_foreign_key "folio_operation_logs", "booking_folios", column: "source_folio_id"
   add_foreign_key "folio_operation_logs", "booking_folios", column: "target_folio_id"
@@ -3547,6 +3564,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
   add_foreign_key "folio_routing_rules", "users", column: "created_by_id"
   add_foreign_key "folio_routing_rules", "users", column: "updated_by_id"
   add_foreign_key "folio_transactions", "booking_folios"
+  add_foreign_key "folio_transactions", "bookings", column: "source_booking_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "moved_from_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "parent_transaction_id"
   add_foreign_key "folio_transactions", "folio_transactions", column: "reversal_of_transaction_id"
@@ -3555,6 +3573,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_100000) do
   add_foreign_key "folio_transactions", "night_audits", on_delete: :restrict
   add_foreign_key "folio_transactions", "transaction_codes"
   add_foreign_key "folio_transactions", "users"
+  add_foreign_key "folio_transfer_batches", "hotels"
   add_foreign_key "group_billing_change_batches", "group_bookings"
   add_foreign_key "group_billing_change_batches", "hotels"
   add_foreign_key "group_billing_change_batches", "users", column: "actor_id"

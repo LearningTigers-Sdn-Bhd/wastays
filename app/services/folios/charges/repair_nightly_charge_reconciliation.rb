@@ -39,7 +39,7 @@ module Folios
         @booking.with_lock do
           ActiveRecord::Base.transaction do
             @removed_transactions.each do |transaction|
-              raise "Removed charge does not belong to this booking and audit date." unless transaction.booking_folio.booking_id == @booking.id && transaction.posting_date == @business_date
+              raise "Removed charge does not belong to this booking and audit date." unless transaction.source_booking_id == @booking.id && transaction.posting_date == @business_date
               raise "Removed charge is already reversed." if transaction.voided_by_transaction_id.present?
               key = transaction.metadata["nightly_charge_key"].presence || transaction.metadata["reconciles_nightly_charge_key"].presence ||
                 (transaction.catch_up_key.presence || transaction.metadata["catch_up_key"].presence)&.delete_prefix("catch_up:")
@@ -131,7 +131,7 @@ module Folios
       def actualize_forecast!(entry, transaction)
         line = entry[:line]
         forecast = FolioForecastedCharge.joins(:booking_folio)
-          .where(booking_folios: { booking_id: @booking.id })
+          .where(source_booking_id: @booking.id)
           .forecast
           .find_by(stay_date: line[:stay_date], charge_kind: line[:charge_kind], identity: line[:identity])
         forecast&.actualize!(transaction: transaction)
@@ -139,6 +139,7 @@ module Folios
 
       def transaction_options
         @posting_options.merge(
+          source_booking: @booking,
           night_audit: @night_audit,
           correction_reason: @posting_options[:correction_reason].presence || @reason
         )

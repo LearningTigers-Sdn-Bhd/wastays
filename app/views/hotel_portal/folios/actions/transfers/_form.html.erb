@@ -1,0 +1,149 @@
+<div data-controller="ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(id: "folio-transfer-sheet", side: :right, size: :xl,
+        title: "Transfer Folio", description: "Move selected charges or payment credits into a receiving folio. Room bookings stay separate.", body_class: "p-0 overflow-hidden") do |sheet| %>
+    <% sheet.with_body do %>
+      <% if flash.now[:alert].present? %>
+        <div class="p-4"><%= render PanelsUI::Alert.new(tone: :warning, title: flash.now[:alert]) %></div>
+      <% end %>
+      <%= form_with scope: :folio_transfer, url: hotel_folio_action_transfer_folios_path(current_hotel, @booking), method: :post,
+            class: "flex h-full min-h-0 flex-col", data: { controller: "folio-transfer" } do |form| %>
+        <%= hidden_field_tag :return_to, @return_to %>
+        <%= form.hidden_field :idempotency_key, value: @draft["idempotency_key"] %>
+        <% if @preview&.success? %>
+          <%= hidden_field_tag :workflow_step, "apply" %>
+          <%= hidden_field_tag :preview_token, @preview.preview_token %>
+          <% @draft.each do |key, value| %>
+            <% next if key == "idempotency_key" %>
+            <% if value.is_a?(Array) %>
+              <% value.each do |item| %><%= hidden_field_tag "folio_transfer[#{key}][]", item %><% end %>
+            <% else %>
+              <%= hidden_field_tag "folio_transfer[#{key}]", value %>
+            <% end %>
+          <% end %>
+          <div class="min-h-0 flex-1 space-y-5 overflow-auto p-4">
+            <p class="text-sm font-semibold">Review transfer to <%= ::Folios::DestinationPolicy.label(@folios.find { |folio| folio.id.to_s == @draft["target_folio_id"].to_s }) %></p>
+            <% if @draft["reason"].present? %><p class="text-sm text-muted-foreground">Reason: <%= @draft["reason"] %></p><% end %>
+            <p class="text-sm text-muted-foreground">Payments keep their original booking credit and receipt.</p>
+            <div class="overflow-hidden rounded-lg border border-border">
+              <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-muted"><tr><th class="p-3">Folio</th><th class="p-3 text-right">Before</th><th class="p-3 text-right">After</th></tr></thead>
+                <tbody class="divide-y divide-border">
+                  <% @preview.balances.each do |balance| %>
+                    <tr><td class="p-3"><%= ::Folios::DestinationPolicy.label(balance[:folio]) %></td><td class="p-3 text-right tabular-nums"><%= balance[:folio].currency %> <%= format_number(balance[:before], precision: 2) %></td><td class="p-3 text-right tabular-nums"><%= balance[:folio].currency %> <%= format_number(balance[:after], precision: 2) %></td></tr>
+                  <% end %>
+                </tbody>
+              </table>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <h3 class="text-sm font-semibold">Selected entries and attached taxes</h3>
+              <div class="divide-y divide-border">
+                <% @entry_presenter.rows.each do |row| %>
+                  <%= render "hotel_portal/folios/actions/transfers/entry", row: row, selectable: false, receiving: false %>
+                <% end %>
+              </div>
+            </div>
+            <% @preview.routing_previews.each do |source_booking, preview| %>
+              <p class="text-sm text-muted-foreground">Future routes for <%= source_booking.formatted_reservation_number %>: <%= preview.changes.size %> charge codes. Upcoming charges to refresh: <%= preview.upcoming_count %> · <%= source_booking.currency %> <%= format_number(preview.upcoming_amount, precision: 2) %>. Existing tax exceptions remain in effect.</p>
+            <% end %>
+          </div>
+          <div class="flex justify-end gap-2 border-t border-border p-4">
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, name: "workflow_step", value: "edit", variant: :secondary) do %>Back<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Transferring…" }) do %>Confirm transfer<% end %>
+          </div>
+        <% else %>
+          <%= hidden_field_tag :workflow_step, "preview" %>
+          <div class="min-h-0 flex-1 space-y-6 overflow-auto p-4">
+            <section class="space-y-3" aria-labelledby="folio-transfer-destination-heading">
+              <h3 id="folio-transfer-destination-heading" class="text-base font-semibold">1. Choose the receiving folio</h3>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :target_folio_id, label: "Receiving folio (master)", required: true,
+                    class: "grid-cols-1", hint: "Selected entries will move here. For a group bill, choose the folio that holds the group payment.") do |field| %>
+                <% field.with_select_menu(@folios.map { |folio| { label: ::Folios::DestinationPolicy.label(folio), value: folio.id } }.presence || [ { label: "No open folio available", value: "", disabled: true } ],
+                     prompt: "Choose where to move the entries", selected: @draft["target_folio_id"], required: true, data: { action: "change->folio-transfer#destinationChanged", folio_transfer_target: "destination" }) %>
+              <% end %>
+            </section>
+            <section class="space-y-3" aria-labelledby="folio-transfer-entries-heading">
+              <div class="space-y-1">
+                <h3 id="folio-transfer-entries-heading" class="text-base font-semibold">2. Choose what to move</h3>
+                <p class="text-sm text-muted-foreground">Tick the entries to move from each folio. Payment credits must be selected individually. Attached taxes follow their charge.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "folio-transfer#selectCharges" }) do %>Select charges from all folios<% end %>
+                <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, size: :sm, data: { action: "folio-transfer#clear" }) do %>Clear entries<% end %>
+              </div>
+              <%= hidden_field_tag "folio_transfer[source_folio_ids][]", "" %>
+              <%= hidden_field_tag "folio_transfer[transaction_ids][]", "" %>
+              <% @folios.each do |folio| %>
+                <% room = folio.booking_room || folio.booking.booking_rooms.first %>
+                <% title = [ ("Room #{room.room_number}" if room&.room_number.present?), folio.label.presence ].compact_blank.join(" · ").presence || folio.display_name %>
+                <% receiving = folio.id.to_s == @draft["target_folio_id"].to_s %>
+                <% rows = @entry_presenter.rows_for(folio) %>
+                <% entries = @rows.select { |row| row.booking_folio_id == folio.id } %>
+                <%= render PanelsUI::Card.new(as: :section, width: :full, density: :compact, variant: :outlined, class: "overflow-hidden",
+                      data: { folio_transfer_target: "group", folio_id: folio.id }) do |card| %>
+                  <% card.with_header(title: title, title_as: :h4, description: [ folio.booking.formatted_reservation_number, folio.folio_reference_display, folio.payer_display_label ].join(" · "), class: "bg-muted/50") do |header| %>
+                    <% header.with_actions do %>
+                      <%= render PanelsUI::Badge.new(label: "Receiving folio", variant: :primary, size: :sm, hidden: !receiving, data: { folio_transfer_receiving: true }) %>
+                      <%= render PanelsUI::Badge.new(label: "0 selected", variant: :outline, size: :sm, hidden: receiving, data: { folio_transfer_selection_count: true }) %>
+                    <% end %>
+                  <% end %>
+                  <% card.with_card_content do %>
+                    <p class="text-sm text-muted-foreground" data-folio-transfer-receiving-message <%= "hidden" unless receiving %>>Selected entries arrive here. Its existing entries stay here.</p>
+                    <div class="space-y-3" data-folio-transfer-source-content <%= "hidden" if receiving %>>
+                      <%= hidden_field_tag "folio_transfer[source_folio_ids][]", folio.id, id: "folio-transfer-source-#{folio.id}",
+                            disabled: receiving || entries.none? { |row| @draft["transaction_ids"].include?(row.id.to_s) && @row_errors[row.id].blank? },
+                            data: { folio_transfer_target: "source" } %>
+                      <% if rows.empty? %>
+                        <p class="text-sm text-muted-foreground">No posted entries to move.</p>
+                      <% elsif entries.none? { |row| row.charge? && @row_errors[row.id].blank? } %>
+                        <p class="text-sm text-muted-foreground"><%= rows.any? { |row| row.payment? && @row_errors[row.id].blank? } ? "No transferable charges. To move a payment credit, select it below." : "No eligible entries to move. See the reasons below." %></p>
+                      <% end %>
+                      <div class="divide-y divide-border">
+                        <% rows.each do |row| %>
+                          <%= render "hotel_portal/folios/actions/transfers/entry", row: row, selectable: true, receiving: receiving %>
+                        <% end %>
+                      </div>
+                    </div>
+                  <% end %>
+                <% end %>
+              <% end %>
+            </section>
+            <%= render PanelsUI::Collapsible.new(id: "folio-transfer-future-routing",
+                  open: Array(@draft["route_code_ids"]).any?, class: "rounded-lg border border-border p-3",
+                  trigger_class: "text-sm font-semibold") do |routing| %>
+              <% routing.with_trigger do %>
+                <span>Also send future charges here <span class="font-normal text-muted-foreground">(optional)</span></span>
+                <%= app_icon "chevron-down", class: "panel-collapsible__indicator size-4 text-muted-foreground", aria: { hidden: true } %>
+              <% end %>
+              <% routing.with_body do %>
+                <p class="mt-2 text-sm text-muted-foreground">For the bookings whose entries you selected, future charges with these codes will post to the receiving folio. Leave all unchecked to keep future billing as it is. Existing tax choices remain in effect.</p>
+                <%= hidden_field_tag "folio_transfer[route_code_ids][]", "" %>
+                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                  <% @codes.each do |code| %>
+                    <%= render PanelsUI::Checkbox.new(name: "folio_transfer[route_code_ids][]", id: "folio-transfer-route-code-#{code.id}",
+                          value: code.id, checked: Array(@draft["route_code_ids"]).include?(code.id.to_s), label: code.name, description: code.code) %>
+                  <% end %>
+                </div>
+              <% end %>
+            <% end %>
+            <section class="space-y-3" aria-labelledby="folio-transfer-reason-heading">
+              <h3 id="folio-transfer-reason-heading" class="text-base font-semibold">3. Review the transfer</h3>
+              <%= render PanelsUI::FormField.new(form: form, attribute: :reason, label: "Reason (optional)",
+                    hint: "The next screen shows the entries and balances before you confirm.") do |field| %>
+                <% field.with_input(value: @draft["reason"], placeholder: "For example, consolidate this group bill") %>
+              <% end %>
+            </section>
+          </div>
+          <div class="flex shrink-0 flex-col gap-3 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-muted-foreground" aria-live="polite" data-folio-transfer-target="summary">Choose entries to move. You’ll review balances before confirming.</p>
+            <div class="flex shrink-0 justify-end gap-2">
+              <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
+              <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Reviewing…" }) do %>Review transfer<% end %>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
