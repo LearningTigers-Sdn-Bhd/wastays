@@ -23,7 +23,7 @@ module HotelPortal
         stage ? "#{label} (#{stage.stage_label.downcase})" : label
       end
 
-      def total_label = money(@booking.total_amount)
+      def total_label = money(@booking.payable_total)
 
       # Nil when the slip fits what the booking asks for.
       def warning

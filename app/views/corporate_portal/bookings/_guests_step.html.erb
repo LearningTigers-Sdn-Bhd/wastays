@@ -1,7 +1,8 @@
 <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
   <h2 class="text-sm font-bold text-foreground">Guest details</h2>
   <p class="mt-1 text-xs text-muted-foreground">
-    <%= pluralize(@cart.rooms, "room") %> · <%= @cart.currency %> <%= number_with_precision(@cart.total_amount, precision: 2, delimiter: ",") %> for the stay.
+    <%= pluralize(@cart.rooms, "room") %> · <%= @cart.currency %> <%= number_with_precision(@cart.grand_total, precision: 2, delimiter: ",") %> for the stay<% if @cart.extra_charges.any? %>, including
+    <%= @cart.extra_charges.map { |extra| "#{extra.name} #{number_with_precision(extra.amount, precision: 2, delimiter: ',')}" }.to_sentence %><% end %>.
   </p>
 
   <%= form_with url: corporate_bookings_path, method: :post, scope: :booking,

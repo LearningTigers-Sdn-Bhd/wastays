@@ -122,10 +122,19 @@ module CorporatePortal
       raise Failed, Array(result.errors).to_sentence unless result.success?
 
       add_companions(result.booking, guests)
+      apply_automatic_extra_charges!(result.booking)
       # Every room in the party takes the same boats, landing on its own stay dates.
       ::Boats::AssignTimes.call(booking: result.booking, params: @boat_times.params)
       stamp_payment_deadline(result.booking)
       result.booking
+    end
+
+    # The hotel's auto-apply extra charges (a jetty fee, say) land on an agent's
+    # booking exactly as on one keyed at the desk, so the folio is complete
+    # before anyone has to remember to post them.
+    def apply_automatic_extra_charges!(booking)
+      result = ::ExtraCharges::ApplyAutomatic.call(booking: booking, user: @user)
+      raise Failed, result.error unless result.success?
     end
 
     # Standard accounts hold the room against a payment schedule -- a deposit

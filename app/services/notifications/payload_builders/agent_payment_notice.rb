@@ -35,7 +35,7 @@ module Notifications
           recipient_email: Notifications::AgentRecipient.email_for(@booking),
           check_in: @booking.check_in.iso8601,
           check_out: @booking.check_out.iso8601,
-          amount: @booking.total_amount.to_s,
+          amount: @booking.payable_total.to_s,
           currency: @booking.currency,
           amount_label: payment.amount_label,
           amount_due_label: payment.amount_due_label,

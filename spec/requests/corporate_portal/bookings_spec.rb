@@ -146,6 +146,25 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     end
   end
 
+  it "lists the stay's extra charges on the confirmed booking and asks for them in the payment" do
+    create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 10,
+      charging_unit: "per_person", allow_amount_override: false, auto_apply: true)
+      .transaction_code.update!(name: "Jetty Fee")
+    post corporate_bookings_path, params: {
+      hotel_relationship_id: relationship.id,
+      booking: {
+        room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
+        adults: 2, children: 0, rooms: 1
+      }.merge(room_detail([ { name: "Aisha Rahman", phone: "+60123456789" } ]))
+    }
+    booking = Booking.last
+
+    get corporate_booking_path(booking)
+
+    expect(Capybara.string(response.body).find("[data-testid='booking-extra-charge']")).to have_text("Jetty Fee").and have_text("20.00")
+    expect(response.body).to include(ActiveSupport::NumberHelper.number_to_rounded(booking.total_amount + 20, precision: 2, delimiter: ","))
+  end
+
   it "asks for nationality with a searchable field per guest, Malaysia preselected" do
     get guests_step
 
@@ -469,6 +488,16 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
       expect(page.find("[data-testid='cart-total']")).to have_text("3 rooms")
       expect(cart).to have_link("Add another room")
       expect(cart).to have_link("Continue to guests")
+    end
+
+    it "quotes the hotel's auto-apply charges in the stay's total, before anything is booked" do
+      create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 10,
+        charging_unit: "per_person", allow_amount_override: false, auto_apply: true)
+        .transaction_code.update!(name: "Jetty Fee")
+      get rooms_url(lines: { "0" => line(room_type_id: room_type.id, adults: 2, quantity: 2) })
+
+      expect(page.find("[data-testid='cart-line-extra-charge']")).to have_text("Jetty Fee").and have_text("20.00 per room")
+      expect(page.find("[data-testid='cart-extra-charges']")).to have_text("Jetty Fee 40.00")
     end
 
     it "removes a line from the cart" do

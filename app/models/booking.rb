@@ -71,6 +71,16 @@ class Booking < ApplicationRecord
     payment_status == "captured"
   end
 
+  def scheduled_extra_charges
+    Bookings::ScheduledExtraChargesQuery.new(self)
+  end
+
+  # Everything the stay costs: the room total and the extra charges scheduled
+  # on it. What an agent is asked to pay.
+  def payable_total
+    total_amount.to_d + scheduled_extra_charges.total
+  end
+
   def payment_concluded_at
     payment_transactions.captured.maximum(:captured_at) || checked_out_at || check_out
   end

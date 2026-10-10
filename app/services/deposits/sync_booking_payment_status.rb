@@ -12,7 +12,7 @@ module Deposits
       payments = Bookings::PaymentProgress.new(booking).paid_total
       status = if payments <= 0
         "pending"
-      elsif payments >= booking.total_amount
+      elsif payments >= booking.payable_total
         "captured"
       else
         "partial"

@@ -39,6 +39,16 @@ class HotelExtraCharge < ApplicationRecord
   def active? = transaction_code.active?
   def nightly? = charging_unit.in?(NIGHTLY_CHARGING_UNITS)
 
+  # How many units one posting of this charge covers for a party: the rooms,
+  # the people (children only when the charge counts them), or just one.
+  def units_for(rooms:, adults:, children:)
+    case charging_unit
+    when "per_room_night", "per_room" then [ rooms.to_i, 1 ].max
+    when "per_person_night", "per_person" then [ adults.to_i + (charge_children? ? children.to_i : 0), 1 ].max
+    else 1
+    end
+  end
+
   def pricing_label
     return "Enter when charging" if manual?
     return "#{formatted_rate}% of #{percentage_basis.to_s.humanize.downcase}" if percentage?
