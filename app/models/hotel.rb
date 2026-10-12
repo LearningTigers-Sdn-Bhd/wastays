@@ -345,6 +345,12 @@ class Hotel < ApplicationRecord
     training_reset_state.in?(%w[queued processing])
   end
 
+  # True only for providers we have an adapter for. "undecided" and "none" are
+  # stored values, so a plain presence check on the column lets them through.
+  def channel_manager_enabled?
+    ChannelManagers::SyncOrchestrator::ADAPTERS.key?(preferred_channel_manager)
+  end
+
   def publicly_bookable?
     active? && plan&.slug != "easy"
   end

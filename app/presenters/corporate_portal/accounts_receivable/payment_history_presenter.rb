@@ -191,7 +191,7 @@ module CorporatePortal
           .where(captured_at: Date.current.beginning_of_month.beginning_of_day..Date.current.end_of_month.end_of_day)
           .group(:currency).sum(:amount)
 
-        legacies = ArPayment.joins(:hotel_corporate_account)
+        legacies = ArPayment.not_voided.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: account.id })
           .where(received_at: Date.current.beginning_of_month..Date.current.end_of_month)
           .where.not(id: CorporateArPaymentIntent.where.not(ar_payment_id: nil).select(:ar_payment_id))

@@ -17,15 +17,14 @@ export default class extends Controller {
     this.render()
   }
 
-  // Picking a mode is itself the answer to step 1 — move straight to its first
-  // question. Bound to click (not change) so re-picking the already-selected
-  // card also moves on instead of appearing to do nothing.
+  // Record the selected mode without auto-advancing so the user can review
+  // their selection and click Continue to proceed to step 2.
   selectMode(event) {
     this.modeValue = event.target.value
-    this.stepValue = 2
   }
 
   continue() {
+    if (this.stepValue === 1 && !this.modeValue) return
     this.stepValue += 1
   }
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_10_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -216,6 +216,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_090000) do
     t.index ["submitted_by_id"], name: "index_ar_payment_submissions_on_submitted_by_id"
     t.check_constraint "amount > 0::numeric", name: "ar_payment_submissions_amount_positive"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying]::text[])", name: "ar_payment_submissions_status_allowed"
+  end
+
+  create_table "ar_payment_voids", force: :cascade do |t|
+    t.bigint "ar_payment_id", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.text "reason", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "voided_at", null: false
+    t.bigint "voided_by_id", null: false
+    t.index ["ar_payment_id"], name: "index_ar_payment_voids_on_ar_payment_id", unique: true
+    t.index ["voided_by_id"], name: "index_ar_payment_voids_on_voided_by_id"
   end
 
   create_table "ar_payments", force: :cascade do |t|
@@ -617,6 +629,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_090000) do
     t.text "cancellation_policy_snapshot"
     t.jsonb "cancellation_policy_snapshot_data", default: {}, null: false
     t.string "channel_manager_reference"
+    t.text "channel_notes"
     t.datetime "check_in", null: false
     t.datetime "check_out", null: false
     t.datetime "checked_in_at"
@@ -3431,6 +3444,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_090000) do
   add_foreign_key "ar_payment_submissions", "hotels"
   add_foreign_key "ar_payment_submissions", "users", column: "reviewed_by_id"
   add_foreign_key "ar_payment_submissions", "users", column: "submitted_by_id"
+  add_foreign_key "ar_payment_voids", "ar_payments"
+  add_foreign_key "ar_payment_voids", "users", column: "voided_by_id"
   add_foreign_key "ar_payments", "hotel_corporate_accounts"
   add_foreign_key "ar_payments", "hotels"
   add_foreign_key "attractions", "attractions", column: "merged_into_id"

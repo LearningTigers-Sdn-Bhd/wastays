@@ -462,7 +462,7 @@ module HotelDemoManagement
     end
 
     def enqueue_channel_manager_sync
-      return if @hotel.preferred_channel_manager.blank?
+      return unless @hotel.channel_manager_enabled?
 
       @logger.puts "Triggering Channel Manager Sync..."
       ChannelManagers::SyncJob.perform_later(@hotel.id, @start_date, @end_date)

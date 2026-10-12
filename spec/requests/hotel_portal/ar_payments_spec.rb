@@ -137,6 +137,39 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(response.body).to include(invoice.formatted_invoice_number)
   end
 
+  it "shows each open invoice's guest name and source references with its allocation limit" do
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 500)
+    invoices = [
+      create_invoice(relationship: payment.hotel_corporate_account, amount: 300),
+      create_invoice(relationship: payment.hotel_corporate_account, amount: 800)
+    ]
+    invoices.first.booking.update!(guest_name: "Alex & <Taylor>")
+    invoices.last.booking.update!(guest_name: "Jordan Lee")
+
+    get hotel_ar_payment_path(hotel, payment)
+
+    expect(response).to have_http_status(:success)
+    doc = Nokogiri::HTML(response.body)
+    rows = doc.css("section[data-controller='ar-payment-form'] tbody tr")
+    expect(rows.size).to eq(2)
+
+    invoices.each do |invoice|
+      row = rows.find { |candidate| candidate.at_css("td").text == invoice.formatted_invoice_number }
+      source = row.css("td")[1]
+      expect(source.css("p").map(&:text)).to eq([
+        invoice.booking.guest_name,
+        "#{invoice.booking.confirmation_token} · #{invoice.booking_folio.folio_reference_display}"
+      ])
+
+      input = row.at_css("input[type='number']")
+      expect(input["name"]).to eq("allocations[#{invoice.id}]")
+      expect(input["max"].to_d).to eq([ invoice.outstanding_amount, payment.amount ].min)
+    end
+
+    expect(response.body).to include("Alex &amp; &lt;Taylor&gt;")
+    expect(rows.css("taylor")).to be_empty
+  end
+
   it "records a fully unapplied payment" do
     expect {
       post hotel_ar_payments_path(hotel), params: {
@@ -187,17 +220,102 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(folio.folio_transactions.payment.sum(:amount)).to eq(300.to_d)
   end
 
-  it "refreshes eligible invoices for the selected corporate account" do
+  it "shows guest names and source references on the record-payment form" do
     relationship = create(:hotel_corporate_account, hotel: hotel)
-    invoice = create_invoice(relationship: relationship, amount: 250)
+    invoices = [
+      create_invoice(relationship: relationship, amount: 250),
+      create_invoice(relationship: relationship, amount: 300)
+    ]
+    invoices.first.booking.update!(guest_name: "Alex & <Taylor>")
+    invoices.last.booking.update!(guest_name: "Jordan Lee")
+
+    get new_hotel_ar_payment_path(hotel), params: { ar_invoice_id: invoices.first.id }
+
+    expect(response).to have_http_status(:success)
+    rows = Nokogiri::HTML(response.body).css("#ar_payment_invoice_allocations tbody tr")
+    expect(rows.size).to eq(2)
+    invoices.each do |invoice|
+      row = rows.find { |candidate| candidate.at_css("td").text == invoice.formatted_invoice_number }
+      expect(row.css("td")[1].css("p").map(&:text)).to eq([
+        invoice.booking.guest_name,
+        "#{invoice.booking.confirmation_token} · #{invoice.booking_folio.folio_reference_display}"
+      ])
+      input = row.at_css("input[type='number']")
+      expect(input["name"]).to eq("allocations[#{invoice.id}]")
+      expect(input["max"].to_d).to eq(invoice.outstanding_amount)
+      expect(input["value"]).to eq(invoice == invoices.first ? invoice.outstanding_amount.to_s : nil)
+    end
+    expect(response.body).to include("Alex &amp; &lt;Taylor&gt;")
+  end
+
+  it "shows guest names for the selected submission invoices while preserving hidden allocations" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    invoices = [
+      create_invoice(relationship: relationship, amount: 300),
+      create_invoice(relationship: relationship, amount: 400)
+    ]
+    invoices.first.booking.update!(guest_name: "Alex Taylor")
+    invoices.last.booking.update!(guest_name: "Jordan Lee")
+    unselected = create_invoice(relationship: relationship, amount: 500)
+    submission = build(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                       submitted_by: create(:user, :corporate, account: relationship.corporate_account), amount: 250, auto_invoice: nil)
+    amounts = [ 100, 150 ]
+    invoices.each_with_index do |invoice, index|
+      submission.ar_payment_submission_allocations.build(ar_invoice: invoice, amount: amounts[index])
+    end
+    submission.save!
+
+    get new_hotel_ar_payment_path(hotel), params: { ar_payment_submission_id: submission.id }
+
+    expect(response).to have_http_status(:success)
+    frame = Nokogiri::HTML(response.body).at_css("#ar_payment_invoice_allocations")
+    rows = frame.css("tbody tr")
+    expect(rows.size).to eq(2)
+    expect(frame.css("input[type='number']")).to be_empty
+    expect(frame.text).not_to include(unselected.formatted_invoice_number)
+    invoices.each_with_index do |invoice, index|
+      row = rows.find { |candidate| candidate.at_css("td").text == invoice.formatted_invoice_number }
+      expect(row.css("td")[1].css("p").map(&:text)).to eq([
+        invoice.booking.guest_name,
+        "#{invoice.booking.confirmation_token} · #{invoice.booking_folio.folio_reference_display}"
+      ])
+      expect(row.css("td")[3].text).to include("#{invoice.currency} #{format('%.2f', amounts[index])}")
+      input = frame.at_css("input[name='allocations[#{invoice.id}]']")
+      expect(input["type"]).to eq("hidden")
+      expect(input["value"].to_d).to eq(amounts[index].to_d)
+    end
+  end
+
+  it "refreshes eligible invoices and guest names for the selected corporate account" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    invoices = [
+      create_invoice(relationship: relationship, amount: 250),
+      create_invoice(relationship: relationship, amount: 300)
+    ]
+    invoices.first.booking.update!(guest_name: "Alex Taylor")
+    invoices.last.booking.update!(guest_name: "Jordan Lee")
     hidden_relationship = create(:hotel_corporate_account, hotel: hotel)
     hidden_invoice = create_invoice(relationship: hidden_relationship, amount: 300)
+    hidden_invoice.booking.update!(guest_name: "Hidden Guest")
 
     get eligible_invoices_hotel_ar_payments_path(hotel), params: { hotel_corporate_account_id: relationship.id }
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include(invoice.formatted_invoice_number)
+    rows = Nokogiri::HTML(response.body).css("#ar_payment_invoice_allocations tbody tr")
+    expect(rows.size).to eq(2)
+    invoices.each do |invoice|
+      row = rows.find { |candidate| candidate.at_css("td").text == invoice.formatted_invoice_number }
+      expect(row.css("td")[1].css("p").map(&:text)).to eq([
+        invoice.booking.guest_name,
+        "#{invoice.booking.confirmation_token} · #{invoice.booking_folio.folio_reference_display}"
+      ])
+      input = row.at_css("input[type='number']")
+      expect(input["name"]).to eq("allocations[#{invoice.id}]")
+      expect(input["max"].to_d).to eq(invoice.outstanding_amount)
+      expect(input["value"]).to be_nil
+    end
     expect(response.body).not_to include(hidden_invoice.formatted_invoice_number)
+    expect(response.body).not_to include("Hidden Guest")
     expect(response.body).to include("ar_payment_invoice_allocations")
   end
 
@@ -216,6 +334,47 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(response).to redirect_to(hotel_ar_payment_path(hotel, payment))
     expect(invoice.reload.outstanding_amount).to eq(500.to_d)
     expect(allocation.reload).to be_reversed
+  end
+
+  it "voids an unallocated payment and drops it from the month total" do
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 400)
+
+    get hotel_ar_payment_path(hotel, payment)
+    expect(response.body).to include("Void payment")
+
+    post hotel_ar_payment_void_path(hotel, payment), params: { reason: "Recorded in error" }
+
+    expect(response).to redirect_to(hotel_ar_payment_path(hotel, payment))
+    expect(payment.reload).to be_voided
+
+    follow_redirect!
+    expect(response.body).to include("payment-voided-notice")
+    expect(response.body).to include("Recorded in error")
+    expect(response.body).not_to include("Void this payment?")
+  end
+
+  it "hides the void action while the payment has an active allocation" do
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 400)
+    invoice = create_invoice(relationship: payment.hotel_corporate_account, amount: 500)
+    post hotel_ar_payment_allocations_path(hotel, payment), params: { allocations: { invoice.id => "400.00" } }
+
+    get hotel_ar_payment_path(hotel, payment)
+
+    expect(response.body).not_to include("Void this payment?")
+    expect(response.body).to include("void-blocked-hint")
+
+    post hotel_ar_payment_void_path(hotel, payment), params: { reason: "Nope" }
+    expect(flash[:alert]).to eq("Reverse the active allocations before voiding this payment.")
+    expect(payment.reload).not_to be_voided
+  end
+
+  it "does not let view_reports void a payment" do
+    role.permissions.delete(manage_ar_payments)
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 400)
+
+    post hotel_ar_payment_void_path(hotel, payment), params: { reason: "Nope" }
+
+    expect(payment.reload).not_to be_voided
   end
 
   it "keeps view_reports read-only" do

@@ -92,6 +92,23 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(adapter.sync_rate_plan(rate_plan)).to eq("ch_rp_person")
     end
 
+    it 'syncs an age-banded rate plan with defaulted 0.00 child and infant fees when nil', :per_person do
+      rate_plan = create(:rate_plan, :age_banded, hotel: hotel, room_type: room_type)
+      rate_plan.update_columns(channex_children_fee: nil, channex_infant_fee: nil)
+      assignment = rate_plan.room_type_rate_plans.find_by!(room_type: room_type)
+      assignment.occupancy_prices.create!(adults: 1, price: 100)
+      assignment.occupancy_prices.create!(adults: 2, price: 200)
+
+      expect(client_double).to receive(:post).with("/rate_plans", {
+        rate_plan: hash_including(
+          children_fee: "0.00",
+          infant_fee: "0.00"
+        )
+      }).and_return({ "data" => { "id" => "ch_rp_age_banded" } })
+
+      expect(adapter.sync_rate_plan(rate_plan)).to eq("ch_rp_age_banded")
+    end
+
     it 'still syncs a per_room rate plan (regression guard)' do
       rate_plan = create(:rate_plan, hotel: hotel, room_type: room_type)
 
@@ -211,6 +228,47 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       expect(result.success?).to be true
     end
 
+    it 'sends nothing when the restrictions budget is spent, so the retry re-sends nothing twice' do
+      allow(Channex::AriRateLimiter).to receive(:room_for?).with("ch_prop_123", [ "/availability", "/restrictions" ]).and_return(false)
+      allow(client_double).to receive(:post)
+
+      expect { adapter.push_ari(date_range: (start_date..end_date)) }
+        .to raise_error(Channex::Client::RetryableRequestError, /budget/)
+      expect(client_double).not_to have_received(:post)
+    end
+
+    it 'leaves out a date whose changed field has no value' do
+      rate_plan.room_rates.find_by!(date: start_date).update_columns(stop_sell: true)
+      allow(client_double).to receive(:post).with("/availability", anything).and_return({ "data" => { "id" => "task_1" } })
+
+      expect(client_double).to receive(:post).with("/restrictions", {
+        values: [
+          { property_id: "ch_prop_123", rate_plan_id: "ch_rp_123", date_from: start_date.to_s, date_to: start_date.to_s, stop_sell: 1 }
+        ]
+      }).and_return({ "data" => { "id" => "task_2" } })
+
+      adapter.push_ari(
+        date_range: (start_date..end_date), sync_availability: false, sync_rates: false, sync_restrictions: true,
+        rate_plan_ids: { rate_plan.id.to_s => { "min" => start_date.to_s, "max" => end_date.to_s } },
+        rate_plan_fields: { rate_plan.id.to_s => [ "stop_sell" ] }
+      )
+    end
+
+    it 'tells the OTAs a closed date has nothing for sale' do
+      room_type.room_inventories.find_by!(date: start_date + 1.day).update!(status: "closed")
+      allow(client_double).to receive(:post).with("/restrictions", anything).and_return({ "data" => { "id" => "task_2" } })
+
+      expect(client_double).to receive(:post).with("/availability", {
+        values: [
+          { property_id: "ch_prop_123", room_type_id: "ch_rt_123", date_from: start_date.to_s, date_to: start_date.to_s, availability: 10 },
+          { property_id: "ch_prop_123", room_type_id: "ch_rt_123", date_from: (start_date + 1.day).to_s, date_to: (start_date + 1.day).to_s, availability: 0 },
+          { property_id: "ch_prop_123", room_type_id: "ch_rt_123", date_from: end_date.to_s, date_to: end_date.to_s, availability: 10 }
+        ]
+      }).and_return({ "data" => { "id" => "task_1" } })
+
+      adapter.push_ari(date_range: (start_date..end_date))
+    end
+
     it 'provides full snapshot including defaults for missing records during full sync' do
       rate_plan.room_rates.destroy_all
       room_type.room_inventories.destroy_all
@@ -316,6 +374,59 @@ RSpec.describe ChannelManagers::ChannexAdapter do
       result = adapter.ingest_booking(payload: payload, require_property_binding: false)
 
       expect(result[:guest_details][:name]).to eq("John Doe")
+    end
+
+    it "joins Channex's name and surname when PersonName is absent" do
+      payload = {
+        "data" => {
+          "id" => "bk_124",
+          "status" => "new",
+          "arrival_date" => Date.current.to_s,
+          "departure_date" => (Date.current + 1.day).to_s,
+          "amount" => "100.00",
+          "currency" => "MYR",
+          "customer" => { "name" => "Henry", "surname" => "Tan" },
+          "rooms" => []
+        }
+      }
+
+      result = adapter.ingest_booking(payload: payload, require_property_binding: false)
+
+      expect(result[:guest_details][:name]).to eq("Henry Tan")
+    end
+
+    context "when Booking.com names a room guest other than the booker" do
+      let(:payload) do
+        {
+          "data" => {
+            "id" => "bk_125",
+            "status" => "new",
+            "arrival_date" => Date.current.to_s,
+            "departure_date" => (Date.current + 1.day).to_s,
+            "amount" => "100.00",
+            "currency" => "MYR",
+            "customer" => { "name" => "Henry", "surname" => "Tan" },
+            "notes" => "Request 1 pillow if can.\nSmoking Preference: Smoking",
+            "rooms" => [ { "room_type_id" => "ch_rt_guest", "guests" => [ { "name" => "Henryz", "surname" => "Tanz" } ] } ]
+          }
+        }
+      end
+
+      before { create(:channel_mapping, mappable: room_type, provider: "channex", external_id: "ch_rt_guest") }
+
+      it "names the booking after the room guest" do
+        result = adapter.ingest_booking(payload: payload, require_property_binding: false)
+
+        expect(result[:guest_details][:name]).to eq("Henryz Tanz")
+      end
+
+      it "carries the channel notes and the booker into the OTA notes" do
+        result = adapter.ingest_booking(payload: payload, require_property_binding: false)
+
+        expect(result[:channel_notes]).to eq(
+          "Request 1 pillow if can.\nSmoking Preference: Smoking\nBooked by: Henry Tan"
+        )
+      end
     end
   end
 

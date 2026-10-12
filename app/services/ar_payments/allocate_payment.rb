@@ -52,6 +52,7 @@ module ArPayments
     private
 
     def validate_allocations
+      return "A voided payment cannot be allocated." if @payment.voided?
       return "Allocation total cannot exceed the payment's unapplied balance." if allocation_total > @payment.unallocated_amount
 
       allocation_rows.each do |row|

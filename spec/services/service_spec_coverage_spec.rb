@@ -24,6 +24,9 @@ RSpec.describe "Service spec coverage" do
     "e_invoice/submission_context" => "e_invoice_services_spec.rb",
     "my_invois/client" => "e_invoice_services_spec.rb",
     "my_invois/client_factory" => "e_invoice_services_spec.rb",
+    # Guest matching is simulated edge case by edge case together with the
+    # booking connections that act on its answer.
+    "channel_managers/match_channel_guest" => "channel_managers/channel_guest_matching_spec.rb",
     # The agent loop's collaborators are exercised through the loop itself --
     # a chat builder or a recorder tested apart from the turn it runs in would
     # be asserting on its own mock.

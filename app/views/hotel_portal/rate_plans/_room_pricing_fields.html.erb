@@ -23,7 +23,7 @@
           <%= f.radio_button :rate_mode, value,
                 class: "mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0",
                 data: { rate_plan_room_pricing_target: "mode", wizard_mode_label: mode[:label],
-                        action: "change->rate-plan-room-pricing#refresh click->rate-plan-pricing-wizard#selectMode" } %>
+                        action: "change->rate-plan-room-pricing#refresh change->rate-plan-pricing-wizard#selectMode" } %>
           <span>
             <span class="block text-sm font-medium text-foreground"><%= mode[:label] %></span>
             <span class="block text-xs text-muted-foreground"><%= mode[:hint] %></span>

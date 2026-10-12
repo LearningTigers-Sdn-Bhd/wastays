@@ -233,6 +233,7 @@ RSpec.describe "Rate plan page", type: :system, js: true do
 
     open_tab "Pricing"
     choose "Set prices directly"
+    click_button "Continue"
     fill_in "Nightly room price", with: "500"
     open_tab "Discounts"
     within("[data-role='stay-discount-row']") { expect(page).to have_text("a 3-night stay at MYR 500 a night") }
@@ -319,6 +320,8 @@ RSpec.describe "Rate plan page", type: :system, js: true do
     expect(page).to have_css("[aria-current='step']", text: "Pricing method")
 
     choose "Adjust Standard Rate"
+    expect(page).to have_css("[aria-current='step']", text: "Pricing method") # choosing alone does not move on
+    click_button "Continue"
     expect(page).to have_field("Relationship to Standard Rate", visible: :visible)
     expect(page).to have_no_field("Adjustment", visible: :visible)
     expect(page).to have_css("[aria-current='step']", text: "Direction")
@@ -339,7 +342,8 @@ RSpec.describe "Rate plan page", type: :system, js: true do
 
     fill_in "Rate plan name", with: "Half Board"
     open_tab "Pricing"
-    choose "Set prices directly" # already the default — picking it again still moves on
+    choose "Set prices directly"
+    click_button "Continue"
     fill_in "Nightly room price", with: "300"
     click_button "Create rate plan", match: :first
 

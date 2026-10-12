@@ -120,7 +120,7 @@ class HotelPortal::InventoryDashboardsController < HotelPortal::BaseController
 
         if result[:success]
           # Trigger a single sync job
-          if current_hotel.preferred_channel_manager.present?
+          if current_hotel.channel_manager_enabled?
             s_date = selection_update_params[:start_date]&.to_date
             e_date = selection_update_params[:end_date]&.to_date
 

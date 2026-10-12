@@ -4,45 +4,43 @@ module ChannelManagers
   class FlushAriSyncJob < ApplicationJob
     queue_as :default
 
-    retry_on Channex::Client::RetryableRequestError, wait: :exponentially_longer, attempts: 8
-
-    WINDOW_KEY_PREFIX = "channex:ari:window".freeze
-    SCHEDULED_KEY_PREFIX = "channex:ari:scheduled".freeze
+    # The flush only hands its changes to SyncJob, so what can fail here is
+    # that hand-off. Retrying re-claims the outbox the failure put back;
+    # without it those changes would sit unsent until they expired.
+    retry_on ActiveJob::EnqueueError, ActiveRecord::ActiveRecordError, wait: :polynomially_longer, attempts: 5
 
     def perform(hotel_id)
       hotel = Hotel.find_by(id: hotel_id)
-      return if hotel.nil? || hotel.preferred_channel_manager.blank?
+      return if hotel.nil? || !hotel.channel_manager_enabled?
 
-      window_key = "#{WINDOW_KEY_PREFIX}:#{hotel_id}"
-      scheduled_key = "#{SCHEDULED_KEY_PREFIX}:#{hotel_id}"
-      window = Rails.cache.read(window_key)
-
-      Rails.cache.delete(scheduled_key)
+      outbox = AriWindow.new(hotel_id)
+      window = outbox.claim
       return if window.blank?
 
-      start_date = Date.parse(window["min_date"])
-      end_date = Date.parse(window["max_date"])
-      sync_availability = window.fetch("sync_availability", true)
-      sync_rates = window.fetch("sync_rates", true)
-      sync_restrictions = window.fetch("sync_restrictions", true)
-      room_type_ids = window["room_type_windows"]
-      rate_plan_ids = window["rate_plan_windows"]
-      rate_plan_fields = window["rate_plan_fields"]
+      begin
+        start_date = Date.parse(window["min_date"])
+        end_date = Date.parse(window["max_date"])
+      rescue Date::Error
+        return
+      end
 
-      ChannelManagers::SyncJob.perform_now(
-        hotel_id,
-        start_date,
-        end_date,
-        sync_availability: sync_availability,
-        sync_rates: sync_rates,
-        sync_restrictions: sync_restrictions,
-        room_type_ids: room_type_ids,
-        rate_plan_ids: rate_plan_ids,
-        rate_plan_fields: rate_plan_fields
-      )
-      Rails.cache.delete(window_key)
-    rescue Date::Error
-      Rails.cache.delete(window_key)
+      begin
+        enqueued = ChannelManagers::SyncJob.perform_later(
+          hotel_id,
+          start_date,
+          end_date,
+          sync_availability: window.fetch("sync_availability", true),
+          sync_rates: window.fetch("sync_rates", true),
+          sync_restrictions: window.fetch("sync_restrictions", true),
+          room_type_ids: window["room_type_windows"],
+          rate_plan_ids: window["rate_plan_windows"],
+          rate_plan_fields: window["rate_plan_fields"]
+        )
+        raise ActiveJob::EnqueueError, "SyncJob was not enqueued for hotel #{hotel_id}" unless enqueued
+      rescue StandardError
+        outbox.restore(window)
+        raise
+      end
     end
   end
 end

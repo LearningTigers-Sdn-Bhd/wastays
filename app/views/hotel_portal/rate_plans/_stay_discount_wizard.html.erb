@@ -15,7 +15,7 @@
   </div>
 
   <div data-stay-discount-wizard-target="step" data-wizard-step="1">
-    <p class="mb-2 text-sm text-muted-foreground">After how many nights should this discount start? Guests who stay this many nights or more will get the discount.</p>
+    <p class="mb-2 text-sm text-muted-foreground">What is the minimum stay to qualify for this discount? Guests who stay this many nights or more will get the discount.</p>
     <div class="max-w-xs">
       <div class="flex rounded-md border border-border bg-card focus-within:border-border-interactive">
         <input type="number" min="2" step="1" inputmode="numeric" placeholder="3"
@@ -74,27 +74,33 @@
   </div>
 
   <div data-stay-discount-wizard-target="step" data-wizard-step="4" class="hidden">
-    <p class="mb-2 text-sm text-muted-foreground">Which nights does the discount apply to?</p>
+    <p class="mb-2 text-sm text-muted-foreground">Once qualified, which nights should receive the discount?</p>
     <div class="space-y-2">
       <label class="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3 hover:border-border-interactive has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
         <input type="radio" name="stay_discount_wizard_from" value="every" checked
                class="mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0"
                data-stay-discount-wizard-target="fromNightMode"
                data-action="change->stay-discount-wizard#selectFromNightMode">
-        <span class="block text-sm font-medium text-foreground">Every night of the stay</span>
+        <span>
+          <span class="block text-sm font-medium text-foreground">All nights of the stay</span>
+          <span class="block text-xs text-muted-foreground">Every night of the stay receives the discount.</span>
+        </span>
       </label>
       <label class="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3 hover:border-border-interactive has-[:checked]:border-border-interactive has-[:checked]:bg-muted/50">
         <input type="radio" name="stay_discount_wizard_from" value="from"
                class="mt-0.5 size-4 border-border-interactive text-foreground focus:ring-0"
                data-stay-discount-wizard-target="fromNightMode"
                data-action="change->stay-discount-wizard#selectFromNightMode">
-        <span class="flex items-center gap-2 text-sm font-medium text-foreground">
-          Only from night
-          <input type="number" min="1" step="1" inputmode="numeric"
-                 class="w-16 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground"
-                 data-stay-discount-wizard-target="fromNightValue"
-                 data-action="input->stay-discount-wizard#updateExample">
-          onward — earlier nights stay full price.
+        <span>
+          <span class="flex items-center gap-2 text-sm font-medium text-foreground">
+            Only from night
+            <input type="number" min="1" step="1" inputmode="numeric" placeholder="2"
+                   class="w-16 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground"
+                   data-stay-discount-wizard-target="fromNightValue"
+                   data-action="input->stay-discount-wizard#updateExample">
+            onward
+          </span>
+          <span class="block text-xs text-muted-foreground mt-0.5">Earlier nights remain at full price (e.g. night 1 full price, later nights discounted).</span>
         </span>
       </label>
     </div>

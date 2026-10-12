@@ -9,7 +9,7 @@ module ChannelManagers
     end
 
     def call
-      return OpenStruct.new(success?: false, message: "Channel manager not selected") if @hotel.preferred_channel_manager.blank?
+      return OpenStruct.new(success?: false, message: "Channel manager not selected") unless @hotel.channel_manager_enabled?
 
       client = Channex::Client.new
       property_id = mapping_for(@hotel).external_id

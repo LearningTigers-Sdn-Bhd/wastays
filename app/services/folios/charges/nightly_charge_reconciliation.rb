@@ -8,18 +8,21 @@ module Folios
       # entry came out clean; issues is the flattened list the audit blocker reads.
       Report = Data.define(:"valid?", :entries, :issues)
 
-      def self.call(booking:, business_date:, allow_closed_folio: false)
-        new(booking: booking, business_date: business_date, allow_closed_folio: allow_closed_folio).call
+      def self.call(booking:, business_date:, allow_closed_folio: false, charge_keys: nil)
+        new(booking: booking, business_date: business_date, allow_closed_folio: allow_closed_folio, charge_keys: charge_keys).call
       end
 
-      def initialize(booking:, business_date:, allow_closed_folio: false)
+      def initialize(booking:, business_date:, allow_closed_folio: false, charge_keys: nil)
         @booking = booking
         @business_date = business_date.to_date
         @allow_closed_folio = allow_closed_folio
+        @charge_keys = charge_keys
       end
 
       def call
-        entries = expected_lines.map { |line| entry_for(line) }
+        lines = expected_lines
+        lines = lines.select { |line| @charge_keys.include?(nightly_charge_key(line)) } if @charge_keys
+        entries = lines.map { |line| entry_for(line) }
         Report.new(
           "valid?": entries.all? { |entry| entry[:issues].empty? },
           entries: entries,

@@ -7,7 +7,7 @@ module Folios
     class RepairNightlyChargeReconciliation
       Result = ApplicationResult.define(:reconciliation, :reversed_transactions, :posted_transactions, :operation_key)
 
-      def self.call(booking:, reconciliation:, actor:, reason:, night_audit:, posting_options: {}, removed_transactions: [])
+      def self.call(booking:, reconciliation:, actor:, reason:, night_audit:, posting_options: {}, removed_transactions: [], business_date: nil, charge_keys: nil)
         new(
           booking: booking,
           reconciliation: reconciliation,
@@ -15,17 +15,19 @@ module Folios
           reason: reason,
           night_audit: night_audit,
           posting_options: posting_options,
-          removed_transactions: removed_transactions
+          removed_transactions: removed_transactions,
+          business_date: business_date, charge_keys: charge_keys
         ).call
       end
 
-      def initialize(booking:, reconciliation:, actor:, reason:, night_audit:, posting_options: {}, removed_transactions: [])
+      def initialize(booking:, reconciliation:, actor:, reason:, night_audit:, posting_options: {}, removed_transactions: [], business_date: nil, charge_keys: nil)
         @booking = booking
         @reconciliation = reconciliation
         @actor = actor
         @reason = reason.to_s.strip
         @night_audit = night_audit
-        @business_date = night_audit.business_date.to_date
+        @business_date = (business_date || night_audit.business_date).to_date
+        @charge_keys = charge_keys
         @posting_options = posting_options
         @removed_transactions = removed_transactions
         @operation_key = SecureRandom.uuid
@@ -102,6 +104,7 @@ module Folios
       def post_expected_line!(entry, moved_from:)
         line = entry[:line]
         metadata = expected_metadata(entry)
+        metadata[:replaces_transaction_id] = moved_from&.id if @charge_keys
         if nightly_key_occupied_on_target?(entry)
           metadata[:reconciles_nightly_charge_key] = entry[:nightly_charge_key]
         else
@@ -118,7 +121,7 @@ module Folios
           posting_date: @business_date,
           options: transaction_options.merge(
             transaction_code: line[:transaction_code],
-            moved_from_transaction: moved_from,
+            moved_from_transaction: (@charge_keys ? nil : moved_from),
             metadata: metadata
           )
         ).call
@@ -158,7 +161,7 @@ module Folios
       def repair_metadata(entry)
         {
           posting_source: transaction_options[:posting_source],
-          night_audit_id: @night_audit.id,
+          night_audit_id: @night_audit&.id,
           stay_date: @business_date.iso8601,
           booking_id: @booking.id,
           charge_kind: entry[:line][:charge_kind],
@@ -185,7 +188,8 @@ module Folios
         Folios::Charges::NightlyChargeReconciliation.call(
           booking: @booking.reload,
           business_date: @business_date,
-          allow_closed_folio: @posting_options[:override_closed_folio]
+          allow_closed_folio: @posting_options[:override_closed_folio],
+          charge_keys: @charge_keys
         )
       end
 
@@ -197,10 +201,10 @@ module Folios
           booking: @booking,
           actor: @actor,
           operation_type: "correction",
-          source_folio: @reversed_transactions.first&.booking_folio,
-          target_folio: @posted_transactions.first&.booking_folio,
-          source_transaction: @reversed_transactions.first&.reversal_of_transaction,
-          target_transaction: @posted_transactions.first,
+          source_folio: operation_reference(@reversed_transactions.first&.booking_folio),
+          target_folio: operation_reference(@posted_transactions.first&.booking_folio),
+          source_transaction: operation_reference(@reversed_transactions.first&.reversal_of_transaction),
+          target_transaction: operation_reference(@posted_transactions.first),
           amount: @posted_transactions.sum { |transaction| transaction.amount.to_d },
           currency: @booking.currency,
           operation_key: @operation_key,
@@ -208,12 +212,21 @@ module Folios
           metadata: {
             correction_type: "nightly_charge_repair",
             posting_source: transaction_options[:posting_source],
-            night_audit_id: @night_audit.id,
+            night_audit_id: @night_audit&.id,
             business_date: @business_date.iso8601,
             reversed_transaction_ids: @reversed_transactions.map(&:id),
             posted_transaction_ids: @posted_transactions.map(&:id)
           }
         )
+      end
+
+      # Group-routed corrections retain their transaction IDs in metadata. The
+      # operation log's optional references are restricted to its own booking.
+      def operation_reference(record)
+        return record unless @charge_keys && record
+
+        folio = record.is_a?(BookingFolio) ? record : record.booking_folio
+        record if folio.booking_id == @booking.id
       end
 
       def success_result(reconciliation: @reconciliation)

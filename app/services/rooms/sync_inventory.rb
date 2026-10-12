@@ -62,7 +62,7 @@ module Rooms
     end
 
     def trigger_channel_sync
-      return if @hotel.preferred_channel_manager.blank?
+      return unless @hotel.channel_manager_enabled?
       ChannelManagers::SyncJob.perform_later(
         @hotel.id,
         @start_date,
