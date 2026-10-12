@@ -70,6 +70,8 @@ module ChannelManagers
           report_failure("Ack failed for revision #{revision_id}: #{ack_response}", hotel, revision_id)
         else
           Rails.logger.info("Channel Manager: Acknowledged revision #{revision_id}")
+          # RecoverBookingsService counts a replay as done only on this value.
+          :acked
         end
       else
         Rails.logger.error "Channel Manager Ingestion Failed for ID #{revision_id}: #{result.message}"

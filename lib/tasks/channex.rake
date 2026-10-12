@@ -33,7 +33,7 @@ namespace :channex do
     puts "Done."
   end
 
-  desc "Replay bookings created since an outage longer than 30 min (HOTEL_ID=1 SINCE=2026-10-07T20:00:00Z)"
+  desc "Replay booking revisions received since an outage longer than 30 min (HOTEL_ID=1 SINCE=2026-10-07T20:00:00Z)"
   task recover_bookings: :environment do
     hotel = Hotel.find(ENV.fetch("HOTEL_ID") { abort "HOTEL_ID is required" })
     since = Time.zone.parse(ENV.fetch("SINCE") { abort "SINCE is required, e.g. 2026-10-07T20:00:00Z" }) ||

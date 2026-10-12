@@ -11,19 +11,24 @@ RSpec.describe ChannelManagers::RecoverBookingsService do
 
   before do
     allow(Channex::Client).to receive(:new).and_return(client)
-    allow(ChannelManagers::IngestRevisionJob).to receive(:perform_now)
+    allow(ChannelManagers::IngestRevisionJob).to receive(:perform_now).and_return(:acked)
   end
 
-  def booking(revision_id, property_id: "prop_1")
-    { "type" => "booking", "id" => "b_#{revision_id}", "attributes" => { "property_id" => property_id, "revision_id" => revision_id } }
+  def revision(id, property_id: "prop_1")
+    { "type" => "booking_revision", "id" => id, "attributes" => { "id" => id, "property_id" => property_id } }
   end
 
-  it "asks Channex only for this property's bookings since the outage" do
-    expect(client).to receive(:get).with("/bookings", hash_including(
+  def page_of(revisions, total: revisions.size)
+    { "data" => revisions, "meta" => { "total" => total } }
+  end
+
+  it "lists this property's booking revisions since the outage, oldest first, never GET /bookings" do
+    expect(client).to receive(:get).with("/booking_revisions", hash_including(
       "filter[property_id]" => "prop_1",
       "filter[inserted_at][gte]" => "2026-10-07T20:00:00Z",
+      "order[inserted_at]" => "asc",
       "pagination[page]" => 1
-    )).and_return({ "data" => [] })
+    )).and_return(page_of([]))
 
     result = service.call
 
@@ -31,36 +36,51 @@ RSpec.describe ChannelManagers::RecoverBookingsService do
     expect(result.replayed_count).to eq(0)
   end
 
-  it "replays each booking's latest revision through the ingest job" do
-    allow(client).to receive(:get).and_return({ "data" => [ booking("rev_1"), booking("rev_2") ] })
+  it "replays every revision, including modifications and cancellations, through the ingest job" do
+    allow(client).to receive(:get).and_return(page_of([ revision("rev_new"), revision("rev_cancel") ]))
 
     result = service.call
 
     expect(result.replayed_count).to eq(2)
-    expect(ChannelManagers::IngestRevisionJob).to have_received(:perform_now).with(hotel.id, "rev_1")
-    expect(ChannelManagers::IngestRevisionJob).to have_received(:perform_now).with(hotel.id, "rev_2")
+    expect(ChannelManagers::IngestRevisionJob).to have_received(:perform_now).with(hotel.id, "rev_new").ordered
+    expect(ChannelManagers::IngestRevisionJob).to have_received(:perform_now).with(hotel.id, "rev_cancel").ordered
   end
 
-  it "ignores bookings that belong to another property" do
-    allow(client).to receive(:get).and_return({ "data" => [ booking("rev_1"), booking("rev_x", property_id: "other") ] })
+  it "ignores revisions that belong to another property" do
+    allow(client).to receive(:get).and_return(page_of([ revision("rev_1"), revision("rev_x", property_id: "other") ]))
 
     service.call
 
     expect(ChannelManagers::IngestRevisionJob).to have_received(:perform_now).once.with(hotel.id, "rev_1")
   end
 
-  it "walks every page" do
-    full_page = Array.new(described_class::PER_PAGE) { |i| booking("rev_#{i}") }
-    allow(client).to receive(:get).with("/bookings", hash_including("pagination[page]" => 1)).and_return({ "data" => full_page })
-    allow(client).to receive(:get).with("/bookings", hash_including("pagination[page]" => 2)).and_return({ "data" => [ booking("rev_last") ] })
+  it "walks every page by the total Channex reports, even when a page comes back short" do
+    allow(client).to receive(:get).with("/booking_revisions", hash_including("pagination[page]" => 1))
+      .and_return(page_of([ revision("rev_1") ], total: described_class::PER_PAGE + 1))
+    allow(client).to receive(:get).with("/booking_revisions", hash_including("pagination[page]" => 2))
+      .and_return(page_of([ revision("rev_last") ], total: described_class::PER_PAGE + 1))
 
     result = service.call
 
-    expect(result.replayed_count).to eq(described_class::PER_PAGE + 1)
+    expect(result.replayed_count).to eq(2)
+    expect(client).to have_received(:get).twice
+  end
+
+  it "does not count a revision that was not acknowledged as replayed" do
+    allow(client).to receive(:get).and_return(page_of([ revision("rev_retry"), revision("rev_ok") ]))
+    # perform_now hands back the error when retry_on swallows it and queues a retry.
+    allow(ChannelManagers::IngestRevisionJob).to receive(:perform_now).with(hotel.id, "rev_retry")
+      .and_return(Channex::Client::RetryableRequestError.new("busy"))
+
+    result = service.call
+
+    expect(result.success?).to be(false)
+    expect(result.replayed_count).to eq(1)
+    expect(result.message).to include("rev_retry", "not acknowledged")
   end
 
   it "reports per-revision failures but keeps going" do
-    allow(client).to receive(:get).and_return({ "data" => [ booking("rev_bad"), booking("rev_ok") ] })
+    allow(client).to receive(:get).and_return(page_of([ revision("rev_bad"), revision("rev_ok") ]))
     allow(ChannelManagers::IngestRevisionJob).to receive(:perform_now).with(hotel.id, "rev_bad").and_raise("boom")
 
     result = service.call
@@ -76,7 +96,7 @@ RSpec.describe ChannelManagers::RecoverBookingsService do
     result = service.call
 
     expect(result.success?).to be(false)
-    expect(result.message).to include("Failed to list bookings")
+    expect(result.message).to include("Failed to list booking revisions")
   end
 
   it "refuses a hotel with no channel manager" do
