@@ -26,7 +26,13 @@ module Folios
         @folio.with_lock do
           @folio.reload
           return failure("Only closed folios can be reopened.") unless @folio.closed?
-          return failure("A folio with an AR invoice must be corrected through Accounts Receivable.") if @folio.ar_invoice.present?
+          if @folio.ar_invoice_corrections.unresolved.exists?
+            return failure("The previous invoice correction must finish before reopening.")
+          end
+          if @folio.ar_invoice.present?
+            NightAudits::OperationalChangeGuard.call!(hotel: @hotel, action: :reopen_folio)
+            ArInvoices::StartCorrection.call!(folio: @folio, user: @user, reason: @reason)
+          end
           return failure("Reason is required to reopen an invoiced folio.") if @folio.invoice.present? && @reason.blank?
 
           @folio.reopening_for_correction do

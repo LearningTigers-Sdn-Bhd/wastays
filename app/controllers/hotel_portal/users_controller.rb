@@ -111,7 +111,7 @@ module HotelPortal
     end
 
     def set_hotel_access
-      @hotel_access = current_hotel.user_hotel_accesses.includes(role: :permissions).find(params[:id])
+      @hotel_access = current_hotel.user_hotel_accesses.excluding_partners.includes(role: :permissions).find(params[:id])
     end
 
     def available_roles

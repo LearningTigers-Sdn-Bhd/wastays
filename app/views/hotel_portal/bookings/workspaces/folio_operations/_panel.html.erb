@@ -11,6 +11,8 @@
       </div>
     </div>
 
+    <%= render "hotel_portal/ar_invoices/correction_history", folio: active_folio %>
+
     <% reversed_application_ids = active_folio.deposit_movements.filter_map { |movement| movement.reversal_of_id if movement.movement_type == "reverse" }.to_set %>
     <% deposit_applications = active_folio.deposit_movements.select { |movement| movement.movement_type == "apply" && !reversed_application_ids.include?(movement.id) } %>
     <% if deposit_applications.any? %><div class="border-b border-border bg-muted px-5 py-3 text-sm text-foreground"><span class="font-medium">Deposit applications:</span> <%= deposit_applications.map { |movement| "##{movement.deposit_id} · #{presenter.money(movement.amount)}" }.to_sentence %></div><% end %>

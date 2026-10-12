@@ -29,15 +29,15 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
 
       terms = section.at_css("[data-corporate-billing-terms-target='terms']")
       expect(terms).to be_present
-      # The controller finds the relationship select by name, and disables the
+      # The controller finds the selected relationship radio by name, and disables the
       # named controls inside the terms block. Both have to be where it looks.
-      expect(section.at_css('select[name$="[relationship_type]"]')).to be_present
+      expect(section.at_css('input[type="radio"][name$="[relationship_type]"]')).to be_present
       expect(terms.css("input[name], select[name]").map { |node| node["name"] })
         .to include(a_string_including("credit_currency"),
                     a_string_including("credit_limit"),
                     a_string_including("payment_terms_days"))
-      # The relationship select must sit outside the block it controls.
-      expect(terms.at_css('select[name$="[relationship_type]"]')).to be_nil
+      # Relationship radios must sit outside the block they control.
+      expect(terms.at_css('input[type="radio"][name$="[relationship_type]"]')).to be_nil
     end
 
     it "drops the terms tail and the credit figure from a standard account" do
@@ -181,19 +181,31 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response.body).to include("Invite external account")
     expect(response.body).to include("Corporate contact email")
     expect(response.body).not_to include("Company name")
+    expect(response.parsed_body.at_css('input[type="radio"][value="direct_bill"]')["checked"]).to be_present
     # DESIGN.md 6: portal forms use SelectMenu, never a native select.
     expect(Nokogiri::HTML(response.body).css("select:not([data-ui--select-menu-target]):not([data-ui--combobox-target])")).to be_empty
   end
 
-  it "renders the edit form in the sheet frame" do
+  it "offers separate creation forms and reveals temporary credentials only on request" do
+    corporate_user = create(:user, :corporate, temporary_password: "password123", temporary_password_hotel: hotel)
+    create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account)
+    get hotel_corporate_accounts_path(hotel)
+    expect(response.body).to include("Add / Invite", "Invite account", "Add account", "More", "Show temporary password")
+    expect(response.body).not_to include("password123")
+    corporate_user.update!(temporary_password: nil, temporary_password_hotel: nil)
+    get hotel_corporate_accounts_path(hotel)
+    expect(response.body).not_to include("Show temporary password")
+  end
+
+  it "renders the edit form as a workspace page" do
     relationship = create(:hotel_corporate_account, hotel: hotel)
 
-    get edit_hotel_corporate_account_path(hotel, relationship), headers: { "Turbo-Frame" => "external_account_sheet" }
+    get edit_hotel_corporate_account_path(hotel, relationship)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include('dialog id="external-account-sheet"')
+    expect(response.parsed_body.at_css('[data-testid="corporate-account-workspace"]')).to be_present
     expect(response.body).to include(relationship.corporate_account.name)
-    expect(response.body).to include("Billing address", "Billing address missing")
+    expect(response.body).to include("Manage billing", "Company details", "Billing address")
     expect(response.body).to include("external-account-suspend-#{relationship.id}")
   end
 
@@ -234,7 +246,7 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
       }
     }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
 
-    expect(response).to have_http_status(:success)
+    expect(response).to have_http_status(:see_other)
     expect(relationship.reload).to have_attributes(
       billing_address_line1: "12 Jalan Lintas",
       billing_city: "Kota Kinabalu",
@@ -526,8 +538,8 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
       expect(relationship.reload.market).to be_nil
     end
 
-    it "is offered on the account's edit sheet" do
-      get edit_hotel_corporate_account_path(hotel, relationship)
+    it "is offered on the account's Company details tab" do
+      get edit_hotel_corporate_account_path(hotel, relationship, tab: "company_details")
 
       expect(response.body).to include("hotel_corporate_account[market]")
     end

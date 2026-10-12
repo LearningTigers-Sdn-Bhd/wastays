@@ -194,12 +194,6 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     expect(companion.country_snapshot).to eq("India")
   end
 
-  # Guest requires a date of birth for anyone not Malaysian (its own
-  # reporting-requirement validation) and the form only offers it once a
-  # non-Malaysian nationality is actually picked, so a companion given a
-  # foreign nationality with no date of birth is dropped rather than saved
-  # half-answered -- the same "log, don't fail the booking" the phone and
-  # email fields already get.
   describe "identity: IC number vs. passport number" do
     # The first six digits of a Malaysian IC are the birthdate; Guest already
     # knows how to read it (Guest#populate_date_of_birth_from_malaysian_ic),
@@ -261,8 +255,7 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     end
 
     # A passport carries no birthdate the way an IC does, so it goes into its
-    # own column rather than the one Guest reads as a Malaysian IC -- and the
-    # date of birth genuinely has to be typed for this guest.
+    # own column rather than the one Guest reads as a Malaysian IC.
     it "routes a non-Malaysian's number to passport_number, not government_id" do
       post corporate_bookings_path, params: {
         hotel_relationship_id: relationship.id,
@@ -301,7 +294,7 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     end
   end
 
-  it "quietly skips a companion given a foreign nationality but no date of birth" do
+  it "saves a companion given a foreign nationality but no date of birth" do
     expect {
       post corporate_bookings_path, params: {
         hotel_relationship_id: relationship.id,
@@ -316,15 +309,12 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     }.to change(Booking, :count).by(1)
 
     booking = Booking.order(:id).last
-    expect(booking.booking_guests.exists?(name_snapshot: "Priya Singh")).to be(false)
+    companion = booking.booking_guests.find_by!(name_snapshot: "Priya Singh")
+    expect(companion.country_snapshot).to eq("India")
+    expect(companion.date_of_birth_snapshot).to be_nil
   end
 
-  # The one case that must never silently break: a lead guest given a foreign
-  # nationality but no date of birth cannot become a Guest record at all
-  # (Guest's own validation), and CreateManualBooking's guest step is not
-  # optional the way a companion's is -- so this has to fail the whole booking
-  # cleanly, with a message, rather than losing the room to an unhandled error.
-  it "refuses cleanly when the lead's nationality is foreign and no date of birth was given" do
+  it "creates a booking when the lead's nationality is foreign and no date of birth was given" do
     expect {
       post corporate_bookings_path, params: {
         hotel_relationship_id: relationship.id,
@@ -333,9 +323,12 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
           adults: 1, children: 0, rooms: 1
         }.merge(room_detail([ { name: "Priya Singh", phone: "+60123456789", country: "India" } ]))
       }
-    }.not_to change(Booking, :count)
+    }.to change(Booking, :count).by(1)
 
     expect(response).to have_http_status(:redirect)
+    guest = Booking.order(:id).last.primary_guest
+    expect(guest.country).to eq("India")
+    expect(guest.date_of_birth).to be_nil
   end
 
   it "leaves nationality blank when the agent does not know it" do

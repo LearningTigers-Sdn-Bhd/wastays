@@ -8,16 +8,16 @@
     <p class="mt-0.5 text-xs text-muted-foreground"><%= hint %></p>
   </div>
 
-  <%= render PanelsUI::FormField.new(form: form, attribute: :relationship_type, label: "Relationship",
-    hint: "Standard settles at checkout. Direct bill invoices this account instead, against its credit limit and terms.") do |field| %>
-    <% field.with_select_menu(
-      [ { label: "Standard", value: "standard" }, { label: "Direct bill", value: "direct_bill" } ],
-      selected: relationship_type) %>
-  <% end %>
+  <%= render PanelsUI::RadioGroup.new(form: form, attribute: :relationship_type, label: "Relationship",
+    variant: :card, selected: relationship_type, required: true,
+    options: [
+      { label: "Standard — Settle by checkout", value: "standard", description: "Charges must be settled by checkout. This account does not receive invoice credit." },
+      { label: "Direct bill — Invoice the company", value: "direct_bill", description: "Invoice this account under the agreed credit limit and payment terms." }
+    ]) %>
 
   <%# Only a direct-bill account is invoiced, so only it has a currency, a
       credit limit and terms to settle on. %>
-  <div data-corporate-billing-terms-target="terms" class="space-y-4">
+  <div data-corporate-billing-terms-target="terms" class="space-y-4" <%= "hidden" unless relationship_type == "direct_bill" %>>
     <div class="grid gap-3 sm:grid-cols-2">
       <%= render PanelsUI::FormField.new(form: form, attribute: :credit_currency, label: "Credit currency") do |field| %>
         <% field.with_combobox(
@@ -54,7 +54,7 @@
   <%# safe_join rather than interpolation: the hint renders as HTML, and the
       hotel's default is the one thing in it an operator has to be able to pick
       out at a glance. %>
-  <div data-corporate-billing-terms-target="hold">
+  <div data-corporate-billing-terms-target="hold" <%= "hidden" unless relationship_type == "standard" && agent_booking_enabled %>>
     <%= render "hotel_portal/shared/agent_payment_hold_field",
           form: form,
           record: record,

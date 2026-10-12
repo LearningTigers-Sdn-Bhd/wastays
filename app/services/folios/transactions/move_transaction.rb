@@ -6,6 +6,7 @@ module Folios
   module Transactions
     class MoveTransaction
       include Authorizable
+      include Folios::MovementLocking
 
       PERMISSION = "manage_folio_movements"
 
@@ -33,9 +34,19 @@ module Folios
         error = validate
         return failure(error) if error.present?
 
+        if @transaction.payment?
+          result = Folios::Payments::ReallocatePayment.call(transaction: @transaction, target_folio: @target_folio,
+            user: @user, reason: @reason, amount: @transaction.amount, posting_date: @posting_date, operation_key: @operation_key)
+          return failure(result.error) unless result.success?
+
+          return success(result.target_transactions)
+        end
+
         ActiveRecord::Base.transaction do
           lock_folios!
           originals.each(&:lock!)
+          error = validate
+          return failure(error) if error.present?
           reverse_originals!
           repost_to_target!
           log_operation!
@@ -53,13 +64,18 @@ module Folios
       def validate
         return "You do not have permission to move folio transactions." unless permitted?
         return "Move reason can't be blank." if @reason.blank?
-        return "Only posted charge transactions can be moved in this phase." unless @transaction.charge?
+        movement_error = Folios::Transactions::MovementPolicy.error(@transaction)
+        return movement_error if movement_error.present?
         return "Generated tax rows move with their parent charge." if generated_tax_child?(@transaction)
         return "Source and target folios must be different." if @source_folio.id == @target_folio.id && @tax_routes.empty?
-        return "Source and target folios must belong to the same booking." unless @target_folio.booking_id == @booking.id
-        return "Source and target folios must belong to the same hotel." unless @target_folio.hotel_id == @hotel.id
+        destination_error = Folios::DestinationPolicy.error(booking: @booking, folio: @target_folio)
+        return destination_error if destination_error.present?
         return "Source folio must be open." unless @source_folio.open?
         return "Target folio must be open." unless @target_folio.open?
+        originals.each do |row|
+          error = Folios::DestinationPolicy.error(booking: @booking, folio: row.booking_folio)
+          return error if error
+        end
         return "Transaction has already been reversed." if originals.any? { |transaction| transaction.voided_by_transaction_id.present? }
         return "Reversal transactions cannot be moved." if originals.any? { |transaction| transaction.reversal_of_transaction_id.present? }
         tax_route_error = validate_tax_routes
@@ -69,13 +85,13 @@ module Folios
       end
 
       def lock_folios!
-        ([ @source_folio, @target_folio ] + originals.map(&:booking_folio) + tax_route_target_folios.values).uniq.sort_by(&:id).each(&:lock!)
+        lock_movement!(folios: ([ @source_folio, @target_folio ] + originals.map(&:booking_folio) + tax_route_target_folios.values), transactions: originals)
       end
 
       def originals
         @originals ||= begin
           children = generated_tax_children(@transaction).to_a
-          [ @transaction, *children ].sort_by { |transaction| [ transaction.posting_date, transaction.created_at, transaction.id ] }
+          [ @transaction, *children.sort_by { |transaction| [ transaction.posting_date, transaction.created_at, transaction.id ] } ]
         end
       end
 
@@ -109,7 +125,7 @@ module Folios
 
         originals.each do |original|
           target_folio = target_folio_for(original)
-          moved_parent = original == @transaction ? nil : parent_map[parent_id_for(original)]
+          moved_parent = original == @transaction ? nil : parent_map[parent_id_for(original).nonzero? || @transaction.id]
           parent = moved_parent if moved_parent&.booking_folio_id == target_folio.id
           result = Folios::Transactions::InsertTransaction.new(
             booking_folio: target_folio,
@@ -136,6 +152,10 @@ module Folios
 
       def movement_options(original)
         {
+          transaction_code_code_snapshot: original.transaction_code_code_snapshot,
+          transaction_code_name_snapshot: original.transaction_code_name_snapshot,
+          gl_code: original.gl_code,
+          source_booking: original.source_booking,
           system_posting: true,
           posting_source: "folio_movement",
           currency: original.currency,
@@ -145,7 +165,9 @@ module Folios
       end
 
       def movement_metadata(original, target_folio = @target_folio)
-        original.metadata.to_h.deep_dup.merge(
+        original.metadata.to_h.deep_dup.except("nightly_charge_key").merge(
+          reconciles_nightly_charge_key: original.metadata["nightly_charge_key"] || original.metadata["reconciles_nightly_charge_key"],
+          internal_folio_movement: true,
           posting_source: "folio_movement",
           operation_key: @operation_key,
           transfer_group_id: @transfer_group_id,
@@ -171,6 +193,10 @@ module Folios
 
       def moved_metadata(original, moved_parent, target_folio)
         metadata = movement_metadata(original, target_folio)
+        if original.metadata["nightly_charge_key"].present? && !target_folio.folio_transactions.where("metadata->>'nightly_charge_key' = ?", original.metadata["nightly_charge_key"]).exists?
+          metadata[:nightly_charge_key] = original.metadata["nightly_charge_key"]
+          metadata.delete(:reconciles_nightly_charge_key)
+        end
         if moved_parent.present?
           metadata["parent_folio_transaction_id"] = moved_parent.id
           metadata[:parent_folio_transaction_id] = moved_parent.id
@@ -190,13 +216,12 @@ module Folios
         @tax_route_target_folios ||= @tax_routes.each_with_object({}) do |(transaction_id, folio_id), targets|
           next if folio_id.blank?
 
-          targets[transaction_id] = @booking.booking_folios.open.find_by(id: folio_id)
+          targets[transaction_id] = Folios::DestinationPolicy.folios(booking: @booking).open.find_by(id: folio_id)
         end
       end
 
       def generated_tax_child?(transaction)
-        metadata = transaction.metadata.to_h
-        metadata["parent_folio_transaction_id"].present? || metadata["tax_line"].present?
+        Folios::Transactions::MovementPolicy.attached_tax?(transaction)
       end
 
       def generated_tax_children(transaction)
@@ -243,6 +268,8 @@ module Folios
           next if folio_id.blank?
 
           return "Selected tax folio is not available." if tax_route_target_folios[transaction_id].blank?
+          error = Folios::DestinationPolicy.error(booking: @booking, folio: tax_route_target_folios[transaction_id])
+          return error if error
         end
 
         nil

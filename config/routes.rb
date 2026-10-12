@@ -265,7 +265,7 @@ Rails.application.routes.draw do
 
   scope "/corporate", module: :corporate_portal, as: :corporate do
     get "dashboard", to: "dashboard#index", as: :dashboard
-    resource :profile, only: [ :show ]
+    resource :profile, only: [ :show, :update ]
     resources :hotel_relationships, only: [ :edit, :update ], path: "linked-hotels"
     # An agent booking a stay for a guest at a hotel this account is linked to.
     # Cancelling is its own resource rather than #destroy: the booking is not
@@ -481,7 +481,11 @@ Rails.application.routes.draw do
 
     resource :property_policy, only: [ :edit, :update ]
     scope "accounts-receivable" do
+      resource :corporate_account_addition, only: [ :new, :create ], path: "corporate-accounts/add" do
+        post :lookup
+      end
       resources :corporate_accounts, only: [ :index, :new, :create, :edit, :update ], path: "corporate-accounts" do
+        resource :temporary_password, only: :show, controller: "corporate_account_passwords"
         member do
           patch :suspend
           patch :reactivate
@@ -493,6 +497,9 @@ Rails.application.routes.draw do
         constraints: { filename: /[^\/]+\.pdf/ }
       get "agent-summary/:filename", to: "ar_invoices#aging_summary_pdf",
         constraints: { filename: /[^\/]+\.pdf/ }
+      resources :ar_invoice_corrections, only: [ :update ], path: "invoice-corrections" do
+        get :credit, on: :member
+      end
       resources :ar_invoices, only: [ :index, :show ], path: "invoices" do
         get :pdf, on: :member
       end
@@ -625,6 +632,7 @@ Rails.application.routes.draw do
       match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
       get "extra-charge-quote/:booking_id", to: "transactions#quote", as: :extra_charge_quote
       get "discount-quote/:booking_id", to: "transactions#discount_quote", as: :discount_quote
+      match "transfer-folios/:booking_id", to: "transfers#show", via: [ :get, :post ], as: :transfer_folios
       match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
       match "split-transaction/:booking_id/:transaction_id", to: "transaction_splits#show", via: [ :get, :post ], as: :split_transaction
       match "reverse-transaction/:booking_id/:transaction_id", to: "transaction_reversals#show", via: [ :get, :post ], as: :reverse_transaction
@@ -972,6 +980,10 @@ Rails.application.routes.draw do
         # row; #update owns the role. DELETE is a permanent removal.
         resources :users, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "staff" do
           patch :status, on: :member
+          resource :temporary_password, only: :show, controller: "staff_passwords"
+        end
+        resource :staff_addition, path: "staff-addition", only: [ :new, :create ] do
+          post :lookup
         end
         resources :staff_invitations, path: "staff-invitations", only: [ :edit, :update, :destroy ] do
           post :resend, on: :member

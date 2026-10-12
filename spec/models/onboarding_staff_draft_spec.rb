@@ -20,6 +20,14 @@ RSpec.describe OnboardingStaffDraft, type: :model do
     expect(draft.errors[:role]).to include("must belong to the property's account")
   end
 
+  it "rejects a normalized partner email" do
+    partner = create(:user, :super_agent)
+    draft = described_class.new(hotel: hotel, role: preset_role, email: "  #{partner.email.upcase}  ")
+
+    expect(draft).not_to be_valid
+    expect(draft.errors[:base]).to include(StaffInvitation::PARTNER_INVITATION_ERROR)
+  end
+
   it "enforces case-insensitive email uniqueness per property" do
     described_class.create!(hotel: hotel, role: preset_role, email: "ari@example.com")
     duplicate = described_class.new(hotel: hotel, role: preset_role, email: "ARI@example.com")

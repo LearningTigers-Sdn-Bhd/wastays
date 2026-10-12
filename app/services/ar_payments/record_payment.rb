@@ -28,6 +28,7 @@ module ArPayments
 
       payment = nil
       ActiveRecord::Base.transaction do
+        BookingFolio.where(id: invoices.map(&:booking_folio_id)).order(:id).each(&:lock!)
         invoices.each(&:lock!)
         allocation_error = validate_allocations
         raise ActiveRecord::Rollback, allocation_error if allocation_error.present?
@@ -84,6 +85,9 @@ module ArPayments
         return "Invoice #{row[:invoice_id]} is not available for this corporate account." if invoice.blank?
         return "Allocation amount must be greater than zero." unless row[:amount].positive?
         return "Allocation for #{invoice.formatted_invoice_number} exceeds outstanding amount." if row[:amount] > invoice.outstanding_amount.to_d
+        return "Invoice is under correction. Record the payment without allocating it." if invoice.invoice&.reload&.under_correction?
+        return "Invoice currency does not match payment." unless invoice.currency == @currency
+        return "Invoice is not available for this corporate account." unless invoice.hotel_corporate_account_id == @hotel_corporate_account.id
         return "Cannot allocate payment to void invoice #{invoice.formatted_invoice_number}." if invoice.void?
       end
 

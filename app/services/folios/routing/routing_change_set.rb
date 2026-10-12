@@ -75,6 +75,11 @@ module Folios
             @error = "Billing routes can only target an open folio."
             next
           end
+          destination_error = Folios::DestinationPolicy.error(booking: @booking, folio: folio)
+          if destination_error
+            @error = destination_error
+            next
+          end
           unless folio.booking_billing_party_id.to_s == party_id.to_s
             @error = "Target folio must belong to the selected billing party."
             next
@@ -142,12 +147,22 @@ module Folios
                 @error = "Guest primary folio must be open."
                 next
               end
+              destination_error = Folios::DestinationPolicy.error(booking: @booking, folio:)
+              if destination_error
+                @error = destination_error
+                next
+              end
               next if child.target_folio&.id == folio.id
               { row:, child:, mode: "exception", folio: }
             else
               folio = folios[attrs["target_folio_id"].to_s]
               unless folio&.open?
                 @error = "Attached-item exceptions must target an open folio."
+                next
+              end
+              destination_error = Folios::DestinationPolicy.error(booking: @booking, folio:)
+              if destination_error
+                @error = destination_error
                 next
               end
               unless folio.booking_billing_party_id.to_s == party_id.to_s

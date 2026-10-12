@@ -9,7 +9,7 @@ module Ezee
   # The export is Crystal Reports output: a banner, a 48-column grid of merged
   # cells, and summary blocks at the end. Roughly 69% of its rows are completely
   # blank, so the one rule that matters is stated in
-  # docs/ezee-reservation-import.md and enforced here: read every row to the end,
+  # docs/integrations/ezee-reservation-import.md and enforced here: read every row to the end,
   # classify each by content, and never stop on emptiness. "Read until the first
   # blank row" returns one row out of 1193 on the client's real file, without
   # raising.

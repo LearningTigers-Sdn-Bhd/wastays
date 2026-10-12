@@ -6,6 +6,7 @@ module Folios
   module Transactions
     class SplitTransaction
       include Authorizable
+      include Folios::MovementLocking
 
       PERMISSION = "manage_folio_movements"
 
@@ -35,9 +36,17 @@ module Folios
         error = validate
         return failure(error) if error.present?
 
+        if @transaction.payment?
+          result = Folios::Payments::ReallocatePayment.call(transaction: @transaction, target_folio: @target_folio,
+            user: @user, reason: @reason, amount: target_parent_amount, posting_date: @posting_date, operation_key: @operation_key)
+          return result
+        end
+
         ActiveRecord::Base.transaction do
           lock_folios!
           originals.each(&:lock!)
+          error = validate
+          return failure(error) if error.present?
           reverse_originals!
           repost_split_rows!
           log_operation!
@@ -55,13 +64,18 @@ module Folios
       def validate
         return "You do not have permission to split folio transactions." unless permitted?
         return "Split reason can't be blank." if @reason.blank?
-        return "Only posted charge transactions can be split in this phase." unless @transaction.charge?
+        movement_error = Folios::Transactions::MovementPolicy.error(@transaction)
+        return movement_error if movement_error.present?
         return "Generated tax rows split with their parent charge." if generated_tax_child?(@transaction)
         return "Source and target folios must be different." if @source_folio.id == @target_folio.id
-        return "Source and target folios must belong to the same booking." unless @target_folio.booking_id == @booking.id
-        return "Source and target folios must belong to the same hotel." unless @target_folio.hotel_id == @hotel.id
+        destination_error = Folios::DestinationPolicy.error(booking: @booking, folio: @target_folio)
+        return destination_error if destination_error.present?
         return "Source folio must be open." unless @source_folio.open?
         return "Target folio must be open." unless @target_folio.open?
+        originals.each do |row|
+          error = Folios::DestinationPolicy.error(booking: @booking, folio: row.booking_folio)
+          return error if error
+        end
         return "Transaction has already been reversed." if originals.any? { |transaction| transaction.voided_by_transaction_id.present? }
         return "Reversal transactions cannot be split." if originals.any? { |transaction| transaction.reversal_of_transaction_id.present? }
         return "Provide either split amount or percent, not both." if @amount.present? && @percent.present?
@@ -73,13 +87,13 @@ module Folios
       end
 
       def lock_folios!
-        [ @source_folio, @target_folio ].sort_by(&:id).each(&:lock!)
+        lock_movement!(folios: ([ @source_folio, @target_folio ] + originals.map(&:booking_folio)), transactions: originals)
       end
 
       def originals
         @originals ||= begin
           children = generated_tax_children(@transaction).to_a
-          [ @transaction, *children ].sort_by { |transaction| [ transaction.posting_date, transaction.created_at, transaction.id ] }
+          [ @transaction, *children.sort_by { |transaction| [ transaction.posting_date, transaction.created_at, transaction.id ] } ]
         end
       end
 
@@ -100,7 +114,7 @@ module Folios
       def reverse_originals!
         originals.each do |original|
           result = Folios::Transactions::InsertTransaction.new(
-            booking_folio: @source_folio,
+            booking_folio: original.booking_folio,
             amount: -original.amount,
             transaction_type: "adjustment",
             category: "correction",
@@ -128,11 +142,11 @@ module Folios
 
         originals.each do |original|
           source_amount, target_amount = split_amounts_for(original)
-          source_parent = original == @transaction ? nil : source_parent_map[parent_id_for(original)]
-          target_parent = original == @transaction ? nil : target_parent_map[parent_id_for(original)]
+          source_parent = original == @transaction ? nil : source_parent_map[(parent_id_for(original).nonzero? || @transaction.id)]
+          target_parent = original == @transaction ? nil : target_parent_map[(parent_id_for(original).nonzero? || @transaction.id)]
 
           source_result = post_split_row(
-            folio: @source_folio,
+            folio: original.booking_folio,
             original: original,
             amount: source_amount,
             parent: source_parent,
@@ -148,12 +162,14 @@ module Folios
 
           source_parent_map[original.id] = source_result.transaction
           target_parent_map[original.id] = target_result.transaction
-          @source_transactions << source_result.transaction
-          @target_transactions << target_result.transaction
+          @source_transactions << source_result.transaction if source_result.transaction
+          @target_transactions << target_result.transaction if target_result.transaction
         end
       end
 
       def post_split_row(folio:, original:, amount:, parent:, side:)
+        return Folios::Transactions::TransactionResult.success(transaction: nil) if amount.zero?
+
         result = Folios::Transactions::InsertTransaction.new(
           booking_folio: folio,
           amount: amount,
@@ -165,7 +181,7 @@ module Folios
           options: split_options(original).merge(
             transaction_code: original.transaction_code,
             split_from_transaction: original,
-            parent_transaction: parent,
+            parent_transaction: (parent if parent&.booking_folio_id == folio.id),
             metadata: split_row_metadata(original, parent, side)
           )
         ).call
@@ -187,6 +203,10 @@ module Folios
 
       def split_options(original)
         {
+          transaction_code_code_snapshot: original.transaction_code_code_snapshot,
+          transaction_code_name_snapshot: original.transaction_code_name_snapshot,
+          gl_code: original.gl_code,
+          source_booking: original.source_booking,
           system_posting: true,
           posting_source: "folio_split",
           currency: original.currency,
@@ -196,7 +216,9 @@ module Folios
       end
 
       def split_metadata(original)
-        original.metadata.to_h.deep_dup.merge(
+        original.metadata.to_h.deep_dup.except("nightly_charge_key").merge(
+          reconciles_nightly_charge_key: original.metadata["nightly_charge_key"] || original.metadata["reconciles_nightly_charge_key"],
+          internal_folio_movement: true,
           posting_source: "folio_split",
           operation_key: @operation_key,
           transfer_group_id: @transfer_group_id,
@@ -231,14 +253,11 @@ module Folios
       end
 
       def generated_tax_child?(transaction)
-        metadata = transaction.metadata.to_h
-        metadata["parent_folio_transaction_id"].present? || metadata["tax_line"].present?
+        Folios::Transactions::MovementPolicy.attached_tax?(transaction)
       end
 
       def generated_tax_children(transaction)
-        transaction.booking_folio.folio_transactions
-          .where("metadata->>'parent_folio_transaction_id' = ?", transaction.id.to_s)
-          .order(:posting_date, :created_at, :id)
+        Folios::Transactions::AttachedTaxTransactions.call(transaction)
       end
 
       def parent_id_for(transaction)

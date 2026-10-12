@@ -3,16 +3,17 @@
 module Folios
   module Lifecycle
     class CreateDirectBillArInvoice
-      def self.call!(folio:, balance: nil)
-        new(folio: folio, balance: balance).call!
+      def self.call!(folio:, balance: nil, due_on: nil)
+        new(folio: folio, balance: balance, due_on: due_on).call!
       end
 
-      def initialize(folio:, balance: nil)
+      def initialize(folio:, balance: nil, due_on: nil)
         @folio = folio
         @hotel = folio.hotel
         @booking = folio.booking
         @hotel_corporate_account = folio.hotel_corporate_account
         @balance = balance
+        @due_on = due_on
       end
 
       def call!
@@ -70,7 +71,7 @@ module Folios
           outstanding_amount: balance,
           currency: @folio.currency,
           issued_on: issued_on,
-          due_on: issued_on + terms_days.days,
+          due_on: @due_on || issued_on + terms_days.days,
         metadata: metadata(terms_days, balance, snapshot)
         )
       end

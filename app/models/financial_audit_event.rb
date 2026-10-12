@@ -22,6 +22,7 @@ class FinancialAuditEvent < ApplicationRecord
     folio_forecasts_refreshed
     hotel_tax_rules_changed
     missing_folio_recovered
+    ar_invoice_corrected
     ar_payment_recorded
     ar_payment_allocated
     ar_payment_allocation_reversed

@@ -5,6 +5,7 @@ class NotificationDelivery < ApplicationRecord
   # payment path -- rather than from a NotificationConfig schedule, so they have
   # no counterpart in the configurable set.
   EXTRA_NOTIFICATION_TYPES = %w[
+    ar_invoice_correction
     invoice_package
     guest_registration_card
     agent_payment_approved

@@ -45,7 +45,8 @@ class FolioOperationLog < ApplicationRecord
 
   def folio_context_matches_booking
     [ source_folio, target_folio ].compact.each do |folio|
-      next if folio.booking_id == booking_id && folio.hotel_id == hotel_id
+      next if folio.hotel_id == hotel_id && (folio.booking_id == booking_id ||
+        (operation_type.in?(%w[move_transaction split_transaction]) && Folios::DestinationPolicy.related?(booking, folio.booking)))
 
       errors.add(:base, "Folio context must match operation booking and hotel.")
     end
@@ -54,7 +55,8 @@ class FolioOperationLog < ApplicationRecord
   def transaction_context_matches_booking
     [ source_transaction, target_transaction ].compact.each do |transaction|
       folio = transaction.booking_folio
-      next if folio.booking_id == booking_id && folio.hotel_id == hotel_id
+      next if folio.hotel_id == hotel_id && (folio.booking_id == booking_id ||
+        (operation_type.in?(%w[move_transaction split_transaction]) && Folios::DestinationPolicy.related?(booking, folio.booking)))
 
       errors.add(:base, "Transaction context must match operation booking and hotel.")
     end

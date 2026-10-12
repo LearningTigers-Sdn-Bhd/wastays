@@ -171,7 +171,7 @@ RSpec.describe "HotelPortal::Folios::Actions transaction moves", type: :request,
       expect(tax_folio.folio_transactions.charge.where(moved_from_transaction: tax)).to exist
     end
 
-    it "closes the sheet with a flash alert when the move fails" do
+    it "keeps the sheet and selections when the move fails" do
       allow(::Folios::Transactions::MoveTransaction).to receive(:call)
         .and_return(double(success?: false, error: "Transaction cannot be moved."))
 
@@ -179,9 +179,9 @@ RSpec.describe "HotelPortal::Folios::Actions transaction moves", type: :request,
         params: { folio_operation: { target_folio_id: target_folio.id, reason: "Route to company" } },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "folio_action_sheet" }
 
-      expect(response).to have_http_status(:success)
-      expect(response.body).to include('action="complete_sheet"')
-      expect(flash[:alert]).to eq("Transaction cannot be moved.")
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Transaction cannot be moved.")
+      expect(flash.now[:alert]).to eq("Transaction cannot be moved.")
     end
 
     it "redirects to the folio tab on a direct request" do

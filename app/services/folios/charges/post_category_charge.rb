@@ -85,6 +85,7 @@ module Folios
       def charge_options
         @charge_options ||= begin
           options = @options.merge(
+            source_booking: @folio.booking,
             transaction_code: transaction_code,
             metadata: @metadata.merge(posting_source: "charge_service", charge_type: @category)
           )

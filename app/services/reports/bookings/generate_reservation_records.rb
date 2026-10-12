@@ -8,7 +8,8 @@ module Reports
     # posted, these are what was booked. Reservation documents are produced before folio
     # charges necessarily exist, so the charge rows here come from the booking-time nightly
     # and tax snapshots rather than from current rates or subsequently posted transactions.
-    # The two will disagree once a stay is under way, and that is the point of having both.
+    # The booking summary opts into configured extras as well; confirmations and vouchers
+    # keep the reservation-only view. Neither is the final posted folio position.
     #
     # Serves a single booking or a whole group. A group organiser settles one position, so
     # the group form aggregates its children rather than reporting each room separately.
@@ -170,12 +171,13 @@ module Reports
 
       attr_reader :booking, :group_booking, :hotel
 
-      def initialize(booking: nil, group_booking: nil)
+      def initialize(booking: nil, group_booking: nil, include_extra_charges: false)
         unless booking.present? ^ group_booking.present?
           raise ArgumentError, "supply exactly one of booking: or group_booking:"
         end
 
         @group_booking = group_booking
+        @include_extra_charges = include_extra_charges
         @bookings = group_booking ? group_booking.bookings.includes(:booking_guests, booking_rooms: :room_type).to_a : [ booking ]
         # Policy, cancellation terms and check-in times are properties of the stay rather
         # than of the group, so the group borrows them from its first room.
@@ -205,13 +207,13 @@ module Reports
         group? ? group_party_blocks : booking_party_blocks
       end
 
-      def charge_rows = @stays.flat_map(&:charge_rows)
+      def charge_rows = @stays.flat_map(&:charge_rows) + extra_charge_rows
 
       def payment_rows
         @payment_rows ||= folio_payment_rows + group_deposit_rows
       end
 
-      def total_due = @bookings.sum(0.to_d) { |record| record.total_amount.to_d }
+      def total_due = @bookings.sum(0.to_d) { |record| record.total_amount.to_d } + extra_charge_rows.sum(0.to_d, &:gross)
 
       def total_payments = payment_rows.sum(0.to_d, &:amount)
 
@@ -265,6 +267,10 @@ module Reports
         non_tourism_tax_lines.group_by { |line| line["name"].presence || "Tax / charge" }.each do |name, lines|
           rows << SummaryRow.new(label: name, amount: lines.sum(0.to_d) { |line| line["amount"].to_d }, variant: nil)
         end
+        if @include_extra_charges
+          rows << SummaryRow.new(label: "Extra charges", amount: extra_charges.base_total, variant: nil) unless extra_charges.base_total.zero?
+          rows << SummaryRow.new(label: "Taxes on extra charges", amount: extra_charges.tax_total, variant: nil) unless extra_charges.tax_total.zero?
+        end
         rows << SummaryRow.new(label: "", amount: nil, variant: :spacer)
         # A voided booking owes nothing, whatever the reservation once totalled.
         return rows << SummaryRow.new(label: "Booking voided - nothing due", amount: 0, variant: :subtotal) if voided?
@@ -306,6 +312,12 @@ module Reports
       def money(value) = PdfTheme.money(value)
 
       private
+
+      def extra_charge_rows = @include_extra_charges ? extra_charges.charge_rows : []
+
+      def extra_charges
+        @extra_charges ||= GenerateSummaryExtraCharges.new(hotel:, bookings: @bookings, group: group?).call
+      end
 
       def status = group? ? group_booking.projected_status : booking.status
 

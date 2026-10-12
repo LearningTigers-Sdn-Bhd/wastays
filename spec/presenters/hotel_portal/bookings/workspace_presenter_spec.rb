@@ -926,6 +926,26 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(documents_presenter.instance_variable_defined?(:@documents)).to be(false)
     end
 
+    it "retains the canceled AR invoice beside its replacement after a folio correction" do
+      user = create(:user, :superadmin)
+      account = create(:hotel_corporate_account, :direct_bill, hotel:)
+      folio = create(:booking_folio, :secondary, booking:, hotel:, hotel_corporate_account: account, status: "open")
+      create(:folio_transaction, booking_folio: folio, amount: 2000)
+      expect(Folios::Lifecycle::CloseFolio.call(folio:, user:, settlement_method: "direct_bill")).to be_success
+      original = folio.reload.ar_invoice
+      expect(Folios::Lifecycle::ReopenFolio.call(folio:, user:, reason: "Wrong charge")).to be_success
+      create(:folio_transaction, :adjustment, category: "correction", booking_folio: folio, amount: -200)
+      expect(Folios::Lifecycle::CloseFolio.call(folio: folio.reload, user:)).to be_success
+      replacement = folio.reload.ar_invoice
+
+      rows = described_class.new(booking, params: { tab: "documents" }, hotel:, user:).documents
+        .select { |row| row.type == "AR invoice" }
+
+      expect(rows.map(&:number)).to contain_exactly(original.formatted_invoice_number, replacement.formatted_invoice_number)
+      expect(rows.find { |row| row.number == original.formatted_invoice_number }).to have_attributes(status: "Void", amount: 2000)
+      expect(rows.find { |row| row.number == replacement.formatted_invoice_number }).to have_attributes(status: "Open", amount: 1800)
+    end
+
     it "keeps document composition queries bounded for a large group" do
       group = create(:group_booking, hotel:)
       booking.update!(group_booking: group, group_position: 1)

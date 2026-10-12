@@ -209,7 +209,7 @@
       <div>
         <p class="font-semibold text-foreground">No guest is linked to this booking.</p>
         <p class="mt-1 text-sm text-muted-foreground">Add a primary guest before check-in.</p>
-        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && entity_booking.status.in?(%w[confirmed checked_in]) %>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && entity_booking.status.in?(Booking::GUEST_ADDABLE_STATUSES) %>
           <div class="mt-4">
             <%= render PanelsUI::Button.new(
                   href: hotel_booking_action_manage_guest_path(current_hotel, entity_booking, mode: "add", return_to: presenter.close_drawer_path),

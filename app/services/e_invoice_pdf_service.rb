@@ -28,6 +28,13 @@ class EInvoicePdfService
   def generate
     raise ArgumentError, "Booking must have a valid guest e-invoice submission" unless @submission&.validated?
 
+    if @submission.ar_invoice_correction
+      correction = @submission.ar_invoice_correction
+      return Reports::AccountsReceivable::GenerateCorrectionCredit.new(correction: correction).generate if @submission.document_type == "02"
+
+      return Reports::AccountsReceivable::GenerateInvoice.new(invoice: correction.replacement_receivable).generate
+    end
+
     pdf = Prawn::Document.new(
       page_size: "A4",
       margin: [ 28, 36, 24, 36 ],

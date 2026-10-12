@@ -1,6 +1,6 @@
 <% booking = local_assigns.fetch(:booking) { @booking } %>
-<% target_choices = @target_folios.map { |folio| { label: folio.display_option_label, value: folio.id } } %>
-<% open_choices = @open_folios.map { |folio| { label: folio.display_option_label, value: folio.id } } %>
+<% target_choices = @target_folios.map { |folio| { label: ::Folios::DestinationPolicy.label(folio), value: folio.id } } %>
+<% open_choices = @open_folios.map { |folio| { label: ::Folios::DestinationPolicy.label(folio), value: folio.id } } %>
 
 <div data-controller="ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
@@ -11,11 +11,14 @@
         description: booking.confirmation_token,
         body_class: "p-0") do |sheet| %>
     <% sheet.with_body do %>
+      <% if flash.now[:alert].present? %>
+        <div class="p-4"><%= render PanelsUI::Alert.new(tone: :warning, title: flash.now[:alert]) %></div>
+      <% end %>
       <% if target_choices.empty? %>
         <div class="space-y-4 p-4">
           <%= render PanelsUI::Alert.new(tone: :warning, title: "No other open folio window") do |alert| %>
             <% alert.with_description do %>
-              This booking has no other open folio window to move the transaction to.
+              This booking or group has no other open folio window to move the transaction to.
               Create a folio window first.
             <% end %>
           <% end %>
@@ -38,11 +41,11 @@
                 <%= @transaction.posting_date.strftime("%d %b %Y") %> ·
                 <%= @transaction.currency %> <%= format_number(@transaction.amount, precision: 2) %>
               </p>
-              <p class="mt-1 text-xs text-muted-foreground">Source folio: <%= @source_folio.display_option_label %></p>
+              <p class="mt-1 text-xs text-muted-foreground">Source folio: <%= ::Folios::DestinationPolicy.label(@source_folio) %></p>
             </div>
 
             <%= render PanelsUI::FormField.new(form: form, attribute: :target_folio_id, label: "Target folio", required: true) do |field| %>
-              <% field.with_select_menu(target_choices, prompt: "Select a target folio", required: true) %>
+              <% field.with_select_menu(target_choices, prompt: "Select a target folio", selected: (@operation_draft || {})["target_folio_id"], required: true) %>
             <% end %>
 
             <% if @tax_transactions.any? %>
@@ -73,7 +76,7 @@
             <% end %>
 
             <%= render PanelsUI::FormField.new(form: form, attribute: :reason, label: "Reason", required: true) do |field| %>
-              <% field.with_input(placeholder: "e.g., Corporate Account pays room charges", required: true) %>
+              <% field.with_input(placeholder: "e.g., Corporate Account pays room charges", value: (@operation_draft || {})["reason"], required: true) %>
             <% end %>
           </div>
 

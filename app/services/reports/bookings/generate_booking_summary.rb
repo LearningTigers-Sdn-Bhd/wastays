@@ -11,11 +11,9 @@ module Reports
     # What a reservation is expected to cost, what has been paid against it, and what is
     # left. The money half of what the voucher used to carry.
     #
-    # These are booked amounts, taken from the reservation's own snapshots. The invoice is
-    # built from posted folio charges, and the two diverge as soon as anything is posted
-    # during the stay — an early departure, a late checkout, a minibar. That is why the page
-    # opens on a band saying which of the two this is: whoever is holding it has to know it
-    # is not the final bill before they read a number off it.
+    # Accommodation and taxes come from the reservation's snapshots. Configured extras
+    # include scheduled and posted charges, but the summary is still preliminary: the
+    # invoice confirms the actual posted charges, including other stay-event charges.
     #
     # A group settles one position, so a group gets one summary rather than one per room.
     class GenerateBookingSummary
@@ -25,14 +23,15 @@ module Reports
       SUMMARY_WIDTH_FRACTION = 0.48
       SUMMARY_LABEL_FRACTION = 0.62
 
-      NOTICE_LABEL = "BOOKED POSITION"
-      NOTICE_NOTE = "These are the amounts agreed when the reservation was made. Charges posted during " \
-        "the stay are billed on the invoice, which is the final bill."
+      NOTICE_LABEL = "PRELIMINARY BOOKING TOTAL"
+      NOTICE_NOTE = "Includes booked accommodation and taxes, plus configured extra charges currently attached " \
+        "to this booking, whether scheduled or posted. The final invoice confirms the actual posted charges."
 
       def initialize(booking: nil, group_booking: nil)
         @records = Reports::Bookings::GenerateReservationRecords.new(
           booking: booking,
-          group_booking: group_booking
+          group_booking: group_booking,
+          include_extra_charges: true
         ).call
       end
 

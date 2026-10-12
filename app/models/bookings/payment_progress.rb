@@ -4,8 +4,8 @@ module Bookings
   # Where an agent booking stands against its payment schedule: how much has been
   # paid, and what is owed now.
   #
-  # The folio is the ledger, so "paid" is read from folio payments (refunds post
-  # as negative payments, so the figure is net). Instalments say which stage each
+  # Payment credit follows the source booking across group folio allocations.
+  # Refunds post as negative payments, so the figure is net. Instalments say which stage each
   # payment settled; they are never summed as money received.
   #
   # Amounts owed are cumulative. Paying 100% up front covers both stages, and a
@@ -18,9 +18,7 @@ module Bookings
 
     # Net of refunds.
     def paid_total
-      @paid_total ||= @booking.booking_folios.joins(:folio_transactions)
-        .where(folio_transactions: { transaction_type: "payment" })
-        .sum("folio_transactions.amount")
+      @paid_total ||= FolioTransaction.where(source_booking_id: @booking.id, transaction_type: "payment").sum(:amount)
     end
 
     def owed_total

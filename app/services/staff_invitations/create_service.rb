@@ -17,6 +17,14 @@ module StaffInvitations
     end
 
     def call
+      # Share direct staff addition's lock so a concurrent invite cannot be
+      # issued after eligibility was checked but before access was granted.
+      @hotel.with_lock { issue_invitation }
+    end
+
+    private
+
+    def issue_invitation
       invitation = build_invitation
 
       if (message = rejection)
@@ -42,8 +50,6 @@ module StaffInvitations
       Result.success(invitation: invitation)
     end
 
-    private
-
     # Reuses the outstanding invitation for this email so a re-invite refreshes
     # the token and expiry rather than stacking duplicates.
     def build_invitation
@@ -54,6 +60,7 @@ module StaffInvitations
 
     def rejection
       return "Email and role are required." if @email.blank? || @role.blank?
+      return StaffInvitation::PARTNER_INVITATION_ERROR if invitee&.super_agent?
       return "This email belongs to a corporate account. Use a separate staff email." if invitee&.corporate?
       return "This user already has active access to this property." if already_has_access?
 

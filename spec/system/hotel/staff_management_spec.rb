@@ -65,6 +65,67 @@ RSpec.describe "Hotel staff management", type: :system, js: true do
     expect(page).to have_content("Duty Manager")
   end
 
+  it "adds new staff without an invitation and shows their temporary sign-in details" do
+    visit hotel_users_path(hotel)
+    expect(page).to have_link("Invite Staff")
+    click_link "Add Staff"
+
+    within("dialog#add-staff-sheet") do
+      fill_in "Login email", with: "direct.staff@example.com"
+      click_button "Continue"
+    end
+
+    within("dialog#add-staff-sheet") do
+      fill_in "Full name", with: "Direct Staff"
+      click_in_overlay find("#staff_addition_role_id-trigger")
+      click_in_overlay find("[role='option']", text: "Front Desk", visible: true)
+      click_button "Add staff"
+    end
+
+    expect(page).to have_css("dialog#staff-credentials-sheet[open]")
+    within("dialog#staff-credentials-sheet") do
+      expect(page).to have_field("Message to send", with: /direct.staff@example.com/)
+      expect(page).to have_button("Copy message")
+      click_link "Done"
+    end
+
+    expect(page).to have_content("Direct Staff")
+    staff = User.find_by!(email: "direct.staff@example.com")
+    access = staff.user_hotel_accesses.find_by!(hotel: hotel)
+    expect(access).to be_active
+    expect(access.role).to eq(staff_role)
+    expect(hotel.staff_invitations.where(email: staff.email)).to be_empty
+
+    find("#staff-#{access.id}-actions-trigger").click
+    click_link "View temporary sign-in details"
+    expect(page).to have_css("dialog#staff-credentials-sheet[open]")
+    expect(page).to have_field("Message to send", with: /#{staff.temporary_password}/)
+  end
+
+  it "links existing staff and returns to the directory" do
+    existing = create(:user, account: account, name: "Existing Staff", email: "existing.staff@example.com")
+    original_password = existing.password_digest
+    visit hotel_users_path(hotel)
+    click_link "Add Staff"
+
+    within("dialog#add-staff-sheet") do
+      fill_in "Login email", with: existing.email
+      click_button "Continue"
+    end
+
+    within("dialog#add-staff-sheet") do
+      expect(page).to have_field("Full name", with: existing.name, readonly: true)
+      click_in_overlay find("#staff_addition_role_id-trigger")
+      click_in_overlay find("[role='option']", text: "Front Desk", visible: true)
+      click_button "Add staff"
+    end
+
+    expect(page).to have_no_css("dialog#add-staff-sheet", wait: 5)
+    expect(page).to have_content("Existing Staff")
+    expect(existing.reload.password_digest).to eq(original_password)
+    expect(existing.user_hotel_accesses.find_by!(hotel: hotel).role).to eq(staff_role)
+  end
+
   it "revokes and restores access with the status switch in the table" do
     visit hotel_users_path(hotel)
 

@@ -117,7 +117,7 @@ module HotelPortal
     end
 
     def can_add_guests?(user)
-      can_manage_bookings?(user) && %w[checked_in confirmed].include?(booking.status)
+      can_manage_bookings?(user) && booking.status.in?(Booking::GUEST_ADDABLE_STATUSES)
     end
 
     def additional_guests

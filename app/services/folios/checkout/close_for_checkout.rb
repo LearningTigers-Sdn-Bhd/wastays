@@ -72,6 +72,8 @@ module Folios
           return failure("#{guest_exception.display_name}: guest folio must be financially resolved before checkout.", folio: primary_folio, balance: total_balance(balances)) if guest_exception.present?
 
           closable_folios.each do |folio|
+            route_error = Folios::Lifecycle::IncomingRouteBlocker.call(folio:)
+            raise ActiveRecord::RecordInvalid.new(folio.tap { |record| record.errors.add(:base, route_error) }) if route_error
             folio.update!(status: "closed", closed_at: Time.current, closed_by: @user)
             document = Folios::Lifecycle::IssueClosingDocument.call!(
               folio:,
@@ -122,7 +124,7 @@ module Folios
 
       def validate_all_nights_posted(folios)
         checkout_date = Bookings::ScheduledStay.local_date(hotel: @booking.hotel, value: @booking.check_out)
-        unsettled = FolioForecastedCharge.where(booking_folio_id: folios.map(&:id)).forecast
+        unsettled = FolioForecastedCharge.where(source_booking_id: @booking.id).forecast
           .where(arel_table[:stay_date].lt(checkout_date))
           .reject { |forecast| matching_posted_charge_exists?(forecast) }
         return if unsettled.none?
@@ -146,7 +148,7 @@ module Folios
         )
 
         FolioTransaction.joins(:booking_folio)
-          .where(booking_folios: { booking_id: @booking.id })
+          .where(source_booking_id: @booking.id)
           .charge
           .where(voided_by_transaction_id: nil)
           .where(

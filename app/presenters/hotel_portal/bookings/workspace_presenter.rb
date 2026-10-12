@@ -1556,8 +1556,8 @@ module HotelPortal
           { booking_guests: :guest },
           booking_folios: [
             :booking_room,
-            { invoice: :revisions },
-            { ar_invoice: { hotel_corporate_account: :corporate_account } },
+            { invoice_history: :revisions },
+            { receivable_history: { hotel_corporate_account: :corporate_account } },
             { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] },
             { hotel_corporate_account: :corporate_account }
           ]
@@ -1597,7 +1597,7 @@ module HotelPortal
       end
       @document_deposits = booking_deposits + group_deposits
 
-      @document_ar_invoices = @document_folios.filter_map(&:ar_invoice)
+      @document_ar_invoices = @document_folios.flat_map(&:receivable_history)
       @document_ar_invoices_by_id = @document_ar_invoices.index_by(&:id)
       payment_ids = ArPaymentAllocation.where(ar_invoice_id: @document_ar_invoices.map(&:id)).select(:ar_payment_id)
       @document_ar_receipts = Receipt.where(hotel_id: hotel.id, ar_payment_id: payment_ids).includes(:ar_payment).to_a
@@ -1610,11 +1610,12 @@ module HotelPortal
     end
 
     def document_folio_invoice_rows
-      @document_folios.filter_map { |folio| document_folio_invoice_row(folio) }
+      @document_folios.flat_map do |folio|
+        folio.invoice_history.filter_map { |invoice| document_folio_invoice_row(folio, invoice: invoice) }
+      end
     end
 
-    def document_folio_invoice_row(folio)
-      invoice = folio.invoice
+    def document_folio_invoice_row(folio, invoice: folio.invoice)
       return unless invoice&.kind_settled?
 
       revision = invoice.current_revision
@@ -2184,7 +2185,7 @@ module HotelPortal
     # Each group carries its own add action so it targets that child booking
     # rather than whichever child happens to be selected.
     def add_guest_path_for(child)
-      return unless child.status.in?(%w[confirmed checked_in])
+      return unless child.status.in?(Booking::GUEST_ADDABLE_STATUSES)
 
       Rails.application.routes.url_helpers.hotel_booking_action_manage_guest_path(
         hotel, child, mode: "add", return_to: close_drawer_path

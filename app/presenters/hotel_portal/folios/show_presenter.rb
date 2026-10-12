@@ -139,7 +139,7 @@ module HotelPortal
     end
 
     def other_open_folios
-      folios.select { |candidate| candidate.open? && candidate.id != active_folio_id }
+      ::Folios::DestinationPolicy.folios(booking: booking).open.reject { |candidate| candidate.id == active_folio_id }
     end
 
     def can_manage_folio_windows?
@@ -747,7 +747,8 @@ module HotelPortal
     end
 
     def folio_operation_logs
-      @folio_operation_logs ||= booking.folio_operation_logs
+      @folio_operation_logs ||= FolioOperationLog.where(hotel_id: hotel.id)
+        .where("booking_id = :booking_id OR source_folio_id IN (:ids) OR target_folio_id IN (:ids)", booking_id: booking.id, ids: folios.map(&:id).presence || [ 0 ])
         .includes(:actor, :source_folio, :target_folio, :source_transaction, :target_transaction)
         .order(created_at: :desc, id: :desc)
         .limit(50)
@@ -764,7 +765,7 @@ module HotelPortal
           log.reason.presence
         ].compact_blank.join(" -> ")
       when "move_transaction", "split_transaction", "move_forecast"
-        [ log.source_folio&.display_name, log.target_folio&.display_name, log.reason.presence ].compact_blank.join(" -> ")
+        [ (::Folios::DestinationPolicy.label(log.source_folio) if log.source_folio), (::Folios::DestinationPolicy.label(log.target_folio) if log.target_folio), log.reason.presence ].compact_blank.join(" -> ")
       when "create_folio", "rename_folio", "set_default_folio", "close_folio", "reopen_folio"
         [ log.target_folio&.display_name || log.source_folio&.display_name, log.reason.presence ].compact_blank.join(" · ")
       else
@@ -852,7 +853,7 @@ module HotelPortal
     end
 
     def posted_transactions
-      @posted_transactions ||= folio&.folio_transactions&.includes(:transaction_code, :user)&.order(posting_date: :asc, created_at: :asc, id: :asc)&.to_a || []
+      @posted_transactions ||= folio&.folio_transactions&.includes(:transaction_code, :user, source_booking: :booking_rooms)&.order(posting_date: :asc, created_at: :asc, id: :asc)&.to_a || []
     end
 
     def posted_row(transaction, effect, balance)
@@ -863,7 +864,7 @@ module HotelPortal
         date: transaction.posting_date,
         date_label: transaction.posting_date.strftime("%d/%m/%Y"),
         code: posted_code(transaction),
-        description: transaction.description,
+        description: transaction.source_booking_id == booking.id ? transaction.description : "#{transaction.description} · From #{transaction.source_booking.formatted_reservation_number}#{" · Room #{transaction.source_booking.booking_rooms.first.room_number}" if transaction.source_booking.booking_rooms.first&.room_number.present?}",
         reference_label: reference_label(transaction),
         detail_label: detail_label(transaction),
         source_label: source_label(transaction),
@@ -879,7 +880,7 @@ module HotelPortal
         modal_title: action_kind == :reverse ? policy.modal_title : nil,
         transaction_id: transaction.id,
         forecast_id: nil,
-        movement_allowed: transaction.charge? && !tax_transaction?(transaction) && !transaction.reversed? && transaction.reversal_of_transaction_id.blank?,
+        movement_allowed: ::Folios::Transactions::MovementPolicy.error(transaction).nil?,
         row_kind: :posted,
         reversed: transaction.reversed?
       )

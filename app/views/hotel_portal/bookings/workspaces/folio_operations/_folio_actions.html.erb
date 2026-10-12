@@ -16,7 +16,7 @@
       </div>
     <% elsif folio_show.action_section_state == :closed %>
       <span class="text-sm text-muted-foreground"><%= folio_show.closed_folio_action_message %></span>
-    <% elsif folio_show.normal_folio_actions_available? || (booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel)) %>
+    <% elsif folio_show.normal_folio_actions_available? || folio_show.can_manage_folio_movements? || (booking.tourism_tax? && current_user.has_permission?("manage_bookings", hotel: hotel)) %>
       <% if folio_show.can_post_payment? %>
         <%= render PanelsUI::Button.new(
               href: hotel_folio_action_post_transaction_path(hotel, booking, transaction_type: "payment", active_folio_id: folio_show.active_folio_id, return_to: request.fullpath),
@@ -80,7 +80,13 @@
             <% end %>
           <% end %>
         <% end %>
-        <% [ [ "Transfer Charge", "arrow-right" ], [ "Print Folio", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>
+        <% if folio_show.can_manage_folio_movements? %>
+          <% menu.with_item(href: hotel_folio_action_transfer_folios_path(hotel, booking, active_folio_id: folio_show.active_folio_id, return_to: request.fullpath), data: sheet_data) do %>
+            <%= cached_icon "arrow-right", class: "size-4 text-muted-foreground", aria: { hidden: true } %>
+            Transfer Folio
+          <% end %>
+        <% end %>
+        <% [ [ "Print Folio", "file-text" ], [ "Void / Reverse", "rotate-ccw" ] ].each do |label, icon| %>
           <% menu.with_item(disabled: true) do %>
             <%= cached_icon icon, class: "size-4 text-muted-foreground", aria: { hidden: true } %>
             <%= label %>

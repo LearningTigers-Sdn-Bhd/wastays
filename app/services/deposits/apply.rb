@@ -3,13 +3,13 @@
 module Deposits
   class Apply
     def self.call(deposit:, booking_folio:, amount:, actor: nil, reason: nil, operation_key: nil, posting_date: nil,
-      override_night_audit: false, override_reason: nil, metadata: {})
+      override_night_audit: false, override_reason: nil, metadata: {}, source_booking: nil, lineage: {})
       new(deposit:, booking_folio:, amount:, actor:, reason:, operation_key:, posting_date:,
-        override_night_audit:, override_reason:, metadata:).call
+        override_night_audit:, override_reason:, metadata:, source_booking:, lineage:).call
     end
 
     def initialize(deposit:, booking_folio:, amount:, actor:, reason:, operation_key:, posting_date:,
-      override_night_audit:, override_reason:, metadata:)
+      override_night_audit:, override_reason:, metadata:, source_booking:, lineage:)
       @deposit = deposit
       @folio = booking_folio
       @amount = amount.to_d
@@ -20,6 +20,8 @@ module Deposits
       @override_night_audit = ActiveModel::Type::Boolean.new.cast(override_night_audit)
       @override_reason = override_reason.to_s.strip.presence
       @metadata = metadata.to_h
+      @source_booking = source_booking || booking_folio.booking
+      @lineage = lineage
     end
 
     def call
@@ -42,6 +44,7 @@ module Deposits
           description: "#{@deposit.kind.humanize} deposit ##{@deposit.id} application",
           posting_date: @posting_date,
           options: {
+            source_booking: @source_booking,
             system_posting: true,
             posting_source: "deposit_application",
             transaction_code: @deposit.transaction_code,
@@ -49,7 +52,8 @@ module Deposits
             override_night_audit: @override_night_audit,
             correction_reason: ("deposit_application_override" if @override_night_audit),
             correction_note: (@override_reason if @override_night_audit),
-             metadata: @metadata.merge(
+             **@lineage,
+            metadata: @metadata.merge(
                deposit_id: @deposit.id,
                deposit_kind: @deposit.kind,
                deposit_operation_key: @operation_key
@@ -70,7 +74,7 @@ module Deposits
           operation_key: @operation_key
         )
         @deposit.refresh_status!
-        Deposits::SyncBookingPaymentStatus.call(@folio.booking)
+        Deposits::SyncBookingPaymentStatus.call(@source_booking) unless @metadata["internal_folio_movement"]
         Deposits::SyncBookingDepositStatus.call(@deposit.booking) if @deposit.kind_security?
       end
       success(movement)

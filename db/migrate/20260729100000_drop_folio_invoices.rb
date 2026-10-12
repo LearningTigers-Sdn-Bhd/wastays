@@ -6,7 +6,7 @@
 # both document types" guarantee onto invoices.
 #
 # Run only once Release 1 is fully rolled out and the parity checks in
-# DOCUMENTS_INVOICING_PLAN.md return zero rows.
+# docs/folios/DOCUMENTS_INVOICING_PLAN.md return zero rows.
 class DropFolioInvoices < ActiveRecord::Migration[8.0]
   def up
     execute <<~SQL

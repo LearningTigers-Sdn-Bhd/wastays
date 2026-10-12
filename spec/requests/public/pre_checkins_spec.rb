@@ -154,7 +154,7 @@ RSpec.describe "Public::PreCheckins", type: :request do
       expect(booking.reload.primary_guest.date_of_birth).to eq(Date.new(1994, 8, 21))
     end
 
-    it "fails cleanly when passport date of birth is missing" do
+    it "completes registration when passport date of birth is missing" do
       patch pre_checkin_path(pre_checkin.token), params: {
         booking: {
           guest_name: "Aisha Tan",
@@ -173,8 +173,9 @@ RSpec.describe "Public::PreCheckins", type: :request do
         }
       }
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Date of birth is required for passport guests")
+      expect(response).to redirect_to(pre_checkin_path(pre_checkin.token))
+      expect(pre_checkin.reload.status).to eq("completed")
+      expect(booking.reload.primary_guest.date_of_birth).to be_nil
     end
   end
 end

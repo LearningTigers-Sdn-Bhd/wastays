@@ -1,173 +1,18 @@
-<div data-controller="ui--sheet-frame">
-  <% billing_address = CorporateAccounts::BillingAddressPresenter.new(@relationship) %>
-  <%= render PanelsUI::Sheet.new(
-    id: "external-account-sheet",
-    side: :right,
-    size: :lg,
-    title: @relationship.corporate_account.name,
-    description: "Code #{@relationship.agent_code} · this hotel's billing relationship with the account.",
-    body_class: "p-0") do |sheet| %>
-    <% sheet.with_body do %>
-      <%= form_with model: @relationship,
-        url: hotel_corporate_account_path(current_hotel, @relationship),
-        method: :patch,
-        class: "flex h-full min-h-0 flex-col",
-        data: { controller: "tin-validation", tin_validation_url_value: hotel_validate_tin_path(current_hotel) } do |form| %>
-        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
-
-        <div class="min-h-0 flex-1 divide-y divide-border overflow-y-auto p-4 [&>*]:py-5 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
-          <% if @relationship.errors.any? %>
-            <%= render PanelsUI::Alert.new(tone: :destructive, title: "This account could not be saved") do |alert| %>
-              <% alert.with_description do %><%= @relationship.errors.full_messages.to_sentence %><% end %>
-            <% end %>
-          <% end %>
-
-          <section class="space-y-4">
-            <h3 class="text-sm font-semibold text-foreground">Account contact</h3>
-
-            <%= render PanelsUI::FormField.new(form: form, attribute: :account_type, label: "Account type") do |field| %>
-              <% field.with_select_menu(
-                HotelCorporateAccount::ACCOUNT_TYPES.map { |type| { label: type.humanize, value: type } },
-                selected: @relationship.account_type) %>
-            <% end %>
-
-            <%= render PanelsUI::FormField.new(form: form, attribute: :market, label: "Market",
-                  hint: "Local agents are offered local rates and international agents international ones. With no market set, an agent sees only the rates open to both.") do |field| %>
-              <% field.with_select_menu(
-                [ { label: "Not set", value: "" } ] + HotelCorporateAccount::MARKETS.map { |market| { label: HotelCorporateAccount::MARKET_LABELS.fetch(market), value: market } },
-                selected: @relationship.market.to_s) %>
-            <% end %>
-
-            <%= render PanelsUI::FormField.new(form: form, attribute: :contact_email, label: "Contact email") do |field| %>
-              <% field.with_input(type: :email, value: @relationship.effective_contact_email, autocomplete: "email") %>
-            <% end %>
-
-            <%= render PanelsUI::FormField.new(form: form, attribute: :contact_phone, label: "Contact phone") do |field| %>
-              <% field.with_input(type: :tel, autocomplete: "tel") %>
-            <% end %>
-
-            <%# Without the company's own tax identity its e-invoices are filed
-                as general public, which the company cannot claim. %>
-            <%= render PanelsUI::FormField.new(
-                  form: form,
-                  attribute: :tin,
-                  label: "Tax identification number (TIN)",
-                  hint: "Needed for LHDN e-invoices this company can claim.") do |field| %>
-              <% field.with_input(autocomplete: "off", data: { tin_validation_target: "tin", action: "blur->tin-validation#check" }) %>
-            <% end %>
-            <%# A company's TIN and BRN must match at LHDN, so the pair is
-                checked here rather than at filing time. %>
-            <p data-tin-validation-target="feedback" class="text-xs text-muted-foreground" hidden></p>
-
-            <%= render PanelsUI::FormField.new(form: form, attribute: :brn, label: "Business registration number") do |field| %>
-              <% field.with_input(autocomplete: "off", data: { tin_validation_target: "idValue", action: "blur->tin-validation#check" }) %>
-            <% end %>
-
-            <%= render PanelsUI::FormField.new(form: form, attribute: :sst_registration_number, label: "SST registration number") do |field| %>
-              <% field.with_input(autocomplete: "off") %>
-            <% end %>
-          </section>
-
-          <section class="space-y-4">
-            <div>
-              <h3 class="text-sm font-semibold text-foreground">Billing address</h3>
-              <p class="mt-1 text-xs text-muted-foreground">The address shown on this account's invoices and statements.</p>
-            </div>
-
-            <% unless billing_address.complete? %>
-              <%= render PanelsUI::Alert.new(tone: :warning, title: billing_address.status_label, role: :status) do |alert| %>
-                <% alert.with_description do %>Direct-bill invoices remain available, but the billing address will show as incomplete.<% end %>
-              <% end %>
-            <% end %>
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <%= render PanelsUI::FormField.new(form:, attribute: :billing_address_line1, label: "Address line 1", class: "sm:col-span-2") do |field| %>
-                <% field.with_input(autocomplete: "address-line1") %>
-              <% end %>
-              <%= render PanelsUI::FormField.new(form:, attribute: :billing_address_line2, label: "Address line 2", class: "sm:col-span-2") do |field| %>
-                <% field.with_input(autocomplete: "address-line2") %>
-              <% end %>
-              <%= render PanelsUI::FormField.new(form:, attribute: :billing_city, label: "City") do |field| %>
-                <% field.with_input(autocomplete: "address-level2") %>
-              <% end %>
-              <%= render PanelsUI::FormField.new(form:, attribute: :billing_state, label: "State") do |field| %>
-                <% field.with_input(autocomplete: "address-level1") %>
-              <% end %>
-              <%= render PanelsUI::FormField.new(form:, attribute: :billing_postal_code, label: "Postal code") do |field| %>
-                <% field.with_input(autocomplete: "postal-code") %>
-              <% end %>
-              <%= render PanelsUI::FormField.new(form:, attribute: :billing_country, label: "Country") do |field| %>
-                <% field.with_combobox(
-                     country_options.map { |country| [ country, country ] },
-                     prompt: "Search and select a country",
-                     selected: @relationship.billing_country,
-                     max_options: 50,
-                     empty_text: "No countries found") %>
-              <% end %>
-            </div>
-          </section>
-
-          <div data-controller="corporate-billing-terms"
-               data-action="change->corporate-billing-terms#refresh">
-            <%= render "hotel_portal/corporate_accounts/billing_terms_fields",
-              form: form,
-              relationship_type: @relationship.relationship_type,
-              credit_currency: @relationship.credit_currency,
-              credit_limit: @relationship.credit_limit,
-              payment_terms_days: @relationship.payment_terms_days,
-              record: @relationship,
-              agent_booking_enabled: @relationship.agent_booking_enabled,
-              agent_payment_hold_default: current_hotel.agent_payment_hold_label,
-              hint: "These terms govern invoicing and credit exposure for this account at this hotel." %>
-
-            <%# Allocation applies payments against outstanding invoices, and a
-                standard account is never invoiced. %>
-            <div data-corporate-billing-terms-target="terms" class="pt-5">
-              <%= render PanelsUI::Switch.new(
-                form: form,
-                attribute: :auto_allocate_payments,
-                label: "Auto-allocate payments",
-                description: "Applies unallocated payments to this account's oldest outstanding invoices first (FIFO) instead of leaving them for manual allocation.") %>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex shrink-0 items-center justify-between gap-2 border-t border-border bg-muted/50 px-4 py-3">
-          <%# Suspend/reactivate post outside this form, so they are links carrying
-              data-turbo-method rather than nested submit buttons. %>
-          <% if @relationship.active? %>
-            <%= render PanelsUI::Button.new(
-              as: :a,
-              href: suspend_hotel_corporate_account_path(current_hotel, @relationship, return_to: @return_to),
-              variant: :destructive,
-              size: :sm,
-              data: {
-                testid: "external-account-suspend-#{@relationship.id}",
-                turbo_method: :patch,
-                turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME,
-                turbo_confirm: "Suspend #{@relationship.corporate_account.name}? Direct bill invoicing pauses until reactivated."
-              }) do %>Suspend account<% end %>
-          <% else %>
-            <%= render PanelsUI::Button.new(
-              as: :a,
-              href: reactivate_hotel_corporate_account_path(current_hotel, @relationship, return_to: @return_to),
-              variant: :success,
-              size: :sm,
-              data: {
-                testid: "external-account-reactivate-#{@relationship.id}",
-                turbo_method: :patch,
-                turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME
-              }) do %>Reactivate account<% end %>
-          <% end %>
-
-          <div class="flex items-center gap-2">
-            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost,
-              data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
-            <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary,
-              data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
-          </div>
-        </div>
+<%= form_with model: @relationship, url: hotel_corporate_account_path(current_hotel, @relationship), method: :patch,
+  class: "flex min-h-0 flex-1 flex-col", data: { turbo_frame: HotelPortal::CorporateAccountsController::WORKSPACE_FRAME,
+    controller: "tin-validation", tin_validation_url_value: hotel_validate_tin_path(current_hotel) } do |form| %>
+  <%= hidden_field_tag :return_to, @return_to %>
+  <%= hidden_field_tag :tab, @active_tab %>
+  <div class="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-5 custom-scrollbar">
+    <% if @relationship.errors.any? %>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "This account could not be saved") do |alert| %>
+        <% alert.with_description do %><%= @relationship.errors.full_messages.to_sentence %><% end %>
       <% end %>
     <% end %>
-  <% end %>
-</div>
+    <%= render "#{@active_tab}_fields", form: form %>
+  </div>
+  <div class="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-muted/50 px-5 py-3">
+    <%= render PanelsUI::Button.new(as: :a, href: @return_to, variant: :ghost, data: { turbo_frame: "_top" }) do %>Back to accounts<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, data: { turbo_submits_with: "Saving…" }) do %>Save changes<% end %>
+  </div>
+<% end %>

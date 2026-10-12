@@ -35,8 +35,6 @@ class Guest < ApplicationRecord
   validates :gender, inclusion: { in: %w[male female other], message: "must be male, female, or other" }, allow_blank: true
   validates :document_type, inclusion: { in: %w[malaysian_nric national_id passport], message: "must be MyKad, national ID, or passport" }, allow_blank: true
   validate :date_of_birth_must_be_before_today, if: :date_of_birth?
-  validate :date_of_birth_required_for_passport_guests
-  validate :date_of_birth_required_for_reporting_guests
 
   GENDERS = %w[male female other].freeze
   DOCUMENT_TYPES = %w[malaysian_nric national_id passport].freeze
@@ -303,42 +301,8 @@ class Guest < ApplicationRecord
     errors.add(:date_of_birth, "must be in the past") unless date_of_birth < Date.current
   end
 
-  def date_of_birth_required_for_passport_guests
-    return unless date_of_birth.blank?
-    return if incomplete_channel_manager_profile?
-    return unless passport_guest?
-
-    errors.add(:date_of_birth, "is required for passport guests")
-  end
-
-  def date_of_birth_required_for_reporting_guests
-    return unless date_of_birth.blank?
-    return if incomplete_channel_manager_profile?
-    return unless non_malaysian_guest?
-
-    errors.add(:date_of_birth, date_of_birth_required_message)
-  end
-
-  def incomplete_channel_manager_profile?
-    metadata.is_a?(Hash) &&
-      metadata["profile_source"] == "channel_manager" &&
-      metadata["profile_incomplete"] == true
-  end
-
   def malaysian_ic_guest?
     country == "Malaysia" && document_type == "malaysian_nric"
-  end
-
-  def passport_guest?
-    document_type == "passport"
-  end
-
-  def non_malaysian_guest?
-    country.present? && country != "Malaysia"
-  end
-
-  def date_of_birth_required_message
-    "is required for passport guests"
   end
 
   # Fires when the VIP column moves, or when the set of properties holding the

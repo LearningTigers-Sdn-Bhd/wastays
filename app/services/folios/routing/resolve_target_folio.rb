@@ -120,7 +120,7 @@ module Folios
       def validate_parent_transaction
         parent_folio = @parent_transaction.booking_folio
         return "Parent transaction must belong to a folio." if parent_folio.blank?
-        return "Parent transaction must belong to the same booking." unless parent_folio.booking_id == @booking&.id
+        return "Parent transaction must belong to the same booking." unless @parent_transaction.source_booking_id == @booking&.id
         return "Parent transaction must belong to the same hotel." unless parent_folio.hotel_id == @hotel&.id
 
         nil
@@ -128,7 +128,12 @@ module Folios
 
       def validate_resolved_folio(folio)
         return "Resolved folio is not available." if folio.blank?
-        return "Resolved folio must belong to the booking." unless folio.booking_id == @booking&.id
+        return "Resolved folio must belong to the booking or group." unless Folios::DestinationPolicy.related?(@booking, folio.booking)
+        if folio.booking_id != @booking&.id
+          error = Folios::DestinationPolicy.error(booking: @booking, folio:, allow_closed: @allow_closed_folio)
+          return error if error
+        end
+        return "Resolved folio must use the same currency." unless folio.currency == @booking.currency
         return "Resolved folio must belong to the hotel." unless folio.hotel_id == @hotel&.id
         return "Resolved folio must be open." unless folio.open? || (@allow_closed_folio && folio.closed?)
 

@@ -3,7 +3,7 @@
 module BookingGuests
   class AddToGroup
     Result = Data.define(:success?, :guest, :booking_guests, :errors)
-    ELIGIBLE_STATUSES = %w[confirmed checked_in].freeze
+    ELIGIBLE_STATUSES = Booking::GUEST_ADDABLE_STATUSES
 
     def self.call(group_booking:, attributes:, actor:, existing_guest: nil, update_profile: false)
       new(group_booking:, attributes:, actor:, existing_guest:, update_profile:).call

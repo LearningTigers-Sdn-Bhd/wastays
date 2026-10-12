@@ -11,6 +11,7 @@ module Public
 
       @existing_user = User.find_by(email: @invitation.email)
       return redirect_corporate_collision if @existing_user&.corporate?
+      return redirect_partner_collision if @existing_user&.super_agent?
 
       @user = User.new(email: @invitation.email, name: @invitation.name)
     end
@@ -18,14 +19,25 @@ module Public
     def update
       return redirect_unavailable unless @invitation&.pending?
 
-      user = User.find_by(email: @invitation.email)
-      return redirect_corporate_collision if user&.corporate?
+      # Match direct addition's lock order and hold both through user creation.
+      # A cancelled invite must not create a login or change hotel access.
+      @invitation.hotel.with_lock do
+        @invitation.with_lock do
+          return redirect_unavailable unless @invitation.pending?
 
-      if user
-        accept_invitation_for(user)
-      else
-        create_user_and_accept_invitation
+          user = User.find_by(email: @invitation.email)
+          return redirect_corporate_collision if user&.corporate?
+          return redirect_partner_collision if user&.super_agent?
+
+          if user
+            accept_invitation_for(user)
+          else
+            create_user_and_accept_invitation
+          end
+        end
       end
+    rescue ActiveRecord::RecordNotFound
+      redirect_unavailable
     end
 
     private
@@ -50,6 +62,10 @@ module Public
       @invitation.accept!(user)
       sign_in_user(user)
       redirect_to invitation_destination, notice: "Welcome to #{@invitation.hotel.name}."
+    rescue ActiveRecord::RecordInvalid => e
+      raise unless e.record.errors[:base].include?(StaffInvitation::PARTNER_INVITATION_ERROR)
+
+      redirect_partner_collision
     end
 
     def invitation_destination
@@ -67,6 +83,10 @@ module Public
 
     def redirect_unavailable
       redirect_to login_path, alert: "This invitation is invalid or has expired."
+    end
+
+    def redirect_partner_collision
+      redirect_to login_path, alert: StaffInvitation::PARTNER_INVITATION_ERROR
     end
 
     def redirect_corporate_collision

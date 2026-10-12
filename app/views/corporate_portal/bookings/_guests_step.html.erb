@@ -94,10 +94,6 @@
                        name: "booking[rooms_detail][#{room_index}][guests][#{guest_index}][government_id]",
                        value: nil, placeholder: "IC number", maxlength: 20) %>
                 <% end %>
-                <%# Only bites once a nationality is actually given: a non-Malaysian
-                    guest record cannot save without a date of birth (the property's
-                    own reporting requirement), and a nationality with no way to answer
-                    that would fail the booking outright rather than just skip a field. %>
                 <%= render PanelsUI::FormField.new(form:, attribute: :date_of_birth,
                       id: "room-#{room_index}-guest-#{guest_index}-dob", label: "Date of birth",
                       class: "col-span-2") do |field| %>

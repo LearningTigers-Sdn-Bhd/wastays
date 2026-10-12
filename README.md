@@ -84,7 +84,7 @@ Use `bin/test <domain> --serial` for serial execution and `bin/test <domain> --p
 
 ## Documentation
 
-Domain documentation and plan/design specs live in `docs/` (including `docs/superpowers/plans/` and `docs/superpowers/specs/`). Operational guides for hotel admins are loaded from `guides/`. AI assistant instructions are in `CLAUDE.md`.
+Start at the [documentation index](docs/README.md). Domain decisions and delivery records are grouped by topic; historical UI plans and audits are in `docs/archive/`. Operational guides for hotel admins are loaded from `guides/`. Local assistant instructions in `AGENTS.md` and `CLAUDE.md` are Git-ignored and remain developer-specific.
 
 ## Production Deployment
 

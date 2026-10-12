@@ -20,7 +20,8 @@ module HotelPortal
       :deletable,
       :status_path,
       :edit_path,
-      :delete_path
+      :delete_path,
+      :temporary_password_path
     )
 
     InvitationRow = Data.define(
@@ -71,12 +72,13 @@ module HotelPortal
 
     def accesses
       hotel.user_hotel_accesses
+           .excluding_partners
            .includes(:user, role: :permissions)
            .in_directory_order
     end
 
     def invitations
-      hotel.staff_invitations.listable.includes(:role, :invited_by_user).order(created_at: :desc)
+      hotel.staff_invitations.excluding_partners.listable.includes(:role, :invited_by_user).order(created_at: :desc)
     end
 
     def staff_row(access)
@@ -96,8 +98,22 @@ module HotelPortal
         deletable: may_delete? && !own_row && !sole_manager,
         status_path: routes.status_hotel_user_path(hotel, access),
         edit_path: routes.edit_hotel_user_path(hotel, access),
-        delete_path: routes.hotel_user_path(hotel, access)
+        delete_path: routes.hotel_user_path(hotel, access),
+        temporary_password_path: temporary_password_path(access)
       )
+    end
+
+    def temporary_password_path(access)
+      return unless may_reveal_password?
+      return unless StaffAccesses::RevealTemporaryPassword.available?(access: access, hotel: hotel)
+
+      routes.hotel_user_temporary_password_path(hotel, access)
+    end
+
+    def may_reveal_password?
+      return @may_reveal_password if defined?(@may_reveal_password)
+
+      @may_reveal_password = current_user.has_permission?("manage_users", hotel: hotel)
     end
 
     # Spelled out rather than left to a disabled control, so the switch never
@@ -114,7 +130,7 @@ module HotelPortal
         id: invitation.id,
         email: invitation.email,
         role_name: invitation.role&.name,
-        invited_by: invitation.invited_by_user.name,
+        invited_by: invitation.invited_by_user.super_agent? ? "WAStays partner" : invitation.invited_by_user.name,
         # "Pending" is a claim about the invitee — they were asked and have not
         # answered. Someone listed during setup with the send switch off has not
         # been asked, so the row says so rather than blaming them for silence.

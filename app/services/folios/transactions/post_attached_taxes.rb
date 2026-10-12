@@ -69,7 +69,7 @@ module Folios
 
       def active_tax_rules
         @active_tax_rules ||= Folios::Routing::EffectiveTaxRules
-          .call(booking: @folio.booking, transaction_code: @tax_rule_transaction_code)
+          .call(booking: @parent_transaction.source_booking, transaction_code: @tax_rule_transaction_code)
           .select(&:enabled_for_posting?)
       end
 
@@ -83,6 +83,7 @@ module Folios
           description: "Tax: #{tax_rule.display_name} for #{@parent_transaction.description}",
           posting_date: @posting_date,
           options: @options.merge(
+            source_booking: @parent_transaction.source_booking,
             posting_source: posting_source,
             transaction_code: tax_transaction_code,
             parent_transaction: parent_transaction_for_tax_line(routing_result.folio),
@@ -110,11 +111,11 @@ module Folios
       def resolve_tax_folio(tax_transaction_code)
         return parent_tax_route if tax_transaction_code.blank?
 
-        child_rule = @folio.booking.folio_routing_rules.active.find_by(transaction_code: tax_transaction_code)
+        child_rule = @parent_transaction.source_booking.folio_routing_rules.active.find_by(transaction_code: tax_transaction_code)
         return parent_tax_route if child_rule.blank?
 
         Folios::Routing::ResolveTargetFolio.call(
-          booking: @folio.booking,
+          booking: @parent_transaction.source_booking,
           transaction_code: tax_transaction_code,
           actor: @user,
           permission_context: permission_context
@@ -123,7 +124,7 @@ module Folios
 
       def parent_tax_route
         Folios::Routing::ResolveTargetFolio.call(
-          booking: @folio.booking,
+          booking: @parent_transaction.source_booking,
           transaction_code: @parent_transaction.transaction_code,
           parent_transaction: @parent_transaction,
           actor: @user,

@@ -18,6 +18,17 @@ RSpec.describe StaffAccesses::DestroyService do
     create(:user_hotel_access, user: user, hotel: hotel, role: role)
   end
 
+  it "refuses to delete partner access" do
+    access = access_for(create(:user, :super_agent))
+    attributes = access.attributes
+
+    result = described_class.new(access: access, current_user: current_user).call
+
+    expect(result.success?).to be(false)
+    expect(result.error).to eq("Partner access cannot be changed through Staff Management.")
+    expect(access.reload.attributes).to eq(attributes)
+  end
+
   it "deletes the access row and returns it" do
     access = access_for(create(:user, account: account))
 

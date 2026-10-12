@@ -323,6 +323,10 @@ class Booking < ApplicationRecord
   # Statuses that occupy a room on the timeline (arrival/occupied/departure). Shared by the
   # Stay View loader and its filter contract so both describe the same set of bookings.
   OCCUPYING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required completed].freeze
+  # Guests can be registered from confirmation until well after departure: the
+  # desk often learns who else stayed only at or after check-out. A guest record
+  # never changes the pax count or the folio, so a finished stay is safe to add to.
+  GUEST_ADDABLE_STATUSES = %w[confirmed checked_in due_out_detected checkout_required completed].freeze
   PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 

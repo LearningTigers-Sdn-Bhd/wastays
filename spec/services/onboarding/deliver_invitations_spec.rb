@@ -23,6 +23,24 @@ RSpec.describe Onboarding::DeliverInvitations do
     )
   end
 
+  [ true, false ].each do |send_invitation|
+    it "rejects an old partner staff draft with sending #{send_invitation ? 'enabled' : 'disabled'}" do
+      draft = staff_draft(send_invitation: send_invitation)
+      create(:user, :super_agent, email: draft.email)
+      attributes = draft.attributes
+      result = nil
+
+      expect {
+        result = described_class.call(hotel: hotel, actor: actor)
+      }.not_to have_enqueued_mail(StaffInvitationMailer, :invite)
+
+      expect(result).to have_attributes(sent_count: 0, held_count: 0,
+                                       failures: [ { email: draft.email, error: StaffInvitation::PARTNER_INVITATION_ERROR } ])
+      expect(hotel.staff_invitations.reload).to be_empty
+      expect(draft.reload.attributes).to eq(attributes)
+    end
+  end
+
   describe "a draft the owner chose not to send" do
     it "becomes an invitation that was never emailed" do
       draft = staff_draft(send_invitation: false)

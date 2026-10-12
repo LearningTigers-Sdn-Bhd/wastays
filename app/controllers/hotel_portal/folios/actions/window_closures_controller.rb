@@ -23,6 +23,8 @@ module HotelPortal
         def load_folio
           @folio = @booking.booking_folios.find(params[:folio_id])
           @direct_bill_available = direct_bill_available?(@folio)
+          @correction = @folio.ar_invoice_corrections.editing.first
+          @company_email = @folio.hotel_corporate_account&.effective_contact_email
         end
 
         def create
@@ -31,7 +33,8 @@ module HotelPortal
             folio: folio,
             user: current_user,
             reason: folio_params[:reason],
-            settlement_method: folio_params[:settlement_method]
+            settlement_method: folio_params[:settlement_method],
+            send_documents: folio_params[:send_documents]
           )
 
           return complete_action(alert: result.error) unless result.success?
@@ -50,7 +53,7 @@ module HotelPortal
         end
 
         def folio_params
-          params.fetch(:booking_folio, {}).permit(:reason, :settlement_method)
+          params.fetch(:booking_folio, {}).permit(:reason, :settlement_method, :send_documents)
         end
       end
     end

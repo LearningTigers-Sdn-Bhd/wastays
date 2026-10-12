@@ -25,23 +25,17 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
   # the three fields ask a question that does not apply to it.
   it "shows the billing terms only once the relationship is direct bill" do
     visit hotel_corporate_accounts_path(hotel)
-    click_link "Invite"
+    click_button "Add / Invite"
+    click_link "Invite account"
     expect(page).to have_css("dialog#external-account-sheet[open]")
 
     within("dialog#external-account-sheet") do
-      # A new invitation starts standard.
-      expect(page).to have_no_field("Credit limit")
-      expect(page).to have_no_field("Payment terms (days)")
-
-      click_in_overlay find("#corporate_invitation_relationship_type-trigger")
-      click_in_overlay find("[role='option']", text: "Direct bill", visible: true)
-
+      expect(page).to have_checked_field("Direct bill — Invoice the company")
       expect(page).to have_field("Credit limit")
       expect(page).to have_field("Payment terms (days)")
       expect(page).to have_content("Credit currency")
 
-      click_in_overlay find("#corporate_invitation_relationship_type-trigger")
-      click_in_overlay find("[role='option']", text: "Standard", visible: true)
+      choose "Standard — Settle by checkout"
 
       expect(page).to have_no_field("Credit limit")
       expect(page).to have_no_field("Payment terms (days)")
@@ -55,19 +49,19 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     expect(page).to have_content("External Accounts")
     expect(page).to have_link("External Accounts")
 
-    click_link "Invite"
+    click_button "Add / Invite"
+    click_link "Invite account"
     expect(page).to have_css("turbo-frame#external_account_sheet dialog#external-account-sheet[open]")
     expect(page).to have_no_field("Company name")
 
-    within("dialog#external-account-sheet") { click_button "Cancel" }
+    within("dialog#external-account-sheet") { click_in_overlay "Cancel" }
     expect(page).to have_no_css("dialog#external-account-sheet", wait: 5)
 
-    click_link "Invite"
+    click_button "Add / Invite"
+    click_link "Invite account"
     within("dialog#external-account-sheet") do
       fill_in "Corporate contact email", with: "staff@example.com"
-      click_in_overlay find("#corporate_invitation_relationship_type-trigger")
-      click_in_overlay find("[role='option']", text: "Direct bill", visible: true)
-      click_button "Send invitation"
+      click_in_overlay "Send invitation"
     end
 
     # The service rejects a staff address; the sheet must stay open with the
@@ -77,7 +71,7 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
       expect(page).to have_field("Corporate contact email", with: "staff@example.com")
 
       fill_in "Corporate contact email", with: "billing@example.com"
-      click_button "Send invitation"
+      click_in_overlay "Send invitation"
     end
 
     expect(page).to have_no_css("dialog#external-account-sheet", wait: 5)
@@ -85,46 +79,60 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     expect(CorporateInvitation.find_by!(email: "billing@example.com").relationship_type).to eq("direct_bill")
   end
 
-  it "edits an account through the sheet and returns to the filtered index" do
-    # Direct bill, because payment terms only exist on an account that is
-    # invoiced -- the sheet hides them on a standard relationship.
+  it "opens an account from its row and saves billing in the workspace" do
     relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "government",
-                                                    relationship_type: "direct_bill", payment_terms_days: 14)
-
+      relationship_type: "direct_bill", payment_terms_days: 14)
     visit hotel_corporate_accounts_path(hotel, account_type: "government")
-    find("[data-testid='external-account-edit-#{relationship.id}']").click
+    find("[data-testid='external-account-row-#{relationship.id}']").click
 
-    expect(page).to have_css("dialog#external-account-sheet[open]")
-    within("dialog#external-account-sheet") do
-      fill_in "Payment terms (days)", with: "45"
-      click_button "Save changes"
-    end
-
-    expect(page).to have_no_css("dialog#external-account-sheet", wait: 5)
+    expect(page).to have_css("[data-testid='corporate-account-workspace']")
+    expect(page).to have_no_css("dialog#external-account-sheet")
+    fill_in "Payment terms (days)", with: "45"
+    click_button "Save changes"
+    expect(page).to have_field("Payment terms (days)", with: "45")
     expect(relationship.reload.payment_terms_days).to eq(45)
-    # complete_sheet hard-navigates, so the filter has to survive in the destination.
+    click_link "Back to accounts"
     expect(page).to have_current_path(hotel_corporate_accounts_path(hotel, account_type: "government"), ignore_query: false)
+    account_link = find("[data-testid='external-account-row-#{relationship.id}'] th a")
+    account_link.hover
+    expect(page.evaluate_script("window.getComputedStyle(arguments[0]).textDecorationLine", account_link)).to eq("underline")
+    account_link.click
+    expect(page).to have_css("[data-testid='corporate-account-workspace']")
   end
 
-  it "suspends an account from the sheet footer" do
+  it "suspends an account from the workspace More menu" do
     relationship = create(:hotel_corporate_account, hotel: hotel)
-
     visit hotel_corporate_accounts_path(hotel)
-    find("[data-testid='external-account-edit-#{relationship.id}']").click
-
-    expect(page).to have_css("dialog#external-account-sheet[open]")
-    find("[data-testid='external-account-suspend-#{relationship.id}']").click
-
-    # The confirm dialog stacks above the already-modal sheet, so Capybara's
-    # visibility check cannot see it — drive it through the overlay helper.
-    expect(page).to have_css("dialog#turbo-confirm-dialog", visible: :all)
+    within("[data-testid='external-account-row-#{relationship.id}']") { click_button "More" }
+    click_link "Edit"
+    expect(page).to have_css("[data-testid='corporate-account-workspace']")
+    within("turbo-frame#corporate_account_workspace") { click_button "More" }
+    click_button "Suspend account"
+    expect(page).to have_css("dialog#turbo-confirm-dialog[open]")
     click_in_overlay find("#turbo-confirm-button", visible: :all)
-
-    # Suspending confirms, posts, and closes the sheet from a stream — three
-    # round trips, which outlast the default wait when this file shares the
-    # machine with another browser worker.
-    expect(page).to have_no_css("dialog#external-account-sheet", wait: 15)
+    expect(page).to have_content("Suspended")
     expect(relationship.reload).to be_suspended
+    expect(page).to have_css("[data-testid='corporate-account-workspace']")
+  end
+
+  it "saves company details and billing address through separate workspace tabs" do
+    corporate_user = create(:user, :corporate)
+    relationship = create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account)
+    visit edit_hotel_corporate_account_path(hotel, relationship)
+    click_link "Company details"
+    fill_in "Company name", with: "Updated Agency"
+    fill_in "Contact person", with: "Updated Contact"
+    click_button "Save changes"
+    expect(page).to have_field("Company name", with: "Updated Agency")
+    expect(page).to have_css("h1", text: "Updated Agency")
+    click_link "Billing address"
+    fill_in "Address line 1", with: "12 Jalan Lintas"
+    fill_in "City", with: "Kota Kinabalu"
+    click_button "Save changes"
+    expect(page).to have_field("City", with: "Kota Kinabalu")
+    expect(relationship.reload.billing_city).to eq("Kota Kinabalu")
+    click_link "Manage billing"
+    expect(page).to have_checked_field("Standard — Settle by checkout")
   end
 
   it "lists invitations and accounts in one table and narrows both by search" do
@@ -152,6 +160,66 @@ RSpec.describe "Hotel corporate management", type: :system, js: true do
     expect(page).to have_css("[data-testid='external-invitation-row-#{invitation.id}']")
     expect(find("[data-tab-label='All']")).to have_content("2")
     expect(find("[data-tab-label='Company']")).to have_content("1")
+  end
+
+  it "creates an account from the Add sheet and reveals its temporary credentials only on request" do
+    visit hotel_corporate_accounts_path(hotel)
+    click_button "Add / Invite"
+    click_link "Add account"
+    within("dialog#external-account-add-sheet") do
+      fill_in "Login email", with: "added@example.com"
+      click_in_overlay "Continue"
+    end
+    within("dialog#external-account-add-sheet") do
+      expect(page).to have_checked_field("Direct bill — Invoice the company")
+      fill_in "Company name", with: "Added Agency"
+      fill_in "Contact person", with: "Agent Contact"
+      click_in_overlay "Add account"
+    end
+    expect(page).to have_css("dialog#external-account-credentials[open]")
+    within("dialog#external-account-credentials") do
+      message = find_field("Message to send")
+      expect(message.value).to include("added@example.com", "1. Open", "2. Sign in", "3. Open Profile")
+      page.execute_script(<<~JS)
+        Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
+          value: { writeText(text) { window.copiedAccountAccessMessage = text; return Promise.resolve(); } }
+        });
+      JS
+      click_in_overlay "Copy message"
+      expect(page).to have_button("Copied")
+      expect(page.evaluate_script("window.copiedAccountAccessMessage")).to eq(message.value)
+      click_in_overlay "Done"
+    end
+    corporate_user = User.find_by!(email: "added@example.com")
+    expect(page).to have_content("Added Agency")
+    expect(page).to have_no_content(corporate_user.temporary_password)
+    relationship = hotel.hotel_corporate_accounts.find_by!(corporate_account: corporate_user.account)
+    within("[data-testid='external-account-row-#{relationship.id}']") { click_button "More" }
+    click_link "Show temporary password"
+    within("dialog#external-account-credentials") do
+      expect(find_field("Message to send").value).to include(corporate_user.temporary_password)
+    end
+  end
+
+  it "links an existing account without changing its profile or password" do
+    corporate_user = create(:user, :corporate)
+    original_digest = corporate_user.password_digest
+    visit hotel_corporate_accounts_path(hotel)
+    click_button "Add / Invite"
+    click_link "Add account"
+    within("dialog#external-account-add-sheet") do
+      fill_in "Login email", with: corporate_user.email
+      click_in_overlay "Continue"
+    end
+    within("dialog#external-account-add-sheet") do
+      expect(page).to have_content(corporate_user.account.name)
+      expect(page).to have_no_field("Company name")
+      click_in_overlay "Add account"
+    end
+    expect(page).to have_no_css("dialog#external-account-add-sheet")
+    expect(page).to have_content(corporate_user.account.name)
+    expect(corporate_user.reload.password_digest).to eq(original_digest)
   end
 
   it "filters to a single account type from the tabs" do

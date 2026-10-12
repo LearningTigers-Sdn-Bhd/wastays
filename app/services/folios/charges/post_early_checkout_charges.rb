@@ -243,7 +243,7 @@ module Folios
 
       def already_posted?(key)
         FolioTransaction.joins(:booking_folio)
-          .where(booking_folios: { booking_id: @booking.id })
+          .where(source_booking_id: @booking.id)
           .where(voided_by_transaction_id: nil)
           .where("metadata->>'early_checkout_charge_key' = ?", key)
           .exists?
@@ -262,7 +262,7 @@ module Folios
           metadata[:route_metadata] = route.route_metadata
         end
 
-        options = @options.merge(metadata: (@options[:metadata] || {}).merge(metadata))
+        options = @options.merge(source_booking: @booking, metadata: (@options[:metadata] || {}).merge(metadata))
 
         if @booking.hotel.date_closed?(@departure_date) || @departure_date < @booking.hotel.current_business_date
           options[:override_night_audit] = true
