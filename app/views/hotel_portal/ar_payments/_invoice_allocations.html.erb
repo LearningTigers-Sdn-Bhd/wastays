@@ -28,7 +28,10 @@
             <% open_invoices.each do |invoice| %>
               <tr>
                 <td class="px-6 py-4 font-bold text-foreground"><%= invoice.formatted_invoice_number %></td>
-                <td class="px-6 py-4 text-muted-foreground"><%= invoice.booking.confirmation_token %> · <%= invoice.booking_folio.folio_reference_display %></td>
+                <td class="px-6 py-4">
+                  <p class="break-words text-sm font-medium text-foreground"><%= invoice.booking.guest_name %></p>
+                  <p class="text-xs text-muted-foreground"><%= invoice.booking.confirmation_token %> · <%= invoice.booking_folio.folio_reference_display %></p>
+                </td>
                 <td class="px-6 py-4 text-muted-foreground"><%= invoice.due_on.strftime("%d %b %Y") %></td>
                 <td class="px-6 py-4 text-right font-bold tabular-nums text-foreground"><%= invoice.currency %> <%= number_with_precision(readonly ? source_allocations[invoice.id] : invoice.outstanding_amount, precision: 2, delimiter: ",") %></td>
                 <% unless readonly %>

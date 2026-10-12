@@ -106,7 +106,7 @@ module HotelPortal
       current_hotel.ar_invoices
         .with_open_balance.allocatable
         .where(hotel_corporate_account: @hotel_corporate_account)
-        .includes(:booking_folio)
+        .includes(booking_folio: :booking)
         .order(due_on: :asc, invoice_number: :asc)
     end
 
