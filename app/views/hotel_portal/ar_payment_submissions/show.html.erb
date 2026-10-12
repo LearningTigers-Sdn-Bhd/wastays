@@ -18,7 +18,7 @@
             <% @submission.ar_payment_submission_allocations.each do |allocation| %>
               <span class="inline-flex flex-wrap items-center gap-x-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs">
                 <%= link_to allocation.ar_invoice.formatted_invoice_number, hotel_ar_invoice_path(current_hotel, allocation.ar_invoice), class: "font-bold text-slate-800 underline" %>
-                <span class="break-words font-medium text-slate-600"><%= allocation.ar_invoice.booking.guest_name %></span>
+                <span class="break-words font-semibold text-slate-900"><%= allocation.ar_invoice.booking.guest_name %></span>
               </span>
             <% end %>
           </dd>
