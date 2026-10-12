@@ -170,6 +170,28 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(rows.css("taylor")).to be_empty
   end
 
+  it "shows the guest name for each allocation in the ledger and each remittance suggestion" do
+    relationship = create(:hotel_corporate_account, hotel: hotel)
+    invoice = create_invoice(relationship: relationship, amount: 243)
+    invoice.booking.update!(guest_name: "Yang Chun Yan")
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 243,
+                                  metadata: { "source" => "corporate_portal_gateway", "remittance_suggestions" => [
+                                    { "ar_invoice_id" => invoice.id, "invoice_label" => invoice.formatted_invoice_number, "due_on" => invoice.due_on.iso8601,
+                                      "outstanding_amount" => "243.0", "suggested_amount" => "243.0" }
+                                  ] })
+    create(:ar_payment_allocation, ar_payment: payment, ar_invoice: invoice, amount: 243)
+
+    get hotel_ar_payment_path(hotel, payment)
+
+    expect(response).to have_http_status(:success)
+    doc = Nokogiri::HTML(response.body)
+    ledger_row = doc.css("[data-testid='allocation-history'] tbody tr").first
+    expect(ledger_row.css("td")[0].text).to include(invoice.formatted_invoice_number, "Yang Chun Yan")
+    expect(doc.css("[data-testid='allocation-history'] article").first.text).to include("Yang Chun Yan")
+    suggestion_row = doc.css("table").find { |table| table.text.include?("Outstanding snapshot") }.css("tbody tr").first
+    expect(suggestion_row.css("td")[1].text).to eq("Yang Chun Yan")
+  end
+
   it "records a fully unapplied payment" do
     expect {
       post hotel_ar_payments_path(hotel), params: {

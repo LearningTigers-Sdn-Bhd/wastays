@@ -4,7 +4,7 @@ module HotelPortal
   module ArPayments
     class ShowPresenter
       AllocationRow = Struct.new(
-        :allocation, :invoice_label, :invoice_path, :allocated_amount, :allocated_at,
+        :allocation, :invoice_label, :invoice_path, :guest_name, :allocated_amount, :allocated_at,
         :reversed, :reversal_reason, :reversed_by, :reversed_at,
         keyword_init: true
       )
@@ -92,6 +92,12 @@ module HotelPortal
         Array(payment.metadata.to_h["remittance_suggestions"])
       end
 
+      # The snapshot holds invoice ids only, so guest names come from the live invoices.
+      def remittance_guest_name(suggestion)
+        invoice_id = suggestion["ar_invoice_id"] || suggestion[:ar_invoice_id]
+        remittance_guest_names[invoice_id.to_s]
+      end
+
       def can_manage?
         @can_manage
       end
@@ -147,6 +153,7 @@ module HotelPortal
               allocation: allocation,
               invoice_label: allocation.ar_invoice.formatted_invoice_number,
               invoice_path: Rails.application.routes.url_helpers.hotel_ar_invoice_path(hotel, allocation.ar_invoice),
+              guest_name: allocation.ar_invoice.booking.guest_name,
               allocated_amount: money(allocation.amount),
               allocated_at: allocation.created_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p"),
               reversed: reversal.present?,
@@ -166,6 +173,14 @@ module HotelPortal
       end
 
       private
+
+      def remittance_guest_names
+        @remittance_guest_names ||= begin
+          ids = remittance_suggestions.filter_map { |suggestion| suggestion["ar_invoice_id"] || suggestion[:ar_invoice_id] }
+          hotel.ar_invoices.where(id: ids).includes(booking_folio: :booking)
+            .to_h { |invoice| [ invoice.id.to_s, invoice.booking.guest_name ] }
+        end
+      end
 
       def allocated_amount
         @allocated_amount ||= payment.ar_payment_allocations.reject(&:reversed?).sum { |allocation| allocation.amount.to_d }

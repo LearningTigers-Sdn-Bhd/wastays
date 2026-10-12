@@ -47,6 +47,10 @@ module HotelPortal
         money_label(invoice.outstanding_amount)
       end
 
+      def guest_name
+        invoice.booking.guest_name.presence || "—"
+      end
+
       def booking_reference
         invoice.booking.confirmation_token.presence || "—"
       end
