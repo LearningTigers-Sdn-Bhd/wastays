@@ -162,6 +162,53 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(response.body).to include("Finance Admin")
   end
 
+  it "shows the guest name on the legacy allocation ledger and pay invoices" do
+    rel = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+    payment = create(:ar_payment, hotel_corporate_account: rel, hotel: rel.hotel, amount: 100, currency: rel.hotel.default_currency)
+    invoice = create_invoice(rel)
+    invoice.booking.update!(guest_name: "Yang Chun Yan")
+    create(:ar_payment_allocation, ar_payment: payment, ar_invoice: invoice, amount: 100)
+
+    get corporate_ar_payment_path(payment, legacy: true)
+    expect(response.body).to include("Yang Chun Yan")
+
+    get pay_invoices_corporate_ar_payments_path(hotel_corporate_account_id: rel.id)
+    expect(response.body).to include("Yang Chun Yan")
+  end
+
+  it "shows the guest name beside each remittance suggestion on review" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account)
+    create(:payment_setting, settable: relationship.hotel, gateway: "razorpay", api_key: "key", secret_key: "secret", status: "active")
+    invoice = create_invoice(relationship)
+    invoice.booking.update!(guest_name: "Yang Chun Yan")
+
+    post review_corporate_ar_payments_path, params: {
+      corporate_ar_payment: {
+        hotel_corporate_account_id: relationship.id, invoice_ids: [ invoice.id ],
+        amount: "100.00", currency: invoice.currency, gateway: "razorpay"
+      }
+    }
+
+    expect(response).to have_http_status(:success)
+    table = Nokogiri::HTML(response.body).css("table").find { |t| t.text.include?("Suggested") }
+    expect(table.css("tbody tr").first.css("td")[1].text).to eq("Yang Chun Yan")
+  end
+
+  it "shows the guest name beside each remittance suggestion on the attempt page" do
+    rel = create(:hotel_corporate_account, corporate_account: user.account)
+    invoice = create_invoice(rel)
+    invoice.booking.update!(guest_name: "Yang Chun Yan")
+    intent = create(:corporate_ar_payment_intent, hotel_corporate_account: rel, user: user,
+                    remittance_suggestions: [ { "ar_invoice_id" => invoice.id, "invoice_label" => invoice.formatted_invoice_number,
+                                                "due_on" => invoice.due_on.iso8601, "outstanding_amount" => "100.0", "suggested_amount" => "100.0" } ])
+
+    get corporate_ar_payment_path(intent)
+
+    expect(response).to have_http_status(:success)
+    table = Nokogiri::HTML(response.body).css("table").find { |t| t.text.include?("Outstanding snapshot") }
+    expect(table.css("tbody tr").first.css("td")[1].text).to eq("Yang Chun Yan")
+  end
+
   it "shows only active relationships on pay invoices" do
     active_hotel = create(:hotel, name: "Active Billing Corporate Hotel")
     suspended_hotel = create(:hotel, name: "Suspended Billing Corporate Hotel")

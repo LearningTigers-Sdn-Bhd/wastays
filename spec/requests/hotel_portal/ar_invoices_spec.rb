@@ -384,12 +384,14 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
   describe "GET /hotel/:hotel_id/ar-invoices/:id" do
     it "renders source booking, folio, corporate account, due date, and outstanding balance" do
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AR-SHOW", folio_number: 701, amount: 450)
+      invoice.booking.update!(guest_name: "Yang Chun Yan")
 
       get hotel_ar_invoice_path(hotel, invoice)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include(invoice.formatted_invoice_number)
       expect(response.body).to include("BK-AR-SHOW")
+      expect(response.body).to include("Yang Chun Yan")
       expect(response.body).to include(invoice.booking_folio.folio_reference_display)
       expect(response.body).to include(invoice.corporate_account.name)
       expect(response.body).to include(invoice.due_on.strftime("%d %b %Y"))

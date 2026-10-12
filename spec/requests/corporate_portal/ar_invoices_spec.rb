@@ -79,6 +79,18 @@ RSpec.describe "CorporatePortal::ArInvoices", type: :request do
       expect(response.body).to include("MYR 100.00")
     end
 
+    it "shows the guest name on the list and the detail page" do
+      invoice = create_ar_invoice_for(relationship: relationship, confirmation_token: "BK-GUEST", folio_number: 7010, amount: 200)
+      invoice.booking.update!(guest_name: "Yang Chun Yan")
+
+      get corporate_ar_invoices_path
+      row = Nokogiri::HTML(response.body).at_css("[data-testid='corp-ar-invoice-row-#{invoice.id}']")
+      expect(row.css("td")[3].css("p").map(&:text)).to eq([ "Yang Chun Yan", "BK-GUEST" ])
+
+      get corporate_ar_invoice_path(invoice)
+      expect(response.body).to include("Yang Chun Yan")
+    end
+
     it "renders the details section with payment terms and direct bill source" do
       invoice = create_ar_invoice_for(
         relationship: relationship, confirmation_token: "BK-TERMS", folio_number: 7003, amount: 200,
