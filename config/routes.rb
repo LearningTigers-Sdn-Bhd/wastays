@@ -508,6 +508,7 @@ Rails.application.routes.draw do
       end
       resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
         get :eligible_invoices, on: :collection
+        resource :void, only: [ :create ], controller: "ar_payment_voids"
         resources :allocations, only: [ :create ], controller: "ar_payment_allocations" do
           resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
         end
@@ -601,6 +602,9 @@ Rails.application.routes.draw do
       match "edit-dates/:booking_id", to: "booking_dates#show", via: [ :get, :patch ], as: :edit_dates
       match "edit-room/:booking_id", to: "room_assignments#show", via: [ :get, :patch ], as: :edit_room
       match "edit-rate/:booking_id", to: "rate_changes#show", via: [ :get, :patch ], as: :edit_rate
+      get "correct-room-charges/:booking_id", to: "room_charge_corrections#show", as: :correct_room_charges
+      post "correct-room-charges/:booking_id/review", to: "room_charge_corrections#review", as: :review_room_charge_correction
+      post "correct-room-charges/:booking_id/confirm", to: "room_charge_corrections#confirm", as: :confirm_room_charge_correction
       match "check-in/:booking_id", to: "check_ins#show", via: [ :get, :post ], as: :check_in
       match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
       match "void-booking/:booking_id", to: "voids#show", via: [ :get, :post ], as: :void_booking

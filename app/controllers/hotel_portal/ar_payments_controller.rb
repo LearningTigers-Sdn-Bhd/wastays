@@ -15,6 +15,7 @@ module HotelPortal
         .includes(
           { ar_payment_allocations: [ :ar_invoice, { reversal: :reversed_by } ] },
           { ar_payment_submission: [ :submitted_by, { slip_attachment: :blob } ] },
+          :void,
           hotel_corporate_account: :corporate_account
         )
         .find(params[:id])
@@ -106,7 +107,7 @@ module HotelPortal
       current_hotel.ar_invoices
         .with_open_balance.allocatable
         .where(hotel_corporate_account: @hotel_corporate_account)
-        .includes(:booking_folio)
+        .includes(booking_folio: :booking)
         .order(due_on: :asc, invoice_number: :asc)
     end
 

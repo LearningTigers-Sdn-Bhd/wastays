@@ -119,7 +119,7 @@ module HotelPortal
         {
           payment: hotel.ar_payments
             .where(id: ids.fetch(:payment, []))
-            .includes(hotel_corporate_account: :corporate_account)
+            .includes(:void, hotel_corporate_account: :corporate_account)
             .index_by(&:id),
           submission: hotel.ar_payment_submissions
             .where(id: ids.fetch(:submission, []))
@@ -130,7 +130,7 @@ module HotelPortal
 
       def business_month_scope
         date = hotel.current_business_date
-        hotel.ar_payments.where(received_at: date.beginning_of_month..date.end_of_month)
+        hotel.ar_payments.not_voided.where(received_at: date.beginning_of_month..date.end_of_month)
       end
 
       def received_this_month
@@ -197,10 +197,12 @@ module HotelPortal
         end
 
         def status_label
-          "Received"
+          payment.voided? ? "Voided" : "Received"
         end
 
         def status_class
+          return "border-border bg-muted text-muted-foreground" if payment.voided?
+
           "border-emerald-200 bg-emerald-50 text-emerald-700"
         end
 

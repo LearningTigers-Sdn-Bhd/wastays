@@ -11,6 +11,16 @@
 
     <% if can_manage %>
       <div class="flex flex-wrap gap-2">
+        <% if entity_booking.status == "completed" %>
+          <% correction_blocked = Bookings::CorrectRoomCharges.unavailable_reason(booking: entity_booking, user: current_user) %>
+          <%= render PanelsUI::Button.new(
+                href: hotel_booking_action_correct_room_charges_path(current_hotel, entity_booking, return_to: request.fullpath),
+                size: :sm,
+                disabled: correction_blocked.present?,
+                title: correction_blocked,
+                data: { turbo_frame: "booking_action_sheet" }) do %>Correct room charges<% end %>
+          <% if correction_blocked %><p class="w-full text-xs text-muted-foreground sm:text-right"><%= correction_blocked %></p><% end %>
+        <% elsif entity_booking.status.in?(HotelPortal::BookingLifecycleTargetPresenter::ELIGIBLE_STATUSES.fetch(:amend_stay)) %>
         <%= render PanelsUI::Button.new(
               href: hotel_booking_action_edit_room_path(current_hotel, entity_booking, return_to: request.fullpath),
               variant: :secondary,
@@ -22,6 +32,7 @@
               disabled: room.nil?,
               title: ("Assign a room before changing its rate." if room.nil?),
               data: { turbo_frame: "booking_workspace", turbo_action: "advance", warning_dialog_trigger: "change-rate" }) do %>Change rate<% end %>
+        <% end %>
       </div>
     <% end %>
   </header>
