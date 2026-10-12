@@ -26,6 +26,7 @@ class FinancialAuditEvent < ApplicationRecord
     ar_payment_recorded
     ar_payment_allocated
     ar_payment_allocation_reversed
+    ar_payment_voided
     no_show_folio_closed
     no_show_tourism_tax_repaired
   ].freeze

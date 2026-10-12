@@ -508,6 +508,7 @@ Rails.application.routes.draw do
       end
       resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
         get :eligible_invoices, on: :collection
+        resource :void, only: [ :create ], controller: "ar_payment_voids"
         resources :allocations, only: [ :create ], controller: "ar_payment_allocations" do
           resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
         end

@@ -173,6 +173,7 @@ module HotelPortal
 
       def paid_this_month_amounts
         hotel.ar_payments
+          .not_voided
           .where(received_at: business_date.beginning_of_month..business_date.end_of_month)
           .group(:currency)
           .sum(:amount)

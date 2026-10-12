@@ -43,6 +43,7 @@ module HotelPortal
 
       def status_class
         case allocation_status
+        when "voided" then "border-border bg-muted text-muted-foreground"
         when "unapplied" then "border-red-200 bg-red-50 text-red-700"
         when "partially_allocated" then "border-amber-200 bg-amber-50 text-amber-700"
         else "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -96,10 +97,43 @@ module HotelPortal
       end
 
       def can_allocate?
-        can_manage? && unapplied_amount_value.positive? && eligible_invoices.any?
+        can_manage? && !voided? && unapplied_amount_value.positive? && eligible_invoices.any?
+      end
+
+      def voided?
+        payment.voided?
+      end
+
+      def void
+        payment.void
+      end
+
+      def voided_by
+        void&.voided_by&.name
+      end
+
+      def voided_at
+        void&.voided_at&.in_time_zone(hotel.hotel_time_zone)&.strftime("%d %b %Y, %I:%M %p")
+      end
+
+      def void_reason
+        void&.reason
+      end
+
+      # Allocated funds must be reversed first; gateway money is refunded there.
+      def can_void?
+        can_manage? && !voided? && allocated_amount.zero? && !payment.gateway_payment?
+      end
+
+      def void_blocked_hint
+        return unless can_manage? && !voided?
+        return "Reverse the active allocations before voiding this payment." if allocated_amount.positive?
+        "This payment came from a gateway charge. Refund it through the gateway." if payment.gateway_payment?
       end
 
       def unapplied_amount_value
+        return 0.to_d if voided?
+
         payment.amount.to_d - allocated_amount
       end
 
@@ -138,6 +172,7 @@ module HotelPortal
       end
 
       def allocation_status
+        return "voided" if voided?
         return "unapplied" if allocated_amount.zero?
         return "fully_allocated" if unapplied_amount_value.zero?
 

@@ -336,6 +336,47 @@ RSpec.describe "HotelPortal::ArPayments", type: :request do
     expect(allocation.reload).to be_reversed
   end
 
+  it "voids an unallocated payment and drops it from the month total" do
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 400)
+
+    get hotel_ar_payment_path(hotel, payment)
+    expect(response.body).to include("Void payment")
+
+    post hotel_ar_payment_void_path(hotel, payment), params: { reason: "Recorded in error" }
+
+    expect(response).to redirect_to(hotel_ar_payment_path(hotel, payment))
+    expect(payment.reload).to be_voided
+
+    follow_redirect!
+    expect(response.body).to include("payment-voided-notice")
+    expect(response.body).to include("Recorded in error")
+    expect(response.body).not_to include("Void this payment?")
+  end
+
+  it "hides the void action while the payment has an active allocation" do
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 400)
+    invoice = create_invoice(relationship: payment.hotel_corporate_account, amount: 500)
+    post hotel_ar_payment_allocations_path(hotel, payment), params: { allocations: { invoice.id => "400.00" } }
+
+    get hotel_ar_payment_path(hotel, payment)
+
+    expect(response.body).not_to include("Void this payment?")
+    expect(response.body).to include("void-blocked-hint")
+
+    post hotel_ar_payment_void_path(hotel, payment), params: { reason: "Nope" }
+    expect(flash[:alert]).to eq("Reverse the active allocations before voiding this payment.")
+    expect(payment.reload).not_to be_voided
+  end
+
+  it "does not let view_reports void a payment" do
+    role.permissions.delete(manage_ar_payments)
+    payment = create(:ar_payment, hotel: hotel, hotel_corporate_account: create(:hotel_corporate_account, hotel: hotel), amount: 400)
+
+    post hotel_ar_payment_void_path(hotel, payment), params: { reason: "Nope" }
+
+    expect(payment.reload).not_to be_voided
+  end
+
   it "keeps view_reports read-only" do
     role.permissions.delete(manage_ar_payments)
     relationship = create(:hotel_corporate_account, hotel: hotel)
