@@ -601,6 +601,9 @@ Rails.application.routes.draw do
       match "edit-dates/:booking_id", to: "booking_dates#show", via: [ :get, :patch ], as: :edit_dates
       match "edit-room/:booking_id", to: "room_assignments#show", via: [ :get, :patch ], as: :edit_room
       match "edit-rate/:booking_id", to: "rate_changes#show", via: [ :get, :patch ], as: :edit_rate
+      get "correct-room-charges/:booking_id", to: "room_charge_corrections#show", as: :correct_room_charges
+      post "correct-room-charges/:booking_id/review", to: "room_charge_corrections#review", as: :review_room_charge_correction
+      post "correct-room-charges/:booking_id/confirm", to: "room_charge_corrections#confirm", as: :confirm_room_charge_correction
       match "check-in/:booking_id", to: "check_ins#show", via: [ :get, :post ], as: :check_in
       match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
       match "void-booking/:booking_id", to: "voids#show", via: [ :get, :post ], as: :void_booking
