@@ -13,10 +13,15 @@ module HotelOps
       @room_numbers = room_numbers
     end
 
+    # The per-room services each queue one push for what they changed. Their
+    # rows commit with this outer transaction, so the skip flag has to hold
+    # until then too, or every saved row also queues its own push.
     def call
       room_types = @hotel.room_types
       room_types = room_types.where(id: @room_type_ids) if @room_type_ids.present?
 
+      skip_was = Thread.current[:skip_ari_sync]
+      Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
         room_types.each do |rt|
           update_rates(rt) if @price
@@ -26,6 +31,8 @@ module HotelOps
       end
     rescue => e
       { success: false, error: e.message }
+    ensure
+      Thread.current[:skip_ari_sync] = skip_was
     end
 
     private

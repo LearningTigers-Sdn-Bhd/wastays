@@ -52,7 +52,7 @@ module Onboarding
           )
         end
 
-        if affected_rooms.any? && @hotel.preferred_channel_manager.present?
+        if affected_rooms.any? && @hotel.channel_manager_enabled?
           ActiveRecord.after_all_transactions_commit do
             ChannelManagers::SyncJob.perform_later(
               @hotel.id, appended_start, appended_end,

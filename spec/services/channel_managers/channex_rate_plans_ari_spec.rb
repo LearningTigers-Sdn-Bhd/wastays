@@ -114,7 +114,11 @@ RSpec.describe "Channex rate plan and ARI contracts" do
           rate_plan_id: "plan-1",
           date_from: date.to_s,
           date_to: date.to_s,
-          rate: [ [ 1, "101.12" ], [ 2, "151.23" ], [ 3, "201.34" ] ],
+          rates: [
+            { occupancy: 1, rate: "101.12" },
+            { occupancy: 2, rate: "151.23" },
+            { occupancy: 3, rate: "201.34" }
+          ],
           max_stay: 7
         ) ]
       }).and_return({ "data" => [ { "id" => "restriction-task" } ] })
@@ -136,8 +140,8 @@ RSpec.describe "Channex rate plan and ARI contracts" do
 
       expect(client).to receive(:post).with("/restrictions", hash_including(
         values: [
-          hash_including(date_from: first.to_s, date_to: first.to_s, rate: [ [ 1, "100.00" ], [ 2, "150.00" ], [ 3, "200.00" ] ]),
-          hash_including(date_from: second.to_s, date_to: second.to_s, rate: [ [ 1, "100.00" ], [ 2, "150.00" ], [ 3, "201.00" ] ])
+          hash_including(date_from: first.to_s, date_to: first.to_s, rates: [ { occupancy: 1, rate: "100.00" }, { occupancy: 2, rate: "150.00" }, { occupancy: 3, rate: "200.00" } ]),
+          hash_including(date_from: second.to_s, date_to: second.to_s, rates: [ { occupancy: 1, rate: "100.00" }, { occupancy: 2, rate: "150.00" }, { occupancy: 3, rate: "201.00" } ])
         ]
       )).and_return({ "data" => { "id" => "task-2" } })
 
@@ -166,7 +170,7 @@ RSpec.describe "Channex rate plan and ARI contracts" do
       )
 
       expect(client).to receive(:post).with("/restrictions", hash_including(
-        values: [ hash_including(rate: [ [ 1, "121.00" ], [ 2, "176.00" ], [ 3, "231.00" ] ]) ]
+        values: [ hash_including(rates: [ { occupancy: 1, rate: "121.00" }, { occupancy: 2, rate: "176.00" }, { occupancy: 3, rate: "231.00" } ]) ]
       )).and_return({ "data" => { "id" => "derived-task" } })
 
       result = adapter.push_ari(

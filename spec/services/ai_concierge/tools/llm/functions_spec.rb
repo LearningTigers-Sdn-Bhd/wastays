@@ -87,7 +87,9 @@ RSpec.describe "AI concierge tools the model can see" do
       expect(recorder.outcome.domain_result.dig(:extra_context, :message)).to include("Parking — The hotel has not listed")
     end
 
-    it "answers one hotel question before continuing the booking from the same message" do
+    # "10 October" carries no year, so it must still be ahead of today.
+    it "answers one hotel question before continuing the booking from the same message",
+       frozen_time: Time.zone.local(2026, 9, 1, 12) do
       mixed = "Does the hotel have parking, and what rooms are available from 10 October to 12 October for two adults?"
       match = {
         "content" => "Parking is available for hotel guests.",

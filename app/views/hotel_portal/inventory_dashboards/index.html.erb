@@ -25,7 +25,7 @@
         <div>
           <h2 class="text-lg font-bold tracking-tight text-foreground">Review Changes</h2>
           <p class="text-xs font-semibold text-muted-foreground">
-            <%= current_hotel.preferred_channel_manager.present? ? "Confirm the staged updates before syncing with the Channel Manager." : "Confirm the staged updates before saving." %>
+            <%= current_hotel.channel_manager_enabled? ? "Confirm the staged updates before syncing with the Channel Manager." : "Confirm the staged updates before saving." %>
           </p>
         </div>
         <button type="button" data-action="inventory-calendar#closeReview" class="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -43,9 +43,9 @@
         <button type="button"
                 data-inventory-calendar-target="finalSyncButton"
                 data-action="inventory-calendar#submitStaged"
-                data-sync-text="<%= current_hotel.preferred_channel_manager.present? ? "Confirm & Sync" : "Confirm & Save" %>"
+                data-sync-text="<%= current_hotel.channel_manager_enabled? ? "Confirm & Sync" : "Confirm & Save" %>"
                 class="inline-flex justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-bold text-primary-foreground hover:bg-indigo-700 shadow-sm">
-          <%= current_hotel.preferred_channel_manager.present? ? "Confirm & Sync" : "Confirm & Save" %>
+          <%= current_hotel.channel_manager_enabled? ? "Confirm & Sync" : "Confirm & Save" %>
         </button>
       </div>
     </div>

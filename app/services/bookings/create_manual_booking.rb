@@ -184,7 +184,7 @@ module Bookings
             Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
 
             # Trigger Channex CRS Sync if connected
-            if @hotel.preferred_channel_manager.present?
+            if @hotel.channel_manager_enabled?
               adapter = ChannelManagers::SyncOrchestrator.adapter_for(@hotel)
               adapter.push_booking(booking)
             end

@@ -16,6 +16,7 @@ module HotelOps
     end
 
     def call
+      skip_was = Thread.current[:skip_ari_sync]
       Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
         # Sync rate plan currency with the update currency if they differ
@@ -51,7 +52,7 @@ module HotelOps
         end
 
         # Trigger ARI Sync if CM is connected
-        if @hotel.preferred_channel_manager.present?
+        if @hotel.channel_manager_enabled?
           ChannelManagers::SyncJob.perform_later(
             @hotel.id,
             @start_date,
@@ -67,7 +68,7 @@ module HotelOps
     rescue => e
       { success: false, error: e.message }
     ensure
-      Thread.current[:skip_ari_sync] = nil
+      Thread.current[:skip_ari_sync] = skip_was
     end
   end
 end

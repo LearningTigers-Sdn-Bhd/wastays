@@ -617,6 +617,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_10_090000) do
     t.text "cancellation_policy_snapshot"
     t.jsonb "cancellation_policy_snapshot_data", default: {}, null: false
     t.string "channel_manager_reference"
+    t.text "channel_notes"
     t.datetime "check_in", null: false
     t.datetime "check_out", null: false
     t.datetime "checked_in_at"

@@ -78,6 +78,7 @@ class RatePlan < ApplicationRecord
 
   before_validation :normalize_currency
   before_validation :inherit_sell_mode_from_hotel
+  before_validation :normalize_channex_child_fees
 
   scope :day_use, -> { where.not(day_use_hours: nil) }
   scope :overnight, -> { where(day_use_hours: nil) }
@@ -302,10 +303,18 @@ class RatePlan < ApplicationRecord
     self.sell_mode = hotel.sell_mode if hotel
   end
 
+  def normalize_channex_child_fees
+    if channex_children_fee.present? && channex_infant_fee.blank?
+      self.channex_infant_fee = 0.to_d
+    elsif channex_infant_fee.present? && channex_children_fee.blank?
+      self.channex_children_fee = 0.to_d
+    end
+  end
+
   def sync_with_channel_manager
     return if Thread.current[:skip_ari_sync]
     return if day_use?
-    return if hotel.preferred_channel_manager.blank?
+    return unless hotel.channel_manager_enabled?
     room_ids = room_type_rate_plans.pluck(:room_type_id)
     return if room_ids.empty?
 
@@ -317,6 +326,6 @@ class RatePlan < ApplicationRecord
   end
 
   def synced_with_channel_manager?
-    hotel.preferred_channel_manager.present? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
+    hotel.channel_manager_enabled? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
   end
 end

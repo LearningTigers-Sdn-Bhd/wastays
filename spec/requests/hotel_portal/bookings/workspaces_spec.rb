@@ -276,6 +276,18 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(overview.at_xpath('.//h2[normalize-space()="Overview"]')).to be_nil
     end
 
+    it "shows the OTA's notes apart from the staff's special requests, with where they come from" do
+      booking.update!(channel_notes: "Request 1 pillow\nBooked by: Henry Tan", special_requests: "VIP, late check-in arranged")
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "Aina Rahman"), is_primary: true)
+
+      get hotel_booking_workspace_path(hotel, booking)
+
+      notes = Nokogiri::HTML(response.body).at_css('[data-testid="channel-notes"]')
+      expect(notes.text).to include("OTA notes", "Request 1 pillow", "Booked by: Henry Tan")
+      expect(notes.to_html).to include("From the OTA / channel manager")
+      expect(response.body).to include("VIP, late check-in arranged")
+    end
+
     it "labels the overview references section and demotes the confirmation code" do
       booking.update!(
         source: "booking_com",

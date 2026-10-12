@@ -13,12 +13,6 @@ if defined?(Rake) && Rake.respond_to?(:application)
   end
 end
 
-# Helper to deeply scrub sensitive data
-# We explicitly remove :email from the global filters for the Observation Deck so devs can debug user issues
-OBSERVATION_SCRUBBER = ActiveSupport::ParameterFilter.new(
-  (Rails.application.config.filter_parameters - [ :email ]) + [ :credit_card, :cvv, :passport, :ssn ]
-)
-
 # Helper to store entries (buffered for requests, immediate for jobs)
 def capture_observation_entry(entry_data)
   entry_data[:request_id] = entry_data[:request_id].presence || Current.request_id || "none"
@@ -69,13 +63,16 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
 
       # Extract Channex Webhook IDs
       if path.include?("webhooks/channex")
-        channex_id = payload[:params]["id"] || payload[:params].dig("payload", "revision_id")
+        # `payload` is a list for `ari` events (and Channex's test message), a hash otherwise
+        channex_payload = payload[:params]["payload"]
+        channex_payload = {} unless channex_payload.is_a?(Hash)
+        channex_id = payload[:params]["id"] || channex_payload["revision_id"] || channex_payload["booking_revision_id"]
         tags << "channex_id:#{channex_id}" if channex_id.present?
       end
     end
 
     # Use raw parameters from the request object to bypass Rails' automatic pre-filtering
-    # This allows OUR OBSERVATION_SCRUBBER (which allows email) to handle the filtering.
+    # This allows ObservationDeck::PayloadScrubber (which allows email) to handle the filtering.
     request = payload[:request]
     raw_params = if request
       request.request_parameters.merge(request.query_parameters)
@@ -90,7 +87,7 @@ ActiveSupport::Notifications.subscribe("process_action.action_controller") do |*
       duration: event.duration,
       path: "#{payload[:method]} #{payload[:path]}",
       tags: tags.uniq,
-      payload: OBSERVATION_SCRUBBER.filter({
+      payload: ObservationDeck::PayloadScrubber.filter({
         params: raw_params.except("controller", "action", "authenticity_token"),
         view_runtime: payload[:view_runtime],
         db_runtime: payload[:db_runtime],
@@ -122,7 +119,7 @@ ActiveSupport::Notifications.subscribe("enqueue.active_job") do |*args|
     status: 100, # Enqueued status
     duration: 0.0,
     path: "#{job.class.name} (Enqueued)",
-    payload: OBSERVATION_SCRUBBER.filter({
+    payload: ObservationDeck::PayloadScrubber.filter({
       arguments: job.arguments,
       queue: job.queue_name,
       executions: job.executions
@@ -143,7 +140,7 @@ ActiveSupport::Notifications.subscribe("perform.active_job") do |*args|
     status: payload[:exception].present? ? 500 : 200,
     duration: event.duration,
     path: job.class.name,
-    payload: OBSERVATION_SCRUBBER.filter({
+    payload: ObservationDeck::PayloadScrubber.filter({
       arguments: job.arguments,
       queue: job.queue_name,
       exception: payload[:exception],
@@ -219,7 +216,7 @@ ActiveSupport::Notifications.subscribe("deliver.action_mailer") do |*args|
     status: payload[:exception].present? ? 500 : 200,
     duration: event.duration,
     path: payload[:mailer],
-    payload: OBSERVATION_SCRUBBER.filter({
+    payload: ObservationDeck::PayloadScrubber.filter({
       subject: subject,
       to: to,
       from: from,
@@ -281,7 +278,7 @@ ActiveSupport::Notifications.subscribe("request.faraday") do |*args|
     status: payload[:status],
     duration: event.duration,
     path: "#{payload[:method].to_s.upcase} #{payload[:url]}",
-    payload: OBSERVATION_SCRUBBER.filter({
+    payload: ObservationDeck::PayloadScrubber.filter({
       request_headers: payload[:request_headers],
       request_body: parsed_request_body,
       response_headers: payload[:response_headers],
@@ -318,7 +315,7 @@ def capture_api_call(provider, method, url, payload = {})
     status: status,
     duration: duration,
     path: "#{method.to_s.upcase} [#{provider}] #{url}",
-    payload: OBSERVATION_SCRUBBER.filter(payload.merge(response_body: parsed_body || body)),
+    payload: ObservationDeck::PayloadScrubber.filter(payload.merge(response_body: parsed_body || body)),
     tags: tags.uniq
   })
 

@@ -85,5 +85,41 @@ RSpec.describe HotelOps::BulkUpdateInventory, frozen_time: Time.zone.local(2026,
         }.not_to change(RoomInventory, :count)
       end
     end
+
+    context 'when only the status changes' do
+      let(:room_type) { create(:room_type, hotel: hotel, quantity: 7) }
+
+      def change_status(to)
+        described_class.new(
+          hotel: hotel, room_type: room_type, start_date: start_date, end_date: start_date,
+          status: to, user: user
+        ).call
+      end
+
+      it 'closes a date without resetting the rooms still free' do
+        create(:room_inventory, room_type: room_type, date: start_date, quantity: 3, status: 'open')
+
+        change_status('closed')
+
+        inventory = room_type.room_inventories.find_by(date: start_date)
+        expect(inventory).to have_attributes(status: 'closed', quantity: 3)
+      end
+
+      it 'reopens a date with the same free-room count it closed with' do
+        create(:room_inventory, room_type: room_type, date: start_date, quantity: 3, status: 'closed')
+
+        change_status('open')
+
+        expect(room_type.room_inventories.find_by(date: start_date)).to have_attributes(status: 'open', quantity: 3)
+      end
+
+      it 'starts a new date from the rooms not already booked' do
+        2.times { create(:booking_room, booking: create(:booking, hotel: hotel), room_type: room_type) }
+
+        change_status('closed')
+
+        expect(room_type.room_inventories.find_by(date: start_date).quantity).to eq(5)
+      end
+    end
   end
 end

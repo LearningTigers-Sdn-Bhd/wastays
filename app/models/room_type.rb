@@ -223,7 +223,7 @@ class RoomType < ApplicationRecord
   end
 
   def sync_with_channel_manager
-    return if hotel.preferred_channel_manager.blank?
+    return unless hotel.channel_manager_enabled?
 
     ChannelManagers::SyncStructureJob.perform_later(self.class.name, id, "sync")
   end
@@ -233,6 +233,6 @@ class RoomType < ApplicationRecord
   end
 
   def synced_with_channel_manager?
-    hotel.preferred_channel_manager.present? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
+    hotel.channel_manager_enabled? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
   end
 end

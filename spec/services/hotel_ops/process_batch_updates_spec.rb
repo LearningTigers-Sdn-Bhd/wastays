@@ -35,10 +35,18 @@ RSpec.describe HotelOps::ProcessBatchUpdates do
       expect(result[:message]).to eq("All changes synced successfully.")
     end
 
-    it "triggers a SyncJob if hotel has a preferred channel manager" do
-      hotel.update!(preferred_channel_manager: "staah")
+    it "triggers a SyncJob if hotel is connected to a channel manager" do
+      hotel.update!(preferred_channel_manager: "channex")
       expect_any_instance_of(HotelOps::ApplyInventoryDashboardSelection).to receive(:call).and_return({ success: true })
       expect(ChannelManagers::SyncJob).to receive(:perform_later).at_least(:once)
+
+      subject.call
+    end
+
+    it "does not trigger a SyncJob for a provider we have no adapter for" do
+      hotel.update!(preferred_channel_manager: "staah")
+      expect_any_instance_of(HotelOps::ApplyInventoryDashboardSelection).to receive(:call).and_return({ success: true })
+      expect(ChannelManagers::SyncJob).not_to receive(:perform_later)
 
       subject.call
     end

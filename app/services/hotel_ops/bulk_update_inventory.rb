@@ -18,6 +18,7 @@ module HotelOps
     end
 
     def call
+      skip_was = Thread.current[:skip_ari_sync]
       Thread.current[:skip_ari_sync] = true
       ActiveRecord::Base.transaction do
         (@start_date..@end_date).each do |date|
@@ -47,9 +48,11 @@ module HotelOps
               inventory.quantity = @quantity if @quantity
             end
           else
-            # Traditional quantity mode
+            # Traditional quantity mode. Quantity counts rooms still free, so a
+            # bare open or close leaves it alone rather than resetting it to the
+            # full count and re-selling rooms already booked.
             inventory.available_room_numbers = []
-            inventory.quantity = @quantity || @room_type.quantity
+            inventory.quantity = @quantity || (inventory.new_record? ? unsold_rooms_on(date) : inventory.quantity)
           end
           inventory.save!
 
@@ -67,7 +70,7 @@ module HotelOps
         end
 
         # Trigger ARI Sync if CM is connected
-        if @hotel.preferred_channel_manager.present?
+        if @hotel.channel_manager_enabled?
           ChannelManagers::SyncJob.perform_later(
             @hotel.id,
             @start_date,
@@ -83,7 +86,18 @@ module HotelOps
     rescue => e
       { success: false, error: e.message }
     ensure
-      Thread.current[:skip_ari_sync] = nil
+      Thread.current[:skip_ari_sync] = skip_was
+    end
+
+    private
+
+    def unsold_rooms_on(date)
+      sold = @hotel.bookings.revenue_generating
+                   .joins(:booking_rooms)
+                   .where(":date >= bookings.check_in::date AND :date < bookings.check_out::date", date: date)
+                   .where(booking_rooms: { room_type_id: @room_type.id })
+                   .count("booking_rooms.id")
+      [ 0, @room_type.quantity - sold ].max
     end
   end
 end

@@ -59,15 +59,22 @@ class RoomRate < ApplicationRecord
     numeric.present? && !numeric.negative?
   end
 
+  PRICE_ATTRIBUTES = %w[price occupancy_prices base_occupancy extra_pax_charge single_supplement].freeze
+  RESTRICTION_ATTRIBUTES = %w[min_stay max_stay closed_to_arrival closed_to_departure stop_sell].freeze
+
+  # Buffers a price change and a restriction change separately, so each goes
+  # out with the fields it touched. A new rate carries both.
   def trigger_ari_sync
     return if Thread.current[:skip_ari_sync]
-    return if room_type.hotel.preferred_channel_manager.blank?
+    return unless room_type.hotel.channel_manager_enabled?
 
-    ChannelManagers::BufferAriSyncJob.perform_later(
-      room_type.hotel_id,
-      date,
-      type: :restrictions,
-      rate_plan_id: rate_plan_id
-    )
+    changed = previously_new_record? ? PRICE_ATTRIBUTES + RESTRICTION_ATTRIBUTES : saved_changes.keys
+    types = []
+    types << :rates if changed.intersect?(PRICE_ATTRIBUTES)
+    types << :restrictions if changed.intersect?(RESTRICTION_ATTRIBUTES)
+
+    types.each do |type|
+      ChannelManagers::BufferAriSyncJob.perform_later(room_type.hotel_id, date, type: type, rate_plan_id: rate_plan_id)
+    end
   end
 end

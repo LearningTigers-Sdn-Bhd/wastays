@@ -86,7 +86,7 @@
           label: complete ? "Ready" : "Needs pricing",
           variant: complete ? :success : :warning,
           size: :sm) %>
-    <% if current_hotel.preferred_channel_manager.present? && rate_plan.channex_syncable? %>
+    <% if current_hotel.channel_manager_enabled? && rate_plan.channex_syncable? %>
       <% synced = assignment.channel_mapping.present? && !assignment.channel_mapping.external_id.to_s.start_with?("pending") %>
       <span class="text-xs text-muted-foreground"><%= synced ? "Channel synced" : "Channel pending" %></span>
     <% end %>

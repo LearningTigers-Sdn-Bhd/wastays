@@ -275,7 +275,7 @@ module HotelOps
     end
 
     def enqueue_sync
-      return if hotel.preferred_channel_manager.blank?
+      return unless hotel.channel_manager_enabled?
 
       ActiveRecord.after_all_transactions_commit do
         ChannelManagers::SyncJob.perform_later(

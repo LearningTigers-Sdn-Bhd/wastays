@@ -19,7 +19,7 @@ module HotelPortal
 
       if hotel.update(profile_params)
         if (hotel.saved_changes.keys & %w[name city country]).any?
-          if hotel.preferred_channel_manager.present? && hotel.channel_mapping.present?
+          if hotel.channel_manager_enabled? && hotel.channel_mapping.present?
             ChannelManagers::SyncStructureJob.perform_later("Hotel", hotel.id, "sync")
           end
         end

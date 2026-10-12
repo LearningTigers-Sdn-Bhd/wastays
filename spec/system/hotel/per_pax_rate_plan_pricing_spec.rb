@@ -47,6 +47,7 @@ RSpec.describe "Per-pax rate plan pricing page", type: :system, js: true do
     open_pricing(std_plan)
 
     choose "Set prices directly"
+    click_button "Continue" # choosing a method waits for Continue
     fill_in "1 adult", with: "250"
     fill_in "2 adults", with: "440"
     fill_in "3 adults", with: "600"
@@ -65,6 +66,7 @@ RSpec.describe "Per-pax rate plan pricing page", type: :system, js: true do
     open_pricing(std_plan)
 
     choose "Set prices directly"
+    click_button "Continue" # choosing a method waits for Continue
     fill_in "1 adult", with: "250"
     fill_in "2 adults", with: "440"
     fill_in "3 adults", with: "600"
@@ -83,6 +85,7 @@ RSpec.describe "Per-pax rate plan pricing page", type: :system, js: true do
     open_pricing(fb)
 
     choose "Adjust Standard Rate"
+    click_button "Continue" # choosing a method waits for Continue
     click_button "Continue"
     fill_in "Adjustment", with: "-10"
     save
@@ -118,6 +121,7 @@ RSpec.describe "Per-pax rate plan pricing page", type: :system, js: true do
     open_pricing(fb)
 
     choose "Adjust Standard Rate"
+    click_button "Continue" # choosing a method waits for Continue
     click_button "Continue"
     fill_in "Adjustment", with: "-10"
     save
@@ -132,6 +136,7 @@ RSpec.describe "Per-pax rate plan pricing page", type: :system, js: true do
     open_pricing(prm)
 
     choose "Generate from a starting rate"
+    click_button "Continue" # choosing a method waits for Continue
     fill_in "Primary occupancy", with: "2"
     click_button "Continue"
     fill_in "Rate at primary occupancy", with: "480"
@@ -174,6 +179,7 @@ RSpec.describe "Per-pax rate plan pricing page", type: :system, js: true do
     open_pricing(plan)
 
     choose "Generate from a starting rate"
+    click_button "Continue" # choosing a method waits for Continue
     fill_in "Primary occupancy", with: "2"
     click_button "Continue"
     fill_in "Rate at primary occupancy", with: "100"

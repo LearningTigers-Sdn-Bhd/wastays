@@ -51,10 +51,11 @@ module ChannelManagers
     end
 
     def enqueue_rate_sync
+      today = rate_plan.hotel.hotel_time_zone.today
       ChannelManagers::SyncJob.perform_later(
         rate_plan.hotel_id,
-        Date.current,
-        Date.current + SYNC_WINDOW_DAYS.days,
+        today,
+        today + SYNC_WINDOW_DAYS.days,
         sync_availability: false,
         sync_rates: true,
         sync_restrictions: true,
