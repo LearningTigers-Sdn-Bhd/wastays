@@ -28,6 +28,21 @@ RSpec.describe "HotelPortal::ArPaymentSubmissions", type: :request do
     expect(response.body).to include("View transaction slip")
   end
 
+  it "shows the guest name beside each targeted invoice" do
+    booking = create(:booking, hotel: hotel, guest_name: "Yang Chun Yan")
+    folio = create(:booking_folio, :secondary, booking: booking, hotel: hotel, hotel_corporate_account: relationship)
+    invoice = create(:ar_invoice, hotel: hotel, booking_folio: folio, hotel_corporate_account: relationship, amount: 100, paid_amount: 0, outstanding_amount: 100, currency: "MYR")
+    submission = create(:ar_payment_submission, hotel_corporate_account: relationship, amount: 100)
+    submission.ar_payment_submission_allocations.destroy_all
+    submission.ar_payment_submission_allocations.create!(ar_invoice: invoice, amount: 100)
+
+    get hotel_ar_payment_submission_path(hotel, submission)
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include(invoice.formatted_invoice_number)
+    expect(response.body).to include("Yang Chun Yan")
+  end
+
   it "shows the booking's status and warns when a pending slip's booking has been voided" do
     booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
     submission = create(:ar_payment_submission, hotel_corporate_account: relationship, booking: booking, auto_invoice: nil)

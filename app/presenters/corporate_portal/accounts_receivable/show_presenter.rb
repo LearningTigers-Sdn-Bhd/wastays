@@ -19,6 +19,10 @@ module CorporatePortal
         invoice.hotel.name
       end
 
+      def guest_name
+        invoice.booking.guest_name.presence || "—"
+      end
+
       def booking_reference
         invoice.booking.confirmation_token.presence || "—"
       end
