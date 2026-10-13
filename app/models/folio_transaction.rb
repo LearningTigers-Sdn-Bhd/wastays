@@ -32,7 +32,7 @@ class FolioTransaction < ApplicationRecord
 
   belongs_to :source_booking, class_name: "Booking"
   before_validation :assign_source_booking, on: :create
-  validate :source_booking_matches_hotel
+  validate :source_booking_matches_hotel, on: :create
 
   belongs_to :booking_folio
   belongs_to :transaction_code, optional: true
@@ -75,9 +75,9 @@ class FolioTransaction < ApplicationRecord
   validates :posting_date, presence: true
   validate :category_allowed_for_transaction_type
   validate :amount_sign_matches_transaction_type
-  validate :reversal_reference_is_valid
-  validate :lineage_references_are_valid
-  validate :night_audit_matches_hotel
+  validate :reversal_reference_is_valid, on: :create
+  validate :lineage_references_are_valid, on: :create
+  validate :night_audit_matches_hotel, on: :create
   validate :night_audit_matches_metadata, on: :create
 
   before_validation :assign_transaction_code, on: :create
@@ -213,6 +213,7 @@ class FolioTransaction < ApplicationRecord
   end
 
   def reversal_reference_is_valid
+    return if reversal_of_transaction_id.blank? && !association(:reversal_of_transaction).loaded?
     return if reversal_of_transaction.blank?
 
     if reversal_of_transaction == self
@@ -223,12 +224,16 @@ class FolioTransaction < ApplicationRecord
   end
 
   def lineage_references_are_valid
-    validate_lineage_reference(parent_transaction, :parent_transaction, same_folio: true)
-    validate_lineage_reference(split_from_transaction, :split_from_transaction)
-    validate_lineage_reference(moved_from_transaction, :moved_from_transaction)
+    validate_lineage_reference(:parent_transaction, same_folio: true)
+    validate_lineage_reference(:split_from_transaction)
+    validate_lineage_reference(:moved_from_transaction)
   end
 
-  def validate_lineage_reference(reference, attribute, same_folio: false)
+  def validate_lineage_reference(attribute, same_folio: false)
+    fk = :"#{attribute}_id"
+    return if self[fk].blank? && !association(attribute).loaded?
+
+    reference = public_send(attribute)
     return if reference.blank?
 
     if reference == self
@@ -241,12 +246,14 @@ class FolioTransaction < ApplicationRecord
   end
 
   def night_audit_matches_hotel
+    return if night_audit_id.blank? && !association(:night_audit).loaded?
     return if night_audit.blank? || booking_folio.blank? || night_audit.hotel_id == booking_folio.hotel_id
 
     errors.add(:night_audit, "must belong to the same hotel as the folio")
   end
 
   def night_audit_matches_metadata
+    return if night_audit_id.blank? && !association(:night_audit).loaded?
     return if night_audit.blank?
 
     metadata_id = metadata.to_h["night_audit_id"] || metadata.to_h[:night_audit_id]

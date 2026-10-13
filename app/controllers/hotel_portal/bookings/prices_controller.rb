@@ -22,7 +22,7 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
       ).call
       render_price(snapshot, room_type:, manual_rate_override: snapshot.room_total)
     else
-      snapshot = Bookings::BuildFinancialSnapshot.new(
+      snapshot = carried_stay_snapshot(room_type:, rate_plan:, check_in:, check_out:) || Bookings::BuildFinancialSnapshot.new(
         hotel: current_hotel, room_type:, rate_plan:, check_in:, check_out:, guest_country:,
         adults: params[:adults].presence, children: params[:children].presence,
         child_ages: Bookings::ChildAges.normalize(params[:child_ages], params[:children])
@@ -77,6 +77,21 @@ class HotelPortal::Bookings::PricesController < HotelPortal::BaseController
     return if room_type.fits?(adults:, children: params[:children].to_i)
 
     room_type.occupancy_limit_message
+  end
+
+  # The Dates Sheet previews an existing booking's new dates. Quote them the
+  # way UpdateStayService will save them: a hand-set or OTA price carries over.
+  def carried_stay_snapshot(room_type:, rate_plan:, check_in:, check_out:)
+    return if params[:booking_id].blank?
+
+    booking = current_hotel.bookings.find_by(id: params[:booking_id])
+    room = booking&.booking_rooms&.first
+    return unless room&.room_type_id == room_type.id && (room.rate_plan || room_type.standard_rate_plan) == rate_plan
+
+    Bookings::CarryStayRates.call(
+      booking:, booking_room: room, rate_plan:,
+      previous_check_in: booking.check_in, previous_check_out: booking.check_out, check_in:, check_out:
+    )
   end
 
   # Editing the final total is a pricing decision, same as the net-based

@@ -79,8 +79,18 @@ module Bookings
             new_rate_plan ||= new_room_type.standard_rate_plan
             raise "Selected rate is no longer available." if new_rate_plan.blank? || new_rate_plan.archived?
 
+            # A date-only change keeps a hand-set or OTA price; anything else
+            # (or a stay priced from room rates) reprices from scratch.
+            carried_snapshot = if dates_changing && !room_type_changing && !rate_plan_changing && !override_changing
+              CarryStayRates.call(
+                booking: @booking, booking_room: current_room, rate_plan: new_rate_plan,
+                previous_check_in: old_check_in, previous_check_out: old_check_out,
+                check_in: new_check_in, check_out: new_check_out
+              )
+            end
+
             # Recalculate Price using BuildFinancialSnapshot (includes taxes)
-            financial_snapshot = BuildFinancialSnapshot.new(
+            financial_snapshot = carried_snapshot || BuildFinancialSnapshot.new(
               hotel: @hotel,
               booking: @booking,
               check_in: new_check_in,
@@ -106,13 +116,16 @@ module Bookings
             end
 
             # Update booking totals (including taxes)
-            @booking.update!(
+            totals = {
               total_amount: financial_snapshot.room_total + Booking.non_tourism_tax_total_for(financial_snapshot.tax_lines),
               tax_lines: financial_snapshot.tax_lines,
               tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
               tourism_tax_amount: financial_snapshot.tax_lines.find { |t| t["type"] == "tourism_tax" }&.fetch("amount", 0).to_d,
               tourism_tax_applied: financial_snapshot.tax_lines.any? { |t| t["type"] == "tourism_tax" }
-            )
+            }
+            # The override is the stay's room total, so it follows the carried nights.
+            totals[:manual_rate_override] = carried_snapshot.room_total if carried_snapshot && @booking.manual_rate_override.present?
+            @booking.update!(totals)
 
             # Deduct new inventory
             InventoryManager.new(@booking).deduct
