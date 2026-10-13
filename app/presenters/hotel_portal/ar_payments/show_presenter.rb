@@ -168,7 +168,7 @@ module HotelPortal
         @eligible_invoices ||= hotel.ar_invoices
           .with_open_balance
           .where(hotel_corporate_account: payment.hotel_corporate_account, currency: payment.currency)
-          .includes(booking_folio: :booking)
+          .includes(:invoice, booking_folio: :booking)
           .order(due_on: :asc, invoice_number: :asc)
       end
 

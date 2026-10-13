@@ -40,6 +40,11 @@ module Bookings
         old_check_in = @booking.check_in
         old_check_out = @booking.check_out
         current_room = @booking.booking_rooms.first
+        # The room the guest already holds, sent back with new dates, is not a
+        # reassignment.
+        same_room_type = @room_type_id.blank? || @room_type_id.to_i == current_room&.room_type_id
+        assigned_room_number = nil if same_room_type && assigned_room_number.present? &&
+          assigned_room_number.to_s == current_room&.room_number.to_s
         old_room_type_id = current_room&.room_type_id
         old_rate_plan_id = current_room&.rate_plan_id
         old_manual_rate_override = @booking.manual_rate_override
@@ -79,8 +84,18 @@ module Bookings
             new_rate_plan ||= new_room_type.standard_rate_plan
             raise "Selected rate is no longer available." if new_rate_plan.blank? || new_rate_plan.archived?
 
+            # A date-only change keeps a hand-set or OTA price; anything else
+            # (or a stay priced from room rates) reprices from scratch.
+            carried_snapshot = if dates_changing && !room_type_changing && !rate_plan_changing && !override_changing
+              CarryStayRates.call(
+                booking: @booking, booking_room: current_room, rate_plan: new_rate_plan,
+                previous_check_in: old_check_in, previous_check_out: old_check_out,
+                check_in: new_check_in, check_out: new_check_out
+              )
+            end
+
             # Recalculate Price using BuildFinancialSnapshot (includes taxes)
-            financial_snapshot = BuildFinancialSnapshot.new(
+            financial_snapshot = carried_snapshot || BuildFinancialSnapshot.new(
               hotel: @hotel,
               booking: @booking,
               check_in: new_check_in,
@@ -106,13 +121,16 @@ module Bookings
             end
 
             # Update booking totals (including taxes)
-            @booking.update!(
+            totals = {
               total_amount: financial_snapshot.room_total + Booking.non_tourism_tax_total_for(financial_snapshot.tax_lines),
               tax_lines: financial_snapshot.tax_lines,
               tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
               tourism_tax_amount: financial_snapshot.tax_lines.find { |t| t["type"] == "tourism_tax" }&.fetch("amount", 0).to_d,
               tourism_tax_applied: financial_snapshot.tax_lines.any? { |t| t["type"] == "tourism_tax" }
-            )
+            }
+            # The override is the stay's room total, so it follows the carried nights.
+            totals[:manual_rate_override] = carried_snapshot.room_total if carried_snapshot && @booking.manual_rate_override.present?
+            @booking.update!(totals)
 
             # Deduct new inventory
             InventoryManager.new(@booking).deduct
@@ -134,15 +152,21 @@ module Bookings
               end
             end
 
-            # Verify availability for target room
+            # Verify availability for target room. A guest keeping the room
+            # they hold is not blocked by its housekeeping status: an in-house
+            # guest's room is dirty most days, and that says nothing about the
+            # extra nights.
             active_room_type = room_type_changing ? new_room_type : current_room&.room_type
+            keeping_current_room = !room_type_changing && current_room&.room_number.present? &&
+              target_room_number.to_s == current_room.room_number.to_s
             if active_room_type
               available_service = Bookings::AvailableRoomNumbers.new(
                 hotel: @hotel,
                 room_type: active_room_type,
                 check_in: new_check_in,
                 check_out: new_check_out,
-                exclude_booking_id: @booking.id
+                exclude_booking_id: @booking.id,
+                ignore_room_status: keeping_current_room
               )
 
               unless available_service.call.include?(target_room_number.to_s)
