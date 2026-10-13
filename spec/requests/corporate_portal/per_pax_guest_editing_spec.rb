@@ -24,7 +24,7 @@ RSpec.describe "Per-pax TA guest editing" do
     params = {
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + 1).to_s,
       adults: 2, children: 0, rooms: 1, rate_plan_id: std_plan.id,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     booking = CorporatePortal::CreateAgentBooking.call(relationship: ta_a, params: params, user: ta_a_user).booking
     expect(booking.total_amount.to_d).to eq(440.to_d) # 2-adult STD price

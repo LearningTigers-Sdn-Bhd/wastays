@@ -30,6 +30,8 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
 
   def room_detail(*guests)
     { rooms_detail: guests.each_with_index.to_h { |people, index|
+      # Every room's lead needs a nationality; tests not about it get Malaysia.
+      people = people.each_with_index.map { |attrs, i| i.zero? ? attrs.reverse_merge(country: "Malaysia") : attrs }
       [ index.to_s, { guests: people.each_with_index.to_h { |attrs, i| [ i.to_s, attrs ] } } ]
     } }
   end
@@ -350,16 +352,33 @@ RSpec.describe "CorporatePortal::Bookings", type: :request do
     expect(guest.date_of_birth).to be_nil
   end
 
-  it "leaves nationality blank when the agent does not know it" do
-    post corporate_bookings_path, params: {
-      hotel_relationship_id: relationship.id,
-      booking: {
-        room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
-        adults: 1, children: 0, rooms: 1
-      }.merge(room_detail([ { name: "Aisha Rahman", phone: "+60123456789", country: "" } ]))
-    }
+  # The lead's nationality decides tourism tax, and nothing reprices it once
+  # booked, so a booking without one would let an international guest leave
+  # untaxed.
+  it "refuses a booking whose lead guest has no nationality" do
+    expect {
+      post corporate_bookings_path, params: {
+        hotel_relationship_id: relationship.id,
+        booking: {
+          room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
+          adults: 1, children: 0, rooms: 1
+        }.merge(room_detail([ { name: "Aisha Rahman", phone: "+60123456789", country: "" } ]))
+      }
+    }.not_to change(Booking, :count)
 
-    expect(Booking.order(:id).last.guest_country).to be_nil
+    follow_redirect!
+    expect(response.body).to include("Choose the lead guest&#39;s nationality for room 1.")
+  end
+
+  it "starts the lead guest's nationality blank and requires it" do
+    get new_corporate_booking_path(
+      hotel_relationship_id: relationship.id, check_in: check_in.to_s, check_out: check_out.to_s, step: "guests",
+      lines: { "0" => { room_type_id: room_type.id, adults: 2, quantity: 1 } }
+    )
+
+    lead = Capybara.string(response.body).find("select[name='booking[rooms_detail][0][guests][0][country]']")
+    expect(lead[:required]).to be_present
+    expect(lead.all("option[selected]")).to be_empty
   end
 
   # The portal is the agent's own, so a hotel they are not linked to is simply

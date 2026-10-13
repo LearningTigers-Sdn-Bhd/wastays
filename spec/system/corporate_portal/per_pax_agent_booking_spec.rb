@@ -48,6 +48,16 @@ RSpec.describe "Per-pax TA booking, end to end", type: :system, js: true do
   def fill_lead_guest(name: "Ada Lim", phone: "+60123456789")
     fill_in "Full name", with: name, match: :first
     fill_in "Phone", with: phone, match: :first
+    choose_lead_nationality(room: 0)
+  end
+
+  # Each room's lead must pick a nationality; it starts blank.
+  def choose_lead_nationality(room:, country: "Malaysia")
+    page.execute_script(<<~JS)
+      const select = document.querySelector("select[name='booking[rooms_detail][#{room}][guests][0][country]']")
+      select.value = #{country.to_json}
+      select.dispatchEvent(new Event("change", { bubbles: true }))
+    JS
   end
 
   # U1: full flow - TA-A searches, sees FB priced correctly, books, and the
@@ -121,7 +131,7 @@ RSpec.describe "Per-pax TA booking, end to end", type: :system, js: true do
     params = {
       room_type_id: suite.id, check_in: check_in.to_s, check_out: check_out.to_s,
       adults: 2, children: 0, rooms: 1, rate_plan_id: fb_plan.id,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     booking = CorporatePortal::CreateAgentBooking.call(relationship: ta_a, params: params, user: ta_a_user).booking
 
@@ -165,6 +175,8 @@ RSpec.describe "Per-pax TA booking, end to end", type: :system, js: true do
     # The first room has two adults to name, so the second room's lead is the third.
     names[2].set("Bo Tan")
     all("input[type='tel']")[2].set("+60127654321")
+    choose_lead_nationality(room: 0)
+    choose_lead_nationality(room: 1)
     click_button "Confirm 2 rooms"
 
     expect(page).to have_current_path(%r{/corporate/bookings/\d+}, wait: 10)

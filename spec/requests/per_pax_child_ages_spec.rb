@@ -48,7 +48,7 @@ RSpec.describe "Per-pax child ages across channels", frozen_time: :business_day,
         booking: {
           room_type_id: suite.id, rate_plan_id: fb_plan.id, check_in: check_in, check_out: check_in + 3,
           adults: 2, children: 1, child_ages: [ "8" ], rooms: 1,
-          rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+          rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
         }
       }
 

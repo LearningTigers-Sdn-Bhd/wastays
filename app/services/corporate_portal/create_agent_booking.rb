@@ -56,6 +56,7 @@ module CorporatePortal
       return failure(early) if early.any?
       return failure("Name the lead guest for each room.") if rooms.empty?
       return failure(unnamed_rooms_message) if unnamed_rooms.any?
+      return failure(leads_without_nationality_message) if leads_without_nationality.any?
       return failure(*@boat_times.errors) if @boat_times.errors.any?
       return failure(cart.errors) unless cart.success?
 
@@ -93,6 +94,16 @@ module CorporatePortal
     # asked for without a word, so the whole request is sent back instead.
     def unnamed_rooms
       @unnamed_rooms ||= (0...rooms_requested).select { |index| room_blocks[index].nil? }.map { |index| index + 1 }
+    end
+
+    # The lead's nationality decides tourism tax (Bookings::BuildFinancialSnapshot),
+    # and once booked nothing reprices it, so it has to be known up front.
+    def leads_without_nationality
+      @leads_without_nationality ||= rooms.each_with_index.filter_map { |guests, index| index + 1 if guests.first[:country].blank? }
+    end
+
+    def leads_without_nationality_message
+      "Choose the lead guest's nationality for #{leads_without_nationality.one? ? 'room' : 'rooms'} #{leads_without_nationality.to_sentence}."
     end
 
     def unnamed_rooms_message

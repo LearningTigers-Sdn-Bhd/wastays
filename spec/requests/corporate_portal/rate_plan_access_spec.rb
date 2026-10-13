@@ -47,7 +47,7 @@ RSpec.describe "CorporatePortal rate plan access", type: :request do
       booking: {
         room_type_id: room_type.id, rate_plan_id: rate_plan_id, check_in: check_in.to_s, check_out: check_out.to_s,
         adults: 2, children: 0, rooms: 1,
-        rooms_detail: { "0" => { guests: { "0" => { name: "Aisha Rahman", phone: "+60123456789" } } } }
+        rooms_detail: { "0" => { guests: { "0" => { name: "Aisha Rahman", phone: "+60123456789", country: "Malaysia" } } } }
       }
     }
   end

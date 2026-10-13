@@ -27,6 +27,8 @@ RSpec.describe CorporatePortal::CreateAgentBooking do
       children: 0,
       rooms: rooms_detail.size,
       rooms_detail: rooms_detail.each_with_index.to_h { |guests, index|
+        # Every room's lead needs a nationality; tests not about it get Malaysia.
+        guests = guests.each_with_index.map { |attrs, i| i.zero? ? attrs.reverse_merge(country: "Malaysia") : attrs }
         [ index.to_s, { guests: guests.each_with_index.to_h { |attrs, i| [ i.to_s, attrs ] } } ]
       }
     }.merge(overrides)

@@ -24,7 +24,7 @@ RSpec.describe "Per-pax night audit and checkout" do
     params = {
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + nights).to_s,
       adults: adults, children: children, rooms: 1, rate_plan_id: plan.id,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     CorporatePortal::CreateAgentBooking.call(relationship: relationship, params: params, user: actor).booking
   end
@@ -186,8 +186,8 @@ RSpec.describe "Per-pax night audit and checkout" do
       room_type_id: suite.id, check_in: (Date.current + 20).to_s, check_out: (Date.current + 22).to_s,
       adults: 2, children: 0, rooms: 2, rate_plan_id: fb_plan.id,
       rooms_detail: {
-        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } },
-        "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780" } } }
+        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } },
+        "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780", country: "Malaysia" } } }
       }
     }
     result = CorporatePortal::CreateAgentBooking.call(relationship: ta_a, params: params, user: ta_a_user)
@@ -213,8 +213,8 @@ RSpec.describe "Per-pax cancellation and auto-release (continued)" do
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + 3).to_s,
       adults: 2, children: 0, rooms: 2, rate_plan_id: plan.id,
       rooms_detail: {
-        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } },
-        "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780" } } }
+        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } },
+        "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780", country: "Malaysia" } } }
       }
     }
     CorporatePortal::CreateAgentBooking.call(relationship: relationship, params: params, user: actor)

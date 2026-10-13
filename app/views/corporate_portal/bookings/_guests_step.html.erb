@@ -63,14 +63,16 @@
                     indexed name (booking[rooms_detail][i][guests][j][country])
                     the way with_input's manual `name:` override gets it for a plain
                     input -- Combobox's own progressive-enhancement layer does not
-                    forward a caller's `name:` down to it. Malaysia is preselected as
-                    the common case for a domestic-facing property; the agent
-                    overrides it rather than picking it every time. %>
+                    forward a caller's `name:` down to it. The lead's nationality is
+                    required and starts blank: it decides tourism tax, and a default
+                    of Malaysia let an international guest through untaxed. A
+                    companion's still defaults to Malaysia, the common case. %>
                 <%= form.fields_for(:rooms_detail, index: room_index) do |room_form| %>
                   <%= room_form.fields_for(:guests, index: guest_index) do |guest_form| %>
                     <%= render PanelsUI::FormField.new(form: guest_form, attribute: :country,
-                          id: "room-#{room_index}-guest-#{guest_index}-country", label: "Nationality") do |field| %>
-                      <% field.with_combobox(COUNTRY_OPTIONS, selected: "Malaysia",
+                          id: "room-#{room_index}-guest-#{guest_index}-country", label: "Nationality",
+                          required: guest_index.zero?) do |field| %>
+                      <% field.with_combobox(COUNTRY_OPTIONS, selected: (guest_index.zero? ? nil : "Malaysia"),
                            prompt: "Select nationality", allow_empty_option: true) %>
                     <% end %>
                   <% end %>
