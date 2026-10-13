@@ -135,7 +135,7 @@ module HotelPortal
       end
 
       def paginated_invoices
-        pagination_pair.last.preload(booking_folio: :booking)
+        pagination_pair.last.preload(:invoice, hotel_corporate_account: :corporate_account, booking_folio: :booking)
       end
 
       def pagination_pair

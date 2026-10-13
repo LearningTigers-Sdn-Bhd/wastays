@@ -113,7 +113,7 @@ module Folios
       def active_nightly_transactions
         FolioTransaction
           .joins(:booking_folio)
-          .includes(:booking_folio, :transaction_code)
+          .includes(:booking_folio, :transaction_code, :source_booking)
           .where(source_booking_id: @booking.id)
           .charge
           .where(voided_by_transaction_id: nil)
