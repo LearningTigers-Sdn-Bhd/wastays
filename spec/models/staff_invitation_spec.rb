@@ -30,6 +30,29 @@ RSpec.describe StaffInvitation, type: :model do
     end
   end
 
+  describe "#destroy" do
+    it "removes the onboarding draft that created it, so it is not delivered again" do
+      invitation = create(:staff_invitation, :held)
+      role = create(:role, account: invitation.account, slug: "front_desk")
+      draft = create(:onboarding_staff_draft, hotel: invitation.hotel, role: role, email: invitation.email, invitation: invitation)
+
+      invitation.destroy!
+
+      expect(OnboardingStaffDraft.exists?(draft.id)).to be(false)
+      expect(invitation.hotel.onboarding_staff_drafts.undelivered).to be_empty
+    end
+
+    it "is also enforced by the database" do
+      invitation = create(:staff_invitation, :held)
+      role = create(:role, account: invitation.account, slug: "front_desk")
+      draft = create(:onboarding_staff_draft, hotel: invitation.hotel, role: role, email: invitation.email, invitation: invitation)
+
+      Invitation.where(id: invitation.id).delete_all
+
+      expect(OnboardingStaffDraft.exists?(draft.id)).to be(false)
+    end
+  end
+
   describe "#pending?" do
     it "is false after expiry" do
       invitation = build(:staff_invitation, expires_at: 1.minute.ago)

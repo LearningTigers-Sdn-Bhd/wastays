@@ -55,6 +55,19 @@ RSpec.describe StaffAccesses::CreateService do
     end
   end
 
+  it "adds staff whose outstanding invitation was created during onboarding" do
+    invitation = create(:staff_invitation, :held, hotel: hotel, account: hotel.account, email: email)
+    preset = create(:role, account: hotel.account, name: "Front Desk", slug: "front_desk")
+    draft = create(:onboarding_staff_draft, hotel: hotel, role: preset, email: email, invitation: invitation)
+
+    result = service.call
+
+    expect(result.success?).to be(true)
+    expect(result.access).to be_active
+    expect(StaffInvitation.exists?(invitation.id)).to be(false)
+    expect(OnboardingStaffDraft.exists?(draft.id)).to be(false)
+  end
+
   it "rolls back user creation and preserves invitations when access cannot be saved" do
     invitation = create(:staff_invitation, hotel: hotel, account: hotel.account, email: email)
     role

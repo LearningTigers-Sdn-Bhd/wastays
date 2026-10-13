@@ -7,6 +7,12 @@ class Invitation < ApplicationRecord
   belongs_to :hotel
   belongs_to :role, optional: true
   belongs_to :invited_by_user, class_name: "User"
+  # The onboarding draft that created this invitation. Once delivered, a draft
+  # only records where the invitation came from; removing the invitation must
+  # remove it too, or a revoked person would look undelivered and be invited
+  # again. The foreign keys also cascade at the database level.
+  has_one :onboarding_staff_draft, dependent: :destroy
+  has_one :onboarding_corporate_draft, dependent: :destroy
 
   enum :kind, { staff: "staff", corporate: "corporate" }, validate: true
 
