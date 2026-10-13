@@ -127,7 +127,8 @@ RSpec.describe Bookings::UpdateStayService do
       params: { check_out: Date.current + 2.days, rate_selection: current_rate_selection }
     ).call
     expect(date_result.success?).to be(true)
-    expect(booking.reload.manual_rate_override).to eq(175)
+    # The hand-set price carries into the added night rather than being spread.
+    expect(booking.reload.manual_rate_override).to eq(350)
 
     rate_result = described_class.new(
       booking:,
