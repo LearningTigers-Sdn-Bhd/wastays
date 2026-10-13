@@ -165,7 +165,6 @@ GEM
     erubi (1.13.1)
     et-orbi (1.4.1)
       tzinfo
-    event_stream_parser (1.0.0)
     factory_bot (6.5.6)
       activesupport (>= 6.1.0)
     factory_bot_rails (6.5.1)
@@ -284,14 +283,15 @@ GEM
     multipart-post (2.4.1)
     neighbor (1.2.0)
       activerecord (>= 7.2)
-    net-http (0.9.1)
+    net-http (0.10.0)
+      net-protocol (>= 0.3.0)
       uri (>= 0.11.1)
     net-imap (0.6.6)
       date
       net-protocol
     net-pop (0.1.2)
       net-protocol
-    net-protocol (0.2.2)
+    net-protocol (0.4.0)
       timeout
     net-scp (4.1.0)
       net-ssh (>= 2.6.5, < 8.0.0)
@@ -493,14 +493,13 @@ GEM
     ruby-vips (2.3.0)
       ffi (~> 1.12)
       logger
-    ruby_llm (2.0.0)
+    ruby_llm (2.1.0)
       base64
-      event_stream_parser (~> 1)
       faraday (>= 1.10.0)
       faraday-multipart (>= 1)
       faraday-net_http (>= 1)
       faraday-retry (>= 1)
-      json (< 3)
+      json (< 4)
       marcel (>= 1.0, < 3)
       schematist (~> 1.1)
       zeitwerk (~> 2)
@@ -577,7 +576,7 @@ GEM
       unicode-emoji (~> 4.1)
     unicode-emoji (4.2.0)
     uniform_notifier (1.18.0)
-    uri (1.1.1)
+    uri (1.1.2)
     useragent (0.16.11)
     view_component (4.15.0)
       actionview (>= 7.1.0)
@@ -660,7 +659,7 @@ DEPENDENCIES
   rspec-rails
   rubocop-rails-omakase
   ruby-vips (~> 2.0)
-  ruby_llm (~> 2.0)
+  ruby_llm (~> 2.1)
   selenium-webdriver
   shoulda-matchers
   simplecov
