@@ -8,7 +8,7 @@ RSpec.describe CorporatePortal::CreateAgentBooking, "with several lines" do
 
   let(:check_in) { Date.current + 20 }
 
-  def lead(name) = { guests: { "0" => { name: name, phone: "+60123456789" } } }
+  def lead(name) = { guests: { "0" => { name: name, phone: "+60123456789", country: "Malaysia" } } }
 
   def book(lines:, detail:, relationship: ta_a, actor: ta_a_user)
     described_class.call(

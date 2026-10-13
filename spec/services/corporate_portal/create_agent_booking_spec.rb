@@ -27,6 +27,8 @@ RSpec.describe CorporatePortal::CreateAgentBooking do
       children: 0,
       rooms: rooms_detail.size,
       rooms_detail: rooms_detail.each_with_index.to_h { |guests, index|
+        # Every room's lead needs a nationality; tests not about it get Malaysia.
+        guests = guests.each_with_index.map { |attrs, i| i.zero? ? attrs.reverse_merge(country: "Malaysia") : attrs }
         [ index.to_s, { guests: guests.each_with_index.to_h { |attrs, i| [ i.to_s, attrs ] } } ]
       }
     }.merge(overrides)
@@ -42,6 +44,42 @@ RSpec.describe CorporatePortal::CreateAgentBooking do
     expect(result).to be_success
     expect(result.booking.hotel_corporate_account_id).to eq(relationship.id)
     expect(result.booking.guest_name).to eq("Ada Lim")
+  end
+
+  it "schedules each auto-apply extra charge on every room booked" do
+    jetty_fee = create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 10,
+      charging_unit: "per_person", allow_amount_override: false, auto_apply: true)
+
+    result = call([
+      [ { name: "Ada Lim", phone: "+60123456789" } ],
+      [ { name: "Grace Tan", phone: "+60123456780" } ]
+    ])
+
+    expect(result).to be_success
+    result.bookings.each do |booking|
+      forecast = booking.booking_folio.folio_forecasted_charges.scheduled_extra_charges.sole
+      expect(forecast).to have_attributes(charge_kind: "extra_charge", amount: 20.to_d)
+      expect(forecast.metadata).to include("extra_charge_id" => jetty_fee.id)
+    end
+  end
+
+  # The agent is quoted the charges before booking; the folio must agree.
+  it "schedules exactly what the stay was quoted for its extra charges" do
+    create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 12.5,
+      charging_unit: "per_person_night", allow_amount_override: false, auto_apply: true)
+    quote = CorporatePortal::AgentStayCart.call(
+      hotel: hotel, relationship: relationship, check_in: check_in.to_s, check_out: check_out.to_s,
+      lines: CorporatePortal::StayLine.parse([ { room_type_id: room_type.id, adults: 2, children: 0, quantity: 2 } ])
+    )
+
+    result = call([
+      [ { name: "Ada Lim", phone: "+60123456789" } ],
+      [ { name: "Grace Tan", phone: "+60123456780" } ]
+    ])
+
+    scheduled = result.bookings.sum { |booking| booking.booking_folio.folio_forecasted_charges.scheduled_extra_charges.sum(:amount) }
+    expect(quote.extra_charges.sum(&:amount)).to eq(100.to_d)
+    expect(scheduled).to eq(100.to_d)
   end
 
   # "internal" would be indistinguishable from a booking keyed at the desk, so
@@ -160,6 +198,28 @@ RSpec.describe CorporatePortal::CreateAgentBooking do
       expect(booking.payment_instalments.map(&:kind)).to eq(%w[deposit balance])
       expect(booking.payment_instalments.sum(&:amount)).to eq(booking.total_amount)
       expect(booking.payment_due_at).to eq(booking.payment_instalments.first.due_at)
+    end
+
+    it "asks for the extra charges scheduled on the room as well as the room itself" do
+      create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 10,
+        charging_unit: "per_person", allow_amount_override: false, auto_apply: true)
+
+      booking = call(guest, { check_in: (Date.current + 60).to_s, check_out: (Date.current + 62).to_s }).booking
+
+      expect(booking.payable_total).to eq(booking.total_amount + 20)
+      expect(booking.payment_instalments.sum(&:amount)).to eq(booking.payable_total)
+      expect(CorporatePortal::BookingPaymentPresenter.new(booking).amount_label).to include(format("%.2f", booking.payable_total))
+    end
+
+    it "keeps the booking part paid until the extra charges are paid too" do
+      create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 10,
+        charging_unit: "per_person", allow_amount_override: false, auto_apply: true)
+      booking = call(guest).booking
+      allow_any_instance_of(Bookings::PaymentProgress).to receive(:paid_total).and_return(booking.total_amount.to_d)
+
+      Deposits::SyncBookingPaymentStatus.call(booking)
+
+      expect(booking.reload.payment_status).to eq("partial")
     end
 
     it "writes none for a direct-bill account" do

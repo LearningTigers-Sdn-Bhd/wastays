@@ -46,7 +46,7 @@ RSpec.describe "Per-pax price parity across channels" do
       params: {
         room_type_id: suite.id, rate_plan_id: fb_plan.id, check_in: check_in.to_s, check_out: (check_in + 3).to_s,
         adults: 2, children: 1, child_ages: [ "8" ], rooms: 1,
-        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
       }
     ).booking
     desk_booking = Bookings::CreateManualBooking.new(

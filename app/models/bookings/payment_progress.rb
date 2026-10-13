@@ -22,7 +22,12 @@ module Bookings
     end
 
     def owed_total
-      [ @booking.total_amount.to_d - paid_total, 0 ].max
+      [ payable_total - paid_total, 0 ].max
+    end
+
+    # The rooms and any extra charges scheduled on them (a jetty fee, say).
+    def payable_total
+      @payable_total ||= @booking.payable_total
     end
 
     def instalments

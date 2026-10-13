@@ -54,24 +54,33 @@ RSpec.describe "Agent guest identity fields", type: :system, js: true do
     JS
   end
 
+  def choose_nationality(country)
+    page.execute_script(<<~JS)
+      const select = document.querySelector("select[name='booking[rooms_detail][0][guests][0][country]']")
+      select.value = #{country.to_json}
+      select.dispatchEvent(new Event("change", { bubbles: true }))
+    JS
+  end
+
   def type_ic(value) = type_into("input[name='booking[rooms_detail][0][guests][0][government_id]']", value)
   def type_date_of_birth(value) = type_into("input[name='booking[rooms_detail][0][guests][0][date_of_birth]']", value)
 
-  it "reads IC by default and switches to Passport for a foreign nationality" do
-    expect(ic_label.text).to eq("IC")
+  # The lead's nationality starts blank -- it decides tourism tax, so the agent
+  # has to pick it -- and the ID field cannot say which kind it is until then.
+  it "reads IC / Passport until a nationality is chosen, then follows it" do
+    expect(ic_label.text).to eq("IC / Passport")
+
+    choose_nationality("Malaysia")
+    expect(ic_label).to have_text("IC")
     expect(ic_field[:placeholder]).to eq("IC number")
 
-    page.execute_script(<<~JS)
-      const select = document.querySelector("select[name='booking[rooms_detail][0][guests][0][country]']")
-      select.value = "India"
-      select.dispatchEvent(new Event("change", { bubbles: true }))
-    JS
-
+    choose_nationality("India")
     expect(ic_label).to have_text("Passport")
     expect(ic_field[:placeholder]).to eq("Passport number")
   end
 
   it "fills in the date of birth as a Malaysian IC is typed, and clears it if the IC becomes invalid" do
+    choose_nationality("Malaysia")
     type_ic("900101-14-5523")
 
     expect(dob_field.value).to eq("1990-01-01")
@@ -85,6 +94,7 @@ RSpec.describe "Agent guest identity fields", type: :system, js: true do
   end
 
   it "rejects an IC with more than 12 digits" do
+    choose_nationality("Malaysia")
     type_ic("9001011455231")
 
     expect(page).to have_text("An IC number has at most 12 digits.")
@@ -94,6 +104,7 @@ RSpec.describe "Agent guest identity fields", type: :system, js: true do
   # "9902031z26661zz" read as if it were "990203126661" -- a real 12-digit IC
   # -- and passed straight through.
   it "rejects an IC containing letters, rather than silently dropping them" do
+    choose_nationality("Malaysia")
     type_ic("9902031z26661zz")
 
     expect(page).to have_text("An IC number should contain digits only.")
@@ -101,11 +112,7 @@ RSpec.describe "Agent guest identity fields", type: :system, js: true do
   end
 
   it "does not apply the IC character rule to a passport" do
-    page.execute_script(<<~JS)
-      const select = document.querySelector("select[name='booking[rooms_detail][0][guests][0][country]']")
-      select.value = "India"
-      select.dispatchEvent(new Event("change", { bubbles: true }))
-    JS
+    choose_nationality("India")
 
     type_ic("A1234567")
 
@@ -113,6 +120,7 @@ RSpec.describe "Agent guest identity fields", type: :system, js: true do
   end
 
   it "leaves a date of birth the agent typed themselves alone" do
+    choose_nationality("Malaysia")
     type_date_of_birth("1985-06-15")
     type_ic("900101-14-5523")
 
@@ -120,6 +128,7 @@ RSpec.describe "Agent guest identity fields", type: :system, js: true do
   end
 
   it "updates the date of birth again when the agent corrects the IC to a different valid one" do
+    choose_nationality("Malaysia")
     type_ic("900101-14-5523")
     expect(dob_field.value).to eq("1990-01-01")
 
@@ -134,6 +143,7 @@ RSpec.describe "Agent guest identity fields", type: :system, js: true do
   # later, genuinely different IC, which is exactly what an agent hits by
   # glancing at the auto-filled date before retyping a mistaken IC.
   it "keeps following the IC even after the date field fires a no-op input event" do
+    choose_nationality("Malaysia")
     type_ic("900101-14-5523")
     expect(dob_field.value).to eq("1990-01-01")
 

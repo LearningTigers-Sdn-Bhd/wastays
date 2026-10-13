@@ -118,8 +118,8 @@ export default class extends Controller {
   // nationality already chosen, same as which column the server files it
   // under (CorporatePortal::CreateAgentBooking#identity_attributes).
   updateLabel() {
-    const malaysia = this.isMalaysia()
-    const label = malaysia ? "IC" : "Passport"
+    // Until a nationality is chosen there is no telling which it will be.
+    const label = this.countrySelect.value.trim() === "" ? "IC / Passport" : (this.isMalaysia() ? "IC" : "Passport")
 
     if (this.icLabel) this.icLabel.textContent = label
     this.icInput.placeholder = `${label} number`

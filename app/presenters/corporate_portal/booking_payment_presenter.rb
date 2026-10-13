@@ -134,7 +134,7 @@ module CorporatePortal
     def dimmed_class = ("opacity-55" if inactive?)
 
     def amount_label
-      money_label(booking.total_amount)
+      money_label(booking.payable_total)
     end
 
     def money_label(amount)
@@ -144,7 +144,7 @@ module CorporatePortal
     # What to send now. For a scheduled booking that is the outstanding part of
     # the next stage, otherwise everything still owed.
     def amount_due_label
-      money_label(progress.amount_due_now || booking.total_amount)
+      money_label(progress.amount_due_now || booking.payable_total)
     end
 
     def amount_due_now = progress.amount_due_now

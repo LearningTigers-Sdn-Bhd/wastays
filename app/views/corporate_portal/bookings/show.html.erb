@@ -18,7 +18,7 @@
     <% if @bookings.size > 1 %>
       <p class="mt-1 text-xs text-muted-foreground" data-testid="stay-context">
         Part of a <%= @bookings.size %>-room stay · stay total
-        <%= @booking.currency %> <%= number_with_precision(@bookings.sum { |booking| booking.total_amount.to_d }, precision: 2) %>
+        <%= @booking.currency %> <%= number_with_precision(@bookings.sum(&:payable_total), precision: 2) %>
       </p>
     <% end %>
 
@@ -52,8 +52,7 @@
       <div>
         <dt class="text-muted-foreground">Total</dt>
         <dd class="font-bold">
-          <%= @booking.currency %>
-          <%= number_with_precision(@booking.total_amount, precision: 2) %>
+          <%= @payment.amount_label %>
         </dd>
       </div>
     </dl>
@@ -73,7 +72,8 @@
                              .group_by { |line| line["name"] }
                              .transform_values { |lines| lines.sum { |line| line["amount"].to_d } } %>
     <% room_subtotal = @booking.total_amount.to_d - tax_totals.values.sum %>
-    <% if tax_totals.present? %>
+    <% extra_charges = @booking.scheduled_extra_charges.lines %>
+    <% if tax_totals.present? || extra_charges.any? %>
       <dl class="mt-4 space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
         <div class="flex justify-between">
           <dt>Room charges</dt>
@@ -83,6 +83,12 @@
           <div class="flex justify-between">
             <dt><%= name %></dt>
             <dd class="tabular-nums"><%= @booking.currency %> <%= number_with_precision(amount, precision: 2) %></dd>
+          </div>
+        <% end %>
+        <% extra_charges.each do |line| %>
+          <div class="flex justify-between" data-testid="booking-extra-charge">
+            <dt><%= line.name %></dt>
+            <dd class="tabular-nums"><%= @booking.currency %> <%= number_with_precision(line.amount, precision: 2) %></dd>
           </div>
         <% end %>
       </dl>

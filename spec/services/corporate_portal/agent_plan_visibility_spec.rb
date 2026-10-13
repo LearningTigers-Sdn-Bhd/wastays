@@ -41,7 +41,7 @@ RSpec.describe "Per-pax TA plan visibility" do
     params = {
       room_type_id: suite.id, check_in: check_in.to_s, check_out: check_out.to_s,
       adults: 2, children: 0, rooms: 1, rate_plan_id: fb_plan.id, # TA-C is excluded from FB entirely (only -> TA-A)
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     result = CorporatePortal::CreateAgentBooking.call(relationship: ta_c, params: params, user: ta_c_user)
 
@@ -62,7 +62,7 @@ RSpec.describe "Per-pax TA plan visibility" do
     params = {
       room_type_id: suite.id, check_in: check_in.to_s, check_out: check_out.to_s,
       adults: 2, children: 0, rooms: 1, rate_plan_id: fb_plan.id,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     booked = CorporatePortal::CreateAgentBooking.call(relationship: ta_a, params: params, user: ta_a_user)
     expect(booked).to be_success

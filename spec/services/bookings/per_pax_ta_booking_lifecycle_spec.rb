@@ -22,7 +22,7 @@ RSpec.describe "Per-pax TA booking lifecycle" do
     params = {
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + nights).to_s,
       adults: adults, children: children, child_ages: child_ages, rooms: 1, rate_plan_id: plan.id,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     CorporatePortal::CreateAgentBooking.call(relationship: relationship, params: params, user: actor).booking
   end
@@ -148,7 +148,7 @@ RSpec.describe "Per-pax TA cancellation and auto-release" do
     params = {
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + nights).to_s,
       adults: adults, children: 0, rooms: 1, rate_plan_id: plan.id,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     CorporatePortal::CreateAgentBooking.call(relationship: relationship, params: params, user: actor).booking
   end

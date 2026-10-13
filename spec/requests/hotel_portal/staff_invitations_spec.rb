@@ -115,5 +115,16 @@ RSpec.describe "HotelPortal::StaffInvitations", type: :request do
       expect(response).to redirect_to(hotel_users_path(hotel))
       expect(flash[:notice]).to eq("Invitation revoked successfully.")
     end
+
+    it "revokes an invitation created during onboarding and removes its draft" do
+      invitation.update_column(:last_sent_at, nil)
+      draft = create(:onboarding_staff_draft, hotel: hotel, role: staff_role, email: invitation.email, invitation: invitation)
+
+      expect {
+        delete hotel_staff_invitation_path(hotel, invitation)
+      }.to change(StaffInvitation, :count).by(-1)
+      expect(response).to redirect_to(hotel_users_path(hotel))
+      expect(OnboardingStaffDraft.exists?(draft.id)).to be(false)
+    end
   end
 end

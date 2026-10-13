@@ -10,7 +10,7 @@ RSpec.describe "Per-pax edge cases" do
   let(:check_in) { Date.current + 20 }
 
   def book(plan:, room_type: suite, adults:, children: 0, nights: 1, relationship: ta_a, actor: ta_a_user, rooms: 1, extra_rooms_detail: {})
-    detail = { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }.merge(extra_rooms_detail)
+    detail = { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }.merge(extra_rooms_detail)
     params = {
       room_type_id: room_type.id, check_in: check_in.to_s, check_out: (check_in + nights).to_s,
       adults: adults, children: children, rooms: rooms, rate_plan_id: plan.id, rooms_detail: detail
@@ -76,7 +76,7 @@ RSpec.describe "Per-pax edge cases" do
       params: {
         room_type_id: twin.id, rate_plan_id: std_plan.id, check_in: check_in.to_s, check_out: (check_in + 1).to_s,
         adults: 2, children: 2, rooms: 1,
-        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
       }
     )
 
@@ -144,7 +144,7 @@ RSpec.describe "Per-pax edge cases" do
       params = {
         room_type_id: suite.id, check_in: business_date.to_s, check_out: (business_date + 1).to_s,
         adults: 2, children: 0, rooms: 1, rate_plan_id: std_plan.id,
-        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
       }
       CorporatePortal::CreateAgentBooking.call(relationship: ta_a, params: params, user: ta_a_user)
     end
@@ -166,7 +166,7 @@ RSpec.describe "Per-pax edge cases" do
 
     result = book(
       plan: plan, room_type: single_room_type, adults: 2, rooms: 2,
-      extra_rooms_detail: { "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780" } } } }
+      extra_rooms_detail: { "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780", country: "Malaysia" } } } }
     )
 
     expect(result).not_to be_success

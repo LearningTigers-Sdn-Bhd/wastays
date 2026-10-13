@@ -56,6 +56,7 @@ module CorporatePortal
       return failure(early) if early.any?
       return failure("Name the lead guest for each room.") if rooms.empty?
       return failure(unnamed_rooms_message) if unnamed_rooms.any?
+      return failure(leads_without_nationality_message) if leads_without_nationality.any?
       return failure(*@boat_times.errors) if @boat_times.errors.any?
       return failure(cart.errors) unless cart.success?
 
@@ -95,6 +96,16 @@ module CorporatePortal
       @unnamed_rooms ||= (0...rooms_requested).select { |index| room_blocks[index].nil? }.map { |index| index + 1 }
     end
 
+    # The lead's nationality decides tourism tax (Bookings::BuildFinancialSnapshot),
+    # and once booked nothing reprices it, so it has to be known up front.
+    def leads_without_nationality
+      @leads_without_nationality ||= rooms.each_with_index.filter_map { |guests, index| index + 1 if guests.first[:country].blank? }
+    end
+
+    def leads_without_nationality_message
+      "Choose the lead guest's nationality for #{leads_without_nationality.one? ? 'room' : 'rooms'} #{leads_without_nationality.to_sentence}."
+    end
+
     def unnamed_rooms_message
       "Name the lead guest for #{unnamed_rooms.one? ? 'room' : 'rooms'} #{unnamed_rooms.to_sentence}."
     end
@@ -122,10 +133,19 @@ module CorporatePortal
       raise Failed, Array(result.errors).to_sentence unless result.success?
 
       add_companions(result.booking, guests)
+      apply_automatic_extra_charges!(result.booking)
       # Every room in the party takes the same boats, landing on its own stay dates.
       ::Boats::AssignTimes.call(booking: result.booking, params: @boat_times.params)
       stamp_payment_deadline(result.booking)
       result.booking
+    end
+
+    # The hotel's auto-apply extra charges (a jetty fee, say) land on an agent's
+    # booking exactly as on one keyed at the desk, so the folio is complete
+    # before anyone has to remember to post them.
+    def apply_automatic_extra_charges!(booking)
+      result = ::ExtraCharges::ApplyAutomatic.call(booking: booking, user: @user)
+      raise Failed, result.error unless result.success?
     end
 
     # Standard accounts hold the room against a payment schedule -- a deposit

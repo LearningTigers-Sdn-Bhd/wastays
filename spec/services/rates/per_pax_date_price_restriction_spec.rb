@@ -137,7 +137,7 @@ RSpec.describe "Per-pax date prices and restrictions" do
       params = {
         room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + 3).to_s,
         adults: 2, children: 0, rooms: 1, rate_plan_id: fb_plan.id,
-        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
       }
       result = nil
       expect {
