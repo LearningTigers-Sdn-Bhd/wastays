@@ -40,6 +40,11 @@ module Bookings
         old_check_in = @booking.check_in
         old_check_out = @booking.check_out
         current_room = @booking.booking_rooms.first
+        # The room the guest already holds, sent back with new dates, is not a
+        # reassignment.
+        same_room_type = @room_type_id.blank? || @room_type_id.to_i == current_room&.room_type_id
+        assigned_room_number = nil if same_room_type && assigned_room_number.present? &&
+          assigned_room_number.to_s == current_room&.room_number.to_s
         old_room_type_id = current_room&.room_type_id
         old_rate_plan_id = current_room&.rate_plan_id
         old_manual_rate_override = @booking.manual_rate_override
@@ -147,15 +152,21 @@ module Bookings
               end
             end
 
-            # Verify availability for target room
+            # Verify availability for target room. A guest keeping the room
+            # they hold is not blocked by its housekeeping status: an in-house
+            # guest's room is dirty most days, and that says nothing about the
+            # extra nights.
             active_room_type = room_type_changing ? new_room_type : current_room&.room_type
+            keeping_current_room = !room_type_changing && current_room&.room_number.present? &&
+              target_room_number.to_s == current_room.room_number.to_s
             if active_room_type
               available_service = Bookings::AvailableRoomNumbers.new(
                 hotel: @hotel,
                 room_type: active_room_type,
                 check_in: new_check_in,
                 check_out: new_check_out,
-                exclude_booking_id: @booking.id
+                exclude_booking_id: @booking.id,
+                ignore_room_status: keeping_current_room
               )
 
               unless available_service.call.include?(target_room_number.to_s)

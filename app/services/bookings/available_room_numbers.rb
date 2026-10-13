@@ -2,12 +2,16 @@
 
 module Bookings
   class AvailableRoomNumbers
-    def initialize(hotel:, room_type:, check_in:, check_out:, exclude_booking_id: nil)
+    # ignore_room_status: housekeeping status says whether a room can be handed
+    # to a guest now. A guest already in the room keeps it whatever its state,
+    # so a stay change that keeps the room passes true.
+    def initialize(hotel:, room_type:, check_in:, check_out:, exclude_booking_id: nil, ignore_room_status: false)
       @hotel = hotel
       @room_type = room_type
       @check_in = check_in
       @check_out = check_out
       @exclude_booking_id = exclude_booking_id
+      @ignore_room_status = ignore_room_status
     end
 
     def call
@@ -88,7 +92,7 @@ module Bookings
 
       # 4. Filter them out
       candidate_rooms = (allowed_rooms - occupied_numbers - locked_numbers).reject(&:blank?).map(&:to_s)
-      available_rooms = candidate_rooms.select { |room_number| room_selectable_by_status?(room_number) }
+      available_rooms = @ignore_room_status ? candidate_rooms : candidate_rooms.select { |room_number| room_selectable_by_status?(room_number) }
 
       @availability_snapshot = {
         all_rooms: configured_rooms,
