@@ -226,4 +226,49 @@ RSpec.describe Bookings::UpdateStayService do
       expect(booking_room.subtotal).to eq(240.to_d)
     end
   end
+
+  describe "extending a stay in a room that is not ready" do
+    let(:numbered_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ]) }
+    let(:guest) do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day,
+                       hotel_snapshot: { "room_number" => "101" })
+    end
+
+    before do
+      create(:booking_room, booking: guest, room_type: numbered_type, room_number: "101")
+      Bookings::InventoryManager.new(guest).deduct
+      create(:room_status, hotel: hotel, room_type: numbered_type, room_number: "101", status: "dirty")
+    end
+
+    it "keeps the guest's own dirty room for the extra nights" do
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days }).call
+
+      expect(result.success?).to be(true)
+      expect(guest.reload.check_out.to_date).to eq(Date.current + 2.days)
+    end
+
+    it "keeps the guest's own dirty room when the room is sent back with the dates" do
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days, room_number: "101" }).call
+
+      expect(result.success?).to be(true)
+    end
+
+    it "still refuses the extension when another booking holds the room" do
+      other = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current + 1.day, check_out: Date.current + 2.days)
+      create(:booking_room, booking: other, room_type: numbered_type, room_number: "101")
+
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days }).call
+
+      expect(result.success?).to be(false)
+      expect(guest.reload.check_out.to_date).to eq(Date.current + 1.day)
+    end
+
+    it "still refuses a move into a different dirty room" do
+      create(:room_status, hotel: hotel, room_type: numbered_type, room_number: "102", status: "dirty")
+
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days, room_number: "102" }).call
+
+      expect(result.success?).to be(false)
+    end
+  end
 end
