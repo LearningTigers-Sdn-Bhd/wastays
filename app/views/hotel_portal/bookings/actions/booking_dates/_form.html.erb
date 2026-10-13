@@ -5,6 +5,10 @@
 <% current_tax_total = @proposed_tax_total || @current_tax_total || Booking.non_tourism_tax_total_for(@booking.tax_lines) %>
 <% check_in_date = @check_in_date || @check_in_value.to_s.split("T").first %>
 <% check_out_date = @check_out_date || @check_out_value.to_s.split("T").first %>
+<%# A Stay View drag opens the Sheet on new dates; the totals below are the current
+    stay's, so the estimate re-quotes on open. %>
+<% hotel_zone = current_hotel.hotel_time_zone %>
+<% dates_proposed = [ check_in_date, check_out_date ] != [ @booking.check_in, @booking.check_out ].map { |time| time.in_time_zone(hotel_zone).to_date.iso8601 } %>
 
 <div data-controller="ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
@@ -24,6 +28,7 @@
               action: "change->booking-actions--stay-price#changed",
               booking_actions__stay_price_url_value: stay_price_hotel_bookings_path(current_hotel),
               booking_actions__stay_price_booking_id_value: @booking.id,
+              booking_actions__stay_price_requote_on_connect_value: dates_proposed,
               booking_actions__stay_price_guest_country_value: @booking.guest_country.presence || current_hotel.country
             } do |form| %>
         <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>

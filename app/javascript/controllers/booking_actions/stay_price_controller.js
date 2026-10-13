@@ -6,10 +6,13 @@ import { Controller } from "@hotwired/stimulus"
 // menu — option replacement is the room editor's job.
 export default class extends Controller {
   static targets = ["roomTotal", "taxTotal", "estimatedTotal", "estimatedTotalInput", "manualOverrideField", "calculationStatus"]
-  static values = { url: String, guestCountry: String, bookingId: String }
+  static values = { url: String, guestCountry: String, bookingId: String, requoteOnConnect: Boolean }
 
   connect() {
     this.requestSequence = 0
+    // Opened on proposed dates (a Stay View drag): the server rendered the
+    // current stay's totals, so quote the proposal before anyone reads them.
+    if (this.requoteOnConnectValue) this.refresh()
   }
 
   // The rate-plan dropdown is the only interactive recalculation field this
