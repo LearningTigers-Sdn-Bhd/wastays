@@ -26,7 +26,7 @@ module Bookings
       relationship = booking.hotel_corporate_account
       return [] unless PaymentHold.applies_to?(relationship)
 
-      total = booking.total_amount.to_d
+      total = booking.payable_total
       deposit_due = PaymentHold.due_at(booking: booking, from: from)
       return [] if total <= 0 || deposit_due.blank?
 

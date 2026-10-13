@@ -80,11 +80,9 @@ module ExtraCharges
     end
 
     def quantity
-      @quantity ||= case @extra_charge.charging_unit
-      when "per_room_night", "per_room" then [ @booking.booking_rooms.count, 1 ].max
-      when "per_person_night", "per_person" then [ @booking.adults.to_i + (@extra_charge.charge_children? ? @booking.children.to_i : 0), 1 ].max
-      else 1
-      end
+      @quantity ||= @extra_charge.units_for(
+        rooms: @booking.booking_rooms.count, adults: @booking.adults, children: @booking.children
+      )
     end
 
     def build_result

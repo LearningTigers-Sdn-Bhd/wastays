@@ -71,7 +71,7 @@ RSpec.describe "Agent payment hold lifecycle", type: :integration do
         rooms: 1,
         special_requests: "High floor, late arrival.",
         rooms_detail: { "0" => { guests: {
-          "0" => { name: "Ada Lim", email: "ada@example.test", phone: "+60123456789" },
+          "0" => { name: "Ada Lim", email: "ada@example.test", phone: "+60123456789", country: "Malaysia" },
           "1" => { name: "Grace Tan" }
         } } }
       }
@@ -417,8 +417,8 @@ RSpec.describe "Agent payment hold lifecycle", type: :integration do
           relationship: relationship, user: agent_user,
           params: { room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
                     adults: 2, children: 0, rooms: 2,
-                    rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } },
-                                    "1" => { guests: { "0" => { name: "Grace Tan", phone: "+60123456780" } } } } }
+                    rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } },
+                                    "1" => { guests: { "0" => { name: "Grace Tan", phone: "+60123456780", country: "Malaysia" } } } } }
         )
       end
       expect(result.bookings.size).to eq(2)
@@ -440,8 +440,8 @@ RSpec.describe "Agent payment hold lifecycle", type: :integration do
           relationship: relationship, user: agent_user,
           params: { room_type_id: room_type.id, check_in: check_in.to_s, check_out: check_out.to_s,
                     adults: 2, children: 0, rooms: 2,
-                    rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } },
-                                    "1" => { guests: { "0" => { name: "Grace Tan", phone: "+60123456780" } } } } }
+                    rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } },
+                                    "1" => { guests: { "0" => { name: "Grace Tan", phone: "+60123456780", country: "Malaysia" } } } } }
         )
       end
 

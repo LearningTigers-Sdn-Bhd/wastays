@@ -31,7 +31,7 @@ module CorporatePortal
     def totals_by_currency
       @totals_by_currency ||= bookings
         .group_by(&:currency)
-        .transform_values { |group| group.sum { |booking| booking.total_amount.to_d } }
+        .transform_values { |group| group.sum(&:payable_total) }
     end
 
     # Soonest first -- the query already orders by deadline -- so the rows the

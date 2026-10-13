@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_12_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_13_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -3681,11 +3681,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_12_100000) do
   add_foreign_key "onboarding_audit_events", "hotels"
   add_foreign_key "onboarding_audit_events", "users"
   add_foreign_key "onboarding_corporate_drafts", "hotels"
-  add_foreign_key "onboarding_corporate_drafts", "invitations"
+  add_foreign_key "onboarding_corporate_drafts", "invitations", on_delete: :cascade
   add_foreign_key "onboarding_deliveries", "onboarding_submissions"
   add_foreign_key "onboarding_sessions", "hotels"
   add_foreign_key "onboarding_staff_drafts", "hotels"
-  add_foreign_key "onboarding_staff_drafts", "invitations"
+  add_foreign_key "onboarding_staff_drafts", "invitations", on_delete: :cascade
   add_foreign_key "onboarding_staff_drafts", "roles"
   add_foreign_key "onboarding_submissions", "hotels"
   add_foreign_key "onboarding_submissions", "users", column: "reviewed_by_id"

@@ -1,7 +1,8 @@
 <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
   <h2 class="text-sm font-bold text-foreground">Guest details</h2>
   <p class="mt-1 text-xs text-muted-foreground">
-    <%= pluralize(@cart.rooms, "room") %> · <%= @cart.currency %> <%= number_with_precision(@cart.total_amount, precision: 2, delimiter: ",") %> for the stay.
+    <%= pluralize(@cart.rooms, "room") %> · <%= @cart.currency %> <%= number_with_precision(@cart.grand_total, precision: 2, delimiter: ",") %> for the stay<% if @cart.extra_charges.any? %>, including
+    <%= @cart.extra_charges.map { |extra| "#{extra.name} #{number_with_precision(extra.amount, precision: 2, delimiter: ',')}" }.to_sentence %><% end %>.
   </p>
 
   <%= form_with url: corporate_bookings_path, method: :post, scope: :booking,
@@ -62,14 +63,16 @@
                     indexed name (booking[rooms_detail][i][guests][j][country])
                     the way with_input's manual `name:` override gets it for a plain
                     input -- Combobox's own progressive-enhancement layer does not
-                    forward a caller's `name:` down to it. Malaysia is preselected as
-                    the common case for a domestic-facing property; the agent
-                    overrides it rather than picking it every time. %>
+                    forward a caller's `name:` down to it. The lead's nationality is
+                    required and starts blank: it decides tourism tax, and a default
+                    of Malaysia let an international guest through untaxed. A
+                    companion's still defaults to Malaysia, the common case. %>
                 <%= form.fields_for(:rooms_detail, index: room_index) do |room_form| %>
                   <%= room_form.fields_for(:guests, index: guest_index) do |guest_form| %>
                     <%= render PanelsUI::FormField.new(form: guest_form, attribute: :country,
-                          id: "room-#{room_index}-guest-#{guest_index}-country", label: "Nationality") do |field| %>
-                      <% field.with_combobox(COUNTRY_OPTIONS, selected: "Malaysia",
+                          id: "room-#{room_index}-guest-#{guest_index}-country", label: "Nationality",
+                          required: guest_index.zero?) do |field| %>
+                      <% field.with_combobox(COUNTRY_OPTIONS, selected: (guest_index.zero? ? nil : "Malaysia"),
                            prompt: "Select nationality", allow_empty_option: true) %>
                     <% end %>
                   <% end %>

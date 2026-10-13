@@ -14,12 +14,12 @@ RSpec.describe "Per-pax reports" do
   let(:staff) { create(:user, account: hotel.account) }
   let(:business_date) { hotel_today(hotel) }
 
-  def book_check_in_and_post(plan:, adults:, relationship:, actor:, nights: 1, guest_country: nil)
+  def book_check_in_and_post(plan:, adults:, relationship:, actor:, nights: 1, guest_country: "Malaysia")
     params = {
       room_type_id: suite.id, check_in: business_date.to_s, check_out: (business_date + nights).to_s,
       adults: adults, children: 0, rooms: 1, rate_plan_id: plan.id,
       rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: guest_country,
-                                                   date_of_birth: (guest_country.present? ? "1990-01-01" : nil) } } } }
+                                                   date_of_birth: "1990-01-01" } } } }
     }
     booking = CorporatePortal::CreateAgentBooking.call(relationship: relationship, params: params, user: actor).booking
 
@@ -75,7 +75,7 @@ RSpec.describe "Per-pax reports" do
         params: {
           room_type_id: suite.id, check_in: (business_date + 10).to_s, check_out: (business_date + 10 + nights).to_s,
           adults: 2, children: 0, rooms: 1, rate_plan_id: plan.id,
-          rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+          rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
         }
       ).booking
     end

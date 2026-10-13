@@ -26,6 +26,11 @@
               <%= quote.rate_plan&.name %> ·
               <%= pluralize(line.adults, "adult") %><%= ", #{pluralize(line.children, 'child')}" if line.children.positive? %> per room
             </p>
+            <% Array(quote.extra_charges).each do |extra| %>
+              <p class="mt-0.5 text-xs text-muted-foreground" data-testid="cart-line-extra-charge">
+                + <%= extra.name %> · <%= quote.option&.currency %> <%= number_with_precision(extra.amount, precision: 2, delimiter: ",") %> per room
+              </p>
+            <% end %>
             <% if quote.error.present? %>
               <p class="mt-1 text-xs font-semibold text-destructive" data-testid="cart-line-error"><%= quote.error %></p>
             <% end %>
@@ -47,10 +52,20 @@
     </ul>
 
     <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-6 py-4">
-      <p class="text-sm font-bold text-foreground" data-testid="cart-total">
-        <%= pluralize(@cart.rooms, "room") %>
-        <% if @cart.success? %> · <%= @cart.currency %> <%= number_with_precision(@cart.total_amount, precision: 2, delimiter: ",") %> for the stay<% end %>
-      </p>
+      <div>
+        <p class="text-sm font-bold text-foreground" data-testid="cart-total">
+          <%= pluralize(@cart.rooms, "room") %>
+          <% if @cart.success? %> · <%= @cart.currency %> <%= number_with_precision(@cart.grand_total, precision: 2, delimiter: ",") %> for the stay<% end %>
+        </p>
+        <% if @cart.success? && @cart.extra_charges.any? %>
+          <p class="mt-0.5 text-xs text-muted-foreground" data-testid="cart-extra-charges">
+            Rooms <%= number_with_precision(@cart.total_amount, precision: 2, delimiter: ",") %>
+            <% @cart.extra_charges.each do |extra| %>
+              · <%= extra.name %> <%= number_with_precision(extra.amount, precision: 2, delimiter: ",") %>
+            <% end %>
+          </p>
+        <% end %>
+      </div>
       <div class="flex flex-wrap gap-2">
         <%= render PanelsUI::Button.new(as: :a, variant: :secondary, size: :sm,
               href: new_corporate_booking_path(base.merge(lines: cart_params, stage: "category"))) do %>

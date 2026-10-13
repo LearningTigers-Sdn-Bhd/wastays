@@ -13,7 +13,7 @@ RSpec.describe "Per-pax TA booking follows the plan" do
     params = {
       room_type_id: room_type.id, check_in: check_in.to_s, check_out: (check_in + nights).to_s,
       adults: adults, children: children, rooms: 1, rate_plan_id: plan.id,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     CorporatePortal::CreateAgentBooking.call(relationship: relationship, params: params, user: actor)
   end
@@ -85,7 +85,7 @@ RSpec.describe "Per-pax TA booking follows the plan" do
       params: {
         room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + 1).to_s,
         adults: 2, children: 0, rooms: 1, rate_plan_id: fb_plan.id, agent_reference: "X" * 150,
-        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+        rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
       }
     )
     booking = result.booking
@@ -117,8 +117,8 @@ RSpec.describe "Per-pax TA booking follows the plan" do
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + 3).to_s,
       adults: 2, children: 0, rooms: 2, rate_plan_id: fb_plan.id,
       rooms_detail: {
-        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } },
-        "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780" } } }
+        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } },
+        "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780", country: "Malaysia" } } }
       }
     }
     result = CorporatePortal::CreateAgentBooking.call(relationship: ta_a, params: params, user: ta_a_user)
@@ -137,7 +137,7 @@ RSpec.describe "Per-pax TA booking follows the plan" do
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + 1).to_s,
       adults: 2, children: 0, rooms: 2, rate_plan_id: fb_plan.id,
       rooms_detail: {
-        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } },
+        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } },
         "1" => { guests: {} } # no lead guest at all
       }
     }
@@ -158,8 +158,8 @@ RSpec.describe "Per-pax TA booking follows the plan" do
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + 1).to_s,
       adults: 5, children: 0, rooms: 2, rate_plan_id: std_plan.id,
       rooms_detail: {
-        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } },
-        "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780" } } }
+        "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } },
+        "1" => { guests: { "0" => { name: "Ben Tan", phone: "+60123456780", country: "Malaysia" } } }
       }
     }
     expect {
@@ -187,7 +187,7 @@ RSpec.describe "Per-pax TA booking follows the plan" do
     params = {
       room_type_id: solo_type.id, check_in: check_in.to_s, check_out: (check_in + 1).to_s,
       adults: 1, children: 0, rooms: 1,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     result = CorporatePortal::CreateAgentBooking.call(relationship: ta_a, params: params, user: ta_a_user)
 
@@ -199,7 +199,7 @@ RSpec.describe "Per-pax TA booking follows the plan" do
     params = {
       room_type_id: suite.id, check_in: check_in.to_s, check_out: (check_in + 1).to_s,
       adults: 2, children: 0, rooms: 1,
-      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789" } } } }
+      rooms_detail: { "0" => { guests: { "0" => { name: "Ada Lim", phone: "+60123456789", country: "Malaysia" } } } }
     }
     result = CorporatePortal::CreateAgentBooking.call(relationship: ta_a, params: params, user: ta_a_user)
 

@@ -28,7 +28,7 @@ module HotelPortal
 
       def reference = booking.formatted_reservation_number
 
-      def total_label = money(booking.total_amount)
+      def total_label = money(booking.payable_total)
       def paid_label = money(progress.paid_total)
       def owed_label = money(progress.owed_total)
 

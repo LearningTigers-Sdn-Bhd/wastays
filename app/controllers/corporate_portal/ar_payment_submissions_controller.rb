@@ -89,7 +89,7 @@ module CorporatePortal
     # no schedule. The agent can change it, but it is what the form starts from.
     def amount_due_now(booking)
       progress = ::Bookings::PaymentProgress.new(booking)
-      progress.amount_due_now || booking.total_amount
+      progress.amount_due_now || booking.payable_total
     end
 
     def corporate_bookings

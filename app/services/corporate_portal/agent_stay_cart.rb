@@ -12,19 +12,36 @@ module CorporatePortal
   # A line's rate must be one the property opens to this agency (market included),
   # for that category. The plan is re-checked here rather than trusted from the
   # form, so a hidden plan's id typed into a request is refused like any other.
+  #
+  # The hotel's auto-apply extra charges (a jetty fee, say) are quoted beside
+  # the rooms, since each booked room is charged them: an agent selling a
+  # package needs the whole cost before confirming, not after.
   class AgentStayCart
-    Quote = Struct.new(:line, :room_type, :rate_plan, :option, :error, keyword_init: true) do
+    Quote = Struct.new(:line, :room_type, :rate_plan, :option, :error, :extra_charges, keyword_init: true) do
       def ok? = error.blank?
       def rooms = line.quantity
       def per_room_amount = option&.per_room_amount
       def total_amount = option&.total_amount
+      # Every room in a line holds the same party, so is charged the same.
+      def extra_charges_total = Array(extra_charges).sum(&:amount) * rooms
     end
+
+    ExtraChargeLine = Data.define(:name, :amount)
 
     Result = Struct.new(:quotes, :errors, :nights, keyword_init: true) do
       def success? = errors.empty?
       def rooms = quotes.sum(&:rooms)
       def total_amount = quotes.sum { |quote| quote.total_amount.to_d }
       def currency = quotes.first&.option&.currency
+
+      # Each auto-apply charge across the whole stay, in the hotel's order.
+      def extra_charges
+        quotes.flat_map { |quote| Array(quote.extra_charges).map { |line| [ line, quote.rooms ] } }
+          .group_by { |line, _| line.extra_charge }
+          .map { |charge, lines| ExtraChargeLine.new(name: charge.name, amount: lines.sum { |line, rooms| line.amount * rooms }) }
+      end
+
+      def grand_total = total_amount + quotes.sum(&:extra_charges_total)
     end
 
     def self.call(...) = new(...).call
@@ -36,6 +53,7 @@ module CorporatePortal
       @check_out = check_out
       @lines = lines
       @searches = {}
+      @extra_charges = {}
     end
 
     def call
@@ -70,7 +88,14 @@ module CorporatePortal
         "#{room_type.name} no longer has #{ActionController::Base.helpers.pluralize(line.quantity, 'room')} free for these dates."
       end
 
-      Quote.new(line: line, room_type: room_type, rate_plan: rate_plan, option: option, error: error)
+      Quote.new(line: line, room_type: room_type, rate_plan: rate_plan, option: option, error: error,
+                extra_charges: extra_charges_for(line))
+    end
+
+    def extra_charges_for(line)
+      @extra_charges[[ line.adults, line.children ]] ||= ::ExtraCharges::AutomaticEstimate.call(
+        hotel: @hotel, check_in: @check_in, check_out: @check_out, adults: line.adults, children: line.children
+      )
     end
 
     # A search per distinct occupancy, not per line: two lines for the same party

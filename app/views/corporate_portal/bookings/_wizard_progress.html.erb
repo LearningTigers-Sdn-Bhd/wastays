@@ -42,7 +42,7 @@
                 extra: pluralize(@base.nights, "night") } %>
   <% if here >= 2 && @cart&.success? %>
     <% cells << { key: :rooms, label: "Rooms", title: pluralize(@cart.rooms, "room"),
-                  detail: "#{@cart.currency} #{number_with_precision(@cart.total_amount, precision: 2, delimiter: ',')}",
+                  detail: "#{@cart.currency} #{number_with_precision(@cart.grand_total, precision: 2, delimiter: ',')}",
                   extra: @cart.quotes.map { |quote| "#{quote.rooms} × #{quote.room_type.name}" }.to_sentence } %>
   <% end %>
 

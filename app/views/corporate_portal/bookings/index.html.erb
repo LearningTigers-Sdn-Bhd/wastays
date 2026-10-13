@@ -72,7 +72,7 @@
             </div>
             <div class="flex items-center justify-between gap-4 sm:justify-end sm:shrink-0">
               <span class="text-sm font-bold tabular-nums text-foreground">
-                <%= booking.currency %> <%= number_with_precision(booking.total_amount, precision: 2) %>
+                <%= payment.amount_label %>
               </span>
               <%= link_to "View", corporate_booking_path(booking),
                     class: "shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-foreground hover:bg-muted" %>
