@@ -76,10 +76,24 @@ RSpec.describe MillionSendDelivery do
     expect(stub).to have_been_requested
   end
 
-  it "raises on API errors such as suppressed recipients" do
-    stub_request(:post, url).to_return(status: 422, body: '{"name":"all_recipients_suppressed"}')
+  it "skips and logs when every recipient is suppressed, like Resend, instead of raising" do
+    stub_request(:post, url).to_return(status: 422, body: '{"statusCode":422,"name":"all_recipients_suppressed","message":"All recipients are suppressed"}')
+    allow(Rails.logger).to receive(:warn)
+
+    expect(delivery.deliver!(mail)).to be_nil
+    expect(Rails.logger).to have_received(:warn).with(/skipped "Hello" to guest@example.com: all recipients suppressed/)
+  end
+
+  it "still raises on other API errors" do
+    stub_request(:post, url).to_return(status: 422, body: '{"name":"validation_error","message":"Either html or text must be provided"}')
 
     expect { delivery.deliver!(mail) }
-      .to raise_error(described_class::DeliveryError, /422.*all_recipients_suppressed/)
+      .to raise_error(described_class::DeliveryError, /422.*validation_error/)
+  end
+
+  it "raises when the API error body is not JSON" do
+    stub_request(:post, url).to_return(status: 422, body: "<html>bad gateway</html>")
+
+    expect { delivery.deliver!(mail) }.to raise_error(described_class::DeliveryError, /422/)
   end
 end
