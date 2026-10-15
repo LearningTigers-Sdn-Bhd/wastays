@@ -37,7 +37,8 @@ class MillionSendDelivery
   end
 
   def skip_suppressed(mail)
-    Rails.logger.warn("[MillionSend] skipped #{mail.subject.inspect} to #{Array(mail.to).join(', ')}: all recipients suppressed")
+    # No address or subject: both can be personal data. The Mail Log has the details.
+    Rails.logger.warn("[MillionSend] skipped delivery, all recipients suppressed (recipients=#{Array(mail.to).size} message_id=#{mail.message_id.inspect})")
     nil
   end
 
