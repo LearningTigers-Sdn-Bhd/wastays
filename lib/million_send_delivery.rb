@@ -29,11 +29,11 @@ class MillionSendDelivery
 
   def payload_for(mail)
     {
-      from: mail[:from].formatted.first,
-      to: mail[:to]&.formatted,
-      cc: mail[:cc]&.formatted.presence,
-      bcc: mail[:bcc]&.formatted.presence,
-      reply_to: mail[:reply_to]&.formatted.presence,
+      from: addresses(mail, :from).first,
+      to: addresses(mail, :to).presence,
+      cc: addresses(mail, :cc).presence,
+      bcc: addresses(mail, :bcc).presence,
+      reply_to: addresses(mail, :reply_to).presence,
       subject: mail.subject,
       html: body_for(mail, "text/html"),
       text: body_for(mail, "text/plain"),
@@ -41,8 +41,16 @@ class MillionSendDelivery
     }.compact
   end
 
+  # "Name <a@b.com>" when the header parses, plain addresses when it doesn't.
+  def addresses(mail, field)
+    header = mail[field]
+    return [] unless header
+
+    header.respond_to?(:formatted) ? header.formatted : Array(mail.public_send(field))
+  end
+
   def body_for(mail, type)
-    return mail.body.decoded if !mail.multipart? && (mail.mime_type || "text/plain") == type
+    return mail.decoded if !mail.multipart? && (mail.mime_type || "text/plain") == type
 
     mail.find_first_mime_type(type)&.decoded
   end
