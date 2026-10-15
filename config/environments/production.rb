@@ -76,7 +76,7 @@ Rails.application.configure do
   million_send_key = Rails.application.credentials.dig(:million_send, :api_key).presence || ENV["MILLIONSEND_API_KEY"].presence
   if million_send_key
     config.action_mailer.delivery_method = :million_send
-    config.action_mailer.million_send_settings = { api_key: million_send_key }
+    config.x.million_send_api_key = million_send_key
     config.x.mailer_from = "WAStays <noreply@wastays.com>"
   end
 
