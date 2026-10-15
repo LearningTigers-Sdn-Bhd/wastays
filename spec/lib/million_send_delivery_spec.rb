@@ -45,6 +45,27 @@ RSpec.describe MillionSendDelivery do
     expect(stub).to have_been_requested
   end
 
+  it "sends a single-part text-only mail (no multipart parts)" do
+    text_only = Mail.new(from: "noreply@wastays.com", to: "guest@example.com", subject: "Plain", body: "just text")
+    stub = stub_request(:post, url).with { |req|
+      body = JSON.parse(req.body)
+      body["text"] == "just text" && !body.key?("html")
+    }.to_return(status: 200, body: "{}")
+
+    delivery.deliver!(text_only)
+    expect(stub).to have_been_requested
+  end
+
+  it "sends the real text-only forgot-password email with its reset link" do
+    reset_mail = OwnerPasswordResetMailer.forgot(create(:user), "TOKEN123")
+    stub = stub_request(:post, url).with { |req|
+      JSON.parse(req.body)["text"].to_s.include?("/owner-password-reset/TOKEN123")
+    }.to_return(status: 200, body: "{}")
+
+    delivery.deliver!(reset_mail.message)
+    expect(stub).to have_been_requested
+  end
+
   it "raises on API errors such as suppressed recipients" do
     stub_request(:post, url).to_return(status: 422, body: '{"name":"all_recipients_suppressed"}')
 
