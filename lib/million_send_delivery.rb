@@ -42,6 +42,8 @@ class MillionSendDelivery
   end
 
   def body_for(mail, type)
+    return mail.body.decoded if !mail.multipart? && (mail.mime_type || "text/plain") == type
+
     mail.find_first_mime_type(type)&.decoded
   end
 
