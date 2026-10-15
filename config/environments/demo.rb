@@ -81,7 +81,7 @@ Rails.application.configure do
   if million_send_key
     config.action_mailer.delivery_method = :million_send
     config.x.million_send_api_key = million_send_key
-    config.x.mailer_from = "WAStays <noreply@wastays.com>"
+    config.x.mailer_from = "WAStays Demo <noreply@wastays.com>"
   end
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
