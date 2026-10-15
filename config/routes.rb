@@ -40,6 +40,8 @@ Rails.application.routes.draw do
   get "terms-and-conditions", to: "legal_pages#terms_and_conditions", as: :terms_and_conditions
 
   # Help Center
+  get "forgot-password", to: "public/password_reset_requests#new", as: :forgot_password
+  post "forgot-password", to: "public/password_reset_requests#create"
   get "owner-password-reset/:token", to: "public/owner_password_resets#show", as: :owner_password_reset
   patch "owner-password-reset/:token", to: "public/owner_password_resets#update"
   get "help", to: "help_center#index", as: :help_center

@@ -1,0 +1,14 @@
+<main class="mx-auto max-w-md space-y-6 px-5 py-12">
+  <div class="space-y-1">
+    <h1 class="text-base font-semibold tracking-tight">Forgot your password?</h1>
+    <p class="text-sm text-muted-foreground">Enter your account email and we'll send you a link to set a new one.</p>
+  </div>
+  <%= form_with url: forgot_password_path, method: :post, class: "space-y-4" do |form| %>
+    <div class="space-y-2">
+      <%= form.label :email, "Email", class: "block text-sm font-medium" %>
+      <%= form.email_field :email, required: true, autofocus: true, autocomplete: "email", class: "w-full rounded-md border border-border bg-card px-3 py-2" %>
+    </div>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary) do %>Send reset link<% end %>
+  <% end %>
+  <%= link_to "Back to sign in", login_path, class: "block text-sm text-primary hover:underline" %>
+</main>
