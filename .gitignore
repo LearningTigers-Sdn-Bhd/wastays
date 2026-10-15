@@ -49,3 +49,7 @@ channex_doc_index.md
 .claude/settings.local.json
 .claude/settings.json
 .claude/style-reminder.txt
+
+# Ignore key files for decrypting credentials and more.
+/config/credentials/*.key
+
