@@ -81,7 +81,8 @@ RSpec.describe MillionSendDelivery do
     allow(Rails.logger).to receive(:warn)
 
     expect(delivery.deliver!(mail)).to be_nil
-    expect(Rails.logger).to have_received(:warn).with(/skipped "Hello" to guest@example.com: all recipients suppressed/)
+    expect(Rails.logger).to have_received(:warn).with(/all recipients suppressed \(recipients=1/)
+    expect(Rails.logger).not_to have_received(:warn).with(/guest@example\.com|Hello/)
   end
 
   it "still raises on other API errors" do
