@@ -72,6 +72,14 @@ Rails.application.configure do
     enable_starttls_auto: true
   }
 
+  # MillionSend takes over when its key is set; otherwise Resend SMTP above stays active.
+  million_send_key = Rails.application.credentials.dig(:million_send, :api_key).presence || ENV["MILLIONSEND_API_KEY"].presence
+  if million_send_key
+    config.action_mailer.delivery_method = :million_send
+    config.action_mailer.million_send_settings = { api_key: million_send_key }
+    config.x.mailer_from = "WAStays <noreply@wastays.com>"
+  end
+
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).
   config.i18n.fallbacks = true
