@@ -56,6 +56,16 @@ RSpec.describe MillionSendDelivery do
     expect(stub).to have_been_requested
   end
 
+  it "keeps non-ASCII text-only bodies as valid UTF-8" do
+    text_only = Mail.new(from: "noreply@wastays.com", to: "guest@example.com", subject: "Refund — RM 50", body: "café ✓")
+    text_only.content_type = "text/plain; charset=UTF-8"
+
+    body = delivery.send(:payload_for, text_only)[:text]
+
+    expect(body).to eq("café ✓")
+    expect(body.encoding).to eq(Encoding::UTF_8)
+  end
+
   it "sends the real text-only forgot-password email with its reset link" do
     reset_mail = OwnerPasswordResetMailer.forgot(create(:user), "TOKEN123")
     stub = stub_request(:post, url).with { |req|
