@@ -5,6 +5,7 @@ class OwnerPasswordResetMailer < ApplicationMailer
     @user = user
     @hotel = hotel
     @reset_url = owner_password_reset_url(token:)
+    attach_logo
     mail(to: user.email, subject: "Reset your WAStays password")
   end
 
@@ -12,6 +13,13 @@ class OwnerPasswordResetMailer < ApplicationMailer
   def forgot(user, token)
     @user = user
     @reset_url = owner_password_reset_url(token:)
+    attach_logo
     mail(to: user.email, subject: "Reset your WAStays password")
+  end
+
+  private
+
+  def attach_logo
+    attachments.inline["long-logo.png"] = File.read(Rails.root.join("app/assets/images/logo/long-logo.png"))
   end
 end
