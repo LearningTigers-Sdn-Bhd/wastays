@@ -21,11 +21,25 @@ class MillionSendDelivery
   def deliver!(mail)
     response = post_json("/emails", payload_for(mail))
     return JSON.parse(response.body) if response.is_a?(Net::HTTPSuccess)
+    return skip_suppressed(mail) if all_recipients_suppressed?(response)
 
     raise DeliveryError, "MillionSend #{response.code}: #{response.body.to_s.truncate(300)}"
   end
 
   private
+
+  # Every recipient bounced or complained before, so MillionSend refuses the send.
+  # Resend accepted these and marked them Suppressed; skip and log instead of failing the job.
+  def all_recipients_suppressed?(response)
+    response.code == "422" && JSON.parse(response.body.to_s)["name"] == "all_recipients_suppressed"
+  rescue JSON::ParserError
+    false
+  end
+
+  def skip_suppressed(mail)
+    Rails.logger.warn("[MillionSend] skipped #{mail.subject.inspect} to #{Array(mail.to).join(', ')}: all recipients suppressed")
+    nil
+  end
 
   def payload_for(mail)
     {
