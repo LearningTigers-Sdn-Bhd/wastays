@@ -123,6 +123,7 @@ RSpec.describe AiConcierge::MessageBuilders::BookingActionsBuilder do
 
     expect(message).to include("_28 August 2026 - 31 August 2026 · 3 nights · 2 adults · 1 room_")
     expect(message).to include("*1. Garden Prestige Suite* — from RM 2,646.00")
+    expect(message).to include("/hotels/#{hotel.unique_id}/#{hotel.public_id}?")
     expect(message).not_to include("Standard Rate")
     expect(message).not_to include("rate plans")
   end

@@ -42,7 +42,7 @@ module PanelsUI
     # Override hooks — MultiSelect subclasses to repoint the Stimulus controller,
     # the root id/class, and the native <select multiple> flag while inheriting
     # everything else. Kept here so both components render an identical structure.
-    def stimulus_identifier = "panels-ui--combobox"
+    def stimulus_identifier = "ui--combobox"
     def root_id = "#{native_id}-combobox"
     def root_class = "panel-combobox"
     def native_multiple? = false

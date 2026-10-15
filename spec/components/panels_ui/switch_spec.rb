@@ -75,4 +75,18 @@ RSpec.describe PanelsUI::Switch, type: :component do
     expect { described_class.new(name: "beta", label: nil) }.to raise_error(ArgumentError, "Switches require a label")
     expect { described_class.new(form: form_for, label: "Beta") }.to raise_error(ArgumentError, "Switches require either form: and attribute:, or name:")
   end
+
+  # A permission switch is read at a glance, so "granted" is green rather than
+  # the product's primary. Off carries no colour at all, in either tone.
+  it "marks a success-toned switch so only its on state is green" do
+    render_inline(described_class.new(name: "agent_booking_enabled", label: "Allow bookings", tone: :success))
+
+    expect(page.find("label")["data-tone"]).to eq("success")
+  end
+
+  it "falls back to the default tone when given one it does not know" do
+    render_inline(described_class.new(name: "agent_booking_enabled", label: "Allow bookings", tone: :neon))
+
+    expect(page.find("label")["data-tone"]).to eq("default")
+  end
 end

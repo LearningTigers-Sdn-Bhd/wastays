@@ -16,9 +16,9 @@ RSpec.describe PanelsUI::Sheet, type: :component do
     end
 
     it "renders a native modal dialog with the sheet controller" do
-      expect(page).to have_css("dialog[aria-modal='true'][data-controller='panels-ui--sheet']")
-      expect(page).to have_css("[data-panels-ui--sheet-target='panel'].min-w-0.w-full")
-      expect(page).to have_css("dialog > [data-panels-ui--sheet-target='panel'] > .min-w-0")
+      expect(page).to have_css("dialog[aria-modal='true'][data-controller='ui--sheet']")
+      expect(page).to have_css("[data-ui--sheet-target='panel'].min-w-0.w-full")
+      expect(page).to have_css("dialog > [data-ui--sheet-target='panel'] > .min-w-0")
       expect(page).to have_css("dialog[data-panels-ui-sheet-side='right']")
     end
 
@@ -31,7 +31,7 @@ RSpec.describe PanelsUI::Sheet, type: :component do
     it "wires its visible title and description to the dialog" do
       expect(page).to have_css("dialog[aria-labelledby='s1-title'][aria-describedby='s1-desc']")
       expect(page).to have_css(
-        "h2#s1-title[tabindex='-1'][data-panels-ui--sheet-target='initialFocus']",
+        "h2#s1-title[tabindex='-1'][data-ui--sheet-target='initialFocus']",
         text: "Sheet title"
       )
       expect(page).to have_css("p#s1-desc", text: "A short summary")
@@ -44,7 +44,7 @@ RSpec.describe PanelsUI::Sheet, type: :component do
     end
 
     it "renders a labelled animated close affordance" do
-      expect(page).to have_css("button[aria-label='Close'][data-action='panels-ui--sheet#close']")
+      expect(page).to have_css("button[aria-label='Close'][data-action='ui--sheet#close']")
     end
   end
 
@@ -68,13 +68,13 @@ RSpec.describe PanelsUI::Sheet, type: :component do
     it "supports a custom header and body classes without replacing dialog behavior" do
       render_sheet(title: nil, aria_label: "Navigation", body_class: "flex flex-col overflow-hidden p-0") do |sheet|
         sheet.with_header do
-          '<header class="custom-head"><button data-action="panels-ui--sheet#close">Close nav</button></header>'.html_safe
+          '<header class="custom-head"><button data-action="ui--sheet#close">Close nav</button></header>'.html_safe
         end
         sheet.with_body { '<nav>Links</nav>'.html_safe }
       end
 
-      expect(page).to have_css("dialog[aria-label='Navigation'][data-controller='panels-ui--sheet']")
-      expect(page).to have_css("header.custom-head button[data-action='panels-ui--sheet#close']", text: "Close nav")
+      expect(page).to have_css("dialog[aria-label='Navigation'][data-controller='ui--sheet']")
+      expect(page).to have_css("header.custom-head button[data-action='ui--sheet#close']", text: "Close nav")
       expect(page).to have_css("dialog > div > div.flex.flex-col.overflow-hidden.p-0 nav", text: "Links")
       expect(page).to have_no_css("dialog > div > header:not(.custom-head)")
     end
@@ -85,7 +85,7 @@ RSpec.describe PanelsUI::Sheet, type: :component do
       render_sheet(dismissible: false) { |sheet| sheet.with_body { "x" } }
 
       expect(page).to have_no_css("button[aria-label='Close']")
-      expect(page).to have_css("dialog[data-panels-ui--sheet-dismissible-value='false']")
+      expect(page).to have_css("dialog[data-ui--sheet-dismissible-value='false']")
     end
   end
 

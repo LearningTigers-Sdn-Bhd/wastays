@@ -3,6 +3,21 @@
     and always state any balance the comparison had to leave out. %>
 <% over_limit = exposure.limit_warning_state == "over_limit" %>
 <% near_limit = exposure.limit_warning_state == "near_limit" %>
+<% outstanding = exposure.projected_exposure.to_d.positive? %>
+
+<%# A standard account settles at checkout, so it is never invoiced and has no
+    limit to measure against. It is still shown any balance it actually carries:
+    an account switched away from direct bill can hold open invoices, and a
+    column that hid real money would be worse than one that is occasionally
+    noisy. %>
+<% if !direct_bill && !outstanding %>
+  <span class="text-muted-foreground">—</span>
+<% elsif !direct_bill %>
+  <div class="font-semibold tabular-nums text-foreground">
+    <%= exposure.credit_currency %> <%= format_amount(exposure.projected_exposure) %>
+  </div>
+  <div class="mt-0.5 text-xs text-muted-foreground">Outstanding · settles at checkout</div>
+<% else %>
 
 <div class="font-semibold tabular-nums <%= over_limit ? "text-destructive" : "text-foreground" %>">
   <%= exposure.credit_currency %> <%= format_amount(exposure.projected_exposure) %>
@@ -37,4 +52,5 @@
       not comparable with the <%= exposure.credit_currency %> limit
     <% end %>
   <% end %>
+<% end %>
 <% end %>

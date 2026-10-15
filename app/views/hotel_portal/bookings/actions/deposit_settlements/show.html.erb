@@ -1,5 +1,5 @@
 <%= turbo_frame_tag(turbo_frame_request_id.presence || "booking_action_sheet_secondary") do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render "hotel_portal/bookings/deposits/settlement_sheet",
           deposit: @deposit,
           operation: @operation,

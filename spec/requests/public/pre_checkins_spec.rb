@@ -29,6 +29,16 @@ RSpec.describe "Public::PreCheckins", type: :request do
       expect(response.body).to include("guest_date_of_birth")
     end
 
+    it "takes the ID photos through the phone's own photo menu" do
+      get pre_checkin_path(pre_checkin.token)
+
+      page = Nokogiri::HTML(response.body)
+
+      expect(page.css(".guest-image-upload input[type='file'][accept='image/*']").size).to eq(2)
+      expect(page.css("input[capture]")).to be_empty
+      expect(page.at_css("[data-controller~='scanner'], [data-scanner-target]")).to be_nil
+    end
+
     it "offers the state as a code list for a Malaysian address" do
       booking.update!(guest_address_country: "Malaysia", guest_state_code: "12")
 
@@ -144,7 +154,7 @@ RSpec.describe "Public::PreCheckins", type: :request do
       expect(booking.reload.primary_guest.date_of_birth).to eq(Date.new(1994, 8, 21))
     end
 
-    it "fails cleanly when passport date of birth is missing" do
+    it "completes registration when passport date of birth is missing" do
       patch pre_checkin_path(pre_checkin.token), params: {
         booking: {
           guest_name: "Aisha Tan",
@@ -163,8 +173,9 @@ RSpec.describe "Public::PreCheckins", type: :request do
         }
       }
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Date of birth is required for passport guests")
+      expect(response).to redirect_to(pre_checkin_path(pre_checkin.token))
+      expect(pre_checkin.reload.status).to eq("completed")
+      expect(booking.reload.primary_guest.date_of_birth).to be_nil
     end
   end
 end

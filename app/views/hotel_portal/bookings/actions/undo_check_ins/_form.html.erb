@@ -2,7 +2,7 @@
 <% group = booking.group_booking_id? %>
 <% target_presenter = HotelPortal::BookingLifecycleTargetPresenter.new(booking: booking, action: :undo_check_in) %>
 
-<div data-controller="panels-ui--sheet-frame">
+<div data-controller="ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
         id: "booking-undo-check-in-sheet",
         side: :right,
@@ -30,7 +30,7 @@
           <% if group %></div><% end %>
         </div>
         <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+          <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
           <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, data: { turbo_submits_with: "Reverting…" }) do %>Undo check-in<% end %>
         </div>
       <% end %>

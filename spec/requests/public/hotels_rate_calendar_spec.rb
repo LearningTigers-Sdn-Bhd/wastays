@@ -16,33 +16,41 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
 
   def json = JSON.parse(response.body)
 
-  describe "GET /hotels/:id/rate_calendar" do
-    it "returns 404 for unknown slug" do
-      get "/hotels/no-such-hotel/rate_calendar", params: base_params
+  describe "GET /hotels/:hotel_code/:public_id/rate_calendar" do
+    it "returns 404 for an unknown public ID" do
+      get rate_calendar_hotel_path(hotel.unique_id, SecureRandom.uuid), params: base_params
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 404 when the code and public ID do not belong to the same hotel" do
+      other = create(:hotel, status: "live")
+
+      get rate_calendar_hotel_path(other.unique_id, hotel.public_id), params: base_params
+
       expect(response).to have_http_status(:not_found)
     end
 
     it "returns 404 when hotel is not active" do
       hotel.update!(status: "setup")
-      get "/hotels/#{hotel.slug}/rate_calendar", params: base_params
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: base_params
       expect(response).to have_http_status(:not_found)
     end
 
     it "returns 404 when hotel is on easy plan" do
       hotel.update!(plan: easy_plan)
 
-      get "/hotels/#{hotel.slug}/rate_calendar", params: base_params
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: base_params
 
       expect(response).to have_http_status(:not_found)
     end
 
     it "returns 422 when end_date < start_date" do
-      get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: (today - 1).to_s }
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: { start_date: today.to_s, end_date: (today - 1).to_s }
       expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "returns 422 when window > 180 days" do
-      get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: (today + 181).to_s }
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: { start_date: today.to_s, end_date: (today + 181).to_s }
       expect(response).to have_http_status(:unprocessable_content)
     end
 
@@ -50,7 +58,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
       before { 7.times { |i| seed_day(today + i) } }
 
       it "returns 200 with correct day count and prices" do
-        get "/hotels/#{hotel.slug}/rate_calendar", params: base_params
+        get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: base_params
         expect(response).to have_http_status(:ok)
         expect(json["days"].length).to eq(7)
         expect(json["days"].first["min_price"]).to eq(200.0)
@@ -61,7 +69,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
       end
 
       it "includes currency and date range" do
-        get "/hotels/#{hotel.slug}/rate_calendar", params: base_params
+        get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: base_params
         expect(json["currency"]).to eq("MYR")
         expect(json["start_date"]).to eq(today.iso8601)
         expect(json["end_date"]).to eq((today + 6).iso8601)
@@ -71,7 +79,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
     it "marks sold-out day as unavailable (quantity 0)" do
       RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 200, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 0, status: "open")
-      get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s }
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s }
       day = json["days"].first
       expect(day["available"]).to be false
       expect(day["rooms_left"]).to eq(0)
@@ -79,7 +87,7 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
 
     it "marks closed inventory as unavailable" do
       seed_day(today, status: "closed")
-      get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s }
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s }
       expect(json["days"].first["available"]).to be false
     end
 
@@ -89,19 +97,19 @@ RSpec.describe "Public::Hotels rate_calendar", type: :request do
       RoomRate.create!(room_type: room_type2, rate_plan: room_type2.standard_rate_plan, date: today, price: 150, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 5, status: "open")
       RoomInventory.create!(room_type: room_type2, date: today, quantity: 2, status: "open")
-      get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s }
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s }
       expect(json["days"].first["min_price"]).to eq(150.0)
     end
 
     it "excludes nights where inventory < room_count" do
       RoomRate.create!(room_type: room_type, rate_plan: room_type.standard_rate_plan, date: today, price: 200, currency: "MYR")
       RoomInventory.create!(room_type: room_type, date: today, quantity: 2, status: "open")
-      get "/hotels/#{hotel.slug}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s, room_count: 3 }
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar", params: { start_date: today.to_s, end_date: today.to_s, room_count: 3 }
       expect(json["days"].first["available"]).to be false
     end
 
     it "defaults start_date to today and end_date to +90 when omitted" do
-      get "/hotels/#{hotel.slug}/rate_calendar"
+      get "/hotels/#{hotel.unique_id}/#{hotel.public_id}/rate_calendar"
       expect(response).to have_http_status(:ok)
       expect(json["days"].length).to eq(91) # today..today+90 inclusive
     end

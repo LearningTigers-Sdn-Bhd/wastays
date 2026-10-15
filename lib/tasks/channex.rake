@@ -6,7 +6,7 @@ namespace :channex do
     hotels = if hotel_id
       [ Hotel.find(hotel_id) ]
     else
-      Hotel.where.not(preferred_channel_manager: [ nil, "" ])
+      Hotel.where(preferred_channel_manager: ChannelManagers::SyncOrchestrator::ADAPTERS.keys)
     end
 
     puts "Starting Channex Booking Sync for #{hotels.count} hotel(s)..."
@@ -31,5 +31,16 @@ namespace :channex do
     puts "Enqueuing ChannelManagers::PullRevisionsJob..."
     ChannelManagers::PullRevisionsJob.perform_now
     puts "Done."
+  end
+
+  desc "Replay booking revisions received since an outage longer than 30 min (HOTEL_ID=1 SINCE=2026-10-07T20:00:00Z)"
+  task recover_bookings: :environment do
+    hotel = Hotel.find(ENV.fetch("HOTEL_ID") { abort "HOTEL_ID is required" })
+    since = Time.zone.parse(ENV.fetch("SINCE") { abort "SINCE is required, e.g. 2026-10-07T20:00:00Z" }) ||
+      abort("SINCE could not be parsed")
+
+    result = ChannelManagers::RecoverBookingsService.new(hotel: hotel, since: since).call
+    puts result.message
+    exit(1) unless result.success?
   end
 end

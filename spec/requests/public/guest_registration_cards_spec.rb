@@ -17,6 +17,54 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
   end
 
   describe "GET /guest-registration-card/:token" do
+    [ false, true ].each do |signed|
+      it "hides the full payment section on #{signed ? 'signed' : 'draft'} cards without changing saved content" do
+        card.save_signature_for_guest!(signer_name: "Aisha Tan", signature_data_url: "data:image/png;base64,abc123") if signed
+        saved_attributes = card.reload.attributes
+        hotel.update!(guest_registration_card_show_pricing: false)
+
+        get guest_registration_card_path(card.public_token)
+
+        expect(response).to have_http_status(:success)
+        document = Nokogiri::HTML(response.body)
+        labels = document.css("dt").map { |node| node.text.strip }
+        expect(labels).not_to include("Room price", "Amount paid", "Total charges", "Tax", "Due amount")
+        expect(document.css("h2, p").map { |node| node.text.strip }).not_to include("Payment", "Payment details")
+        expect(card.reload.attributes).to eq(saved_attributes)
+
+        hotel.update!(guest_registration_card_show_pricing: true)
+        get guest_registration_card_path(card.public_token)
+        expect(response.body).to include("Room price", "Amount paid", "Total charges", "Due amount")
+      end
+    end
+
+    # The card is a public, token-addressed page with no :hotel_id, so
+    # current_hotel is nil. Staff open it all the time -- they send the link and
+    # then click it -- and the shared layout must not fall over when it does.
+    # A corporate account has no hotel access at all, so current_hotel is nil
+    # even after its fallback -- and the layout's account links are hotel-scoped.
+    # An agent opening a card link took the whole page down with a routing error.
+    it "renders for a signed-in user who has no hotel at all" do
+      sign_in_as(create(:user, :corporate))
+
+      get guest_registration_card_path(card.public_token)
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include("Sign registration card")
+    end
+
+    it "renders for a signed-in staff member, who has no hotel in scope here" do
+      account = create(:account)
+      role = create(:role, account: account)
+      staff = create(:user, account: account)
+      create(:user_hotel_access, user: staff, hotel: hotel, role: role)
+      sign_in_as(staff)
+
+      get guest_registration_card_path(card.public_token)
+
+      expect(response).to have_http_status(:success)
+    end
+
     it "renders the card for signing" do
       booking.update!(guest_home_address: "12 Public Street, Kuching")
 
@@ -99,12 +147,22 @@ RSpec.describe "Public::GuestRegistrationCards", type: :request do
   end
 
   describe "GET /guest-registration-card/:token/pdf" do
-    it "refuses before the card is signed" do
+    it "serves the blank official form before it's signed, for printing" do
+      get pdf_guest_registration_card_path(card.public_token)
+
+      expect(response).to have_http_status(:success)
+      expect(response.media_type).to eq("application/pdf")
+      expect(response.body).to start_with("%PDF")
+    end
+
+    it "refuses to print before the property has set its Terms & Conditions" do
+      hotel.update!(guest_registration_card_terms: nil)
+
       get pdf_guest_registration_card_path(card.public_token)
 
       expect(response).to redirect_to(guest_registration_card_path(card.public_token))
       follow_redirect!
-      expect(response.body).to include("Sign the card first")
+      expect(response.body).to include("isn&#39;t ready to print yet")
     end
 
     it "serves the PDF once signed" do

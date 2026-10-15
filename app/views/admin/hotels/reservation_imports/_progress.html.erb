@@ -1,0 +1,93 @@
+<div id="reservation_import_progress" class="space-y-6" data-import-running="<%= import.running? %>">
+  <% percent = import.percent_complete %>
+  <% tone = case import.status
+            when "completed" then { ring: "border-emerald-200", bar: "bg-emerald-500", text: "text-emerald-700", chip: "bg-emerald-50 text-emerald-700" }
+            when "failed" then { ring: "border-red-200", bar: "bg-red-500", text: "text-red-700", chip: "bg-red-50 text-red-700" }
+            else { ring: "border-border", bar: "bg-primary", text: "text-foreground", chip: "bg-blue-50 text-blue-700" }
+            end %>
+
+  <section class="rounded-2xl border <%= tone[:ring] %> bg-card p-8 shadow-sm">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="min-w-0">
+        <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold <%= tone[:chip] %>">
+          <% if import.running? %>
+            <span class="relative flex size-2">
+              <span class="absolute inline-flex size-full animate-ping rounded-full bg-current opacity-75"></span>
+              <span class="relative inline-flex size-2 rounded-full bg-current"></span>
+            </span>
+          <% end %>
+          <%= import.status.humanize %>
+        </span>
+        <p class="mt-3 text-lg font-bold text-foreground">
+          <%= import.step.presence || "Preparing" %>
+        </p>
+        <p class="mt-1 text-sm text-muted-foreground">
+          <%= import.file.filename if import.file.attached? %>
+          <% if import.duration %>· <%= distance_of_time_in_words(import.duration.seconds) %> elapsed<% end %>
+        </p>
+      </div>
+
+      <div class="text-right">
+        <p class="text-5xl font-bold tabular-nums <%= tone[:text] %>"><%= percent %><span class="text-2xl">%</span></p>
+        <p class="mt-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <%= number_with_delimiter(import.processed_rows) %> of <%= number_with_delimiter(import.total_rows) %>
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-6 h-3 w-full overflow-hidden rounded-full bg-muted"
+         role="progressbar" aria-valuenow="<%= percent %>" aria-valuemin="0" aria-valuemax="100"
+         aria-label="Import progress">
+      <div class="h-full rounded-full <%= tone[:bar] %> transition-all duration-500 ease-out
+                  <%= "animate-pulse" if import.running? && import.total_rows.zero? %>"
+           style="width: <%= [ percent, import.running? && percent.zero? ? 4 : percent ].max %>%"></div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <% [ [ "Created", import.created_count, "text-emerald-700" ],
+         [ "Grouped stays", import.group_count, "text-foreground" ],
+         [ "Already present", import.skipped_count, "text-muted-foreground" ],
+         [ "Failed", import.failed_count, import.failed_count.positive? ? "text-red-700" : "text-muted-foreground" ] ].each do |label, value, colour| %>
+      <div class="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <p class="text-xs font-bold uppercase tracking-wide text-muted-foreground"><%= label %></p>
+        <p class="mt-1 text-3xl font-bold tabular-nums <%= colour %>"><%= number_with_delimiter(value) %></p>
+      </div>
+    <% end %>
+  </section>
+
+  <% if import.error_message.present? %>
+    <section class="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-900">
+      <p class="font-bold">The import stopped</p>
+      <p class="mt-1"><%= import.error_message %></p>
+    </section>
+  <% end %>
+
+  <% if import.failures.any? %>
+    <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+      <p class="font-bold"><%= pluralize(import.failures.size, "reservation") %> could not be created</p>
+      <ul class="mt-2 space-y-1">
+        <% import.failures.last(15).each do |failure| %>
+          <li>
+            <span class="font-mono font-bold"><%= failure["reference"] %></span> — <%= failure["message"] %>
+          </li>
+        <% end %>
+      </ul>
+      <% if import.failures.size > 15 %>
+        <p class="mt-2 text-xs">Showing the most recent 15.</p>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% if import.status == "completed" %>
+    <div class="flex flex-wrap items-center gap-3">
+      <%= link_to "View the bookings", admin_bookings_path(hotel_id: import.hotel.to_param),
+                  class: "rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+      <%= link_to "Import another file", new_admin_hotel_reservation_import_path(import.hotel),
+                  class: "rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-foreground hover:bg-muted" %>
+    </div>
+  <% elsif import.status == "failed" %>
+    <%= link_to "Try again", new_admin_hotel_reservation_import_path(import.hotel),
+                class: "inline-block rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover" %>
+  <% end %>
+</div>

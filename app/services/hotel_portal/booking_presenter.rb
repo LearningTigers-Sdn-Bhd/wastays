@@ -55,11 +55,11 @@ module HotelPortal
     end
 
     def nights_label
-      view_context.pluralize(nights_count, "night")
+      booking.stay_length_label
     end
 
     def stay_summary
-      "#{nights_count} #{'night'.pluralize(nights_count)} · #{check_in_short}–#{check_out_short}"
+      "#{nights_label} · #{check_in_short}–#{check_out_short}"
     end
 
     def guest_count_summary
@@ -117,7 +117,7 @@ module HotelPortal
     end
 
     def can_add_guests?(user)
-      can_manage_bookings?(user) && %w[checked_in confirmed].include?(booking.status)
+      can_manage_bookings?(user) && booking.status.in?(Booking::GUEST_ADDABLE_STATUSES)
     end
 
     def additional_guests
@@ -550,6 +550,43 @@ module HotelPortal
     def created_at_date
       format_date(booking.created_at.in_time_zone(hotel.hotel_time_zone), :long)
     end
+
+    # An agency booking made through the corporate portal. Its `source` is
+    # "internal", the same as a booking keyed at the desk, so the badge this
+    # feeds is the only thing on the list that says an agent sold the room.
+    def agent_booking?
+      HotelPortal::Bookings::AgentAttribution.agent_booking?(booking)
+    end
+
+    # Shared with HotelPortal::Bookings::WorkspacePresenter, which feeds the same
+    # badge on the booking workspace.
+    def agent_attribution
+      @agent_attribution ||= HotelPortal::Bookings::AgentAttribution.for(booking, time_zone: hotel.hotel_time_zone)
+    end
+
+    # Bookings that are over and need nothing: the record is closed, the
+    # inventory is already back, and there is no decision left for the desk.
+    # They are dimmed so live business reads first.
+    #
+    # no_show is deliberately **not** here. It looks similarly final, but its
+    # money usually is not settled -- a charge decision, a penalty, sometimes a
+    # room still blocked -- so it keeps its weight.
+    INACTIVE_STATUSES = %w[cancelled voided].freeze
+
+    def inactive?
+      status.to_s.in?(INACTIVE_STATUSES)
+    end
+
+    # Applied on top of whatever else a row or card is already saying about the
+    # booking -- a blacklist highlight, for instance -- rather than replacing it,
+    # which is why it is only the dimming and not a whole class list. The table
+    # and the card style blacklisting differently.
+    #
+    # Desaturated and very slightly softened, not just faded: opacity alone
+    # still read as "live but pale", which competed for attention rather than
+    # visibly stepping back from it. The blur is deliberately a hair's width --
+    # enough to read as "behind glass", not enough to cost legibility.
+    def dimmed_class = ("opacity-70 grayscale-[60%] blur-[0.3px]" if inactive?)
 
     def status_variant_class
       booking_styles = {

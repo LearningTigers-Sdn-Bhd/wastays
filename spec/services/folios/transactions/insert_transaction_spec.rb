@@ -114,7 +114,7 @@ RSpec.describe Folios::Transactions::InsertTransaction, frozen_time: Time.zone.l
         result = @result
 
         expect(result.success?).to be false
-        expect(result.error).to include("already closed")
+        expect(result.error).to include("Night audit has already closed that day")
       end
 
       it "succeeds with override" do

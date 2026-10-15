@@ -15,7 +15,8 @@ module NightAudits
 
     def call
       stay_scope.or(no_show_scope)
-        .includes(:payment_transactions, :refund_request, :booking_rooms, booking_folio: :folio_transactions)
+        .includes(:payment_transactions, :refund_request, :booking_rooms,
+          booking_folio: :folio_transactions, booking_folios: [ :folio_transactions, :receivable ])
     end
 
     private

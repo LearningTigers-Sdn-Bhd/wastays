@@ -36,7 +36,7 @@ RSpec.describe "PanelsUI::Breadcrumb", type: :system do
 
     send_key("Escape")
     expect(page).to have_no_css("[role='menu']:popover-open")
-    expect(page).to have_css("button:focus[data-panels-ui--dropdown-menu-target='trigger']")
+    expect(page).to have_css("button:focus[data-ui--dropdown-menu-target='trigger']")
   end
 
   it "toggling the same trigger twice closes the menu" do

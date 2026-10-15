@@ -1,0 +1,108 @@
+<% content_for :title, "Signing Tablets" %>
+
+<div class="mx-auto max-w-3xl space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Signing Tablets",
+        description: "Tablets this property can send a guest's registration card to.") %>
+
+  <%# Pairing cannot happen in this browser: whichever device ends up holding
+      the token has to be the one that claims it. So the desk mints a code here
+      and the tablet claims it, which also keeps staff credentials off a device
+      that lives on a counter. %>
+  <section class="card p-6">
+    <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Pair a new tablet</h2>
+
+    <% if @pairing %>
+      <div class="mt-4 grid gap-6 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center">
+        <div class="mx-auto w-40 rounded-xl bg-white p-3 shadow-sm sm:mx-0">
+          <%= image_tag Concierge::QrSvg.data_url(pair_token_url(@pairing.token)),
+                alt: "QR code to pair a tablet", class: "block h-auto w-full" %>
+        </div>
+
+        <div class="space-y-3 text-center sm:text-left">
+          <p class="text-sm text-muted-foreground">
+            On the tablet, scan this code — or open
+            <span class="font-semibold text-foreground"><%= pair_url %></span>
+            and enter:
+          </p>
+
+          <p class="font-mono text-3xl font-black tracking-[0.2em] text-foreground">
+            <%= @pairing.display_code %>
+          </p>
+
+          <p class="text-xs text-muted-foreground">
+            Expires in
+            <span data-controller="countdown"
+                  data-countdown-expiry-value="<%= @pairing.expires_at.iso8601 %>"
+                  class="font-bold tabular-nums text-foreground"></span>
+          </p>
+
+          <%= button_to "Cancel this code",
+                hotel_signing_device_pairing_path(current_hotel, @pairing),
+                method: :delete,
+                class: "text-xs font-bold text-muted-foreground underline underline-offset-2 hover:text-foreground" %>
+        </div>
+      </div>
+    <% else %>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Generates a QR code and a short code. The tablet scans or types it, names itself, and is ready — it never signs in.
+      </p>
+
+      <div class="mt-4">
+        <%= button_to hotel_signing_device_pairings_path(current_hotel), method: :post, class: "inline-block" do %>
+          <span class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover">
+            <%= cached_icon "qr-code", class: "size-4", aria: { hidden: true } %>
+            Generate pairing code
+          </span>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+
+  <section class="card p-6">
+    <h2 class="text-sm font-black uppercase tracking-widest text-foreground">Paired tablets</h2>
+
+    <% if @devices.empty? %>
+      <p class="mt-3 text-sm text-muted-foreground">No tablets paired yet.</p>
+    <% else %>
+      <ul class="mt-4 divide-y divide-border">
+        <% @devices.each do |device| %>
+          <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
+              <%# Renamed in place: a one-field form is less friction than a
+                  sheet for what is usually a typo fix. %>
+              <%= form_with url: hotel_signing_device_path(current_hotel, device), method: :patch,
+                    class: "flex items-center gap-2" do %>
+                <label class="sr-only" for="signing-device-label-<%= device.id %>">Tablet name</label>
+                <%= text_field_tag "signing_device[label]", device.label,
+                      id: "signing-device-label-#{device.id}",
+                      class: "form-input h-8 w-48 py-0 text-sm font-semibold" %>
+                <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :ghost, size: :sm) do %>Rename<% end %>
+              <% end %>
+
+              <p class="mt-1.5 flex items-center gap-2 text-xs">
+                <% status = device.live? ? (device.busy? ? :busy : :ready) : :offline %>
+                <span class="inline-block size-2 rounded-full <%= status == :ready ? "bg-emerald-500" : status == :busy ? "bg-amber-500" : "bg-muted-foreground" %>"
+                      aria-hidden="true"></span>
+                <span class="font-bold <%= status == :offline ? "text-muted-foreground" : "text-foreground" %>">
+                  <%= { ready: "Ready", busy: "Busy", offline: "Not connected" }[status] %>
+                </span>
+                <span class="text-muted-foreground">
+                  <%= device.last_seen_at ? "· last seen #{time_ago_in_words(device.last_seen_at)} ago" : "· never connected" %>
+                </span>
+              </p>
+            </div>
+
+            <%# Revoking deletes the row, because the token is the whole of the
+                device's access and a flag would leave it usable. %>
+            <%= button_to "Revoke",
+                  hotel_signing_device_path(current_hotel, device),
+                  method: :delete,
+                  form: { data: { turbo_confirm: "Revoke #{device.label}? It stops working immediately and has to be paired again." } },
+                  class: "shrink-0 rounded-lg border border-destructive px-3 py-1.5 text-xs font-bold text-destructive-on-surface hover:bg-destructive/10" %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+</div>

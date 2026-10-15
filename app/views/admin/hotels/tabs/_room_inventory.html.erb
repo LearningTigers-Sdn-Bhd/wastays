@@ -1,0 +1,23 @@
+<section class="space-y-5 py-4">
+  <div><h2 class="text-base font-semibold">Room inventory</h2><p class="text-sm text-muted-foreground">Room types and their active physical rooms.</p></div>
+  <% if @room_types.any? %>
+    <div class="space-y-6">
+      <% @room_types.each do |room_type| %>
+        <section class="space-y-3 border-b border-border pb-6 last:border-0">
+          <h3 class="text-base font-semibold"><%= room_type.name %></h3>
+          <dl class="grid gap-4 text-sm sm:grid-cols-3">
+            <div><dt class="text-muted-foreground">Capacity</dt><dd><%= room_type.max_adults %> adults, <%= room_type.max_children %> children</dd></div>
+            <div><dt class="text-muted-foreground">Quantity</dt><dd><%= room_type.quantity %> rooms</dd></div>
+            <div><dt class="text-muted-foreground">Base price</dt><dd><%= number_to_currency(room_type.base_price, unit: "RM ") %></dd></div>
+          </dl>
+          <% active_rooms = room_type.rooms.select(&:active?).sort_by { |room| [room.position, room.id] } %>
+          <% if active_rooms.any? %>
+            <ul class="flex flex-wrap gap-2" aria-label="Rooms in <%= room_type.name %>">
+              <% active_rooms.each do |room| %><li class="rounded-md border border-border px-3 py-1.5 text-sm"><%= room.number %><% if room.room_group %> · <%= room.room_group.name %><% end %></li><% end %>
+            </ul>
+          <% else %><p class="text-sm text-muted-foreground">No active physical rooms.</p><% end %>
+        </section>
+      <% end %>
+    </div>
+  <% else %><p class="text-sm text-muted-foreground">No room types have been added.</p><% end %>
+</section>

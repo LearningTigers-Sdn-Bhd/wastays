@@ -15,7 +15,10 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
     when "overview"
       rates_coverage = Rates::SetupCoverage.call(hotel: @hotel)
       @readiness = Onboarding::Readiness.new(hotel: @hotel, rates_coverage:).call
-      @configuration_unchanged = configuration_unchanged?(rates_coverage:)
+      comparison = Onboarding::CompareSubmission.call(hotel: @hotel, submission: @submission) if @submission
+      @configuration_unchanged = comparison&.success? && comparison.unchanged
+      @comparison_error = comparison&.error
+      @availability_extension_needed = @configuration_unchanged && comparison.end_date < rates_coverage.end_date
       @overview_presenter = Admin::Hotels::OnboardingOverviewPresenter.new(submission: @submission) if @submission
     when "history"
       @audit_events = @hotel.onboarding_audit_events.includes(:user).order(occurred_at: :desc, id: :desc)
@@ -98,12 +101,5 @@ class Admin::Hotels::OnboardingController < Admin::BaseController
     return onboarding_admin_hotel_path(@hotel) unless TAB_LABELS.key?(tab) && tab != "overview"
 
     onboarding_tab_admin_hotel_path(@hotel, tab:)
-  end
-
-  def configuration_unchanged?(rates_coverage:)
-    return false unless @submission
-
-    current_digest = Onboarding::SubmissionSnapshot.call(hotel: @hotel, rates_coverage:).digest
-    ActiveSupport::SecurityUtils.secure_compare(current_digest, @submission.configuration_digest)
   end
 end

@@ -69,7 +69,7 @@ module Folios
 
       def posted_ota_component_identities(booking)
         FolioTransaction.joins(:booking_folio)
-          .where(booking_folios: { booking_id: booking.id }, voided_by_transaction_id: nil)
+          .where(source_booking_id: booking.id, voided_by_transaction_id: nil)
           .where("folio_transactions.metadata->>'ota_component_stable_key' IS NOT NULL")
           .pluck(
             Arel.sql("folio_transactions.metadata->>'ota_component_stable_key'"),

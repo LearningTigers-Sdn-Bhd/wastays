@@ -105,7 +105,7 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     )
 
     expect(revenue).to include(
-      "Revenue", "Revenue Summary", "Daily Breakdown", "Revenue by Source", "Revenue Register",
+      "Revenue", "Revenue Summary", "Daily Breakdown", "Revenue by Source", "Revenue by Extra Charge", "Revenue Register",
       "Charter Boat", "Adjustments", "Net Revenue", "Total", "Page 1 of"
     )
     # Mixed case above is the table header; the stat strip carries the same words upcased,

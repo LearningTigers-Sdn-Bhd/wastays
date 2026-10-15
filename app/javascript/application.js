@@ -37,13 +37,13 @@ function refreshPage(url) {
 
 // Sheet analog of complete_offcanvas for HotelPortal::Bookings::Actions.
 // Closes the booking-action Sheet (the native <dialog> restores focus to the
-// invoker and panels-ui--sheet-frame clears the frame on close), then navigates
+// invoker and ui--sheet-frame clears the frame on close), then navigates
 // to the return destination after the exit transition.
 Turbo.StreamActions.complete_sheet = function() {
   const frameId = this.getAttribute("target") || "booking_action_sheet"
   const frame = document.getElementById(frameId)
   const dialog = frame?.querySelector("dialog")
-  const controller = dialog && window.Stimulus?.getControllerForElementAndIdentifier(dialog, "panels-ui--sheet")
+  const controller = dialog && window.Stimulus?.getControllerForElementAndIdentifier(dialog, "ui--sheet")
   const url = this.getAttribute("url")
   let parentFrameId = null
   if (url) {

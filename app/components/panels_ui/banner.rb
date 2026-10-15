@@ -49,7 +49,7 @@ module PanelsUI
           appearance: @appearance,
           strategy: @strategy,
           position: @position,
-          controller: (@dismissible ? "panels-ui--dismissible" : nil)
+          controller: (@dismissible ? "ui--dismissible" : nil)
         ).compact
       ).compact
     end

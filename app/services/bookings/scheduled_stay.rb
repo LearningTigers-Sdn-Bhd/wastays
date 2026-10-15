@@ -30,10 +30,29 @@ module Bookings
       value.to_date
     end
 
+    # The dates a stay is billed for. An overnight stay bills each night; a
+    # day-use stay (arrives and leaves on the same date) bills that one date.
     def stay_dates(hotel:, check_in:, check_out:)
       arrival_date = local_date(hotel: hotel, value: check_in)
       departure_date = local_date(hotel: hotel, value: check_out)
-      return [] if arrival_date.blank? || departure_date.blank? || departure_date <= arrival_date
+      return [] if arrival_date.blank? || departure_date.blank? || departure_date < arrival_date
+      return [ arrival_date ] if day_use?(hotel: hotel, check_in: check_in, check_out: check_out)
+
+      (arrival_date...departure_date).to_a
+    end
+
+    # Same date in and out, leaving after arriving. Date-only callers carry no
+    # time, so they use `billable_dates` and let the rate plan say it is day use.
+    def day_use?(hotel:, check_in:, check_out:)
+      return false if check_in.blank? || check_out.blank?
+
+      check_in_at = at_hotel_time(hotel: hotel, value: check_in, kind: :check_in)
+      check_out_at = at_hotel_time(hotel: hotel, value: check_out, kind: :check_out)
+      check_out_at > check_in_at && check_out_at.to_date == check_in_at.to_date
+    end
+
+    def billable_dates(arrival_date, departure_date)
+      return [ arrival_date ] if arrival_date == departure_date
 
       (arrival_date...departure_date).to_a
     end

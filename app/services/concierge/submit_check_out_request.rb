@@ -6,8 +6,11 @@ module Concierge
     end
 
     def call
-      unless @booking.checked_in?
-        return Result.failure(message: "Checkout requests can only be submitted for checked-in bookings.")
+      # Every in-house status can ask to check out, not only checked_in. A guest
+      # whose booking is already due out or past its checkout time is exactly
+      # the guest who needs this.
+      unless @booking.status.in?(Booking::IN_HOUSE_STATUSES)
+        return Result.failure(message: "Checkout requests are for guests who are still in house.")
       end
 
       if @booking.check_out_requests.open_tasks.exists?

@@ -4,10 +4,10 @@ module PanelsUI
   # Global command palette (⌘K / Ctrl+K) built on the native <dialog> primitive.
   #
   # Structure is two nested Stimulus controllers:
-  #   • panels-ui--command-palette (this root) — owns the trigger, the global
+  #   • ui--command-palette (this root) — owns the trigger, the global
   #     ⌘K / "/" shortcut, the debounced async search, the listbox keyboard
   #     navigation, and navigate-on-select (Turbo.visit).
-  #   • panels-ui--dialog (the inner <dialog>) — reused verbatim for scroll-lock,
+  #   • ui--dialog (the inner <dialog>) — reused verbatim for scroll-lock,
   #     backdrop-dismiss, Escape/cancel and top-layer. Native <dialog> also gives
   #     focus-trapping for free, so the palette controller never touches focus
   #     containment.

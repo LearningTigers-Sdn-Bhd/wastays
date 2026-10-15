@@ -24,6 +24,7 @@ module Bookings
       @existing_guest_id = @params.delete(:existing_guest_id)
       @guest_update_intent = @params.delete(:guest_update_intent)
       @rate_plan_id = @params.delete(:rate_plan_id)
+      @child_ages = @params.delete(:child_ages)
       @apply_stop_sell_restriction = @params.delete(:apply_stop_sell_restriction)
       @apply_arrival_departure_restrictions = @params.delete(:apply_arrival_departure_restrictions)
       @apply_stay_length_restrictions = @params.delete(:apply_stay_length_restrictions)
@@ -63,6 +64,11 @@ module Bookings
 
       apply_existing_guest_fields(booking, selected_guest) if selected_guest
 
+      if rate_plan.day_use?
+        day_use_error = apply_day_use_window(booking, rate_plan)
+        return OpenStruct.new(success?: false, errors: [ day_use_error ]) if day_use_error
+      end
+
       # 1. Validate Room Availability based on Grid Selection
       available_rooms = AvailableRoomNumbers.new(
         hotel: @hotel,
@@ -81,17 +87,20 @@ module Bookings
         return OpenStruct.new(success?: false, errors: [ "Room #{@room_number} is currently being assigned by another staff member." ])
       end
 
+      child_ages = ChildAges.normalize(@child_ages, booking.children)
+
       begin
         financial_snapshot = BuildFinancialSnapshot.new(
           hotel: @hotel,
           room_type: room_type,
           rate_plan: rate_plan,
-          check_in: booking.check_in,
-          check_out: booking.check_out,
+          check_in: local_date(booking.check_in),
+          check_out: local_date(booking.check_out),
           guest_country: booking.guest_country,
           manual_total_amount: booking.manual_rate_override,
           adults: booking.adults,
-          children: booking.children
+          children: booking.children,
+          child_ages: child_ages
         ).call
       rescue ArgumentError => e
         return OpenStruct.new(success?: false, errors: [ e.message ])
@@ -135,7 +144,8 @@ module Bookings
             rate_plan: rate_plan,
             subtotal: financial_snapshot.room_total,
             room_type_snapshot: room_type.as_json,
-            nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot
+            nightly_rate_snapshot: financial_snapshot.nightly_rate_snapshot,
+            occupancy_snapshot: { "adults" => booking.adults, "children" => booking.children, "child_ages" => child_ages }
           )
 
           if booking.save
@@ -174,7 +184,7 @@ module Bookings
             Notifications::Dispatcher.new(event: :booking_confirmed, booking: booking).call
 
             # Trigger Channex CRS Sync if connected
-            if @hotel.preferred_channel_manager.present?
+            if @hotel.channel_manager_enabled?
               adapter = ChannelManagers::SyncOrchestrator.adapter_for(@hotel)
               adapter.push_booking(booking)
             end
@@ -218,7 +228,8 @@ module Bookings
         check_out: booking.check_out,
         guest_country: booking.guest_country,
         adults: booking.adults,
-        children: booking.children
+        children: booking.children,
+        child_ages: booking.child_ages
       ).call.room_total
     rescue ArgumentError => e
       # The booking is already valid; a failed counterfactual quote must not
@@ -243,6 +254,20 @@ module Bookings
 
     def record_payment?
       @record_payment == "1" || @record_payment == true
+    end
+
+    # A day-use plan sells a fixed block of hours: it leaves exactly
+    # `day_use_hours` after arriving, whatever departure time was typed.
+    def apply_day_use_window(booking, rate_plan)
+      booking.check_out = booking.check_in + rate_plan.day_use_hours.hours
+      return if local_date(booking.check_out) == local_date(booking.check_in)
+
+      "#{rate_plan.name} is #{rate_plan.day_use_hours} hours and must finish before midnight. Choose an earlier arrival."
+    end
+
+    # The hotel's calendar date, not the UTC date a stored time reads back as.
+    def local_date(time)
+      ScheduledStay.local_date(hotel: @hotel, value: time)
     end
 
     def normalize_scheduled_stay!
@@ -275,8 +300,8 @@ module Bookings
 
       RateOptions.new(
         room_type: room_type,
-        check_in: booking.check_in,
-        check_out: booking.check_out,
+        check_in: local_date(booking.check_in),
+        check_out: local_date(booking.check_out),
         apply_stop_sell: @apply_stop_sell_restriction,
         apply_arrival_departure: @apply_arrival_departure_restrictions,
         apply_stay_length: @apply_stay_length_restrictions,

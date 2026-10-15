@@ -22,8 +22,8 @@ RSpec.describe PanelsUI::Autocomplete, type: :component do
 
     root = page.find(".panel-autocomplete")
     input = page.find("input#guest_name")
-    expect(root["data-controller"]).to include("panels-ui--autocomplete")
-    expect(root["data-panels-ui--autocomplete-endpoint-value"]).to eq("/guests/search")
+    expect(root["data-controller"]).to include("ui--autocomplete")
+    expect(root["data-ui--autocomplete-endpoint-value"]).to eq("/guests/search")
     expect(input["role"]).to eq("combobox")
     expect(input["aria-autocomplete"]).to eq("list")
     expect(input["aria-expanded"]).to eq("false")

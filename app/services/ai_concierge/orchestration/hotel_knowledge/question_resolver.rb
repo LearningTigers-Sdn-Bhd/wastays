@@ -7,7 +7,8 @@ module AiConcierge
       class QuestionResolver
         Result = Struct.new(:tool_result, :reply, :answer, keyword_init: true)
 
-        def initialize(hotel:, message:, interpretation:, language:, previous_reply: nil, max_list_facts: nil, localize: true)
+        def initialize(hotel:, message:, interpretation:, language:, previous_reply: nil, max_list_facts: nil, localize: true,
+                       fact_catalogue: nil)
           @hotel = hotel
           @message = message.to_s
           @interpretation = interpretation
@@ -15,10 +16,16 @@ module AiConcierge
           @previous_reply = previous_reply.to_s
           @max_list_facts = max_list_facts
           @localize = localize
+          @fact_catalogue = fact_catalogue
         end
 
         def call
-          tool_result = ToolRouter.new(hotel: hotel, message: message, interpretation: interpretation).call
+          tool_result = ToolRouter.new(
+            hotel: hotel,
+            message: message,
+            interpretation: interpretation,
+            fact_catalogue: fact_catalogue
+          ).call
           reply = ReplyFactory.new(intent: interpretation["intent"], result: tool_result[:result]).call
           reply = limited(reply)
           answer = factual_message(reply)
@@ -29,7 +36,8 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :message, :interpretation, :language, :previous_reply, :max_list_facts, :localize
+        attr_reader :hotel, :message, :interpretation, :language, :previous_reply, :max_list_facts, :localize,
+          :fact_catalogue
 
         def limited(reply)
           return reply if max_list_facts.blank? || reply.shape != "list"

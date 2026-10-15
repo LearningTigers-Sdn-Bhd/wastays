@@ -57,7 +57,7 @@ RSpec.describe "PanelsUI::Collapsible", type: :system do
     page.execute_script(<<~JS)
       window.collapsibleChanges = []
       document.getElementById("sd-collapsible-panel-light").addEventListener(
-        "panels-ui--collapsible:change",
+        "ui--collapsible:change",
         (event) => window.collapsibleChanges.push(event.detail.open)
       )
     JS

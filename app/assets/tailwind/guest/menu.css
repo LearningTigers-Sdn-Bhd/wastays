@@ -1,0 +1,50 @@
+@layer components {
+  /* The guest dropdown (GuestUI::Menu). Anchored to the corner it hangs from
+     rather than positioned by script: on a guest page it is only ever used at
+     the end of the chat bar.
+
+     Its own file rather than the end of chat.css, which is where it used to
+     sit. The menu is a GuestUI primitive in its own right, and a second
+     caller looking for its rules should not have to read the chat to find
+     them. */
+  .guest-menu {
+    @apply relative inline-flex;
+  }
+
+  .guest-menu__trigger {
+    @apply inline-flex size-9 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-menu__trigger[aria-expanded="true"] {
+    @apply bg-secondary/15 text-foreground;
+  }
+
+  /* Built to the panel dropdown's measurements -- a hairline border carried by
+     the shadow rather than by its own weight, a pad of its own so the items sit
+     inside it, and items with their own radius so a hover is a rounded block
+     and not a stripe running into the corners. The earlier version had
+     border-interactive around it and items flush to the edge, which read as a
+     box drawn around a list rather than as a menu.
+
+     Only the colours are this side's: --card, the softer public radius, and a
+     hover with something behind it. */
+  .guest-menu__list {
+    @apply absolute right-0 top-full z-30 mt-1 flex min-w-52 max-w-[min(22rem,calc(100vw-1rem))] flex-col rounded-xl border border-border bg-card p-1 shadow-lg;
+  }
+
+  /* The focus state is a ring on top of the tint. The panel dropdown marks
+     focus with --muted alone, which over there is a judgement call and here is
+     not one I can make: on --card it is 1.05:1, and a guest arriving by
+     keyboard would have no way of telling which item they were on. */
+  .guest-menu__item {
+    @apply flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium text-foreground transition-colors select-none hover:bg-secondary/10 focus-visible:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-menu__item[data-danger="true"] {
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-menu__item[data-danger="true"]:is(:hover, :focus-visible) {
+    background: color-mix(in oklab, var(--destructive) 14%, transparent);
+  }
+}

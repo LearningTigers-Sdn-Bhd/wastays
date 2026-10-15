@@ -98,7 +98,7 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
       # Guest folios lock the payer, so the field is hidden on connect.
       expect(page).to have_no_css("[data-folio-window-payer-target='payerType']", visible: :visible)
 
-      find("[data-folio-window-payer-target='folioType'] [data-controller~='panels-ui--select-menu'] button").click
+      find("[data-folio-window-payer-target='folioType'] [data-controller~='ui--select-menu'] button").click
       find("[role='option']", text: "House").click
 
       expect(page).to have_no_css("[data-folio-window-payer-target='payerType']", visible: :visible)
@@ -120,7 +120,7 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-post-transaction-sheet[open]")
 
     within("dialog#folio-post-transaction-sheet") do
-      find("[data-controller~='panels-ui--select-menu'] button").click
+      find("[data-controller~='ui--select-menu'] button").click
       find("[role='option']", text: "Cash").click
       fill_in "Amount", with: "40.00"
       fill_in "Description", with: "Front desk cash"
@@ -142,7 +142,7 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
 
     expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-post-transaction-sheet[open]")
     within("dialog#folio-post-transaction-sheet") do
-      find("[data-controller~='panels-ui--select-menu'] button").click
+      find("[data-controller~='ui--select-menu'] button").click
       find("[role='option']", text: extra_charge.name).click
       fill_in "Quantity", with: "2"
       expect(page).to have_field("Amount", with: "10.00", readonly: false)
@@ -173,7 +173,7 @@ RSpec.describe "Folio Operations ledger", type: :system, js: true do
     expect(page).to have_css("turbo-frame#folio_action_sheet dialog#folio-move-transaction-sheet[open]")
 
     within("dialog#folio-move-transaction-sheet") do
-      find("[data-controller~='panels-ui--select-menu'] button").click
+      find("[data-controller~='ui--select-menu'] button").click
       find("[role='option']", text: "Company Folio").click
       fill_in "Reason", with: "Company settles the room"
       click_button "Move transaction"

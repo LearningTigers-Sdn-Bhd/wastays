@@ -1,80 +1,40 @@
-<% content_for :title, "Dashboard | WAStays" %>
+<% content_for :title, "Home | WAStays" %>
 
-<div class="space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(
-        title: "Dashboard",
-        description: "Welcome back, #{current_guest.name.split.first}. Here's an overview of your stays.") %>
-
-  <!-- Stats Grid -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    <div class="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Total Bookings</p>
-      <div class="flex items-end gap-x-2">
-        <span class="text-2xl font-bold text-foreground"><%= @total_bookings %></span>
-      </div>
-    </div>
-    <div class="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Upcoming Stays</p>
-      <div class="flex items-end gap-x-2">
-        <span class="text-2xl font-bold text-foreground"><%= @upcoming_bookings.count %></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent Bookings Table-style Card -->
-  <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-    <div class="px-6 py-4 border-b border-border flex items-center justify-between">
-      <h2 class="font-semibold text-foreground">Recent Bookings</h2>
-      <%= link_to "View All Bookings", guest_bookings_path, class: "text-xs font-bold text-brand-primary hover:underline" %>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-border">
-        <thead class="bg-background">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Hotel</th>
-            <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Stay Dates</th>
-            <th scope="col" class="px-6 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-            <th scope="col" class="px-6 py-3 text-right text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Action</th>
-          </tr>
-        </thead>
-        <tbody class="bg-card divide-y divide-border">
-          <% if @upcoming_bookings.any? || @past_bookings.any? %>
-            <% (@upcoming_bookings + @past_bookings).first(5).each do |booking| %>
-              <tr class="hover:bg-background/50 transition-colors group">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-semibold text-foreground group-hover:text-brand-primary transition-colors">
-                    <%= booking.hotel.name %>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-muted-foreground">
-                    <%= booking.check_in.strftime("%d %b") %> – <%= booking.check_out.strftime("%d %b %Y") %>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
-                    <%= guest_booking_status(booking) == 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground' %>">
-                    <%= guest_booking_status(booking).humanize %>
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right">
-                  <%= link_to guest_booking_path(booking), class: "inline-flex items-center gap-x-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-bold text-foreground hover:bg-background transition-all shadow-sm" do %>
-                    <svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                    View
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          <% else %>
-            <tr>
-              <td colspan="4" class="px-6 py-10 text-center text-sm text-muted-foreground">
-                No bookings found.
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+<div class="space-y-1">
+  <h1 class="font-guest-display text-2xl font-semibold text-foreground md:text-3xl">
+    Hello, <span class="text-primary"><%= current_guest.name %></span>
+  </h1>
+  <p class="text-sm text-muted-foreground">Your stays, documents, and refunds, all in one place.</p>
 </div>
+
+<section class="guest-stat-grid" aria-label="Your stays at a glance">
+  <%= render GuestUI::StatCard.new(label: "Total bookings", value: @stats[:total], icon: "calendar-days", tone: :info) %>
+  <%= render GuestUI::StatCard.new(label: "Upcoming", value: @stats[:upcoming], icon: "calendar-clock", tone: :warning) %>
+  <%= render GuestUI::StatCard.new(label: "In house", value: @stats[:in_house], icon: "door-open", tone: :success) %>
+  <%= render GuestUI::StatCard.new(label: "Refunds requested", value: @stats[:refunds], icon: "receipt", tone: :destructive) %>
+</section>
+
+<% if (next_stay = @next_stay) %>
+  <%= render guest_stay_summary(next_stay, eyebrow: (next_stay.check_in.to_date <= Date.current ? "Current stay" : "Next stay")) do |summary| %>
+    <% summary.with_actions do %>
+      <%= render "guest/bookings/concierge_button", booking: next_stay %>
+      <%= render GuestUI::Button.new(label: "View booking", href: guest_booking_path(next_stay), variant: :secondary) %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @stats[:total].zero? %>
+  <%= render "guest/shared/no_bookings" %>
+<% elsif @recent_bookings.any? %>
+  <section class="space-y-3" aria-labelledby="recent-bookings-title">
+    <div class="flex items-center justify-between gap-3">
+      <h2 id="recent-bookings-title" class="guest-card__title">Recent Bookings</h2>
+      <%= link_to "See all", guest_bookings_path, class: "text-sm font-bold text-primary hover:underline" %>
+    </div>
+    <div class="guest-booking-grid">
+      <% @recent_bookings.each do |booking| %>
+        <%= render guest_booking_card(booking) %>
+      <% end %>
+    </div>
+  </section>
+<% end %>

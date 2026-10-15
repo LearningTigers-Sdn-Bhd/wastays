@@ -15,6 +15,9 @@ class HotelPortal::RoomTypesController < HotelPortal::SettingsBaseController
     @pagy, @room_types = pagy(:offset, @all_room_types, limit: 25)
 
     @filters_active = params[:q].present?
+    # Coming back from a rate plan reopens its room category. Only a category
+    # on this page can be opened; the accordion rejects any other value.
+    @open_room_type_id = params[:open].to_s if @room_types.any? { |room_type| room_type.id.to_s == params[:open].to_s }
   end
 
   def new

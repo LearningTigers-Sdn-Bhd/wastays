@@ -45,6 +45,13 @@ module CorporatePortal
               search_text: "Dashboard Home Linked Hotels Corporate Portal",
               active: controller_name == "dashboard",
               icon: "layout-dashboard"
+            ),
+            PanelsUI::Navigation::Item.new(
+              label: "Bookings",
+              path: corporate_bookings_path,
+              search_text: "Bookings Book a Stay Reserve Room Availability Guest",
+              active: controller_name == "bookings",
+              icon: "calendar-check"
             )
           ]
         ),

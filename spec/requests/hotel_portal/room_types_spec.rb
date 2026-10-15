@@ -54,8 +54,8 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(document.at_css("[aria-label='Room categories and rate plans']")).to be_present
 
       accordion = document.at_css("#room-inventory-accordion")
-      expect(accordion["data-panels-ui--accordion-type-value"]).to eq("single")
-      expect(accordion["data-panels-ui--accordion-collapsible-value"]).to eq("true")
+      expect(accordion["data-ui--accordion-type-value"]).to eq("single")
+      expect(accordion["data-ui--accordion-collapsible-value"]).to eq("true")
       expect(accordion["aria-label"]).to eq("Room inventory")
       expect(document.css("[data-room-type-id]")).to all(satisfy { |room| room["data-state"] == "closed" })
       expect(document.css("[data-room-type-id] .panel-collapsible__content")).to all(
@@ -89,6 +89,13 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       end
 
       assignment_row = document.at_css("#room-inventory-rate-plan-#{custom_assignment.id}")
+      # Archived rows start hidden, and only a room with one offers the toggle.
+      expect(assignment_row.key?("hidden")).to be(true)
+      expect(assignment_row.key?("data-archived")).to be(true)
+      room_with_archived = assignment_row.ancestors("[data-room-type-id]").first
+      expect(room_with_archived.at_css("[data-archived-toggle-target='control']").key?("hidden")).to be(false)
+      other_room = document.css("[data-room-type-id]").find { |room| room != room_with_archived }
+      expect(other_room.at_css("[data-archived-toggle-target='control']").key?("hidden")).to be(true)
       expect(assignment_row.text.squish).to include("Non-refundable", "Archived", "Adjusts Standard Rate", "Ready", "Edit rate", "Detach rate")
       # An archived plan reads as off, and restoring is not confirmed — the
       # confirm belongs on the direction that takes a plan out of use.
@@ -112,17 +119,17 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(archive_form["data-turbo-confirm-tone"]).to eq("warning")
       # A declined confirm has to put the switch back — it has already moved by
       # the time the dialog opens.
-      expect(archive_form["data-action"]).to include("panels-ui:confirm-settled->tax-registry-status#settled")
+      expect(archive_form["data-action"]).to include("ui:confirm-settled->tax-registry-status#settled")
       expect(archive_form.at_css("input[role='switch']")["checked"]).to eq("checked")
 
       standard_assignment = grouped_room_type.room_type_rate_plans.find { |assignment| assignment.rate_plan.standard_rate? }
       standard_row = document.at_css("#room-inventory-rate-plan-#{standard_assignment.id}")
-      expect(standard_row.text.squish).to include("Standard Rate", "Default", "MYR 99.99", "Ready")
+      expect(standard_row.text.squish).to include("Standard Rate", "Base rate", "MYR 99.99", "Ready")
       expect(standard_row.text.squish).not_to include("Standard Rate MYR", "Detach rate")
       # Every other plan prices against Standard, so the switch is locked on
       # rather than absent — the row still reads as having an availability slot,
       # and it can never post an archive request.
-      expect(standard_row.at_css("form")).to be_nil
+      expect(standard_row.at_css("form[action*='archive']")).to be_nil
       standard_switch = standard_row.at_css("input[role='switch']")
       expect(standard_switch["disabled"]).to eq("disabled")
       expect(standard_switch["checked"]).to eq("checked")
@@ -147,11 +154,11 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       first_header_cell = rate_header.element_children.first
       expect(first_header_cell.text.squish).to eq("Rate availability")
       expect(first_header_cell.at_css(".sr-only")).to be_present
-      expect(document.at_css("#room-inventory-#{grouped_room_type.id} h4").text.squish).to eq("Rate plans (5)")
+      expect(document.at_css("#room-inventory-#{grouped_room_type.id} h4").text.squish).to eq("Rate plans (4)")
 
       new_rate = document.css("#room-inventory-#{grouped_room_type.id} a").find { |link| link.text.squish == "New rate" }
       expect(new_rate["href"]).to eq(new_hotel_rate_plan_path(hotel, room_type_id: grouped_room_type.id))
-      expect(document.at_css("body").text).to include("Rooms", "Rate issues", "Rate plans (5)", "New rate")
+      expect(document.at_css("body").text).to include("Rooms", "Rate issues", "Rate plans (4)", "New rate")
       expect(document.at_css("body").text).not_to include("New Rate", "Standard Rate (MYR)")
       expect(document.at_css("body").text).to include("Assign room rate")
       expect(document.at_css("body").text).not_to include("Assign Room Group", room_group.name)
@@ -242,7 +249,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       capacity_fields = document.at_css("section[aria-labelledby='room-category-capacity-heading'] > div:nth-child(2)")
       restriction_fields = document.at_css("section[aria-labelledby='room-category-restrictions-heading'] > div:nth-child(2)")
 
-      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+      expect(sheet["data-ui--sheet-dismissible-value"]).to eq("false")
       expect(sheet["class"].split).to include("right-0", "w-[48rem]")
       expect(sheet["class"].split).not_to include("left-0", "bottom-0", "w-dvw")
       expect(form["class"].split).to include("space-y-8")
@@ -261,7 +268,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       expect(document.at_css("#room-type-photos-manager")).to be_nil
       expect(document.at_css("#bulk-delete-photos-form")).to be_nil
       expect(document.at_css("input[type='file']")).to be_nil
-      expect(document.at_css('[data-panels-ui--tabs-target="tab"]')).to be_nil
+      expect(document.at_css('[data-ui--tabs-target="tab"]')).to be_nil
       expect(document.at_css("select[name='room_type[room_group_id]']")).to be_nil
     end
   end
@@ -282,7 +289,7 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       restriction_fields = document.at_css("section[aria-labelledby='room-category-restrictions-heading'] > div:nth-child(2)")
       rendered_classes = form.css("[class]").flat_map { |element| element["class"].split }
 
-      expect(sheet["data-panels-ui--sheet-dismissible-value"]).to eq("false")
+      expect(sheet["data-ui--sheet-dismissible-value"]).to eq("false")
       expect(sheet["class"].split).to include("bottom-0", "h-dvh", "rounded-none")
       expect(sheet["class"].split).not_to include("left-0", "w-[48rem]")
       expect(form["class"].split).to include("lg:grid-cols-2")
@@ -510,6 +517,58 @@ RSpec.describe "HotelPortal::RoomTypes", type: :request do
       # inside the category form would end it early.
       expect(document.at_css("#room-type-photos-manager input[name='ordered_ids']")[:form]).to eq("reorder-photos-form")
       expect(document.at_css("form#reorder-photos-form")).to be_present
+    end
+  end
+  describe "reopening a room category" do
+    it "expands the category named by open and ignores one that is not on the page" do
+      villa = create(:room_type, hotel: hotel, name: "Villa")
+
+      get hotel_room_types_path(hotel, open: villa.id)
+      trigger = Nokogiri::HTML(response.body).at_css("#room-inventory-#{villa.id} button[aria-expanded]")
+      expect(trigger["aria-expanded"]).to eq("true")
+
+      get hotel_room_types_path(hotel, open: "999999")
+      expect(response).to have_http_status(:ok)
+      expect(Nokogiri::HTML(response.body).css("button[aria-expanded='true']")).to be_empty
+    end
+  end
+
+  describe "per-guest price ladder" do
+    let(:hotel) { create(:hotel, :per_person, account: account) }
+
+    it "shows each guest count with the guest icon instead of 1p/2p shorthand" do
+      villa = create(:room_type, hotel: hotel, name: "Villa", max_adults: 2)
+      plan = create(:rate_plan, :custom, hotel: hotel, name: "Full Board")
+      create(:room_type_rate_plan, rate_plan: plan, room_type: villa).tap do |assignment|
+        assignment.occupancy_prices.create!(adults: 1, price: 250)
+        assignment.occupancy_prices.create!(adults: 2, price: 1000)
+      end
+
+      get hotel_room_types_path(hotel)
+
+      row = Nokogiri::HTML(response.body).css("[id^='room-inventory-rate-plan-']").find { |node| node.text.include?("Full Board") }
+      expect(row.text.squish).to include("MYR", "1 guest: 250", "2 guests: 1,000")
+      expect(row.text).not_to include("1p ")
+      expect(row.css("svg").size).to be >= 2
+    end
+  end
+
+  describe "primary rate plan" do
+    before { allow_any_instance_of(HotelPortal::RoomTypePrimaryRatePlansController).to receive(:authorize).and_return(true) }
+
+    it "makes a plan primary from Room Inventory" do
+      room_type = Rooms::SaveSeedRoomType.call!(
+        hotel: hotel,
+        attributes: { name: "Villa", room_number_mode: "custom", quantity: 1, base_price: 250.0, max_adults: 2, room_numbers: %w[V1] }
+      )
+      package = create(:rate_plan, :custom, hotel: hotel, name: "Full Board")
+      create(:room_type_rate_plan, rate_plan: package, room_type: room_type, pricing_value: 400)
+
+      patch hotel_room_type_primary_rate_plan_path(hotel, room_type, rate_plan_id: package.id)
+
+      expect(response).to redirect_to(hotel_room_types_path(hotel))
+      expect(flash[:notice]).to include("Full Board is now the primary plan for Villa")
+      expect(room_type.reload.primary_rate_plan).to eq(package)
     end
   end
 end

@@ -44,7 +44,8 @@ RSpec.describe HotelPortal::HousekeepingTaskRoomPresenter do
         assigned_to:,
         assigned_to_id:,
         late_checkout_eligible:,
-        pax: booking ? "#{booking.adults}/#{booking.children}" : "—"
+        pax: booking ? "#{booking.adults}/#{booking.children}" : "—",
+        guest_name: booking&.guest_name.presence || "—"
       },
       hotel:,
       view_context:,

@@ -136,31 +136,7 @@ module Reports
         return unless cancellation.present?
 
         prose(pdf).draw(POLICY_NOTE, heading: "Property policies")
-        draw_cancellation_table(pdf, cancellation.rows) if cancellation.rows.any?
-        draw_cancellation_notes(pdf, cancellation)
-      end
-
-      def draw_cancellation_table(pdf, rows)
-        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
-          section_title: "Cancellation policy",
-          headers: [ "If cancelled", "Charge" ],
-          rows: rows.map { |row| [ row.window, row.charge ] },
-          numeric_columns: [],
-          total_row: nil,
-          empty_message: "No cancellation tiers are configured.",
-          column_widths: [ 0.62, 0.38 ].map { |fraction| pdf.bounds.width * fraction }
-        )
-      end
-
-      def draw_cancellation_notes(pdf, cancellation)
-        notes = [
-          cancellation.refund_note,
-          cancellation.description,
-          cancellation.structured? ? nil : cancellation.legacy_text
-        ].compact_blank
-        return if notes.empty?
-
-        prose(pdf).draw_muted(notes.map { |note| "- #{note}" }.join("\n"))
+        Reports::Bookings::CancellationPolicySection.new(pdf: pdf).draw(cancellation)
       end
 
       def draw_closing_note(pdf)

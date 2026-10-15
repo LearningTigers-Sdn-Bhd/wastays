@@ -1,0 +1,12 @@
+<%= tag.section(**card_attributes) do %>
+  <% if title.present? %>
+    <h2 class="guest-card__title"><%= title %></h2>
+    <div class="guest-card__body">
+      <%= content %>
+      <%= safe_join(rows) if rows? %>
+    </div>
+  <% else %>
+    <%= content %>
+    <%= safe_join(rows) if rows? %>
+  <% end %>
+<% end %>

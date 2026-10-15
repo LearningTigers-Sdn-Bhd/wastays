@@ -2,11 +2,31 @@ require "rails_helper"
 
 RSpec.describe "Service spec coverage" do
   GROUPED_SERVICE_SPECS = {
+    "folios/reads/projected_forecasts" => "folios/group_folio_movements_spec.rb",
+    "concerns/folios/movement_locking" => "folios/group_folio_movements_spec.rb",
+    "folios/destination_policy" => "folios/group_folio_movements_spec.rb",
+    "folios/transactions/movement_policy" => "folios/group_folio_movements_spec.rb",
+    "folios/transfer_folios" => "folios/group_folio_movements_spec.rb",
+    "folios/payments/reallocate_payment" => "folios/group_folio_movements_spec.rb",
+    "folios/lifecycle/incoming_route_blocker" => "folios/group_folio_movements_spec.rb",
+    # Corrections are exercised through the folio lifecycle and document pipeline.
+    "ar_invoices/start_correction" => "ar_invoices/folio_correction_spec.rb",
+    "ar_invoices/complete_correction" => "ar_invoices/folio_correction_spec.rb",
+    "ar_invoices/retry_correction" => "e_invoice/ar_correction_spec.rb",
+    "ar_invoices/send_correction" => "../jobs/ar_invoices/process_correction_job_spec.rb",
+    "e_invoice/ar_correction_document_builder" => "e_invoice/ar_correction_spec.rb",
+    "e_invoice/process_ar_correction" => "e_invoice/ar_correction_spec.rb",
+    "e_invoice/resolve_ar_original" => "e_invoice/ar_correction_spec.rb",
+    "notifications/ar_correction_delivery" => "../jobs/ar_invoices/process_correction_job_spec.rb",
+    "reports/accounts_receivable/generate_correction_credit" => "../jobs/ar_invoices/process_correction_job_spec.rb",
     "e_invoice/cancel" => "e_invoice_services_spec.rb",
     "e_invoice/phone_formatter" => "e_invoice_services_spec.rb",
     "e_invoice/submission_context" => "e_invoice_services_spec.rb",
     "my_invois/client" => "e_invoice_services_spec.rb",
     "my_invois/client_factory" => "e_invoice_services_spec.rb",
+    # Guest matching is simulated edge case by edge case together with the
+    # booking connections that act on its answer.
+    "channel_managers/match_channel_guest" => "channel_managers/channel_guest_matching_spec.rb",
     # The agent loop's collaborators are exercised through the loop itself --
     # a chat builder or a recorder tested apart from the turn it runs in would
     # be asserting on its own mock.
@@ -50,6 +70,14 @@ RSpec.describe "Service spec coverage" do
     # from the class it calls would assert the literal it was given.
     "hotel_portal/reports/booking_performance_columns" => "hotel_portal/reports/report_columns_spec.rb",
     "hotel_portal/reports/booking_performance_selection" => "hotel_portal/reports/record_selection_spec.rb",
+    # The cancellation block only has meaning on the page that prints it. The
+    # voucher and booking summary specs read it from the rendered PDF.
+    "reports/bookings/cancellation_policy_section" => "reports/bookings/generate_voucher_spec.rb",
+    # The folio posting the instalment services share is exercised through them:
+    # a spec for it apart from a payment or refund would assert its own mock.
+    "bookings/payment_instalments/folio_posting" => "bookings/payment_instalments/mark_paid_spec.rb",
+    # Historical posting is tested through the stay transaction and its rollback.
+    "bookings/post_closed_stay_charges" => "bookings/update_stay_closed_dates_spec.rb",
     "onboarding/approve_onboarding" => "onboarding/review_lifecycle_spec.rb",
     "onboarding/commercial_rows" => "onboarding/commercial_setup_spec.rb",
     "onboarding/complete_training" => "onboarding/review_lifecycle_spec.rb",

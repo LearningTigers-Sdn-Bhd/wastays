@@ -4,7 +4,7 @@ module HotelPortal
   module Reports
     class ArrivalsDeparturesPdfExportService
       # Room, date and time columns share fixed widths in portrait mode; guest name takes the remainder.
-      BIBO_FIXED_COLUMN_WIDTHS = [ 100, 110, 100 ].freeze
+      BIBO_FIXED_COLUMN_WIDTHS = [ 80, 90, 80, 90 ].freeze
 
       # Same idea for meal prep, but its columns hold different amounts of text.
       MEAL_PREP_FIXED_COLUMN_WIDTHS = { "Pax" => 40, "Room Number" => 75, "Transfer" => 75,
@@ -88,8 +88,8 @@ module HotelPortal
           rows = leg[:rows]
           builder.add_table(
             section_title: leg[:title], section_meta: count_label(rows.size, "transfer"),
-            headers: [ "Guest Name", "Room Number", leg[:date_header], leg[:time_header] ],
-            rows: rows.map { |row| [ row[:guest_name], row[:room_number], row[leg[:date_key]], row[:boat_time] ].map { |value| value.presence || "-" } },
+            headers: [ "Guest Name", "Room Number", leg[:date_header], leg[:time_header], leg[:label_header] ],
+            rows: rows.map { |row| [ row[:guest_name], row[:room_number], row[leg[:date_key]], row[:boat_time], row[:boat_label] ].map { |value| value.presence || "-" } },
             numeric_columns: [], total_row: nil, empty_message: leg[:empty_message],
             column_widths: widths
           )

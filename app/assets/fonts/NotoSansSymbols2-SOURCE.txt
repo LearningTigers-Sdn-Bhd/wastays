@@ -1,0 +1,9 @@
+Noto Sans Symbols 2, SIL Open Font License 1.1 (see NotoSansSymbols2-OFL.txt).
+
+Source: https://github.com/google/fonts
+Commit: 8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5
+Input: ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf
+License: ofl/notosanssymbols2/OFL.txt
+
+Unmodified static TrueType font. Used for checkbox and other symbols
+absent from the Latin and Chinese faces.

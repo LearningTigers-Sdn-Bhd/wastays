@@ -1,0 +1,49 @@
+<% content_for :title, "Notification Log | WAStays Admin" %>
+<% filter_params = { q: params[:q].presence, range: params[:range].presence } %>
+<% tabs = [
+     { name: "whatsapp", label: "WhatsApp", icon: "message-circle" },
+     { name: "staff", label: "Staff alerts", icon: "bell" }
+   ] %>
+
+<%= render PanelsUI::PageHeader.new(
+      title: "Notification log",
+      description: "Every notification that is not an email: guest WhatsApp messages and in-app alerts for hotel staff.") %>
+
+<section aria-label="Notifications" class="space-y-4">
+  <%= render PanelsUI::Tabs.new(id: "notification-tabs", active: @tab, variant: :line, aria_label: "Filter notifications by channel") do |nav| %>
+    <% tabs.each do |tab| %>
+      <% nav.with_tab(
+           name: tab[:name],
+           label: tab[:label],
+           icon: tab[:icon],
+           count: @tab_counts.fetch(tab[:name]),
+           href: admin_notification_logs_path(filter_params.merge(tab: tab[:name])),
+           data: { turbo_action: "advance" }) %>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: admin_notification_logs_path, method: :get, class: "flex flex-wrap items-end gap-4",
+        data: { controller: "auto-submit", action: "input->auto-submit#submit", turbo_action: "advance" } do |form| %>
+    <%= form.hidden_field :tab, value: @tab %>
+    <div class="w-full flex-1 sm:min-w-64">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :q, label: "Search") do |field| %>
+        <% field.with_input(type: :search, value: params[:q], placeholder: @tab == "staff" ? "Alert, message or staff name" : "Type, booking or guest name") %>
+      <% end %>
+    </div>
+    <div class="w-full sm:w-64">
+      <%= render PanelsUI::FormField.new(form: form, attribute: :range, label: "Date range") do |field| %>
+        <% field.with_date_picker(range: true, value: params[:range].presence) %>
+      <% end %>
+    </div>
+    <% if filter_params.values.any?(&:present?) %>
+      <div class="flex items-center gap-2">
+        <%= render PanelsUI::Button.new(as: :a, href: admin_notification_logs_path(tab: @tab), variant: :ghost) do %>Clear<% end %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%= render "admin/notification_logs/#{@tab}", notifications: @notifications %>
+
+  <%= render PanelsUI::Pagination.new(pagy: @pagy, hide_when_single_page: true) %>
+  <%= turbo_frame_tag "log_detail_sheet" %>
+</section>

@@ -58,7 +58,7 @@
              prompt: "Select a payment method",
              required: required,
              class: "min-w-0 max-w-full",
-             data: { panels_ui__select_menu_fixed_width_value: "true" }) %>
+             data: { ui__select_menu_fixed_width_value: "true" }) %>
       <% end %>
       <p class="mt-2 <%= "hidden" if current_options.present? %> text-xs text-warning" data-payment-method-filter-target="emptyState">No active payment methods are configured for this type.</p>
     </div>

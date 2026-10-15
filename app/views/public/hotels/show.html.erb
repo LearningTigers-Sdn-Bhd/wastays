@@ -308,6 +308,49 @@
             </div>
           </div>
 
+          <% if @nearby_attractions.any? %>
+            <section class="card p-6 bg-white" aria-labelledby="nearby-attractions-heading" data-controller="nearby-attractions">
+              <h3 id="nearby-attractions-heading" class="text-xs font-black text-foreground uppercase tracking-widest mb-4 pb-3 border-b border-muted flex items-center gap-x-2">
+                <%= cached_icon "map-pin", class: "w-4 h-4 text-primary" %>
+                Nearby attractions
+              </h3>
+              <ul class="space-y-3">
+                <% @nearby_attractions.first(3).each do |row| %>
+                  <%= render "nearby_attraction_item", row: row %>
+                <% end %>
+              </ul>
+              <% if @nearby_attractions.size > 3 %>
+                <div>
+                  <div class="-mx-6 -mb-6 mt-4 border-t border-border" data-nearby-attractions-target="moreFooter">
+                    <button type="button"
+                            class="w-full rounded-b px-6 py-3 text-center text-sm font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            aria-expanded="false"
+                            aria-controls="nearby-attractions-more"
+                            data-nearby-attractions-target="more"
+                            data-action="click->nearby-attractions#expand">
+                      Show <%= @nearby_attractions.size - 3 %> more
+                    </button>
+                  </div>
+                  <ul id="nearby-attractions-more" class="hidden space-y-3 mt-4" data-nearby-attractions-target="remaining">
+                    <% @nearby_attractions.drop(3).each do |row| %>
+                      <%= render "nearby_attraction_item", row: row %>
+                    <% end %>
+                  </ul>
+                  <div class="hidden -mx-6 -mb-6 mt-4 border-t border-border" data-nearby-attractions-target="fewerFooter">
+                    <button type="button"
+                            class="w-full rounded-b px-6 py-3 text-center text-sm font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            aria-expanded="true"
+                            aria-controls="nearby-attractions-more"
+                            data-nearby-attractions-target="fewer"
+                            data-action="click->nearby-attractions#collapse">
+                      Show fewer
+                    </button>
+                  </div>
+                </div>
+              <% end %>
+            </section>
+          <% end %>
+
           <div class="card p-6 bg-white">
             <h3 class="text-xs font-black text-foreground uppercase tracking-widest mb-4 pb-3 border-b border-muted flex items-center gap-x-2">
               <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>

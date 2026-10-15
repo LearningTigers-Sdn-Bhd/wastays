@@ -13,7 +13,7 @@
 <% size = local_assigns.fetch(:size, :md) %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: id,
           side: :right,
@@ -33,7 +33,7 @@
               type: :button,
               variant: :secondary,
               size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
+              data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <%= render PanelsUI::Button.new(

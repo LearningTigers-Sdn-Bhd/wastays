@@ -11,7 +11,7 @@
         <% group.rows.each do |row| %>
           <% link_data = { turbo_frame: "_top", turbo_action: "advance" } %>
           <% if mobile_entity_selection %>
-            <% link_data.merge!(action: "workspace-entity-selection#select panels-ui--sheet#close", workspace_entity_selection_heading_param: "billing-preferences-panel") %>
+            <% link_data.merge!(action: "workspace-entity-selection#select ui--sheet#close", workspace_entity_selection_heading_param: "billing-preferences-panel") %>
           <% end %>
           <%= link_to row.href,
               aria: { current: ("page" if row.active) },

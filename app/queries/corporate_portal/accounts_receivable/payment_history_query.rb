@@ -65,7 +65,7 @@ module CorporatePortal
       def payment_scope
         return ArPayment.none if %w[pending failed pending_review rejected].include?(status)
 
-        scope = ArPayment.joins(:hotel_corporate_account)
+        scope = ArPayment.not_voided.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: account.id })
           .where.not(id: CorporateArPaymentIntent.where.not(ar_payment_id: nil).select(:ar_payment_id))
         scope = scope.where(hotel_id:) if hotel_id.present?

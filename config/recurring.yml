@@ -13,15 +13,27 @@ production:
   release_expired_holds:
     class: BookingEngine::ReleaseExpiredHoldsJob
     schedule: every minute
+  release_unpaid_agent_bookings:
+    class: Bookings::ReleaseUnpaidAgentBookingsJob
+    schedule: every 5 minutes
+  agent_payment_reminders:
+    class: Notifications::AgentPaymentRemindersJob
+    schedule: every hour at minute 7
   pull_channex_revisions:
     class: ChannelManagers::PullRevisionsJob
     schedule: every 15 minutes
+  nightly_channex_full_refresh:
+    class: ChannelManagers::NightlyFullRefreshJob
+    schedule: "0 2 * * * Asia/Kuala_Lumpur"
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
   prune_observation_entries:
     class: ObservationDeck::PruneEntriesJob
     schedule: at 3am every day
+  prune_log_entries:
+    class: Logs::PruneOldEntriesJob
+    schedule: at 3:30am every day
   cleanup_room_locks:
     class: CleanupRoomLocksJob
     schedule: every 5 minutes
@@ -43,17 +55,29 @@ production:
   close_stale_conversations:
     class: Concierge::CloseStaleConversationsJob
     schedule: every hour at minute 24
+  recover_stale_knowledge_indexing:
+    class: HotelKnowledges::RecoverStaleIndexingJob
+    schedule: every 15 minutes
 
 demo:
   release_expired_holds:
     class: BookingEngine::ReleaseExpiredHoldsJob
     schedule: every minute
+  release_unpaid_agent_bookings:
+    class: Bookings::ReleaseUnpaidAgentBookingsJob
+    schedule: every 5 minutes
+  agent_payment_reminders:
+    class: Notifications::AgentPaymentRemindersJob
+    schedule: every hour at minute 7
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
   prune_observation_entries:
     class: ObservationDeck::PruneEntriesJob
     schedule: at 3am every day
+  prune_log_entries:
+    class: Logs::PruneOldEntriesJob
+    schedule: at 3:30am every day
   cleanup_room_locks:
     class: CleanupRoomLocksJob
     schedule: every 5 minutes
@@ -75,3 +99,6 @@ demo:
   close_stale_conversations:
     class: Concierge::CloseStaleConversationsJob
     schedule: every hour at minute 24
+  recover_stale_knowledge_indexing:
+    class: HotelKnowledges::RecoverStaleIndexingJob
+    schedule: every 15 minutes

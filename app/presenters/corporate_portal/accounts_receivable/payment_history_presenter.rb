@@ -161,7 +161,7 @@ module CorporatePortal
 
       def load_intents(ids)
         CorporateArPaymentIntent.where(corporate_account: account, id: ids)
-          .includes(:hotel, ar_payment: { ar_payment_allocations: :reversal })
+          .includes(:hotel, ar_payment: [ :void, { ar_payment_allocations: :reversal } ])
           .index_by(&:id)
       end
 
@@ -169,7 +169,7 @@ module CorporatePortal
         ArPayment.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: account.id })
           .where(id: ids)
-          .includes(:hotel, ar_payment_allocations: :reversal)
+          .includes(:hotel, :void, ar_payment_allocations: :reversal)
           .index_by(&:id)
       end
 
@@ -191,7 +191,7 @@ module CorporatePortal
           .where(captured_at: Date.current.beginning_of_month.beginning_of_day..Date.current.end_of_month.end_of_day)
           .group(:currency).sum(:amount)
 
-        legacies = ArPayment.joins(:hotel_corporate_account)
+        legacies = ArPayment.not_voided.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: account.id })
           .where(received_at: Date.current.beginning_of_month..Date.current.end_of_month)
           .where.not(id: CorporateArPaymentIntent.where.not(ar_payment_id: nil).select(:ar_payment_id))
@@ -218,13 +218,13 @@ module CorporatePortal
         ArPayment.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: account.id })
           .where.not(id: CorporateArPaymentIntent.where.not(ar_payment_id: nil).select(:ar_payment_id))
-          .includes(ar_payment_allocations: :reversal)
+          .includes(:void, ar_payment_allocations: :reversal)
           .find_each do |pmt|
             unapplied[pmt.currency.to_s.upcase] += pmt.unallocated_amount
           end
 
         CorporateArPaymentIntent.where(corporate_account: account, status: "captured")
-          .includes(ar_payment: { ar_payment_allocations: :reversal })
+          .includes(ar_payment: [ :void, { ar_payment_allocations: :reversal } ])
           .find_each do |intent|
             if intent.ar_payment
               unapplied[intent.currency.to_s.upcase] += intent.ar_payment.unallocated_amount
@@ -242,13 +242,13 @@ module CorporatePortal
         ArPayment.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: account.id })
           .where.not(id: CorporateArPaymentIntent.where.not(ar_payment_id: nil).select(:ar_payment_id))
-          .includes(ar_payment_allocations: :reversal)
+          .includes(:void, ar_payment_allocations: :reversal)
           .find_each do |pmt|
             count += 1 if pmt.unallocated_amount.positive?
           end
 
         CorporateArPaymentIntent.where(corporate_account: account, status: "captured")
-          .includes(ar_payment: { ar_payment_allocations: :reversal })
+          .includes(ar_payment: [ :void, { ar_payment_allocations: :reversal } ])
           .find_each do |intent|
             if intent.ar_payment
               count += 1 if intent.ar_payment.unallocated_amount.positive?

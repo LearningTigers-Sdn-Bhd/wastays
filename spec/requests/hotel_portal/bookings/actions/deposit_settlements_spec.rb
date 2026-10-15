@@ -29,7 +29,7 @@ RSpec.describe "Checkout deposit settlements", type: :request do
 
     expect(response).to have_http_status(:success)
     document = Nokogiri::HTML(response.body)
-    expect(document.at_css("turbo-frame#booking_action_sheet_secondary [data-controller='panels-ui--sheet-frame']")).to be_present
+    expect(document.at_css("turbo-frame#booking_action_sheet_secondary [data-controller='ui--sheet-frame']")).to be_present
     expect(document.at_css("turbo-frame#booking_action_sheet_secondary dialog#deposit-settlement-apply-#{deposit.id}")).to be_present
     expect(document.text).to include("Apply deposit", "Cleaning Fee", "Damage Charge", "Miscellaneous Revenue")
   end

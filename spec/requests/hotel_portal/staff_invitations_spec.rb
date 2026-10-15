@@ -18,6 +18,44 @@ RSpec.describe "HotelPortal::StaffInvitations", type: :request do
     sign_in_as(user)
   end
 
+  context "an old invitation for a partner" do
+    before { create(:user, :super_agent, email: invitation.email) }
+
+    [ "staff manager", "platform admin" ].each do |actor|
+      context "as a #{actor}" do
+        before { sign_in_as(create(:user, :superadmin)) } if actor == "platform admin"
+
+        [ "sent", "unsent" ].each do |status|
+          context "with a #{status} invitation" do
+            before { invitation.update_column(:last_sent_at, nil) } if status == "unsent"
+
+            %i[edit update resend revoke].each do |action|
+              it "returns 404 for #{action} without changing the invitation or sending mail" do
+                attributes = invitation.reload.attributes
+
+                expect {
+                  case action
+                  when :edit
+                    get edit_hotel_staff_invitation_path(hotel, invitation)
+                  when :update
+                    patch hotel_staff_invitation_path(hotel, invitation), params: { staff_invitation: { role_id: manager_role.id } }
+                  when :resend
+                    post resend_hotel_staff_invitation_path(hotel, invitation)
+                  when :revoke
+                    delete hotel_staff_invitation_path(hotel, invitation)
+                  end
+                }.not_to have_enqueued_job(ActionMailer::MailDeliveryJob)
+
+                expect(response).to have_http_status(:not_found)
+                expect(invitation.reload.attributes).to eq(attributes)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
   describe "PATCH /hotel/:hotel_id/staff_invitations/:id" do
     it "updates the invitation role" do
       patch hotel_staff_invitation_path(hotel, invitation), params: { staff_invitation: { role_id: manager_role.id } }
@@ -76,6 +114,17 @@ RSpec.describe "HotelPortal::StaffInvitations", type: :request do
       }.to change(StaffInvitation, :count).by(-1)
       expect(response).to redirect_to(hotel_users_path(hotel))
       expect(flash[:notice]).to eq("Invitation revoked successfully.")
+    end
+
+    it "revokes an invitation created during onboarding and removes its draft" do
+      invitation.update_column(:last_sent_at, nil)
+      draft = create(:onboarding_staff_draft, hotel: hotel, role: staff_role, email: invitation.email, invitation: invitation)
+
+      expect {
+        delete hotel_staff_invitation_path(hotel, invitation)
+      }.to change(StaffInvitation, :count).by(-1)
+      expect(response).to redirect_to(hotel_users_path(hotel))
+      expect(OnboardingStaffDraft.exists?(draft.id)).to be(false)
     end
   end
 end

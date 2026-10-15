@@ -1,0 +1,16 @@
+<% attraction = row.link.attraction %>
+<li>
+  <div class="flex items-start justify-between gap-3">
+    <%= link_to attraction.name, row.maps_url,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                aria: { label: "Open #{attraction.name} on Google Maps" },
+                class: "min-w-0 text-sm font-semibold text-foreground underline underline-offset-2 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" %>
+    <% if row.distance_km %>
+      <span class="shrink-0 text-xs text-muted-foreground"><%= number_with_precision(row.distance_km, precision: 1) %> km</span>
+    <% end %>
+  </div>
+  <% if row.link.guest_description != attraction.name %>
+    <p class="mt-1 line-clamp-2 text-xs text-muted-foreground"><%= row.link.guest_description %></p>
+  <% end %>
+</li>

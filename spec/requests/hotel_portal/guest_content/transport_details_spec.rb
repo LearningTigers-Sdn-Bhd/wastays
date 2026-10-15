@@ -90,6 +90,7 @@ RSpec.describe "HotelPortal::GuestContent::TransportDetails", type: :request do
       detail = hotel.reload.transport_detail
       expect(detail.airport_distance_km).to eq(32)
       expect(detail.directions).to eq("Take exit 14 from the coastal highway.")
+      expect(detail.configured_sections).to include("directions")
     end
 
     it "writes only the columns of the section that was open" do
@@ -124,6 +125,17 @@ RSpec.describe "HotelPortal::GuestContent::TransportDetails", type: :request do
       expect(detail.parking_height_limit_m).to eq(2.10)
       expect(detail).to be_parking_ev_charging
       expect(detail).not_to be_parking_booking_required
+      expect(detail.configured_sections).to include("parking")
+    end
+
+    it "records an explicit negative transportation setting" do
+      patch hotel_guest_transport_detail_path(hotel, "transportation"), params: {
+        hotel_transport_detail: { airport_transfer_offered: "0" }
+      }
+
+      detail = hotel.reload.transport_detail
+      expect(detail).not_to be_airport_transfer_offered
+      expect(detail.configured_sections).to include("transportation")
     end
 
     it "shows the sheet again when a number is wrong" do

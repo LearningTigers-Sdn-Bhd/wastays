@@ -9,7 +9,7 @@ module ChannelManagers
         hotel_id = options[:hotel_id] || options["hotel_id"]
         external_id = options[:external_id] || options["external_id"]
         hotel = Hotel.find_by(id: hotel_id)
-        return if hotel.nil? || hotel.preferred_channel_manager.blank?
+        return if hotel.nil? || !hotel.channel_manager_enabled?
 
         adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
         adapter.delete_channel_availability_rule(external_id)
@@ -20,7 +20,7 @@ module ChannelManagers
       return if rule.nil?
 
       hotel = rule.hotel
-      return if hotel.preferred_channel_manager.blank?
+      return unless hotel.channel_manager_enabled?
 
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
 

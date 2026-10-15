@@ -1,0 +1,71 @@
+<div class="space-y-8 py-4">
+  <section class="space-y-3">
+    <h2 class="text-base font-semibold">Account information</h2>
+    <dl class="grid gap-4 text-sm sm:grid-cols-2">
+      <div><dt class="text-muted-foreground">Account status</dt><dd><%= @hotel.account.status.humanize %></dd></div>
+      <div><dt class="text-muted-foreground">Account slug</dt><dd class="break-all"><%= @hotel.account.slug.presence || "Not set" %></dd></div>
+    </dl>
+  </section>
+
+  <% if @owners.many? %>
+    <%= form_with url: admin_hotel_path(@hotel), method: :get, class: "flex flex-wrap items-end gap-3" do |form| %>
+      <%= form.hidden_field :tab, value: "account_information" %>
+      <%= render PanelsUI::FormField.new(form:, attribute: :owner_id, label: "Owner account") do |field| %>
+        <% field.with_select_menu(@owners.map { |owner| { label: "#{owner.name} · #{owner.email}", value: owner.id } }, prompt: "Select an owner", selected: @selected_owner&.id) %>
+      <% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary) do %>View owner<% end %>
+    <% end %>
+  <% end %>
+
+  <%= form_with model: @hotel.account, url: update_account_admin_hotel_path(@hotel), method: :patch, class: "space-y-5" do |form| %>
+    <%= hidden_field_tag :owner_id, @selected_owner.id if @selected_owner %>
+    <div class="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <%= render PanelsUI::FieldSet.new(legend: "Account", description: "The account name is shared by every hotel in this account.") do %>
+        <%= render PanelsUI::FieldGroup.new do %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Account name", required: true) do |field| %><% field.with_input %><% end %>
+        <% end %>
+      <% end %>
+      <% if @selected_owner %>
+        <%= fields_for :owner, @selected_owner do |owner_form| %>
+          <%= render PanelsUI::FieldSet.new(legend: "Selected owner", description: "Changes to this user affect every hotel they can access.") do %>
+            <%= render PanelsUI::FieldGroup.new do %>
+              <%= render PanelsUI::FormField.new(form: owner_form, attribute: :name, label: "Owner name", required: true) do |field| %><% field.with_input %><% end %>
+              <%= render PanelsUI::FormField.new(form: owner_form, attribute: :email, label: "Owner email", required: true) do |field| %><% field.with_input(type: :email) %><% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% else %><p class="text-sm text-muted-foreground">Select an active owner to edit their contact details or password.</p><% end %>
+    </div>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Save account information<% end %>
+  <% end %>
+
+  <% if @selected_owner %>
+    <section class="grid gap-8 border-t border-border pt-6 lg:grid-cols-2 lg:items-start">
+      <div class="space-y-3">
+        <h2 class="text-base font-semibold">Email password reset</h2>
+        <p class="text-sm text-muted-foreground">Send a one-time link to <%= @selected_owner.email %>. It expires in 30 minutes.</p>
+        <%= form_with url: send_owner_password_reset_admin_hotel_path(@hotel), method: :post do |form| %>
+          <%= form.hidden_field :owner_id, value: @selected_owner.id %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, data: { turbo_confirm: "Send a password reset link to #{@selected_owner.email}?" }) do %>Send password reset link<% end %>
+        <% end %>
+      </div>
+      <%= form_with url: set_owner_password_admin_hotel_path(@hotel), method: :patch, class: "space-y-4" do |form| %>
+        <h2 class="text-base font-semibold">Set new password</h2>
+        <%= form.hidden_field :owner_id, value: @selected_owner.id %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :password, label: "New password", hint: "At least 12 characters.", required: true) do |field| %><% field.with_input(type: :password, minlength: 12, autocomplete: "new-password") %><% end %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :password_confirmation, label: "Confirm new password", required: true) do |field| %><% field.with_input(type: :password, minlength: 12, autocomplete: "new-password") %><% end %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary) do %>Set owner password<% end %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section class="space-y-3 border-t border-border pt-6">
+    <h2 class="text-base font-semibold">Account users</h2>
+    <% if @account_users.any? %>
+      <ul class="divide-y divide-border">
+        <% @account_users.each do |user| %><li class="py-3 text-sm"><span class="font-medium"><%= user.name %></span><span class="ml-2 text-muted-foreground"><%= user.email %> · <%= user.role.humanize %></span></li><% end %>
+      </ul>
+    <% else %><p class="text-sm text-muted-foreground">No account users yet.</p><% end %>
+    <% @pending_owner_invitations.each do |invitation| %><p class="text-sm text-muted-foreground">Pending owner invitation: <%= invitation.email %></p><% end %>
+  </section>
+</div>

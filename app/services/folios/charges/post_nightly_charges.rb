@@ -145,7 +145,7 @@ module Folios
       def extra_charge_forecasts(booking)
         FolioForecastedCharge.joins(:booking_folio)
           .includes(:booking_folio)
-          .where(booking_folios: { booking_id: booking.id })
+          .where(source_booking_id: booking.id)
           .scheduled_extra_charges.forecast.for_date(@business_date)
           .order(Arel.sql("CASE charge_kind WHEN 'extra_charge' THEN 0 ELSE 1 END"), :id)
       end
@@ -181,6 +181,7 @@ module Folios
           description: description,
           posting_date: @business_date,
           options: @options.merge(
+            source_booking: booking,
             posting_source: "night_audit",
             night_audit: @night_audit,
             transaction_code: transaction_code,
@@ -208,7 +209,7 @@ module Folios
 
       def posted_transaction(booking, nightly_charge_key)
         FolioTransaction.joins(:booking_folio)
-          .where(booking_folios: { booking_id: booking.id })
+          .where(source_booking_id: booking.id)
           .where(voided_by_transaction_id: nil)
           .find_by(
             "metadata->>'nightly_charge_key' = :key OR metadata->>'reconciles_nightly_charge_key' = :key",
@@ -218,7 +219,7 @@ module Folios
 
       def actualize_forecast!(booking, transaction, metadata)
         forecasts = FolioForecastedCharge.joins(:booking_folio)
-          .where(booking_folios: { booking_id: booking.id })
+          .where(source_booking_id: booking.id)
           .forecast
           .where(stay_date: @business_date, charge_kind: metadata[:charge_kind], identity: metadata[:forecast_identity])
 

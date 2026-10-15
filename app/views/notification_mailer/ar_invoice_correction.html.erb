@@ -1,0 +1,15 @@
+<p>Dear <%= @payload[:payer_name] %>,</p>
+<p>We have corrected invoice <%= @correction.original_receivable.formatted_invoice_number %>. The attached credit note cancels that invoice.</p>
+<% replacement = @correction.replacement_receivable %>
+<% if replacement %>
+  <p>Please use replacement invoice <%= replacement.formatted_invoice_number %>.</p>
+  <p>Invoice amount: <%= replacement.currency %> <%= number_with_precision(replacement.amount, precision: 2, delimiter: ",") %><br>
+  Payment carried forward: <%= replacement.currency %> <%= number_with_precision(@correction.metadata["carried_payment_amount"], precision: 2, delimiter: ",") %><br>
+  Remaining due: <%= replacement.currency %> <%= number_with_precision(replacement.outstanding_amount, precision: 2, delimiter: ",") %></p>
+<% else %>
+  <p>The invoice has been canceled in full. No replacement invoice is due.</p>
+<% end %>
+<% if @correction.metadata["unapplied_payment_amount"].to_d.positive? %>
+  <p>Company credit: <%= @correction.original_receivable.currency %> <%= number_with_precision(@correction.metadata["unapplied_payment_amount"], precision: 2, delimiter: ",") %>. This amount remains on your company account; it has not been refunded.</p>
+<% end %>
+<p>Reason: <%= @correction.reason %></p>

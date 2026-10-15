@@ -55,6 +55,13 @@ RSpec.describe BookingGuests::UpdateSnapshot do
     expect(guest.reload.home_address).to eq(original_profile_address)
   end
 
+  it "saves the primary guest with a blank phone" do
+    result = described_class.call(booking_guest:, attributes: attributes.merge(phone: ""), actor:)
+
+    expect(result).to be_success
+    expect(booking.reload.guest_phone).to be_blank
+  end
+
   it "updates the reusable guest profile only when requested" do
     result = described_class.call(booking_guest:, attributes:, actor:, update_profile: true)
 

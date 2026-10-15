@@ -42,7 +42,7 @@ export default class extends Controller {
   filterOptions(malaysia) {
     const unavailable = malaysia ? "national_id" : "malaysian_nric"
     const available = malaysia ? "malaysian_nric" : "national_id"
-    const root = this.documentTypeTarget.closest?.("[data-controller~='searchable-select'], [data-controller~='panels-ui--select-menu']") || this.documentTypeTarget
+    const root = this.documentTypeTarget.closest?.("[data-controller~='searchable-select'], [data-controller~='ui--select-menu']") || this.documentTypeTarget
     root.querySelectorAll?.(`option[value="${unavailable}"], [role="option"][data-value="${unavailable}"]`).forEach((option) => {
       option.hidden = true
       option.setAttribute("aria-disabled", "true")
@@ -60,9 +60,12 @@ export default class extends Controller {
     if (this.hasNumberLabelTarget) {
       const label = this.numberLabelTarget.matches?.("label") ? this.numberLabelTarget : this.numberLabelTarget.querySelector("label")
       if (!label) return
+      // A label that carries a required mark keeps it: only its text span
+      // changes, when it has one.
+      const text = label.querySelector("[data-guest-identity-label-text]") || label
       // Same wording as GuestPresenter#identity_number_label. The server paints
       // it first; this only keeps up once the desk changes the document type.
-      label.textContent = !type ? "Identity document number" :
+      text.textContent = !type ? "Identity document number" :
         (type === "passport" ? "Passport number" :
           (nationalId ? "National identity card number" : "MyKad number"))
     }

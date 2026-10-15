@@ -12,7 +12,7 @@
 <% deposits = checkout_deposits(checkout_bookings) %>
 <% ns = "booking-actions--checkout-settlement" %>
 
-<div data-controller="panels-ui--sheet-frame">
+<div data-controller="ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
         id: "booking-checkout-sheet",
         side: :bottom,
@@ -138,7 +138,7 @@
     <% end %>
 
     <% sheet.with_footer do %>
-      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+      <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
       <%= render PanelsUI::Button.new(
             as: :button,
             type: :submit,

@@ -41,14 +41,14 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     # regardless of whether adults = 1 or adults = 2.
 
     # Test 1 adult -> should pick Standard (150)
-    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 1)
+    visit hotel_path(hotel.unique_id, hotel.public_id, check_in: Date.current, check_out: Date.tomorrow, adults: 1)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/150/)
       expect(page).not_to have_content("PER-PAX BOOKING RULES")
     end
 
     # Test 2 adults -> should pick Standard (150)
-    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
+    visit hotel_path(hotel.unique_id, hotel.public_id, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/150/)
       expect(page).not_to have_content("PER-PAX BOOKING RULES")
@@ -60,7 +60,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
 
     # 1 adult -> card shows price per person (80).
     # When added, sticky bar total price should be 80.
-    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 1)
+    visit hotel_path(hotel.unique_id, hotel.public_id, check_in: Date.current, check_out: Date.tomorrow, adults: 1)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/80/)
       click_button "Add to Stay"
@@ -71,7 +71,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
 
     # 2 adults -> card shows price per person (80).
     # When added, sticky bar total price should be 160.
-    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
+    visit hotel_path(hotel.unique_id, hotel.public_id, check_in: Date.current, check_out: Date.tomorrow, adults: 2)
     within ".group", text: @room_type.name do
       expect(page).to have_content(/80/)
       click_button "Add to Stay"
@@ -85,7 +85,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     add_pax_plan!
     create(:rate_plan_age_band, rate_plan: @pax_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
 
-    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2, children: 1, child_ages: [ 8 ])
+    visit hotel_path(hotel.unique_id, hotel.public_id, check_in: Date.current, check_out: Date.tomorrow, adults: 2, children: 1, child_ages: [ 8 ])
     within ".group", text: @room_type.name do
       click_button "Add to Stay"
     end
@@ -102,7 +102,7 @@ RSpec.describe "Booking Features (Per Pax)", type: :system do
     create(:rate_plan_age_band, rate_plan: @pax_plan, min_age: 4, max_age: 11, price_value: 40, label: "Child")
     @pax_rate.update!(price: 300.0, occupancy_prices: { "1" => 180.0, "2" => 300.0 })
 
-    visit hotel_path(hotel, check_in: Date.current, check_out: Date.tomorrow, adults: 2, children: 1, child_ages: [ 8 ])
+    visit hotel_path(hotel.unique_id, hotel.public_id, check_in: Date.current, check_out: Date.tomorrow, adults: 2, children: 1, child_ages: [ 8 ])
     within ".group", text: @room_type.name do
       click_button "Add to Stay"
     end

@@ -1,0 +1,31 @@
+<% if @tab == "staff" %>
+  <%= render "admin/logs/detail_sheet",
+        title: @notification.title,
+        description: "Staff alert",
+        fields: [
+          [ "Created", l(@notification.created_at, format: "%d %b %Y, %H:%M") ],
+          [ "Hotel", @notification.hotel.name ],
+          [ "Staff", @notification.recipient.name ],
+          [ "Severity", @notification.severity.titleize ],
+          [ "Read", (l(@notification.read_at, format: "%d %b %Y, %H:%M") if @notification.read_at) ],
+          [ "Resolved", (l(@notification.resolved_at, format: "%d %b %Y, %H:%M") if @notification.resolved_at) ]
+        ],
+        text_label: "Message",
+        text: @notification.message,
+        empty_text: "This alert has no message." %>
+<% else %>
+  <%= render "admin/logs/detail_sheet",
+        title: @notification.notification_type.humanize,
+        description: "WhatsApp message",
+        fields: [
+          [ "Time", l(@notification.sent_at || @notification.created_at, format: "%d %b %Y, %H:%M") ],
+          [ "Hotel", @notification.hotel.name ],
+          [ "Booking", "#{@notification.booking.confirmation_token} (#{@notification.booking.guest_name})" ],
+          [ "Event", Notifications::Channels::WhatsappWebhook::EVENT_NAMES[@notification.notification_type] ],
+          [ "Status", @notification.status.titleize ],
+          [ "Error", @notification.error_message ]
+        ],
+        text_label: "Data sent to the WhatsApp webhook",
+        text: (JSON.pretty_generate(@notification.payload) if @notification.payload.present?),
+        empty_text: "No data was sent for this message." %>
+<% end %>

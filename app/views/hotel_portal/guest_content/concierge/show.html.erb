@@ -1,0 +1,52 @@
+<%= render "hotel_portal/guest_content/shared/section_header",
+      title: "Concierge Settings",
+      description: "Manage guest chat, refund requests, and the appearance of Concierge menus." %>
+
+<%= render layout: "hotel_portal/guest_content/ai_concierge/section_form", locals: {
+      hotel: @hotel,
+      url: hotel_concierge_settings_path(@hotel),
+      section: "guest-chat",
+      title: "Guest Chat",
+      description: "Choose whether guests can start a chat from Property Contacts."
+    } do |form| %>
+  <%= render PanelsUI::Switch.new(
+        form: form,
+        attribute: :guest_chat_enabled,
+        label: "Guest Chat",
+        description: "Let guests start a chat from Property Contacts. Off also hides the Conversations inbox and its sidebar tab.") %>
+<% end %>
+
+<%= render layout: "hotel_portal/guest_content/ai_concierge/section_form", locals: {
+      hotel: @hotel,
+      url: hotel_concierge_settings_path(@hotel),
+      section: "refund-requests",
+      title: "Refund Requests",
+      description: "Choose whether verified guests can ask for a refund from Concierge."
+    } do |form| %>
+  <%= render PanelsUI::Switch.new(
+        form: form,
+        attribute: :concierge_refund_requests_enabled,
+        label: "Ask for a Refund",
+        description: "Show the Ask for a refund action on the verified-stay Concierge page.") %>
+<% end %>
+
+<%= render layout: "hotel_portal/guest_content/ai_concierge/section_form", locals: {
+      hotel: @hotel,
+      url: hotel_concierge_settings_path(@hotel),
+      section: "menu-appearance",
+      title: "Menu Appearance",
+      description: "Choose how Concierge menus and Property Guide icons look to guests."
+    } do |form| %>
+  <%= render PanelsUI::RadioGroup.new(
+        form: form,
+        attribute: :concierge_menu_style,
+        label: "Menu style",
+        variant: :card,
+        selected: @hotel.concierge_menu_style,
+        options: [
+          { label: "Interactive", value: "interactive",
+            description: "Use rich colors for menu actions and guide icons." },
+          { label: "Fancy", value: "fancy",
+            description: "Use plain surfaces and reserve solid color for primary actions." }
+        ]) %>
+<% end %>

@@ -24,7 +24,7 @@ RSpec.describe ArPaymentSubmission, type: :model do
     submission.ar_payment_submission_allocations.clear
 
     expect(submission).not_to be_valid
-    expect(submission.errors[:base]).to include("must target at least one outstanding invoice")
+    expect(submission.errors[:base]).to include("must target at least one outstanding invoice or a booking")
   end
 
   it "allows an already-persisted submission without allocations to still be approved/rejected" do

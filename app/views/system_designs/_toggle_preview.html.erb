@@ -10,7 +10,7 @@
       <div class="rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm"
            data-theme="<%= theme %>"
            data-controller="system-designs--toggle-preview"
-           data-action="panels-ui--toggle:change->system-designs--toggle-preview#show">
+           data-action="ui--toggle:change->system-designs--toggle-preview#show">
         <h3 class="text-sm font-semibold"><%= label %> toggles</h3>
         <div class="mt-4 flex flex-wrap items-center gap-2">
           <%= render PanelsUI::Toggle.new(name: "#{scope}[rates]", pressed: true) do %>

@@ -1,0 +1,9 @@
+<%# The facts a guest asks about most, from the settings the property
+    enforces. The public page shows it beside the policies; the stay page
+    shows it under the stay card. Locals: guide, and an optional class. %>
+<% if guide.glance.any? %>
+  <%= render GuestUI::Card.new(title: "At a glance", class: local_assigns[:class]) do %>
+    <%= render GuestUI::FactList.new(columns: 1, facts: guide.glance.map { |fact|
+          GuestUI::FactList.fact(fact.label, fact.value, icon: fact.icon) }) %>
+  <% end %>
+<% end %>

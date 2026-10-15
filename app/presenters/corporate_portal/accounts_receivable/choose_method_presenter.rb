@@ -38,6 +38,13 @@ module CorporatePortal
       def gateway_ready?
         relationship&.hotel&.effective_payment_setting("razorpay").present?
       end
+
+      # Travel agents are bank-transfer only, so the card tile is not offered at
+      # all rather than shown disabled — there is nothing they could do to
+      # enable it.
+      def gateway_offered?
+        relationship.present? && relationship.gateway_payments_allowed?
+      end
     end
   end
 end

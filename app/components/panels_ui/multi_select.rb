@@ -20,7 +20,7 @@ module PanelsUI
 
     def placeholder_text = @placeholder || @prompt || "Search and select…"
 
-    def stimulus_identifier = "panels-ui--multi-select"
+    def stimulus_identifier = "ui--multi-select"
     def root_id = "#{native_id}-multi-select"
     # Keep panel-combobox so every combobox style applies; panel-multi-select adds
     # the multi-item pill overrides on top.

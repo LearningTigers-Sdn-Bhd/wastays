@@ -50,8 +50,8 @@ module PanelsUI
             data: data.merge({
               variant: (@variant unless @unstyled),
               size: (@size unless @unstyled),
-              panels_ui__popover_target: "trigger",
-              action: ("click->panels-ui--popover#toggle keydown->panels-ui--popover#onTriggerKeydown" unless @href.present?)
+              ui__popover_target: "trigger",
+              action: ("click->ui--popover#toggle keydown->ui--popover#onTriggerKeydown" unless @href.present?)
             }.compact),
             aria: aria.merge(
               label: @aria_label || aria.delete(:label) || aria.delete("label"),
@@ -99,8 +99,8 @@ module PanelsUI
     def root_action
       return nil unless @trigger_on == :hover
 
-      "mouseenter->panels-ui--popover#show mouseleave->panels-ui--popover#hide " \
-        "focusin->panels-ui--popover#show focusout->panels-ui--popover#hide"
+      "mouseenter->ui--popover#show mouseleave->ui--popover#hide " \
+        "focusin->ui--popover#show focusout->ui--popover#hide"
     end
 
     def root_attributes
@@ -112,14 +112,14 @@ module PanelsUI
         id: attributes.delete(:id) || @id,
         class: tw_merge("popover-root", @root_class, attributes.delete(:class)),
         data: data.merge(
-          controller: "panels-ui--popover",
-          panels_ui__popover_placement_value: floating_placement,
-          panels_ui__popover_offset_value: @offset,
-          panels_ui__popover_delay_value: @delay,
-          panels_ui__popover_close_delay_value: @close_delay,
-          panels_ui__popover_trigger_on_value: @trigger_on,
-          panels_ui__popover_focus_value: focus?,
-          panels_ui__popover_owner_value: @owner,
+          controller: "ui--popover",
+          ui__popover_placement_value: floating_placement,
+          ui__popover_offset_value: @offset,
+          ui__popover_delay_value: @delay,
+          ui__popover_close_delay_value: @close_delay,
+          ui__popover_trigger_on_value: @trigger_on,
+          ui__popover_focus_value: focus?,
+          ui__popover_owner_value: @owner,
           action: [ root_action, caller_action ].compact_blank.join(" ").presence
         ).compact
       )

@@ -54,7 +54,11 @@ class Deposit < ApplicationRecord
   def eligible_folio?(folio)
     return false unless folio&.hotel_id == hotel_id && folio.currency == currency
     return false if hotel_corporate_account_id.present? && folio.hotel_corporate_account_id != hotel_corporate_account_id
-    return folio.booking_id == booking_id if booking_id.present?
+    if booking_id.present?
+      return true if folio.booking_id == booking_id
+
+      return kind_prepayment? && Folios::DestinationPolicy.related?(booking, folio.booking)
+    end
 
     folio.booking.group_booking_id == group_booking_id
   end

@@ -27,14 +27,14 @@ module HotelPortal
         def load_transaction
           @transaction = booking_transaction_scope.includes(:transaction_code).find(params[:transaction_id])
           @source_folio = @transaction.booking_folio
-          @target_folios = @booking.booking_folios.open
+          @target_folios = ::Folios::DestinationPolicy.folios(booking: @booking).open
                                    .order(is_primary: :desc, folio_sequence: :asc, folio_number: :asc, id: :asc)
                                    .reject { |folio| folio.id == @source_folio.id }
         end
 
         def create
           transaction = booking_transaction_scope.find(params[:transaction_id])
-          target_folio = @booking.booking_folios.find(folio_operation_params[:target_folio_id])
+          target_folio = ::Folios::DestinationPolicy.folios(booking: @booking).find(folio_operation_params[:target_folio_id])
 
           result = ::Folios::Transactions::SplitTransaction.call(
             transaction: transaction,
@@ -46,7 +46,12 @@ module HotelPortal
             posting_date: current_hotel.current_business_date
           )
 
-          return complete_action(alert: result.error) unless result.success?
+          unless result.success?
+            load_transaction
+            @operation_draft = folio_operation_params.to_h
+            flash.now[:alert] = result.error
+            return render :show, formats: [ :html ], layout: false, status: :unprocessable_content
+          end
 
           complete_action(notice: "Folio transaction split.")
         end

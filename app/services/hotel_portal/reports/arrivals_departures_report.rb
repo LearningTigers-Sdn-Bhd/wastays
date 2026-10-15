@@ -112,7 +112,8 @@ module HotelPortal
           guarantee_method_status: guarantee.humanize,
           deposit_status: deposit.humanize,
           guarantee_status: "#{guarantee.humanize} / #{deposit.humanize}",
-          boat_arrival: primary_bg&.boat_in_at
+          boat_arrival: primary_bg&.boat_in_at,
+          boat_arrival_type: primary_bg&.boat_in_type
         }
       end
 
@@ -120,7 +121,8 @@ module HotelPortal
         primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
         {
           departure_status: departure_status(booking),
-          boat_departure: primary_bg&.boat_out_at
+          boat_departure: primary_bg&.boat_out_at,
+          boat_departure_type: primary_bg&.boat_out_type
         }
       end
 
@@ -128,7 +130,8 @@ module HotelPortal
         primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
         {
           departure_status: "In house",
-          boat_departure: primary_bg&.boat_out_at
+          boat_departure: primary_bg&.boat_out_at,
+          boat_departure_type: primary_bg&.boat_out_type
         }
       end
 
@@ -136,7 +139,8 @@ module HotelPortal
         primary_bg = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
         {
           departure_status: departure_status(booking),
-          boat_departure: primary_bg&.boat_out_at
+          boat_departure: primary_bg&.boat_out_at,
+          boat_departure_type: primary_bg&.boat_out_type
         }
       end
 

@@ -1,0 +1,10 @@
+<%# The tablet's instruction slot. Empty while idle; the desk replaces it with a
+    copy carrying a path, and the controller navigates the moment it connects.
+    Replacing rather than appending means a second push supersedes the first
+    instead of queueing behind it. %>
+<div id="<%= SigningDevice::COMMAND_REGION_ID %>"
+     <% if url.present? %>
+       data-controller="signing-command"
+       data-signing-command-url-value="<%= url %>"
+     <% end %>
+     hidden></div>

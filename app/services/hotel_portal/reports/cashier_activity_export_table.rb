@@ -27,8 +27,16 @@ module HotelPortal
           section: report.section_by_transaction_id.fetch(transaction.id),
           origin: report.non_cash_origin_by_transaction_id[transaction.id],
           handling: report.handling_by_transaction_id&.[](transaction.id),
-          received_by_key: report.received_by_key_by_transaction_id&.[](transaction.id)
+          received_by_key: report.received_by_key_by_transaction_id&.[](transaction.id),
+          payment_reference: batch_reference(report, transaction)
         )
+      end
+
+      # A report built without the batch map (older callers, specs) lets the
+      # row resolve its own reference instead of showing none.
+      def batch_reference(report, transaction)
+        references = report.respond_to?(:payment_reference_by_transaction_id) && report.payment_reference_by_transaction_id
+        references ? references[transaction.id] : :unresolved
       end
 
       def cell_values(row, key, pdf)
@@ -50,6 +58,7 @@ module HotelPortal
         when "invoice" then row.invoice_number
         when "handling" then row.handling
         when "payment_mode" then row.settlement_mode
+        when "payment_reference" then row.payment_reference
         when "stage" then row.section
         when "received_by" then row.received_by
         when "remarks" then row.description

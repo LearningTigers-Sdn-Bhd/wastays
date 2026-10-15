@@ -1,13 +1,20 @@
 <%# Pages scroll as documents by default. The chat overrides the root instead:
-    it fills the viewport exactly and hands its own thread the only scrollbar. %>
-<div class="<%= local_assigns.fetch(:root_class, 'bg-background min-h-screen flex flex-col md:flex-row') %>">
-  <%= render "public/concierge/shared/left_panel" %>
+    it fills the viewport exactly and hands its own thread the only scrollbar,
+    and suppresses the hero because its own header already names the hotel. %>
+<div class="<%= local_assigns.fetch(:root_class, 'bg-background min-h-screen flex flex-col') %>">
+  <% if local_assigns.fetch(:top_bar, true) %>
+    <%= render "public/concierge/shared/hero" %>
+  <% end %>
 
-  <%# A landmark, so anyone navigating by them can get past the brand panel in
-      one move rather than tabbing through it. %>
-  <main class="<%= local_assigns.fetch(:content_class, 'flex-1 flex items-start justify-center px-4 pt-20 pb-20 sm:px-6 md:pt-28') %>">
-    <div class="<%= local_assigns.fetch(:container_class, 'w-full max-w-3xl') %>">
+  <%# A landmark, so anyone navigating by them can get straight to the content. %>
+  <main class="<%= local_assigns.fetch(:content_class, 'flex-1 px-4 pt-8 pb-16 sm:px-6 md:pt-10') %>">
+    <div class="mx-auto <%= local_assigns.fetch(:container_class, 'w-full max-w-3xl') %>">
       <%= yield %>
     </div>
   </main>
+
+  <%# The chat fills the viewport, so it drops the footer with the hero. %>
+  <% if local_assigns.fetch(:footer, local_assigns.fetch(:top_bar, true)) %>
+    <%= render "public/concierge/shared/footer" %>
+  <% end %>
 </div>

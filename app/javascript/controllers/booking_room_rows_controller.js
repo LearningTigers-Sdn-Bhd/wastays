@@ -6,18 +6,26 @@ export default class extends Controller {
     // Collection switches.
     "tourismTaxCollection", "depositCollection", "collectPayment", "tourismTaxCollected", "depositEnabled", "depositAmount",
     // Billing summary rows.
-    "folioGroup", "folioNote", "roomTotal", "taxTotal", "tourismTaxRow", "tourismTaxTotal", "tourismTaxNote",
+    "folioGroup", "folioNote", "autoChargeList", "roomTotal", "taxTotal", "tourismTaxRow", "tourismTaxTotal", "tourismTaxNote",
     "surchargeRow", "surchargeTotal", "surchargeTaxRow", "surchargeTaxTotal", "depositRow", "depositTotal",
-    "collectedLabel", "collectedTotal", "grandTotal"
+    "collectedLabel", "collectedTotal", "grandTotal",
+    // Day use: the date range is swapped for an arrival time on today's date.
+    "rangeField", "dayUseFields", "arrivalDate", "arrivalTime"
   ]
-  static values = { availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean }
+  static values = {
+    autoCharges: Array, availabilityUrl: String, rateOptionsUrl: String, priceUrl: String, roomRowUrl: String, autoAssignEnabled: Boolean,
+    dayUseDate: String, dayUseSelected: Boolean
+  }
 
   connect() {
     this.nextIndex = this.rowTargets.length
     this.baseTotal = 0
+    this.autoChargeTotal = 0
     this.tourismTax = 0
     this.surcharge = 0
     this.surchargeTax = 0
+    this.dayUse = this.dayUseSelectedValue && this.hasArrivalTimeTarget && this.hasArrivalDateTarget
+    if (this.dayUse) this.applyDayUseWindow()
     this.onQuoteChanged = this.onQuoteChanged.bind(this)
     this.overrideTimeouts = new Map()
     window.addEventListener("booking:quote-changed", this.onQuoteChanged)
@@ -64,6 +72,56 @@ export default class extends Controller {
     this.updateTotals()
   }
 
+  // Overnight / Day use switch. Day use replaces the date range with an arrival
+  // date and time; going back restores whatever range the picker holds.
+  stayTypeChanged(event) {
+    this.dayUse = event.detail.value === "day_use"
+    this.rangeFieldTarget.classList.toggle("hidden", this.dayUse)
+    this.dayUseFieldsTarget.classList.toggle("hidden", !this.dayUse)
+    if (this.dayUse) this.applyDayUseWindow()
+    else this.restoreRange()
+    this.stayChanged()
+  }
+
+  arrivalChanged() {
+    this.applyDayUseWindow()
+    this.stayChanged()
+  }
+
+  // Check-in is the chosen date (today by default) at the chosen time. Check-out is that plus the hours of
+  // the day-use plan picked on a row (one hour until a plan is picked). The
+  // server sets the real check-out from the plan; this keeps the form's dates
+  // on one day so rate options and availability are asked the right question.
+  applyDayUseWindow() {
+    const date = this.arrivalDateTarget.value || this.dayUseDateValue
+    const time = this.arrivalTimeTarget.value || "09:00"
+    const start = new Date(`${date}T${time}`)
+    let end = new Date(start.getTime() + (this.selectedDayUseHours() || 1) * 3600000)
+    if (end.toDateString() !== start.toDateString()) end = new Date(`${date}T23:59`)
+    this.checkInTarget.value = this.localStamp(start)
+    this.checkOutTarget.value = this.localStamp(end)
+  }
+
+  restoreRange() {
+    const picker = this.element.querySelector('[data-ui--date-time-picker-target="input"]')
+    const [start = "", end = ""] = (picker?.value || "").split("/")
+    this.checkInTarget.value = start
+    this.checkOutTarget.value = end
+  }
+
+  selectedDayUseHours() {
+    for (const row of this.rowTargets) {
+      const hours = JSON.parse(row.dataset.rateHours || "{}")[this.readValue(this.roleEl(row, "rate-plan"))]
+      if (hours) return Number(hours)
+    }
+    return null
+  }
+
+  localStamp(date) {
+    const pad = (value) => String(value).padStart(2, "0")
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+
   stayChanged() {
     this.updateNights()
     this.rowTargets.forEach((row) => {
@@ -85,7 +143,7 @@ export default class extends Controller {
   // value into the hidden check_in / check_out fields the backend and the rest
   // of this controller already consume, then re-run the stay-dependent loads.
   rangeChanged(event) {
-    if (!event.target.matches('[data-panels-ui--date-time-picker-target="input"]')) return
+    if (!event.target.matches('[data-ui--date-time-picker-target="input"]')) return
 
     const [start = "", end = ""] = (event.target.value || "").split("/")
     if (this.hasCheckInTarget) this.checkInTarget.value = start
@@ -150,15 +208,19 @@ export default class extends Controller {
       this.setChoices(roomEl, roomChoices, roomStillAvailable ? preservedRoomNumber : "")
 
       const rateTotals = {}
+      const rateHours = {}
       const rateChoices = [{ label: "Select rate", value: "" }].concat(
         (rates.rate_options || []).map((rate) => {
           const total = Number(rate.total_amount || 0)
           const value = String(rate.id || "")
           rateTotals[value] = total
-          return { label: `${rate.name} · ${rate.currency || "MYR"} ${total.toFixed(2)}`, value: value }
+          if (rate.day_use_hours) rateHours[value] = rate.day_use_hours
+          const hours = rate.day_use_hours ? ` (${rate.day_use_hours}h day use)` : ""
+          return { label: `${rate.name}${hours} · ${rate.currency || "MYR"} ${total.toFixed(2)}`, value: value }
         })
       )
       row.dataset.rateTotals = JSON.stringify(rateTotals)
+      row.dataset.rateHours = JSON.stringify(rateHours)
       const preservedRatePlanId = String(preserved.rate_plan_id || "")
       const rateStillAvailable = rateChoices.some((choice) => choice.value === preservedRatePlanId)
       this.setChoices(rateEl, rateChoices, rateStillAvailable ? preservedRatePlanId : "")
@@ -188,6 +250,14 @@ export default class extends Controller {
     const row = event.target.closest("[data-booking-room-rows-target~='row']")
     this.clearOverride(row)
     this.recalcRow(row)
+    if (this.dayUse) this.followPlanHours()
+  }
+
+  // A day-use plan sets how long the stay is, so a different plan moves check-out.
+  followPlanHours() {
+    const before = this.checkOutTarget.value
+    this.applyDayUseWindow()
+    if (this.checkOutTarget.value !== before) this.stayChanged()
   }
 
   // Bound to the adults/children fields. Occupancy can change what a rate plan
@@ -195,6 +265,7 @@ export default class extends Controller {
   // recalcRow re-solves against the same target rather than dropping it.
   occupancyChanged(event) {
     this.recalcRow(event.target.closest("[data-booking-room-rows-target~='row']"))
+    this.updateTotals()
   }
 
   // Typing a final total (tax included) re-solves the room net on the server:
@@ -433,7 +504,7 @@ export default class extends Controller {
       (collectingTourism ? this.tourismTax : 0) + deposit
 
     this.collectedLabelTargets.forEach((target) => { target.textContent = collecting ? "Total to collect" : "Total" })
-    this.collectedTotalTargets.forEach((target) => { target.textContent = (collecting ? total : this.baseTotal).toFixed(2) })
+    this.collectedTotalTargets.forEach((target) => { target.textContent = (collecting ? total : this.baseTotal + this.autoChargeTotal).toFixed(2) })
 
     const folioUnpaid = collecting && !payingFolio
     this.folioGroupTargets.forEach((target) => target.classList.toggle("opacity-50", folioUnpaid))
@@ -502,6 +573,10 @@ export default class extends Controller {
     const children = this.readValue(this.roleEl(row, "children"))
     if (adults) params.set("adults", adults)
     if (children) params.set("children", children)
+    params.delete("child_ages[]")
+    row.querySelectorAll("[data-role='child-ages'] select").forEach((select) => {
+      params.append("child_ages[]", select.value)
+    })
   }
 
   // The [data-role] wrapper for a row cell.
@@ -552,8 +627,8 @@ export default class extends Controller {
   // (which SelectMenu reads verbatim on connect).
   setChoices(wrapper, choices, selectedValue = "") {
     if (!wrapper) return
-    const host = wrapper.querySelector('[data-controller~="panels-ui--select-menu"]')
-    const controller = host && this.application.getControllerForElementAndIdentifier(host, "panels-ui--select-menu")
+    const host = wrapper.querySelector('[data-controller~="ui--select-menu"]')
+    const controller = host && this.application.getControllerForElementAndIdentifier(host, "ui--select-menu")
     if (controller) {
       controller.replaceOptions(choices, selectedValue)
       return
@@ -568,11 +643,64 @@ export default class extends Controller {
     native.value = selectedValue || ""
   }
 
-  updateNights() {
+  stayNights() {
     const start = new Date(this.checkInTarget.value)
     const finish = new Date(this.checkOutTarget.value)
-    const nights = Math.max(0, Math.ceil((finish - start) / 86400000)) || 0
-    this.nightsTarget.textContent = nights
+    return Math.max(0, Math.ceil((finish - start) / 86400000)) || 0
+  }
+
+  // Same date in and out, leaving later: a day-use stay, billed once.
+  isDayUse() {
+    const start = this.checkInTarget.value
+    const finish = this.checkOutTarget.value
+    return Boolean(start && finish) && start.slice(0, 10) === finish.slice(0, 10) && new Date(finish) > new Date(start)
+  }
+
+  updateNights() {
+    this.nightsTarget.textContent = this.isDayUse() ? "Day use" : this.stayNights()
+  }
+
+  // Mirrors ExtraCharges::ForecastQuote: a charge that is not per night is
+  // billed once for the stay, a per-night charge once for each night.
+  autoChargeAmount(charge, room) {
+    const perGuest = ["per_person", "per_person_night"].includes(charge.unit)
+    const quantity = perGuest ? Math.max(1, room.adults + (charge.children ? room.children : 0)) : 1
+    const nightly = ["per_night", "per_room_night", "per_person_night"].includes(charge.unit)
+    return Number(charge.rate) * quantity * (nightly ? this.stayNights() : 1)
+  }
+
+  // Adults and children on the rooms that are picked so far, one entry per room.
+  roomGuests() {
+    return this.rowTargets
+      .filter((row) => this.readValue(this.roleEl(row, "room-type")))
+      .map((row) => {
+        const adults = Number(this.readValue(this.roleEl(row, "adults")) || 1)
+        const children = Number(this.readValue(this.roleEl(row, "children")) || 0)
+        return { adults, children }
+      })
+  }
+
+  renderAutoCharges() {
+    if (!this.hasAutoChargeListTarget) return
+    const list = this.autoChargeListTarget
+    const currency = list.dataset.currency
+    const lines = this.autoChargesValue.map((charge) => ({
+      name: charge.name,
+      amount: this.roomGuests().reduce((sum, room) => sum + this.autoChargeAmount(charge, room), 0)
+    })).filter((line) => line.amount > 0)
+
+    this.autoChargeTotal = lines.reduce((sum, line) => sum + line.amount, 0)
+    list.replaceChildren(...lines.map((line) => {
+      const row = document.createElement("div")
+      row.className = "flex justify-between"
+      const label = document.createElement("span")
+      label.textContent = line.name
+      const amount = document.createElement("strong")
+      amount.className = "text-foreground"
+      amount.textContent = `${currency} ${line.amount.toFixed(2)}`
+      row.append(label, amount)
+      return row
+    }))
   }
 
   updateTotals() {
@@ -583,6 +711,7 @@ export default class extends Controller {
 
     this.baseTotal = grandTotal
     this.tourismTax = tourismTaxTotal
+    this.renderAutoCharges()
 
     this.roomTotalTargets.forEach((target) => { target.textContent = roomTotal.toFixed(2) })
     this.taxTotalTargets.forEach((target) => { target.textContent = taxTotal.toFixed(2) })
@@ -644,6 +773,7 @@ export default class extends Controller {
   }
 
   resetPriceBreakdown(row) {
+    this.showOccupancyWarning(row, null)
     const status = this.breakdownEl(row, "breakdown-status")
     const details = this.breakdownEl(row, "breakdown-details")
     if (status) {
@@ -663,7 +793,18 @@ export default class extends Controller {
     details?.classList.add("hidden")
   }
 
+  // A party bigger than the category is meant to hold is the desk's call to
+  // make, so it is flagged under the row rather than blocked.
+  showOccupancyWarning(row, message) {
+    const warning = this.roleEl(row, "occupancy-warning")
+    if (!warning) return
+
+    warning.textContent = message || ""
+    warning.classList.toggle("hidden", !message)
+  }
+
   populatePriceBreakdown(row, data) {
+    this.showOccupancyWarning(row, data.occupancy_warning)
     const status = this.breakdownEl(row, "breakdown-status")
     const details = this.breakdownEl(row, "breakdown-details")
     const nightly = this.breakdownEl(row, "nightly-breakdown")

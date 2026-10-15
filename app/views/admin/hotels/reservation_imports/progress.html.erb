@@ -1,0 +1,13 @@
+<%# The page subscribes to the import's own stream, so the job pushes progress
+    as it works rather than the browser asking every second. The partial renders
+    the current state on load too, so a reload after a lost socket still shows
+    the truth. %>
+<%= turbo_stream_from @import %>
+
+<div class="w-full space-y-6" data-controller="reservation-import-progress">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Importing reservations",
+        description: "#{@hotel.name} — you can leave this page; the import keeps running.") %>
+
+  <%= render "admin/hotels/reservation_imports/progress", import: @import %>
+</div>

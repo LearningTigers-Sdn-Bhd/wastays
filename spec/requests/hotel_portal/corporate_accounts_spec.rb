@@ -15,6 +15,63 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     sign_in_as(user)
   end
 
+  # Credit currency, credit limit and payment terms only apply to a direct-bill
+  # relationship. A standard account settles at checkout, so it is never
+  # invoiced and has no credit exposure to cap.
+  describe "billing terms visibility" do
+    it "wires the invitation form so the terms follow the relationship" do
+      get new_hotel_corporate_account_path(hotel)
+      document = Nokogiri::HTML(response.body)
+      section = document.at_css("[data-controller='corporate-billing-terms']")
+
+      expect(section).to be_present
+      expect(section["data-action"]).to include("change->corporate-billing-terms#refresh")
+
+      terms = section.at_css("[data-corporate-billing-terms-target='terms']")
+      expect(terms).to be_present
+      # The controller finds the selected relationship radio by name, and disables the
+      # named controls inside the terms block. Both have to be where it looks.
+      expect(section.at_css('input[type="radio"][name$="[relationship_type]"]')).to be_present
+      expect(terms.css("input[name], select[name]").map { |node| node["name"] })
+        .to include(a_string_including("credit_currency"),
+                    a_string_including("credit_limit"),
+                    a_string_including("payment_terms_days"))
+      # Relationship radios must sit outside the block they control.
+      expect(terms.at_css('input[type="radio"][name$="[relationship_type]"]')).to be_nil
+    end
+
+    it "drops the terms tail and the credit figure from a standard account" do
+      create(:hotel_corporate_account, hotel: hotel, relationship_type: "standard")
+
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).to include("Standard")
+      # "Standard · No terms" answers a question nobody asked: a standard
+      # account is never invoiced, so it has no terms and no limit.
+      expect(response.body).not_to include("Standard · No terms")
+      expect(response.body).not_to include("No limit set")
+    end
+
+    it "keeps the terms and the limit on a direct-bill account" do
+      create(:hotel_corporate_account, hotel: hotel, relationship_type: "direct_bill",
+                                       payment_terms_days: 30)
+
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).to include("Direct bill · 30 days")
+    end
+
+    it "wires the edit form the same way" do
+      relationship = create(:hotel_corporate_account, hotel: hotel)
+
+      get edit_hotel_corporate_account_path(hotel, relationship)
+      section = Nokogiri::HTML(response.body).at_css("[data-controller='corporate-billing-terms']")
+
+      expect(section).to be_present
+      expect(section.at_css("[data-corporate-billing-terms-target='terms']")).to be_present
+    end
+  end
+
   it "lists only relationships belonging to the current hotel" do
     visible = create(:hotel_corporate_account, hotel: hotel)
     hidden = create(:hotel_corporate_account)
@@ -124,20 +181,56 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(response.body).to include("Invite external account")
     expect(response.body).to include("Corporate contact email")
     expect(response.body).not_to include("Company name")
+    expect(response.parsed_body.at_css('input[type="radio"][value="direct_bill"]')["checked"]).to be_present
     # DESIGN.md 6: portal forms use SelectMenu, never a native select.
-    expect(Nokogiri::HTML(response.body).css("select:not([data-panels-ui--select-menu-target]):not([data-panels-ui--combobox-target])")).to be_empty
+    expect(Nokogiri::HTML(response.body).css("select:not([data-ui--select-menu-target]):not([data-ui--combobox-target])")).to be_empty
   end
 
-  it "renders the edit form in the sheet frame" do
+  it "offers separate creation forms and reveals temporary credentials only on request" do
+    corporate_user = create(:user, :corporate, temporary_password: "password123", temporary_password_hotel: hotel)
+    create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account)
+    get hotel_corporate_accounts_path(hotel)
+    expect(response.body).to include("Add / Invite", "Invite account", "Add account", "More", "Show temporary password")
+    expect(response.body).not_to include("password123")
+    corporate_user.update!(temporary_password: nil, temporary_password_hotel: nil)
+    get hotel_corporate_accounts_path(hotel)
+    expect(response.body).not_to include("Show temporary password")
+  end
+
+  it "renders the edit form as a workspace page" do
     relationship = create(:hotel_corporate_account, hotel: hotel)
 
-    get edit_hotel_corporate_account_path(hotel, relationship), headers: { "Turbo-Frame" => "external_account_sheet" }
+    get edit_hotel_corporate_account_path(hotel, relationship)
 
     expect(response).to have_http_status(:success)
-    expect(response.body).to include('dialog id="external-account-sheet"')
+    expect(response.parsed_body.at_css('[data-testid="corporate-account-workspace"]')).to be_present
     expect(response.body).to include(relationship.corporate_account.name)
-    expect(response.body).to include("Billing address", "Billing address missing")
+    expect(response.body).to include("Manage billing", "Company details", "Billing address")
     expect(response.body).to include("external-account-suspend-#{relationship.id}")
+  end
+
+  # The stored column is hours; days are a way of typing it. Both ends of the
+  # round trip are checked, because a hold that reads back wrong is one an admin
+  # will "correct" into something else.
+  it "sets an account's payment hold in days and stores it as hours" do
+    relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+
+    patch hotel_corporate_account_path(hotel, relationship), params: {
+      hotel_corporate_account: { agent_payment_hold_amount: "3", agent_payment_hold_unit: "days" }
+    }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+    expect(relationship.reload.agent_payment_hold_hours).to eq(72)
+  end
+
+  it "offers a unit beside the hold, and re-opens showing what was saved" do
+    relationship = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent",
+                                                    agent_payment_hold_hours: 72)
+
+    get edit_hotel_corporate_account_path(hotel, relationship)
+
+    document = response.parsed_body
+    expect(document.at_css("#hotel_corporate_account_agent_payment_hold_amount")["value"]).to eq("3")
+    expect(document.at_css("[name='hotel_corporate_account[agent_payment_hold_unit]']")).to be_present
   end
 
   it "updates the hotel-specific billing address" do
@@ -153,7 +246,7 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
       }
     }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
 
-    expect(response).to have_http_status(:success)
+    expect(response).to have_http_status(:see_other)
     expect(relationship.reload).to have_attributes(
       billing_address_line1: "12 Jalan Lintas",
       billing_city: "Kota Kinabalu",
@@ -184,6 +277,77 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
       "relationship_type" => "standard",
       "credit_currency" => "MYR"
     )
+  end
+
+  # Booking on a client's behalf is a permission the hotel grants, and the hold
+  # only means anything once it has been. Both travel with the invitation so the
+  # accepted relationship starts on the terms that were offered.
+  describe "the booking permission on an invitation" do
+    it "carries the permission and the proposed hold through to the invitation" do
+      post hotel_corporate_accounts_path(hotel), params: {
+        corporate_invitation: {
+          email: "agent@acme.test",
+          relationship_type: "standard",
+          credit_currency: "MYR",
+          agent_booking_enabled: "1",
+          agent_payment_hold_amount: "3",
+          agent_payment_hold_unit: "days"
+        }
+      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+      invitation = CorporateInvitation.last
+      expect(invitation.agent_booking_enabled).to be(true)
+      expect(invitation.agent_payment_hold_hours).to eq(72)
+    end
+
+    # An account that cannot book has nothing to hold. Keeping the number would
+    # quietly apply it the day someone switched booking on.
+    it "drops a hold offered without the permission" do
+      post hotel_corporate_accounts_path(hotel), params: {
+        corporate_invitation: {
+          email: "agent@acme.test",
+          relationship_type: "standard",
+          credit_currency: "MYR",
+          agent_booking_enabled: "0",
+          agent_payment_hold_amount: "3",
+          agent_payment_hold_unit: "days"
+        }
+      }, headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "external_account_sheet" }
+
+      invitation = CorporateInvitation.last
+      expect(invitation.agent_booking_enabled).to be(false)
+      expect(invitation.agent_payment_hold_hours).to be_nil
+    end
+
+    it "offers the switch and the hold on the invite form, with days first" do
+      get new_hotel_corporate_account_path(hotel)
+
+      document = response.parsed_body
+      switch = document.at_css('input[type="checkbox"][name="corporate_invitation[agent_booking_enabled]"]')
+      expect(switch).to be_present
+      expect(switch["checked"]).to be_nil
+      # The stimulus controller hides the hold until the switch is on, so the
+      # block it looks for has to be here and has to hold the two controls.
+      hold = document.at_css("[data-corporate-billing-terms-target='hold']")
+      expect(hold).to be_present
+      expect(hold.css("input[name], select[name]").map { |node| node["name"] })
+        .to include(a_string_including("agent_payment_hold_amount"),
+                    a_string_including("agent_payment_hold_unit"))
+      units = hold.css('select[name$="[agent_payment_hold_unit]"] option').map { |node| node["value"] }
+      expect(units.first).to eq("days")
+    end
+
+    it "grants the permission on the relationship when the invitation is accepted" do
+      invitation = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user,
+                                                 agent_booking_enabled: true, agent_payment_hold_hours: 72)
+      corporate_user = create(:user, :corporate, email: invitation.email)
+
+      result = CorporateInvitations::AcceptService.new(invitation: invitation, accepting_user: corporate_user).call
+
+      expect(result.success?).to be(true)
+      expect(result.relationship.agent_booking_enabled).to be(true)
+      expect(result.relationship.agent_payment_hold_hours).to eq(72)
+    end
   end
 
   it "keeps service errors and submitted values inside the sheet" do
@@ -252,6 +416,73 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     expect(invitation).to be_pending
   end
 
+  describe "copying an invitation link, for a contact the email does not reach" do
+    let!(:invitation) { create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user, email: "agent@perfect.test") }
+
+    def revealed_url = response.body[%r{http[^<\s]*/corporate-invitations/[\w-]+}]
+
+    it "shows a fresh link that opens the acceptance page" do
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(response).to have_http_status(:ok)
+      expect(revealed_url).to be_present
+      expect(response.body).to include("external-invitation-link-row-")
+
+      get URI(revealed_url).path
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Connect your Corporate Account")
+    end
+
+    it "shows the link in the results frame when asked by the Copy link button (a Turbo request)" do
+      post link_hotel_corporate_invitation_path(hotel, invitation), headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect(revealed_url).to be_present
+      expect(response.body).to include("external-invitation-link-row-#{invitation.id}", "clipboard#copy")
+    end
+
+    it "stops the previous link from working, because only the new one is known" do
+      old_digest = invitation.token_digest
+
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(invitation.reload.token_digest).not_to eq(old_digest)
+    end
+
+    it "does not email anyone, and leaves an unsent invitation unsent" do
+      invitation.update!(last_sent_at: nil)
+
+      expect {
+        post link_hotel_corporate_invitation_path(hotel, invitation)
+      }.not_to have_enqueued_mail(CorporateInvitationMailer, :invite)
+
+      expect(invitation.reload.last_sent_at).to be_nil
+    end
+
+    it "revives a lapsed invitation so the link can be used" do
+      invitation.update!(expires_at: 1.minute.ago)
+
+      post link_hotel_corporate_invitation_path(hotel, invitation)
+
+      expect(invitation.reload).to be_pending
+    end
+
+    it "does not show a link on the ordinary list" do
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).not_to include("external-invitation-link-row-")
+      expect(response.body).to include("external-invitation-link-#{invitation.id}")
+    end
+
+    it "cannot reach another hotel's invitation" do
+      other = create(:corporate_invitation)
+
+      post link_hotel_corporate_invitation_path(hotel, other)
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   it "revokes an unaccepted invitation" do
     invitation = create(:corporate_invitation, hotel: hotel, account: account, invited_by_user: user)
 
@@ -284,5 +515,84 @@ RSpec.describe "HotelPortal::CorporateAccounts", type: :request do
     get "/hotel/#{hotel.to_param}/corporate-accounts"
 
     expect(response).to have_http_status(:not_found)
+  end
+
+  describe "an agent's market" do
+    let!(:relationship) { create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent") }
+
+    it "can be set on the account, and is shown in the list" do
+      patch hotel_corporate_account_path(hotel, relationship),
+            params: { hotel_corporate_account: { market: "international" } }
+
+      expect(relationship.reload.market).to eq("international")
+
+      get hotel_corporate_accounts_path(hotel)
+      expect(Capybara.string(response.body).find("[data-testid='agent-market']")).to have_text("International")
+    end
+
+    it "can be cleared again" do
+      relationship.update!(market: "local")
+
+      patch hotel_corporate_account_path(hotel, relationship), params: { hotel_corporate_account: { market: "" } }
+
+      expect(relationship.reload.market).to be_nil
+    end
+
+    it "is offered on the account's Company details tab" do
+      get edit_hotel_corporate_account_path(hotel, relationship, tab: "company_details")
+
+      expect(response.body).to include("hotel_corporate_account[market]")
+    end
+
+    it "travels with an invitation to a new account, and lands on the relationship it creates" do
+      post hotel_corporate_accounts_path(hotel), params: {
+        corporate_invitation: { email: "new@agent.test", market: "local" }
+      }
+      invitation = CorporateInvitation.last
+      expect(invitation.market).to eq("local")
+
+      result = CorporateInvitations::AcceptService.new(
+        invitation: invitation,
+        user_attributes: { account_name: "New Agent", name: "Nia", password: "password123", password_confirmation: "password123" }
+      ).call
+
+      expect(result.relationship.market).to eq("local")
+    end
+  end
+
+  describe "inviting a contact to an imported account" do
+    let(:agency_account) { create(:account, :corporate, name: "PERFECT VACATION SDN.BHD") }
+    let!(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: agency_account, account_type: "travel_agent")
+    end
+
+    it "offers the invite on an account nobody can sign in to, and not on one that has a login" do
+      get hotel_corporate_accounts_path(hotel)
+      expect(response.body).to include("Invite contact")
+
+      create(:user, :corporate, account: agency_account)
+      get hotel_corporate_accounts_path(hotel)
+
+      expect(response.body).not_to include("external-account-invite-#{relationship.id}")
+    end
+
+    it "opens a short form for the account: its name, an email, and no billing terms to propose" do
+      get new_hotel_corporate_account_path(hotel, hotel_corporate_account_id: relationship.id)
+
+      expect(response.body).to include("Invite a contact", "PERFECT VACATION SDN.BHD")
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("input[name='corporate_invitation[hotel_corporate_account_id]']")["value"]).to eq(relationship.id.to_s)
+      expect(document.at_css("[data-controller='corporate-billing-terms']").has_attribute?("hidden")).to be(true)
+    end
+
+    it "sends the invitation to claim that account" do
+      expect {
+        post hotel_corporate_accounts_path(hotel), params: {
+          corporate_invitation: { email: "sabrina@perfect.test", hotel_corporate_account_id: relationship.id }
+        }
+      }.to change(CorporateInvitation, :count).by(1)
+
+      expect(CorporateInvitation.last).to have_attributes(email: "sabrina@perfect.test", hotel_corporate_account: relationship)
+    end
   end
 end

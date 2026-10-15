@@ -1,0 +1,814 @@
+# Stand-in for the Dinerzflow vendor/voucher API while that backend is built.
+# The shape of this file mirrors what VendorDirectory::Adapter is expected to
+# return, so swapping MockAdapter for the HTTP client changes no caller.
+#
+# Distances are from a notional Kota Kinabalu city-centre property.
+
+categories:
+  - slug: food-drink
+    name: Food & Drink
+    tagline: Where the city actually eats
+    icon: utensils-crossed
+
+  - slug: bars
+    name: Bars
+    tagline: Sundowners, rooftops and late ones
+    icon: wine
+
+  - slug: wellness
+    name: Wellness
+    tagline: Undo the flight
+    icon: sparkles
+
+  - slug: health
+    name: Health & Pharmacy
+    tagline: For when the trip needs a hand
+    icon: pill
+
+  - slug: shopping
+    name: Shopping
+    tagline: Take a bit of Sabah home
+    icon: shopping-bag
+
+vendors:
+  # ---------------------------------------------------------------- Food & Drink
+  - id: yee-fung
+    category: food-drink
+    name: Kedai Kopi Yee Fung
+    tagline: Gaya Street institution, famous for its laksa
+    accent: amber
+    price_range: "$"
+    tags: [Local, Breakfast]
+    dietary_tags: [Halal]
+    summary: >-
+      A coffee shop that has been on Gaya Street long enough to have outlived
+      most of its neighbours. The laksa and the beef noodles are the reason for
+      the queue; go before 10am or plan to share a table.
+    address: 127 Jalan Gaya, Pusat Bandar Kota Kinabalu, 88000 Sabah
+    phone: "+60 88 312 042"
+    distance_km: 0.6
+    walking_minutes: 8
+    hours:
+      - { days: "Mon – Sun", opens: "06:30", closes: "17:00" }
+    google_maps_url: https://maps.google.com/?q=Kedai+Kopi+Yee+Fung+Kota+Kinabalu
+    latitude: 5.9836
+    longitude: 116.0755
+    offers:
+      - id: yee-fung-laksa
+        title: Free kaya toast set
+        subtitle: With any bowl of laksa or beef noodles
+        kind: free_item
+        value_label: Free
+        terms:
+          - One set per guest per visit.
+          - Dine-in only, not valid with other promotions.
+          - Present the QR code before ordering.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 42
+      - id: yee-fung-coffee
+        title: 15% off the whole bill
+        subtitle: Weekdays before 11am
+        kind: percentage
+        value_label: 15% off
+        terms:
+          - Monday to Friday, 06:30 – 11:00 only.
+          - Applies to food and drinks, excludes retail packs.
+        valid_until: "2026-11-30"
+        per_guest_limit: 1
+        remaining: 118
+      - id: yee-fung-noodles
+        title: RM5 off any noodle bowl
+        subtitle: Dine-in, any time
+        kind: fixed
+        value_label: RM5 off
+        terms:
+          - One voucher per guest per visit.
+          - Not valid with the kaya toast offer.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 200
+      - id: yee-fung-teh-tarik
+        title: Free teh tarik with breakfast
+        subtitle: Before 9am, any breakfast set
+        kind: free_item
+        value_label: Free
+        terms:
+          - Valid 06:30 – 09:00 only.
+          - One drink per guest, per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 85
+      - id: yee-fung-family
+        title: 10% off for tables of four or more
+        subtitle: Any time, dine-in
+        kind: percentage
+        value_label: 10% off
+        terms:
+          - Applies to the full bill for parties of four or more.
+          - Dine-in only, one voucher per table.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 60
+      - id: yee-fung-dessert
+        title: Free bowl of cendol with any main
+        subtitle: While stocks last
+        kind: free_item
+        value_label: Free
+        terms:
+          - One bowl per guest, per visit.
+          - Subject to availability.
+        valid_until: "2026-11-30"
+        per_guest_limit: 1
+        remaining: 30
+
+    reviews:
+      - guest_name: "Amira R."
+        rating: 5
+        comment: "Queued 15 minutes but worth it. The laksa tasted exactly like what my Sabahan colleague described."
+        posted_at: 2026-08-28
+      - guest_name: "Daniel Tan"
+        rating: 4
+        comment: "Great beef noodles, very local vibe. Seating is tight during breakfast rush."
+        posted_at: 2026-08-14
+      - guest_name: "Priya S."
+        rating: 5
+        comment: "Used the free kaya toast voucher, staff scanned it without fuss. Coffee is strong, just how I like it."
+        posted_at: 2026-07-30
+  - id: welcome-seafood
+    category: food-drink
+    name: Welcome Seafood Restaurant
+    tagline: The big, loud, very good seafood one
+    accent: rose
+    price_range: "$$$"
+    tags: [Seafood, Dinner, Groups]
+    dietary_tags: [Non-Halal]
+    summary: >-
+      Pick your fish out of the tank at the front and argue about the sauce
+      afterwards. Loud, bright and consistently excellent — book ahead on
+      weekends or expect to wait with a number in your hand.
+    address: Lot 1, Ground Floor, Asia City, Jalan Coastal, 88000 Kota Kinabalu
+    phone: "+60 88 447 866"
+    distance_km: 1.2
+    walking_minutes: 15
+    hours:
+      - { days: "Mon – Sun", opens: "11:30", closes: "23:00" }
+    google_maps_url: https://maps.google.com/?q=Welcome+Seafood+Restaurant+Kota+Kinabalu
+    latitude: 5.9789
+    longitude: 116.0713
+    offers:
+      - id: welcome-seafood-platter
+        title: RM30 off seafood platters
+        subtitle: Minimum spend RM200
+        kind: fixed
+        value_label: RM30 off
+        terms:
+          - Minimum spend of RM200 before service charge and tax.
+          - Dine-in only, one voucher per table.
+          - Not valid on eve of public holidays.
+        valid_until: "2026-10-31"
+        per_guest_limit: 1
+        remaining: 25
+      - id: welcome-seafood-drinks
+        title: Complimentary coconut drinks
+        subtitle: Two per table, with any main course
+        kind: free_item
+        value_label: Free
+        terms:
+          - Two coconuts per table, per visit.
+          - Dine-in only.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 60
+      - id: welcome-seafood-crab
+        title: RM20 off chilli crab
+        subtitle: Any size, dine-in
+        kind: fixed
+        value_label: RM20 off
+        terms:
+          - One voucher per table, per visit.
+          - Subject to daily catch and availability.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 45
+      - id: welcome-seafood-lunch
+        title: 15% off weekday lunch sets
+        subtitle: Mon – Fri, 11:30 – 14:30
+        kind: percentage
+        value_label: 15% off
+        terms:
+          - Monday to Friday, 11:30 – 14:30 only.
+          - Applies to the set lunch menu.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 70
+      - id: welcome-seafood-soup
+        title: Free soup of the day
+        subtitle: With any two mains, dine-in
+        kind: free_item
+        value_label: Free
+        terms:
+          - Applies when ordering two or more mains.
+          - Dine-in only, one bowl per table.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 55
+
+    reviews:
+      - guest_name: "Mark O."
+        rating: 5
+        comment: "Butter prawns and steamed fish were both excellent. A bit pricier than expected but portions are generous."
+        posted_at: 2026-08-31
+      - guest_name: "Siti N."
+        rating: 4
+        comment: "Good seafood, service was slow on a Friday night. Would still come back for the crab."
+        posted_at: 2026-08-06
+  - id: el-centro
+    category: food-drink
+    name: El Centro
+    tagline: Western comfort food and a proper burger
+    accent: orange
+    price_range: "$$"
+    tags: [Western, Late night]
+    dietary_tags: [Vegetarian Options]
+    summary: >-
+      Backpacker-adjacent but grown-up about it. Burgers, quesadillas and a
+      long bar, with a quiz night that takes itself only half seriously.
+    address: 32 Jalan Haji Saman, 88000 Kota Kinabalu, Sabah
+    phone: "+60 12 803 8695"
+    distance_km: 0.4
+    walking_minutes: 5
+    hours:
+      - { days: "Tue – Sun", opens: "11:00", closes: "01:00" }
+      - { days: "Mon", opens: "17:00", closes: "01:00" }
+    google_maps_url: https://maps.google.com/?q=El+Centro+Kota+Kinabalu
+    latitude: 5.9822
+    longitude: 116.0764
+    offers:
+      - id: el-centro-burger
+        title: 20% off all burgers
+        subtitle: Any day, dine-in
+        kind: percentage
+        value_label: 20% off
+        terms:
+          - Applies to the burger menu only.
+          - Dine-in, one voucher per guest per visit.
+        valid_until: "2026-12-15"
+        per_guest_limit: 1
+        remaining: 77
+      - id: el-centro-pitcher
+        title: Free pitcher of iced tea
+        subtitle: With any two mains
+        kind: free_item
+        value_label: Free
+        terms:
+          - Applies when ordering two or more main courses.
+          - Dine-in only, one per table.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 90
+      - id: el-centro-quiz
+        title: 2-for-1 burgers on quiz night
+        subtitle: Wednesdays, dine-in
+        kind: free_item
+        value_label: 2-for-1
+        terms:
+          - Wednesdays only, dine-in.
+          - One redemption per guest, per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 24
+      - id: el-centro-nachos
+        title: RM8 off loaded nachos
+        subtitle: Any time, dine-in or takeaway
+        kind: fixed
+        value_label: RM8 off
+        terms:
+          - One voucher per guest, per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 65
+
+    reviews:
+      - guest_name: "Jonathan Lee"
+        rating: 5
+        comment: "Finally a proper vegetarian burrito bowl in KK. Portions are big enough to share."
+        posted_at: 2026-09-02
+      - guest_name: "Hana K."
+        rating: 4
+        comment: "Nice casual spot near the waterfront. Nachos were a bit salty but the guac made up for it."
+        posted_at: 2026-08-19
+      - guest_name: "Ryan Chua"
+        rating: 3
+        comment: "Decent but not authentic Mexican. Fine for a quick lunch between meetings."
+        posted_at: 2026-07-25
+  - id: chilli-vanilla
+    category: food-drink
+    name: Chilli Vanilla
+    tagline: Small kitchen, Hungarian-Mediterranean, big flavours
+    accent: emerald
+    price_range: "$$"
+    tags: [Mediterranean, Dinner, Small plates]
+    dietary_tags: [Pork-Free]
+    summary: >-
+      Nine tables and a chef who will come out to explain the special. Book —
+      walking in on a Friday is optimistic.
+    address: 32 Jalan Haji Saman, 88000 Kota Kinabalu, Sabah
+    phone: "+60 88 238 098"
+    distance_km: 0.5
+    walking_minutes: 6
+    hours:
+      - { days: "Tue – Sat", opens: "11:00", closes: "22:00" }
+      - { days: "Sun – Mon", opens: "Closed", closes: "" }
+    google_maps_url: https://maps.google.com/?q=Chilli+Vanilla+Kota+Kinabalu
+    latitude: 5.9819
+    longitude: 116.0768
+    offers:
+      - id: chilli-vanilla-tasting
+        title: 15% off the tasting menu
+        subtitle: Tuesday to Thursday
+        kind: percentage
+        value_label: 15% off
+        terms:
+          - Tuesday to Thursday only, dinner service.
+          - Whole table must order the tasting menu.
+        valid_until: "2026-12-15"
+        per_guest_limit: 1
+        remaining: 18
+      - id: chilli-vanilla-wine
+        title: Free glass of house wine
+        subtitle: With any main course
+        kind: free_item
+        value_label: Free
+        terms:
+          - One glass per guest, per visit.
+          - Dine-in only.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 40
+      - id: chilli-vanilla-dessert
+        title: Free dessert of the day
+        subtitle: With any two-course order
+        kind: free_item
+        value_label: Free
+        terms:
+          - Applies when ordering a starter and a main.
+          - One dessert per guest, per visit.
+        valid_until: "2026-11-30"
+        per_guest_limit: 1
+        remaining: 20
+      - id: chilli-vanilla-lunch
+        title: 20% off weekday set lunch
+        subtitle: Tue – Fri, 11:30 – 14:00
+        kind: percentage
+        value_label: 20% off
+        terms:
+          - Tuesday to Friday, 11:30 – 14:00 only.
+          - Applies to the set lunch menu.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 35
+
+  # ------------------------------------------------------------------------ Bars
+    reviews:
+      - guest_name: "Farah A."
+        rating: 5
+        comment: "Pork-free menu made it easy to bring the whole family. The chilli pan mee is fantastic."
+        posted_at: 2026-08-22
+      - guest_name: "Wei Ming"
+        rating: 4
+        comment: "Fusion menu is fun, some dishes hit better than others. Vanilla milkshake is a must-try."
+        posted_at: 2026-08-01
+  - id: nook-rooftop
+    category: bars
+    name: Nook Rooftop Bar
+    tagline: The sunset one everybody photographs
+    accent: violet
+    price_range: "$$$"
+    tags: [Rooftop, Sunset, Cocktails]
+    dietary_tags: [Non-Halal]
+    summary: >-
+      Eleven floors up and pointed straight at the South China Sea. Get there
+      by 17:45 if you want a rail seat for the sunset; the cocktails are better
+      than the view has any right to make them.
+    address: Level 11, Jalan Tun Fuad Stephens, 88000 Kota Kinabalu
+    phone: "+60 88 528 000"
+    distance_km: 0.9
+    walking_minutes: 11
+    hours:
+      - { days: "Mon – Sun", opens: "16:00", closes: "01:00" }
+    google_maps_url: https://maps.google.com/?q=Rooftop+Bar+Kota+Kinabalu+waterfront
+    latitude: 5.9803
+    longitude: 116.0698
+    offers:
+      - id: nook-house-pour
+        title: 1-for-1 house pours
+        subtitle: Golden hour, 17:00 – 19:00
+        kind: free_item
+        value_label: 1-for-1
+        terms:
+          - Valid 17:00 – 19:00 daily.
+          - House spirits and house wine only.
+          - One voucher per guest per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 90
+      - id: nook-signature
+        title: RM15 off signature cocktails
+        subtitle: Any two signature cocktails
+        kind: fixed
+        value_label: RM15 off
+        terms:
+          - Applies when ordering two or more signature cocktails.
+          - Not valid alongside the golden hour offer.
+        valid_until: "2026-11-30"
+        per_guest_limit: 1
+        remaining: 34
+      - id: nook-canapes
+        title: Free canapé plate
+        subtitle: With any bottle of wine
+        kind: free_item
+        value_label: Free
+        terms:
+          - One plate per bottle ordered.
+          - Dine-in only.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 22
+
+    reviews:
+      - guest_name: "Sophie B."
+        rating: 5
+        comment: "Sunset views over the harbour are unreal. Got there early on a Friday and it filled up fast."
+        posted_at: 2026-09-05
+      - guest_name: "Aiman Y."
+        rating: 4
+        comment: "House pours are generous with the 1-for-1. Music gets loud after 9pm if you want conversation."
+        posted_at: 2026-08-11
+      - guest_name: "Grace L."
+        rating: 5
+        comment: "Best rooftop bar we found in KK. Staff were happy to recommend cocktails."
+        posted_at: 2026-07-28
+  - id: shamrock
+    category: bars
+    name: The Shamrock
+    tagline: Waterfront Irish bar, football always on
+    accent: teal
+    price_range: "$$"
+    tags: [Sports, Beer, Waterfront]
+    dietary_tags: [Non-Halal]
+    summary: >-
+      A reliable pint and a screen showing whatever is on at 3am UK time. The
+      waterfront terrace is the good bit.
+    address: Waterfront Esplanade, Jalan Tun Fuad Stephens, 88000 Kota Kinabalu
+    phone: "+60 88 447 188"
+    distance_km: 1.0
+    walking_minutes: 12
+    hours:
+      - { days: "Mon – Sun", opens: "15:00", closes: "02:00" }
+    google_maps_url: https://maps.google.com/?q=Shamrock+Irish+Bar+Kota+Kinabalu
+    latitude: 5.9797
+    longitude: 116.0704
+    offers:
+      - id: shamrock-bucket
+        title: Free bar snacks with any beer bucket
+        subtitle: Five-bottle bucket or larger
+        kind: free_item
+        value_label: Free
+        terms:
+          - One snack platter per bucket.
+          - Dine-in only.
+        valid_until: "2026-12-31"
+        per_guest_limit: 2
+        remaining: 55
+      - id: shamrock-happy-hour
+        title: 20% off during happy hour
+        subtitle: Daily, 15:00 – 18:00
+        kind: percentage
+        value_label: 20% off
+        terms:
+          - Valid 15:00 – 18:00 daily.
+          - Draught beer and house spirits only.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 75
+
+  # -------------------------------------------------------------------- Wellness
+    reviews:
+      - guest_name: "Connor M."
+        rating: 4
+        comment: "Proper pub food and a good range of beers on tap. Gets busy for the football screenings."
+        posted_at: 2026-08-24
+      - guest_name: "Nadia I."
+        rating: 4
+        comment: "Solid spot for a casual night out. Fish and chips were better than expected."
+        posted_at: 2026-08-03
+  - id: borneo-spa
+    category: wellness
+    name: Borneo Heritage Spa
+    tagline: Traditional Sabahan massage, no upselling
+    accent: green
+    price_range: "$$"
+    tags: [Massage, Couples, Walk-ins]
+    summary: >-
+      Quiet, clean and refreshingly free of the hard sell. The 90-minute
+      traditional Sabahan massage is the one to book after a Kinabalu climb.
+    address: Lot 22, Api-Api Centre, Jalan Centre Point, 88000 Kota Kinabalu
+    phone: "+60 88 269 088"
+    distance_km: 0.8
+    walking_minutes: 10
+    hours:
+      - { days: "Mon – Sun", opens: "10:00", closes: "22:00" }
+    google_maps_url: https://maps.google.com/?q=Spa+Api-Api+Centre+Kota+Kinabalu
+    latitude: 5.9812
+    longitude: 116.0731
+    offers:
+      - id: borneo-spa-massage
+        title: 25% off 90-minute traditional massage
+        subtitle: Weekdays only
+        kind: percentage
+        value_label: 25% off
+        terms:
+          - Monday to Friday, appointments before 18:00.
+          - Booking recommended; mention the voucher when you call.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 20
+      - id: borneo-spa-foot
+        title: Free 15-minute foot soak
+        subtitle: With any treatment over 60 minutes
+        kind: free_item
+        value_label: Free
+        terms:
+          - One per guest per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 48
+
+    reviews:
+      - guest_name: "Clara W."
+        rating: 5
+        comment: "The traditional Malay massage was exactly the reset I needed after a long flight. Booked again for the last day."
+        posted_at: 2026-09-01
+      - guest_name: "Tunku R."
+        rating: 5
+        comment: "Calm, professional, and the therapists actually listen to what you ask for. Highly recommend the hot stone add-on."
+        posted_at: 2026-08-17
+      - guest_name: "Lisa Ho"
+        rating: 4
+        comment: "Lovely facilities, just wish the booking window was a little more flexible."
+        posted_at: 2026-07-22
+  - id: kenzo-reflexology
+    category: wellness
+    name: Kenzo Reflexology
+    tagline: Walk-in foot reflexology, open late
+    accent: lime
+    price_range: "$"
+    tags: [Reflexology, Late night, Walk-ins]
+    summary: >-
+      No appointment, no ceremony. Sit down, hand over your feet, walk out an
+      hour later a different person. Open until midnight.
+    address: Ground Floor, Wisma Merdeka Phase 2, 88000 Kota Kinabalu
+    phone: "+60 88 233 671"
+    distance_km: 0.7
+    walking_minutes: 9
+    hours:
+      - { days: "Mon – Sun", opens: "11:00", closes: "00:00" }
+    google_maps_url: https://maps.google.com/?q=Reflexology+Wisma+Merdeka+Kota+Kinabalu
+    latitude: 5.9846
+    longitude: 116.0744
+    offers:
+      - id: kenzo-foot
+        title: RM10 off 60-minute foot reflexology
+        subtitle: Any time, walk-in
+        kind: fixed
+        value_label: RM10 off
+        terms:
+          - One voucher per guest per visit.
+          - Cannot be combined with package rates.
+        valid_until: "2026-12-31"
+        per_guest_limit: 2
+        remaining: 130
+      - id: kenzo-couple
+        title: 2-for-1 couple reflexology
+        subtitle: 90-minute session, book ahead
+        kind: free_item
+        value_label: 2-for-1
+        terms:
+          - Subject to availability; call ahead to reserve.
+          - Both guests must be present.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 15
+
+  # ------------------------------------------------------------ Health & Pharmacy
+    reviews:
+      - guest_name: "Benjamin K."
+        rating: 4
+        comment: "Firm pressure, exactly what tired feet need after walking Gaya Street all day."
+        posted_at: 2026-08-27
+      - guest_name: "Michelle T."
+        rating: 5
+        comment: "Best reflexology I've had outside of Taiwan. Clean, quiet, and reasonably priced."
+        posted_at: 2026-08-09
+  - id: guardian-suria
+    category: health
+    name: Guardian, Suria Sabah
+    tagline: Pharmacy, sunscreen and everything you forgot
+    accent: sky
+    price_range: "$"
+    tags: [Pharmacy, Open daily, Card accepted]
+    summary: >-
+      The dependable option for sunblock, mosquito repellent, motion sickness
+      tablets and the charger cable you left at home. Pharmacist on duty until
+      21:00.
+    address: Level 2, Suria Sabah Shopping Mall, Jalan Tun Fuad Stephens, 88000 Kota Kinabalu
+    phone: "+60 88 487 244"
+    distance_km: 1.1
+    walking_minutes: 14
+    hours:
+      - { days: "Mon – Sun", opens: "10:00", closes: "22:00" }
+    google_maps_url: https://maps.google.com/?q=Guardian+Suria+Sabah
+    latitude: 5.9866
+    longitude: 116.0714
+    offers:
+      - id: guardian-suncare
+        title: 10% off sun care & insect repellent
+        subtitle: Whole category, no minimum spend
+        kind: percentage
+        value_label: 10% off
+        terms:
+          - Excludes prescription items and infant formula.
+          - One voucher per guest per visit.
+        valid_until: "2026-12-31"
+        per_guest_limit: 2
+        remaining: 200
+      - id: guardian-firstaid
+        title: RM8 off travel first-aid kits
+        subtitle: While stocks last
+        kind: fixed
+        value_label: RM8 off
+        terms:
+          - One voucher per guest per visit.
+          - Excludes prescription medication.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 60
+
+    reviews:
+      - guest_name: "Alex P."
+        rating: 5
+        comment: "Had everything I needed for a travel-sickness fix. Pharmacist was helpful and spoke great English."
+        posted_at: 2026-08-30
+      - guest_name: "Yusof B."
+        rating: 4
+        comment: "Well-stocked branch inside the mall, easy to find."
+        posted_at: 2026-08-05
+  - id: klinik-kota
+    category: health
+    name: Klinik Kota
+    tagline: Walk-in GP clinic, English-speaking
+    accent: cyan
+    price_range: "$$"
+    tags: [Clinic, Walk-ins, Insurance]
+    summary: >-
+      A short walk from the hotel and used to travellers — traveller's tummy,
+      dive-related ear trouble and the paperwork insurers ask for. Ask
+      reception to call ahead if you would rather not queue.
+    address: 8 Jalan Pantai, 88000 Kota Kinabalu, Sabah
+    phone: "+60 88 233 500"
+    distance_km: 0.5
+    walking_minutes: 7
+    hours:
+      - { days: "Mon – Fri", opens: "08:30", closes: "20:00" }
+      - { days: "Sat – Sun", opens: "09:00", closes: "17:00" }
+    google_maps_url: https://maps.google.com/?q=Klinik+Jalan+Pantai+Kota+Kinabalu
+    latitude: 5.9828
+    longitude: 116.0759
+    offers:
+      - id: klinik-consult
+        title: RM20 off first consultation
+        subtitle: For in-house hotel guests
+        kind: fixed
+        value_label: RM20 off
+        terms:
+          - Consultation fee only; medication and procedures excluded.
+          - Show the QR code and your room key at registration.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 40
+      - id: klinik-travel-panel
+        title: 15% off travel health panel
+        subtitle: Blood work and vaccination advice
+        kind: percentage
+        value_label: 15% off
+        terms:
+          - Covers the standard travel health panel only.
+          - Book ahead; walk-ins subject to availability.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 25
+
+  # -------------------------------------------------------------------- Shopping
+    reviews:
+      - guest_name: "Rachel N."
+        rating: 5
+        comment: "Saw a doctor within 20 minutes for a minor fever. Consultation was thorough and not rushed."
+        posted_at: 2026-08-20
+      - guest_name: "Faizal M."
+        rating: 4
+        comment: "Straightforward walk-in clinic, English-speaking staff. Good to know it's nearby."
+        posted_at: 2026-07-31
+  - id: handicraft-market
+    category: shopping
+    name: Filipino Handicraft Market
+    tagline: Pearls, batik and cheerful haggling
+    accent: fuchsia
+    price_range: "$"
+    tags: [Souvenirs, Cash, Haggling expected]
+    summary: >-
+      Rows of stalls selling freshwater pearls, batik, wood carvings and dried
+      seafood. Bring cash and expect to negotiate — it is part of the deal, not
+      a fight.
+    address: Jalan Tun Fuad Stephens, 88000 Kota Kinabalu, Sabah
+    phone: ""
+    distance_km: 0.9
+    walking_minutes: 11
+    hours:
+      - { days: "Mon – Sun", opens: "09:00", closes: "19:00" }
+    google_maps_url: https://maps.google.com/?q=Filipino+Handicraft+Market+Kota+Kinabalu
+    latitude: 5.9808
+    longitude: 116.0722
+    offers:
+      - id: handicraft-pearls
+        title: 15% off freshwater pearls
+        subtitle: Participating stalls, marked with the decal
+        kind: percentage
+        value_label: 15% off
+        terms:
+          - Valid only at stalls displaying the partner decal.
+          - Cash payment; not valid on already-discounted sets.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 65
+      - id: handicraft-batik
+        title: Free tote bag with batik purchase
+        subtitle: Any batik piece over RM50
+        kind: free_item
+        value_label: Free
+        terms:
+          - Valid only at stalls displaying the partner decal.
+          - One tote per guest, while stocks last.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 30
+      - id: handicraft-carving
+        title: 10% off wood carvings
+        subtitle: Participating stalls only
+        kind: percentage
+        value_label: 10% off
+        terms:
+          - Valid only at stalls displaying the partner decal.
+          - Cash payment.
+        valid_until: "2026-12-31"
+        per_guest_limit: 1
+        remaining: 50
+
+    reviews:
+      - guest_name: "Emma S."
+        rating: 4
+        comment: "Great for souvenirs, prices are negotiable if you're polite about it. Lots of handmade textiles."
+        posted_at: 2026-08-23
+      - guest_name: "Kevin D."
+        rating: 3
+        comment: "Fun to browse but can feel a bit touristy. Still found a nice batik shirt."
+        posted_at: 2026-07-29
+  - id: imago-mall
+    category: shopping
+    name: Imago Shopping Mall
+    tagline: Air conditioning, a cinema and a food hall
+    accent: indigo
+    price_range: "$$"
+    tags: [Mall, Cinema, Rainy day]
+    summary: >-
+      The obvious answer to an afternoon downpour. Redeem the voucher at the
+      concierge desk on the ground floor for the tourist privilege card.
+    address: KK Times Square, Jalan Coastal, 88100 Kota Kinabalu, Sabah
+    phone: "+60 88 486 888"
+    distance_km: 2.4
+    walking_minutes: 29
+    hours:
+      - { days: "Mon – Sun", opens: "10:00", closes: "22:00" }
+    google_maps_url: https://maps.google.com/?q=Imago+Shopping+Mall+Kota+Kinabalu
+    latitude: 5.9678
+    longitude: 116.0713
+    offers: []
+    reviews:
+      - guest_name: "Vanessa C."
+        rating: 4
+        comment: "Good aircon break from the heat, decent food court. Standard mall but well maintained."
+        posted_at: 2026-08-15
+      - guest_name: "Haziq A."
+        rating: 4
+        comment: "Convenient for last-minute shopping, has most of the brands you'd expect."
+        posted_at: 2026-07-20

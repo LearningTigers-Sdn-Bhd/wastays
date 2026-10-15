@@ -71,7 +71,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
     expect(page).to have_current_path(hotel_dashboard_path(hotel))
     expect(page).to have_css("#hotel-sidebar")
     expect(page).to have_no_css("#hotel-settings-sidebar", visible: :all)
-    wait_for_stimulus_controller("#hotel-profile", "panels-ui--dropdown-menu")
+    wait_for_stimulus_controller("#hotel-profile", "ui--dropdown-menu")
 
     find("#hotel-profile-trigger[aria-label='Open account menu'][aria-haspopup='menu'][aria-expanded='false']").click
     expect(page).to have_css("#hotel-profile-trigger[aria-expanded='true']")
@@ -205,7 +205,7 @@ RSpec.describe "Hotel settings sidebar Hotwire navigation", type: :system, js: t
   end
 
   def open_settings_from_profile
-    wait_for_stimulus_controller("#hotel-profile", "panels-ui--dropdown-menu")
+    wait_for_stimulus_controller("#hotel-profile", "ui--dropdown-menu")
     perform_turbo_navigation do
       find("#hotel-profile-trigger").click
       within("#hotel-profile-menu") { click_link "Settings", href: hotel_general_settings_path(hotel) }

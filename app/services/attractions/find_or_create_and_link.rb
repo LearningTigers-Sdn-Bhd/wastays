@@ -9,9 +9,10 @@ module Attractions
       new(**attributes).call
     end
 
-    def initialize(hotel:, google_maps_url:, submitted_by: nil, description: nil, approve: false)
+    def initialize(hotel:, google_maps_url: nil, attraction_id: nil, submitted_by: nil, description: nil, approve: false)
       @hotel = hotel
       @google_maps_url = google_maps_url
+      @attraction_id = attraction_id
       @submitted_by = submitted_by
       @description = description
       @approve = approve
@@ -19,6 +20,8 @@ module Attractions
     end
 
     def call
+      return link_existing if @attraction_id.present?
+
       parsed_result = GoogleMapsUrlParser.call(@google_maps_url)
       return Result.failure(parsed_result.error) unless parsed_result.success?
 
@@ -30,11 +33,23 @@ module Attractions
 
     private
 
+    def link_existing
+      attraction = Attraction.find_by(id: @attraction_id)
+      return Result.failure("This attraction is no longer available to add.") unless attraction&.status_approved? && attraction.merged_into_id.nil?
+
+      Attraction.transaction do
+        link = link_attraction(attraction)
+        Result.success(attraction: attraction, hotel_nearby_attraction: link, "created?": false, "reused?": true)
+      end
+    end
+
     def create_or_link
       @attempts += 1
       Attraction.transaction do
-        attraction = FindDuplicate.call(fingerprint: @parsed.fingerprint)
+        duplicate = FindDuplicate.call(fingerprint: @parsed.fingerprint, google_maps_url: @parsed.google_maps_url)
+        attraction = duplicate&.merged_into || duplicate
         return inactive_failure(attraction) if attraction&.status_rejected? || attraction&.status_archived?
+        return Result.failure("This attraction is no longer available to add.") if attraction&.merged_into_id.present?
 
         created = attraction.nil?
         attraction ||= create_attraction

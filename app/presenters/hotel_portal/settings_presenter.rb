@@ -4,8 +4,10 @@ module HotelPortal
   class SettingsPresenter
     PAGE_HEADINGS = {
       "general" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
+      "ota_logins" => [ "OTA Logins", "Review and add OTA login details for this hotel." ],
       "boat" => [ "Boat Settings", "Configure the daily boat timetable and the meals each transfer slot carries." ],
       "notifications" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
+      "corporate_ta_portal" => [ "General Settings", "Manage core hotel operations, guest communication, and plan access." ],
       "banking" => [ "Banking Details", "Manage the bank account used for hotel payouts." ],
       "e_invoice" => [ "E-Invoice", "Configure LHDN MyInvois submission details for this property." ]
     }.freeze
@@ -68,6 +70,23 @@ module HotelPortal
         config.channels = [ "whatsapp", "email" ] if config.channels.blank?
         config.settings = config.settings.to_h.reverse_merge(
           "stages" => %w[d2 d1]
+        )
+        config
+      end
+    end
+
+    # The one notification in this set aimed at a business contact rather than a
+    # guest, and the only one whose schedule is counted back from a deadline.
+    def agent_payment_reminder_notification_config
+      @agent_payment_reminder_notification_config ||= begin
+        config = NotificationConfig.find_or_initialize_by(
+          hotel: hotel,
+          notification_type: "agent_payment_reminder"
+        )
+        config.enabled = false if config.new_record?
+        config.channels = [ "email" ] if config.channels.blank?
+        config.settings = config.settings.to_h.reverse_merge(
+          "offsets_hours" => NotificationConfig::DEFAULT_AGENT_REMINDER_OFFSETS
         )
         config
       end

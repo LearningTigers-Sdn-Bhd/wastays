@@ -47,7 +47,7 @@
         </div>
       <% end %>
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "ui--sheet#close" }) do %>
           Cancel filters
         <% end %>
         <%= render PanelsUI::Button.new(variant: :primary) do %>
@@ -67,7 +67,7 @@
         <p>The filter sheet remains open and inert underneath.</p>
       <% end %>
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--sheet#close" }) do %>
           Back to filters
         <% end %>
       <% end %>
@@ -87,7 +87,7 @@
         </div>
       <% end %>
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :secondary, data: { action: "ui--sheet#close" }) do %>
           Cancel invite
         <% end %>
         <%= render PanelsUI::Button.new(variant: :primary) do %>
@@ -104,7 +104,7 @@
           description: "A compact sheet anchored to the left edge.") do |sheet| %>
       <% sheet.with_body { "Left-side content." } %>
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--sheet#close" }) do %>
           Close left sheet
         <% end %>
       <% end %>
@@ -118,7 +118,7 @@
           description: "A sheet anchored to the top edge.") do |sheet| %>
       <% sheet.with_body { "Top-side content." } %>
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--sheet#close" }) do %>
           Close top sheet
         <% end %>
       <% end %>
@@ -132,7 +132,7 @@
           description: "A sheet anchored to the bottom edge.") do |sheet| %>
       <% sheet.with_body { "Bottom-side content." } %>
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--sheet#close" }) do %>
           Close bottom sheet
         <% end %>
       <% end %>
@@ -146,7 +146,7 @@
           description: "A viewport-filling sheet with no rounded edge.") do |sheet| %>
       <% sheet.with_body { "Full-screen sheet content." } %>
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--sheet#close" }) do %>
           Close full sheet
         <% end %>
       <% end %>
@@ -161,7 +161,7 @@
           description: "Complete this step using its explicit action.") do |sheet| %>
       <% sheet.with_body { "This sheet ignores Escape and backdrop dismissal." } %>
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(variant: :primary, data: { action: "ui--sheet#close" }) do %>
           Finish required step
         <% end %>
       <% end %>

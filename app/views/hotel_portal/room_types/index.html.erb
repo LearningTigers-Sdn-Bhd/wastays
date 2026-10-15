@@ -69,7 +69,7 @@
                 id: "room-inventory-accordion",
                 type: :single,
                 collapsible: true,
-                default_open: [],
+                default_open: Array(@open_room_type_id),
                 heading_level: 3,
                 aria: { label: "Room inventory" }) do |accordion| %>
             <% @room_types.each do |room_type| %>

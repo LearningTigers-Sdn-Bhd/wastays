@@ -269,7 +269,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         "registration_cards" => { tables: 1, metrics: 3 },
         "bibo" => { tables: 2, metrics: 0 },
         # The meal tab lands on "All": one table per meal.
-        "meal_prep" => { tables: 3, metrics: 0 }
+        "meal_prep" => { tables: 4, metrics: 0 }
       }.each do |tab, expected|
         get guest_reports_hotel_reports_path(hotel), params: {
           start_date: start_date.to_s,
@@ -369,11 +369,11 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       tables = Nokogiri::HTML(response.body).css("table.panel-table")
       expect(tables.map { |table| table.css("thead th").map { |th| th.text.strip } }).to eq([
-        [ "Guest name", "Room number", "Arrival Date", "Arrival Time" ],
-        [ "Guest name", "Room number", "Departure Date", "Departure Time" ]
+        [ "Guest name", "Room number", "Arrival Date", "Arrival Time", "Arrival Boat" ],
+        [ "Guest name", "Room number", "Departure Date", "Departure Time", "Departure Boat" ]
       ])
-      expect(bibo_row_cells(tables.first)).to eq([ "Boat Guest", "103", start_date.strftime("%d %b %Y"), "07:00 AM" ])
-      expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
+      expect(bibo_row_cells(tables.first)).to eq([ "Boat Guest", "103", start_date.strftime("%d %b %Y"), "7:00 AM", "Resort Boat" ])
+      expect(bibo_row_cells(tables.last)).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "1:00 PM", "Resort Boat" ])
     end
 
     it "gives boat transfers All, Boat-ins and Boat-outs tabs that narrow the sections" do
@@ -447,9 +447,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       expect(response.headers["Content-Disposition"]).to include("guest-reports-bibo-boat-outs")
       rows = CSV.parse(response.body.delete_prefix("\xEF\xBB\xBF"), headers: true)
-      expect(rows.headers).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time" ])
+      expect(rows.headers).to eq([ "Guest Name", "Room Number", "Departure Date", "Departure Time", "Departure Boat" ])
       expect(rows.count).to eq(1)
-      expect(rows[0].fields).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "01:00 PM" ])
+      expect(rows[0].fields).to eq([ "Boat Guest", "103", end_date.strftime("%d %b %Y"), "1:00 PM", "Resort Boat" ])
     end
 
     it "keeps the booking a guest belongs to behind a hover popover, not in a column" do
@@ -1237,13 +1237,13 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get daily_occupancy_hotel_reports_path(hotel), params: { date_range: "2026-05-06/2026-05-07" }
 
       page = Capybara.string(response.body)
-      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      picker = page.find('[data-ui--date-picker-mode-value="range"]')
       expect(response).to have_http_status(:success)
-      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
-      expect(picker["data-panels-ui--date-picker-responsive-months-value"]).to eq("true")
+      expect(picker["data-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-ui--date-picker-responsive-months-value"]).to eq("true")
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Apply")
-      expect(page).to have_css('[data-controller~="panels-ui--dropdown-menu"]')
+      expect(page).to have_css('[data-controller~="ui--dropdown-menu"]')
       expect(page).to have_no_css("details")
     end
 
@@ -1481,7 +1481,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       page = Capybara.string(response.body)
       expect(page).to have_css('input[name="as_of_date"][value="2026-05-20"]', visible: :all)
       expect(page).to have_no_css('input[name="date_range"]', visible: :all)
-      picker = page.find('[data-panels-ui--date-picker-mode-value="single"]')
+      picker = page.find('[data-ui--date-picker-mode-value="single"]')
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Apply")
       expect(page).to have_field("Time period", visible: :all)
@@ -1512,7 +1512,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get deposit_liability_hotel_reports_path(hotel, format: :csv), params: { as_of_date: as_of_date.to_s }
       expect(response).to have_http_status(:success)
       expect(response.content_type).to include("text/csv")
-      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Deposit Received,Earned,Refunds,Remaining Liability,Latest Deposit Date")
+      expect(response.body).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Payment Reference,Deposit Received,Earned,Refunds,Remaining Liability,Latest Deposit Date")
       expect(response.body).to include(HotelPortal::Reports::DepositLiabilityReport::SCOPE_NOTE)
 
       get deposit_liability_hotel_reports_path(hotel, format: :xlsx), params: { as_of_date: as_of_date.to_s }
@@ -1597,9 +1597,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           start_date: start_date.to_s, end_date: start_date.to_s)
 
         page = Capybara.string(response.body)
-        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 3)
-        expect(page.text).to include("Daily breakdown", "Revenue by source", "Revenue register")
-        expect(page.text).to include("Other charges", "Total charges", "Net revenue", "Booking / folio", "Base amount", "Total amount")
+        expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']", count: 4)
+        expect(page.text).to include("Daily breakdown", "Revenue by source", "Revenue by extra charge", "Revenue register")
+        expect(page.text).to include("Extra charges", "Total charges", "Net revenue", "Booking / folio", "Base amount", "Total amount")
       end
 
       it "queries the Charge Register scope once without filters" do
@@ -1856,24 +1856,38 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         document = Nokogiri::HTML(response.body)
         headers = document.css("[aria-labelledby='cashier-activity-heading'] thead th[data-column-key]").map { |header| header["data-column-key"] }
-        expect(headers).to eq(%w[date_time booking_number guest_details handling payment_mode stage received_by currency amount])
+        expect(headers).to eq(%w[date_time booking_number guest_details handling payment_mode payment_reference stage received_by currency amount])
 
         rows = document.css('[data-testid="cashier-row"]')
         expect(rows.size).to eq(2)
 
         advance_row = rows.find { |row| row.text.include?("Bank Transfer Payment") }
         advance_cells = advance_row.css("td")
-        expect(advance_cells.size).to eq(10)
+        expect(advance_cells.size).to eq(11)
         expect(advance_cells[2].text.squish).to eq(booking.formatted_reservation_number)
         expect(advance_cells[3].text.squish).to include(booking.guest_name, "Room —")
         expect(advance_cells[4].text.strip).to eq("At desk")
-        expect(advance_cells[6].text.strip).to eq("Advance")
+        expect(advance_cells[7].text.strip).to eq("Advance")
 
-        settlement_row = rows.find { |row| row.css("td")[6].text.strip == "Settlement" }
+        settlement_row = rows.find { |row| row.css("td")[7].text.strip == "Settlement" }
         expect(settlement_row).to be_present
         [ advance_row, settlement_row ].each do |row|
           expect(row.css("td").last["class"].split).to include("whitespace-nowrap")
         end
+      end
+
+      it "shows the payment reference staff recorded" do
+        booking = create(:booking, hotel: hotel)
+        folio = create(:booking_folio, booking: booking, hotel: hotel)
+        create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "cash", amount: 50,
+          posting_date: start_date, metadata: { payment_source: "bank", bank_reference: "TT-778899" })
+
+        get daily_report_hotel_reports_path(hotel, tab: "cashier", start_date: start_date.to_s, end_date: start_date.to_s)
+
+        document = Nokogiri::HTML(response.body)
+        headers = document.css("[aria-labelledby='cashier-activity-heading'] thead th[data-column-key]").map { |header| header["data-column-key"] }
+        row = document.at_css('[data-testid="cashier-row"]')
+        expect(row.css("td")[headers.index("payment_reference") + 1].text.strip).to eq("TT-778899")
       end
 
       it "shows a refund under its resolved settlement mode" do
@@ -1885,7 +1899,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         refund_row = Nokogiri::HTML(response.body).at_css('[data-testid="cashier-row"]')
         expect(refund_row.text).to include("Cash Payment")
-        expect(refund_row.css("td")[6].text.strip).to eq("Refund")
+        expect(refund_row.css("td")[7].text.strip).to eq("Refund")
       end
 
       it "separates Razorpay payments from the at-desk summary" do
@@ -2132,7 +2146,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
         expect(response).to have_http_status(:success)
         expect(response.body).to include(
           "Payment Activity", "Activity By Payment Mode", "Currency Summary",
-          "Date & Time,Booking No.,Guest,Room,Handling,Payment Mode,Stage,Received By,Currency,Amount",
+          "Date & Time,Booking No.,Guest,Room,Handling,Payment Mode,Payment Reference,Stage,Received By,Currency,Amount",
           booking.formatted_reservation_number,
           "Cash Payment"
         )
@@ -2536,10 +2550,10 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       expect(response).to have_http_status(:success)
       page = Capybara.string(response.body)
-      expect(page).to have_css('[data-panels-ui--tabs-active-value="paid"]')
+      expect(page).to have_css('[data-ui--tabs-active-value="paid"]')
       expect(page).to have_css('[data-testid="payouts-upcoming-panel"]', visible: :all)
       expect(page).to have_css('[data-testid="payouts-paid-panel"]')
-      expect(page).to have_css('[data-panels-ui--breadcrumb-target="tabLabel"]', text: "Paid History")
+      expect(page).to have_css('[data-ui--breadcrumb-target="tabLabel"]', text: "Paid History")
     end
 
     it "falls back to upcoming for an unknown tab" do
@@ -2547,9 +2561,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
       expect(response).to have_http_status(:success)
       page = Capybara.string(response.body)
-      expect(page).to have_css('[data-panels-ui--tabs-active-value="upcoming"]')
+      expect(page).to have_css('[data-ui--tabs-active-value="upcoming"]')
       expect(page).to have_css(
-        '[data-panels-ui--breadcrumb-target="tabLabel"]',
+        '[data-ui--breadcrumb-target="tabLabel"]',
         text: "Upcoming & Processing"
       )
     end
@@ -2569,9 +2583,9 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       }
 
       page = Capybara.string(response.body)
-      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      picker = page.find('[data-ui--date-picker-mode-value="range"]')
       expect(response).to have_http_status(:success)
-      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-ui--date-picker-months-value"]).to eq("2")
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_css('input[name="paid_date_range"][value="2026-05-01/2026-05-31"]', visible: :all)
       expect(page).to have_no_button("Filter")
@@ -2748,7 +2762,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       get journal_batches_hotel_reports_path(hotel), params: { date_range: "2026-05-01/2026-05-31" }
 
       page = Capybara.string(response.body)
-      picker = page.find('[data-panels-ui--date-picker-mode-value="range"]')
+      picker = page.find('[data-ui--date-picker-mode-value="range"]')
       expect(response).to have_http_status(:success)
       expect(page).to have_css("[data-slot='report-page'][data-report='journal-batches']")
       expect(page).to have_css("h1", exact_text: "Journal batches")
@@ -2758,7 +2772,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_css("table.panel-table[data-density='compact'][data-header-style='sentence']")
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card", count: 3)
       expect(page).to have_css("[data-slot='report-metric-strip'] .panel-metric-card__detail", count: 3)
-      expect(picker["data-panels-ui--date-picker-months-value"]).to eq("2")
+      expect(picker["data-ui--date-picker-months-value"]).to eq("2")
       expect(picker["data-action"]).to include("change->date-preset#submitDate")
       expect(page).to have_no_button("Filter")
       expect(page).to have_text("07 May 2026")
@@ -2771,7 +2785,7 @@ RSpec.describe "HotelPortal::Reports", type: :request do
       expect(page).to have_link("Export CSV", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :csv))
       expect(page).to have_link("Export Excel", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :xlsx))
       expect(page).to have_link("Export PDF", href: journal_batches_hotel_reports_path(hotel, start_date: "2026-05-01", end_date: "2026-05-31", format: :pdf))
-      expect(page).to have_css('[data-controller~="panels-ui--dropdown-menu"]')
+      expect(page).to have_css('[data-controller~="ui--dropdown-menu"]')
     end
 
     it "exports XLSX and PDF" do

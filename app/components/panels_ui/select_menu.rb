@@ -7,7 +7,7 @@ module PanelsUI
   # The native select (rendered via PanelsUI::NativeSelect) is the source of truth: it
   # carries the form value and is what submits. Server-side and with JS disabled the
   # native control is what the user sees and uses. On connect the
-  # `panels-ui--select-menu` Stimulus controller hides the native select and reveals
+  # `ui--select-menu` Stimulus controller hides the native select and reveals
   # a styled trigger button + a role="listbox" popup that mirror it, syncing every
   # selection back to the native element (so validation, form reset, and submission
   # keep working unchanged).
@@ -92,8 +92,8 @@ module PanelsUI
         selected: @selected,
         class: "panel-select-menu__native",
         data: {
-          panels_ui__select_menu_target: "native",
-          action: "change->panels-ui--select-menu#onNativeChange"
+          ui__select_menu_target: "native",
+          action: "change->ui--select-menu#onNativeChange"
         }
       )
     end
@@ -116,14 +116,14 @@ module PanelsUI
         id: root_id,
         class: tw_merge("panel-select-menu", @class),
         data: data.merge(
-          controller: [ data.delete(:controller), "panels-ui--select-menu" ].compact.join(" "),
-          panels_ui__select_menu_placement_value: floating_placement,
-          panels_ui__select_menu_offset_value: @offset,
-          panels_ui__select_menu_placeholder_value: placeholder_text,
+          controller: [ data.delete(:controller), "ui--select-menu" ].compact.join(" "),
+          ui__select_menu_placement_value: floating_placement,
+          ui__select_menu_offset_value: @offset,
+          ui__select_menu_placeholder_value: placeholder_text,
           size: @size,
           invalid: @invalid.to_s,
           disabled: @disabled.to_s,
-          action: [ data.delete(:action), "pointerdown@window->panels-ui--select-menu#onWindowPointerDown" ].compact.join(" ")
+          action: [ data.delete(:action), "pointerdown@window->ui--select-menu#onWindowPointerDown" ].compact.join(" ")
         )
       )
     end
@@ -135,8 +135,8 @@ module PanelsUI
         class: "panel-select-menu__trigger",
         disabled: @disabled,
         data: {
-          panels_ui__select_menu_target: "trigger",
-          action: "click->panels-ui--select-menu#toggle keydown->panels-ui--select-menu#onTriggerKeydown"
+          ui__select_menu_target: "trigger",
+          action: "click->ui--select-menu#toggle keydown->ui--select-menu#onTriggerKeydown"
         },
         aria: {
           haspopup: "listbox",
@@ -157,7 +157,7 @@ module PanelsUI
         class: "panel-select-menu__option",
         tabindex: "-1",
         data: {
-          panels_ui__select_menu_target: "option",
+          ui__select_menu_target: "option",
           value: choice[:value]
         },
         aria: {

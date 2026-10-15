@@ -21,14 +21,14 @@
 <% end %>
 
 <% if @messages.any? %>
-  <%= turbo_stream.remove "#{PublicUI::Chat::Log::DEFAULT_ID}-empty" %>
+  <%= turbo_stream.remove "#{GuestUI::Chat::Log::DEFAULT_ID}-empty" %>
 
   <%# The last message is the one just written: the guest's own words go in
       the same request, the answer is a job. A browser that was already
       subscribed gets this twice -- once here, once down the stream -- and the
       chat controller drops the copy it already shows. %>
-  <%= turbo_stream.append PublicUI::Chat::Log::DEFAULT_ID,
-        renderable: PublicUI::Chat::Message.new(message: @messages.last, hotel: @hotel) %>
+  <%= turbo_stream.append GuestUI::Chat::Log::DEFAULT_ID,
+        renderable: GuestUI::Chat::Message.new(message: @messages.last, hotel: @hotel) %>
 <% end %>
 
 <%# Always replaced, never only added: the region has to be able to clear the

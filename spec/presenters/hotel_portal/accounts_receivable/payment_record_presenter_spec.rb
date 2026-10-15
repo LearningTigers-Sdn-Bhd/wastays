@@ -44,6 +44,42 @@ RSpec.describe HotelPortal::AccountsReceivable::PaymentRecordPresenter do
     expect(presenter.paginated_rows.count { |row| row.kind == :submission }).to eq(2)
   end
 
+  # A booking prepayment (Bookings::PaymentHold) targets the booking directly,
+  # and the hotel can void or cancel it without first resolving a slip sitting
+  # in the review queue -- a reviewer working through the list needs to see
+  # that before approving what looks like an ordinary pending submission.
+  it "flags a submission whose booking has since been voided" do
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                booking: booking, auto_invoice: nil)
+    booking.transition_status_to!("voided", event: "void")
+
+    row = presenter_for.paginated_rows.find { |candidate| candidate.reference == submission.reference_number }
+
+    expect(row.booking_closed?).to be(true)
+    expect(row.booking_flag_label).to eq("Booking voided")
+  end
+
+  it "does not flag a submission whose booking is still live" do
+    booking = create(:booking, hotel: hotel, hotel_corporate_account: relationship, status: "confirmed")
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship,
+                                                booking: booking, auto_invoice: nil)
+
+    row = presenter_for.paginated_rows.find { |candidate| candidate.reference == submission.reference_number }
+
+    expect(row.booking_closed?).to be(false)
+    expect(row.booking_flag_label).to be_nil
+  end
+
+  it "does not flag an ordinary invoice settlement, which has no booking to close" do
+    submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship)
+
+    row = presenter_for.paginated_rows.find { |candidate| candidate.reference == submission.reference_number }
+
+    expect(row.booking).to be_nil
+    expect(row.booking_flag_label).to be_nil
+  end
+
   it "filters to pending submissions only" do
     pending_submission = create(:ar_payment_submission, hotel: hotel, hotel_corporate_account: relationship)
     create(:ar_payment, hotel: hotel, hotel_corporate_account: relationship, amount: 100)

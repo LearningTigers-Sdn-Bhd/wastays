@@ -33,6 +33,8 @@ module Bookings
     private
 
     def update_inventory(room, quantity_change, dates: nil)
+      return if @booking.day_use? # sold by the hour; the room is back before the night starts
+
       room_type = room.room_type
       stay_dates = dates || (@booking.check_in.to_date...@booking.check_out.to_date).to_a
 

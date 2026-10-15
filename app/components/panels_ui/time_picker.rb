@@ -39,7 +39,7 @@ module PanelsUI
     end
 
     def native_id = @id || @form.field_id(@attribute)
-    def stimulus_identifier = "panels-ui--time-picker"
+    def stimulus_identifier = "ui--time-picker"
     def root_id = "#{native_id}-time-picker"
     def root_class = "panel-time-picker"
     def popover_id = "#{native_id}-time"
@@ -65,7 +65,7 @@ module PanelsUI
         data: data.merge(
           {
             controller: [ data.delete(:controller), stimulus_identifier ].compact.join(" "),
-            "#{stimulus_identifier}-panels-ui--popover-outlet" => ".#{popover_root_class}",
+            "#{stimulus_identifier}-ui--popover-outlet" => ".#{popover_root_class}",
             "#{stimulus_identifier}-min-value" => serialize_time(@min),
             "#{stimulus_identifier}-max-value" => serialize_time(@max),
             "#{stimulus_identifier}-step-value" => @minute_step,

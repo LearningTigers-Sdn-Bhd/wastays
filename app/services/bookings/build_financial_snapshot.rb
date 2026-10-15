@@ -29,6 +29,7 @@ module Bookings
     end
 
     def call
+      ensure_plan_fits_stay_length!
       rooms = normalized_room_items
       tax_posting_snapshot = build_tax_posting_snapshot(rooms)
       tax_lines = summarize_tax_lines(tax_posting_snapshot)
@@ -44,8 +45,21 @@ module Bookings
 
     private
 
+    def ensure_plan_fits_stay_length!
+      return if @room_items.present? || @rate_plan.blank?
+
+      day_use_stay = @check_in == @check_out
+      return if day_use_stay == @rate_plan.day_use?
+
+      raise ArgumentError, if day_use_stay
+        "A same-day stay needs a day-use rate plan."
+      else
+        "Day-use rate plans can only be booked for a single day."
+      end
+    end
+
     def stay_dates
-      @stay_dates ||= (@check_in...@check_out).to_a
+      @stay_dates ||= ScheduledStay.billable_dates(@check_in, @check_out)
     end
 
     def normalized_room_items
@@ -105,6 +119,7 @@ module Bookings
           "source" => resolved.source.to_s
         ).compact
       end.transform_keys(&:iso8601)
+      snapshot = apply_stay_discount(snapshot)
 
       total = stay_dates.sum { |date| snapshot.dig(date.iso8601, "price").to_d * @quantity }
 
@@ -113,6 +128,17 @@ module Bookings
         total_amount: total,
         nightly_rate_snapshot: snapshot
       }
+    end
+
+    # Long-stay discounts are for the property's own channels. An OTA booking
+    # was priced by the OTA and must keep that price when staff change it.
+    def apply_stay_discount(snapshot)
+      return snapshot if @booking&.ota_booking?
+
+      Rates::ApplyStayDiscount.snapshot(
+        rate_plan: @rate_plan, snapshot: snapshot,
+        guests: Rates::ApplyStayDiscount.guests_for(@rate_plan, adults: @adults, children: @children)
+      )
     end
 
     def build_manual_override_room_item
@@ -195,6 +221,9 @@ module Bookings
     end
 
     def room_transaction_code_tax_enabled?(rule)
+      # Tourism Tax is an overnight levy; a day-use block is exempt.
+      return false if rule.primary_tax_key == "tourism_tax" && @rate_plan&.day_use?
+
       if rule.hotel_tax.present?
         rule.hotel_tax.enabled? && rule.hotel_tax.applicable_for?(@guest_country)
       elsif rule.primary_tax_key == "sst_tax"

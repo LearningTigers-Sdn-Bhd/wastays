@@ -28,4 +28,14 @@ RSpec.describe Onboarding::DeliveryRecipients do
 
     expect(described_class.owners_for(hotel)).to eq([ "owner@example.com" ])
   end
+
+  it "returns the linked super agent only" do
+    expect(described_class.agent_for(hotel)).to be_nil
+
+    hotel.update!(created_by_user: create(:user, :superadmin))
+    expect(described_class.agent_for(hotel)).to be_nil
+
+    hotel.update!(created_by_user: create(:user, :super_agent, email: "Aina@Agent.test"))
+    expect(described_class.agent_for(hotel)).to eq("aina@agent.test")
+  end
 end

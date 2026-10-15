@@ -45,16 +45,23 @@ module Onboarding
           raise ActiveRecord::Rollback
         end
 
-        rates_coverage = Rates::SetupCoverage.call(hotel: @hotel)
-        readiness = Readiness.new(hotel: @hotel, rates_coverage:).call
-        unless readiness.ready
-          error = "The property is no longer ready to launch. Contact WAStays support."
+        comparison = CompareSubmission.call(hotel: @hotel, submission:)
+        unless comparison.success? && comparison.unchanged
+          error = comparison.error || "The property setup changed after approval. Contact WAStays support before launching."
           raise ActiveRecord::Rollback
         end
 
-        current = SubmissionSnapshot.call(hotel: @hotel, rates_coverage:)
-        unless ActiveSupport::SecurityUtils.secure_compare(current.digest, submission.configuration_digest)
-          error = "The property setup changed after approval. Contact WAStays support before launching."
+        today = Date.current
+        extension = ExtendAvailability.call(hotel: @hotel, submission:, actor: @actor, today:)
+        unless extension.success?
+          error = extension.error
+          raise ActiveRecord::Rollback
+        end
+
+        rates_coverage = Rates::SetupCoverage.call(hotel: @hotel, start_date: today, end_date: today + 364.days)
+        readiness = Readiness.new(hotel: @hotel, rates_coverage:).call
+        unless readiness.ready
+          error = "The property is no longer ready to launch. Contact WAStays support."
           raise ActiveRecord::Rollback
         end
 

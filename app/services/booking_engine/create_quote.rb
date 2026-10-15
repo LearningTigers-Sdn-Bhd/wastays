@@ -39,7 +39,10 @@ module BookingEngine
       flat_rooms = []
       @allocations.each do |alloc|
         begin
-          room_type = @hotel.room_types.find(alloc[:room_type_id] || alloc["room_type_id"])
+          # Pricing reads each plan's age bands and long-stay discounts per room.
+          room_type = @hotel.room_types
+            .includes(rate_plans: %i[rate_plan_age_bands rate_plan_stay_discounts])
+            .find(alloc[:room_type_id] || alloc["room_type_id"])
           quantity = (alloc[:quantity] || alloc["quantity"]).to_i
           quantity.times { flat_rooms << room_type }
         rescue ActiveRecord::RecordNotFound

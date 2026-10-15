@@ -20,6 +20,7 @@ class FolioRoutingRule < ApplicationRecord
   validate :booking_belongs_to_hotel
   validate :target_folio_belongs_to_booking
   validate :target_folio_belongs_to_hotel
+  validate :target_folio_currency_matches_booking
   validate :transaction_code_belongs_to_hotel
   validate :effective_dates_are_ordered
 
@@ -38,9 +39,15 @@ class FolioRoutingRule < ApplicationRecord
   end
 
   def target_folio_belongs_to_booking
-    return if target_folio.blank? || booking_id.blank? || target_folio.booking_id == booking_id
+    return if target_folio.blank? || booking_id.blank? || Folios::DestinationPolicy.related?(booking, target_folio.booking)
 
     errors.add(:target_folio, "must belong to the same booking")
+  end
+
+  def target_folio_currency_matches_booking
+    return if booking.blank? || target_folio.blank? || booking.currency == target_folio.currency
+
+    errors.add(:target_folio, "must use the same currency as the booking")
   end
 
   def target_folio_belongs_to_hotel

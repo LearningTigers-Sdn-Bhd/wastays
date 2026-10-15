@@ -8,6 +8,22 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyReport, type: :service do
   let(:start_date) { Date.new(2026, 5, 6) }
   let(:end_date) { Date.new(2026, 5, 7) }
 
+  describe "day use" do
+    it "is reported beside the overnight figures and joins total revenue without touching occupancy, ADR or RevPAR" do
+      room_type = create(:room_type, hotel: hotel, quantity: 10)
+      day_use_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, day_use_hours: 6)
+      arrival = hotel.hotel_time_zone.parse("#{start_date} 06:00")
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: arrival, check_out: arrival + 6.hours, total_amount: 90)
+      create(:booking_room, booking: booking, room_type: room_type, rate_plan: day_use_plan, subtotal: 90)
+
+      result = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+      expect(result.rows[0]).to include(day_use_sold: 1, day_use_revenue: 90.to_d, rooms_sold: 0, room_revenue: 0.to_d, total_revenue: 90.to_d)
+      expect(result.rows[1]).to include(day_use_sold: 0, day_use_revenue: 0.to_d)
+      expect(result.totals).to include(day_use_sold: 1, day_use_revenue: 90.to_d, rooms_sold: 0, occupancy_rate: 0.to_d, adr: 0.to_d, revpar: 0.to_d, total_revenue: 90.to_d)
+    end
+  end
+
   describe "#call" do
     it "computes daily and total occupancy metrics for selected hotel and range" do
       room_type = create(:room_type, hotel: hotel, quantity: 10)

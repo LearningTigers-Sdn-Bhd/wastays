@@ -7,7 +7,8 @@ module HotelPortal
 
       CATEGORY_LABELS = {
         "accommodation" => "Accommodation",
-        "other_charges" => "Other Charges",
+        "room_fees" => "Room Fees",
+        "other_charges" => "Extra Charges",
         "tax" => "Tax",
         "discount" => "Discount",
         "gateway_payment" => "Online Payment",
@@ -49,10 +50,11 @@ module HotelPortal
       end
 
       def transaction_entries
-        transactions = FolioTransaction.joins(booking_folio: :booking)
+        transactions = FolioTransaction.joins(:source_booking)
           .left_outer_joins(:reversal_of_transaction)
           .where(bookings: { hotel_id: @hotel.id })
           .where(posting_date: @start_date..@end_date)
+          .where("COALESCE(folio_transactions.metadata->>'internal_folio_movement', 'false') != 'true'")
           .select(
             "folio_transactions.*",
             "bookings.confirmation_token AS booking_confirmation_token",
@@ -83,8 +85,10 @@ module HotelPortal
           tx.transaction_type == "charge" && tx.category == "accommodation"
         when "tax"
           tx.transaction_type == "charge" && tx.category == "tax"
+        when "room_fees"
+          tx.transaction_type == "charge" && DailyRevenueAccounting::ROOM_FEE_CATEGORIES.include?(tx.category)
         when "other_charges"
-          tx.transaction_type == "charge" && !%w[accommodation tax].include?(tx.category)
+          DailyRevenueAccounting.extra_charge?(tx)
         when "discount"
           tx.transaction_type == "adjustment" && (tx.category == "discount" || tx.reversed_category == "discount")
         when "gateway_payment"

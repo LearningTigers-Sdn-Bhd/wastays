@@ -19,6 +19,11 @@ FactoryBot.define do
       role { "salesperson" }
     end
 
+    trait :super_agent do
+      role { "super_agent" }
+      sequence(:agent_code) { |n| format("AG%04d", n) }
+    end
+
     trait :corporate do
       account { association :account, :corporate }
       role { "corporate" }

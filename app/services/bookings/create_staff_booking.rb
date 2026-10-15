@@ -6,7 +6,7 @@ module Bookings
   class CreateStaffBooking
     class CreationFailed < StandardError; end
 
-    def initialize(hotel:, common_params:, room_rows:, user:, booking_type: "reservation", posting_date: nil)
+    def initialize(hotel:, common_params:, room_rows:, user:, booking_type: "reservation", posting_date: nil, boat_params: {})
       @hotel = hotel
       @common_params = common_params.to_h.symbolize_keys
       @backdate_reason = @common_params.delete(:backdate_reason)
@@ -17,6 +17,7 @@ module Bookings
       @user = user
       @booking_type = booking_type.presence || "reservation"
       @posting_date = posting_date
+      @boat_params = boat_params
     end
 
     def call
@@ -43,6 +44,8 @@ module Bookings
           raise CreationFailed, Array(result.errors).to_sentence unless result.success?
 
           bookings << result.booking
+          apply_automatic_extra_charges!(result.booking)
+          Boats::AssignTimes.call(booking: result.booking, params: @boat_params)
         end
 
         if bookings.many?
@@ -67,17 +70,22 @@ module Bookings
       end
 
       OpenStruct.new(success?: true, booking: bookings.first, bookings: bookings, group_booking: group_booking, errors: [])
-    rescue CreationFailed, ActiveRecord::RecordInvalid => e
+    rescue CreationFailed, ActiveRecord::RecordInvalid, Boats::ResolveTimes::InvalidSelection => e
       Rails.logger.warn("Staff booking creation rolled back: #{e.message}")
       failure(e.message)
     end
 
     private
 
+    def apply_automatic_extra_charges!(booking)
+      result = ExtraCharges::ApplyAutomatic.call(booking: booking, user: @user)
+      raise CreationFailed, result.error unless result.success?
+    end
+
     def child_params(row)
       params = @common_params.merge(
         room_type_id: row[:room_type_id], room_number: row[:room_number], rate_plan_id: row[:rate_plan_id],
-        adults: row[:adults].presence || 1, children: row[:children].presence || 0,
+        adults: row[:adults].presence || 1, children: row[:children].presence || 0, child_ages: row[:child_ages],
         manual_rate_override: row[:manual_rate_override], posting_date: @posting_date,
         source: @booking_type == "reservation" ? @common_params[:source] : "walk_in",
         require_room_number: @booking_type != "reservation"
@@ -243,6 +251,9 @@ module Bookings
           bill_tourism_tax_to_company: @bill_tourism_tax_to_company
         )
         raise CreationFailed, result.error unless result.success?
+
+        # The corporate portal lists a booking by this column, not by the billing party.
+        booking.update!(hotel_corporate_account_id: account_id)
       end
     end
 

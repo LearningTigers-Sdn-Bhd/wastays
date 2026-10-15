@@ -5,6 +5,12 @@
     row drops; 48px has no room for either. %>
 <% admin_shortcut = current_user&.superadmin? %>
 <div class="panel-sidebar__footer">
+  <% if footer_details.present? %>
+    <div class="panel-sidebar__details panel-sidebar__presentation panel-sidebar__presentation--expanded">
+      <%= footer_details %>
+    </div>
+  <% end %>
+
   <%= content_tag(
         admin_shortcut ? :a : :div,
         class: class_names("panel-sidebar__mark", "panel-sidebar__mark--interactive" => admin_shortcut),

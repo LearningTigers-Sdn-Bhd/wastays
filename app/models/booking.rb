@@ -12,9 +12,14 @@ class Booking < ApplicationRecord
   belongs_to :group_booking, optional: true
   belongs_to :payout_batch, optional: true
   belongs_to :hotel_corporate_account, optional: true
+  # The person at the agency who made the booking, when it came from the
+  # corporate portal. hotel_corporate_account_id says which agency; this says
+  # who, which is what staff ask for when they ring the agency back.
+  belongs_to :corporate_booked_by, class_name: "User", optional: true
   has_many :booking_rooms, dependent: :destroy
   accepts_nested_attributes_for :booking_rooms
   has_many :booking_notes, dependent: :destroy
+  has_many :payment_instalments, -> { order(:position) }, class_name: "BookingPaymentInstalment", dependent: :destroy, inverse_of: :booking
   has_many :booking_guests, dependent: :destroy
   has_many :guests, through: :booking_guests
   has_one :pre_checkin, dependent: :destroy
@@ -39,9 +44,16 @@ class Booking < ApplicationRecord
   has_many :complaint_requests, dependent: :destroy
   has_many :check_out_requests, dependent: :destroy
   has_many :notification_deliveries, dependent: :destroy
+  # A remittance an agent sent to meet this booking's payment deadline. Nullified
+  # rather than destroyed: a submission is a record of money that was claimed,
+  # and it outlives the booking it was sent against.
+  has_many :ar_payment_submissions, dependent: :nullify
   has_many :e_invoice_submissions, dependent: :destroy
   has_many :payment_transactions, dependent: :destroy
   has_one :booking_confirmation_token, dependent: :destroy
+  has_many :concierge_stay_accesses, dependent: :destroy
+  has_one :live_concierge_stay_access, -> { where(revoked_at: nil) },
+    class_name: "ConciergeStayAccess", inverse_of: :booking, dependent: nil
   has_many :folio_operation_logs, dependent: :restrict_with_error
   has_many :room_operational_audit_logs, dependent: :nullify
   attr_accessor :estimated_arrival_time, :existing_guest_id, :guest_update_intent, :guest_date_of_birth,
@@ -57,6 +69,16 @@ class Booking < ApplicationRecord
 
   def payment_concluded?
     payment_status == "captured"
+  end
+
+  def scheduled_extra_charges
+    Bookings::ScheduledExtraChargesQuery.new(self)
+  end
+
+  # Everything the stay costs: the room total and the extra charges scheduled
+  # on it. What an agent is asked to pay.
+  def payable_total
+    total_amount.to_d + scheduled_extra_charges.total
   end
 
   def payment_concluded_at
@@ -267,13 +289,13 @@ class Booking < ApplicationRecord
   end
 
   def check_in=(value)
-    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_in) if hotel && value.present?
-    super(value)
+    @assigned_check_in = value
+    super(scheduled_stay_time(value, :check_in))
   end
 
   def check_out=(value)
-    value = Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: :check_out) if hotel && value.present?
-    super(value)
+    @assigned_check_out = value
+    super(scheduled_stay_time(value, :check_out))
   end
 
   def room_type_summary
@@ -302,10 +324,19 @@ class Booking < ApplicationRecord
   end
 
   STATUSES = %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required cancelled completed overbooked no_show voided].freeze
+  # Both release inventory and end the stay the same way (Bookings::TransitionStatus,
+  # Bookings::VoidBooking); shared so nowhere has to remember to check one and not
+  # the other, which is exactly how a voided booking once read as "Paid" in
+  # CorporatePortal::BookingPaymentPresenter.
+  CLOSED_STATUSES = %w[cancelled voided].freeze
   OCCUPIED_STATUSES = %w[checked_in due_out_detected checkout_required].freeze
   # Statuses that occupy a room on the timeline (arrival/occupied/departure). Shared by the
   # Stay View loader and its filter contract so both describe the same set of bookings.
   OCCUPYING_STATUSES = %w[confirmed no_show_detected checked_in due_out_detected checkout_required completed].freeze
+  # Guests can be registered from confirmation until well after departure: the
+  # desk often learns who else stayed only at or after check-out. A guest record
+  # never changes the pax count or the folio, so a finished stay is safe to add to.
+  GUEST_ADDABLE_STATUSES = %w[confirmed checked_in due_out_detected checkout_required completed].freeze
   PAYMENT_STATUSES = %w[pending authorized partial captured failed refunded].freeze
   PAYOUT_STATUSES = %w[pending processing paid].freeze
 
@@ -327,6 +358,17 @@ class Booking < ApplicationRecord
   validates :guarantee_method, inclusion: { in: GUARANTEE_METHODS, allow_blank: true }
   validates :deposit_status, inclusion: { in: DEPOSIT_STATUSES, allow_nil: true }
   validates :fund_collector, inclusion: { in: FUND_COLLECTORS }
+
+  # Every status change passes through here, so one hook covers check-out, void,
+  # cancel, and undo check-in. Concierge::StayAccess::Eligibility is the only
+  # place that says which statuses hold a stay page, and a completed booking
+  # keeps its link through the grace period.
+  def revoke_stay_access_when_ineligible
+    return unless concierge_stay_accesses.live.exists?
+    return if Concierge::StayAccess::Eligibility.new(booking: self).call.success?
+
+    Concierge::StayAccess::Revoke.new(booking: self).call
+  end
 
   def primary_guest
     if booking_guests.loaded?
@@ -358,10 +400,12 @@ class Booking < ApplicationRecord
     primary_guest&.repeat? || false
   end
 
-  validates :guest_name, :guest_phone, presence: true
-  # The desk usually takes only a phone number, so a booking entered by staff may
-  # go without an address. Everything else — the public funnel, OTA ingestion —
-  # reaches us with one and still has to.
+  validates :guest_name, presence: true
+  # The desk may take a booking before it has any contact detail, and the guest
+  # fills in the phone at check-in. Everything else — the public funnel, OTA
+  # ingestion — reaches us with a phone and an email, and still has to. Later
+  # edits may clear the phone, because staff own the guest details after that.
+  validates :guest_phone, presence: true, on: :create, unless: :created_by_staff?
   validates :guest_email, presence: true, unless: :created_by_staff?
   validates :check_in, :check_out, :adults, :total_amount, :confirmation_token, presence: true
   validates :confirmation_token, uniqueness: true
@@ -370,12 +414,14 @@ class Booking < ApplicationRecord
   validate :group_booking_belongs_to_hotel
 
   before_validation :assign_confirmation_token, on: :create
+  before_validation :apply_hotel_stay_times
   before_create :assign_document_counters
   before_validation :normalize_guest_data
   before_validation :default_fund_collector
   before_validation :assign_existing_document_references
   after_create :register_confirmation_token
   after_update :sync_confirmation_token, if: :saved_change_to_confirmation_token?
+  after_update_commit :revoke_stay_access_when_ineligible, if: :saved_change_to_status?
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :with_confirmation_token, ->(token) {
@@ -395,7 +441,7 @@ class Booking < ApplicationRecord
     return all if query.blank?
     q = "%#{ActiveRecord::Base.sanitize_sql_like(query.to_s.downcase)}%"
     joins(:hotel).where(
-      "hotels.name ILIKE :q OR guest_name ILIKE :q OR confirmation_token ILIKE :q OR reservation_reference ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q",
+      "hotels.name ILIKE :q OR guest_name ILIKE :q OR confirmation_token ILIKE :q OR reservation_reference ILIKE :q OR external_reference ILIKE :q OR guest_email ILIKE :q OR guest_phone ILIKE :q",
       q: q
     )
   }
@@ -490,7 +536,7 @@ class Booking < ApplicationRecord
 
   def self.for_financial_breakdown(hotel, start_date, end_date, query)
     hotel.bookings.revenue_generating
-         .includes(booking_folio: :folio_transactions)
+         .includes({ booking_folio: :folio_transactions }, { booking_rooms: :rate_plan })
          .created_between(start_date, end_date)
          .search(query)
          .order(created_at: :desc, id: :desc)
@@ -560,6 +606,10 @@ class Booking < ApplicationRecord
 
   def pre_checkin_completed?
     pre_checkin_display_status == "completed"
+  end
+
+  def closed?
+    status.in?(CLOSED_STATUSES)
   end
 
   def tourism_tax?
@@ -716,7 +766,37 @@ class Booking < ApplicationRecord
   end
 
   def duration_in_nights
+    return 0 if day_use?
+
     (check_out.to_date - check_in.to_date).to_i
+  end
+
+  # Arrives and leaves on the same hotel date, for a fixed block of hours.
+  def day_use?
+    return false if check_in.blank? || check_out.blank?
+
+    Bookings::ScheduledStay.day_use?(hotel: hotel, check_in: check_in, check_out: check_out)
+  end
+
+  # "2 nights", or "Day use · 5h" for a block of hours on one day.
+  def stay_length_label
+    return "Day use · #{day_use_hours}h" if day_use?
+
+    nights = duration_in_nights
+    "#{nights} #{'night'.pluralize(nights)}"
+  end
+
+  def day_use_hours
+    return unless day_use?
+
+    ((check_out - check_in) / 1.hour).round
+  end
+
+  # The children's ages the room was booked with, so a stay re-priced later
+  # (extended, shortened, moved to another plan) keeps its age-band prices.
+  # Every channel keeps them on the room's occupancy snapshot.
+  def child_ages
+    Bookings::ChildAges.normalize(booking_rooms.first&.occupancy_snapshot.to_h["child_ages"], children)
   end
 
   def eligible_for_refund?(refund_policy)
@@ -811,6 +891,23 @@ class Booking < ApplicationRecord
     self.reservation_reference = allocation.reference
   end
 
+  def scheduled_stay_time(value, kind)
+    return value if hotel.blank? || value.blank?
+
+    Bookings::ScheduledStay.at_hotel_time(hotel: hotel, value: value, kind: kind)
+  end
+
+  # `hotel.bookings.build(check_in: ...)` assigns the attributes before the
+  # association sets the owner, so the setters above run with no hotel and a
+  # date-only value falls through to a bare midnight instead of the property's
+  # check-in time. Re-apply the policy once the hotel is known.
+  def apply_hotel_stay_times
+    return if hotel.blank?
+
+    self.check_in = @assigned_check_in if @assigned_check_in.present?
+    self.check_out = @assigned_check_out if @assigned_check_out.present?
+  end
+
   def assign_existing_document_references
     current_year = DocumentIdentifiers::Issuer.sequence_year(hotel:) if hotel
     self.reservation_year ||= current_year if reservation_number.present?
@@ -831,6 +928,7 @@ class Booking < ApplicationRecord
     return unless %w[pending confirmed no_show_detected checked_in due_out_detected checkout_required].include?(status)
     return unless new_record? || check_in_changed? || check_out_changed?
     return if new_record? && booking_rooms.target.empty?
+    return if day_use? # a day-use stay has no night to stop-sell and no departure date to close
 
     room_types = booking_rooms.map(&:room_type).compact
     return if room_types.empty?

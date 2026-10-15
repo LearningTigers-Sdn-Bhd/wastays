@@ -42,7 +42,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       document = Nokogiri::HTML(response.body)
       frame = document.at_css("turbo-frame#booking_action_sheet")
       expect(frame).to be_present
-      dialog = frame.at_css("dialog#booking-creation-sheet[data-controller='panels-ui--sheet']")
+      dialog = frame.at_css("dialog#booking-creation-sheet[data-controller='ui--sheet']")
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("bottom")
       expect(dialog.text).to include("New Booking", "Stay details", "Guest information")
@@ -84,7 +84,63 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       payment_menu = rail.at_css('[data-payment-method-filter-target="method"] .panel-select-menu')
       expect(rail["class"].split).to include("min-w-0")
       expect(payment_menu["class"].split).to include("max-w-full")
-      expect(payment_menu["data-panels-ui--select-menu-fixed-width-value"]).to eq("true")
+      expect(payment_menu["data-ui--select-menu-fixed-width-value"]).to eq("true")
+    end
+
+    describe "the Day use stay type" do
+      def dialog_for(path)
+        get path, headers: { "Turbo-Frame" => "booking_action_sheet" }
+        Nokogiri::HTML(response.body).at_css("dialog#booking-creation-sheet")
+      end
+
+      it "offers Overnight / Day use on a per-room hotel, defaulting to overnight with the arrival time hidden" do
+        dialog = dialog_for(hotel_booking_action_new_booking_path(hotel))
+
+        expect(dialog.at_css('#stay-type [data-value="overnight"]')["aria-pressed"]).to eq("true")
+        expect(dialog.at_css('#stay-type [data-value="day_use"]')["aria-pressed"]).to eq("false")
+        expect(dialog.at_css('[data-booking-room-rows-target="dayUseFields"]')["class"]).to include("hidden")
+        expect(dialog.at_css('[data-booking-room-rows-target="rangeField"]')["class"]).not_to include("hidden")
+      end
+
+      it "defaults the arrival to today, in the hotel's time zone, and swaps the range for an arrival date and time when Day use is chosen" do
+        dialog = dialog_for(hotel_booking_action_new_booking_path(hotel, stay_type: "day_use"))
+
+        expect(dialog.at_css('#stay-type [data-value="day_use"]')["aria-pressed"]).to eq("true")
+        expect(dialog.at_css('[data-booking-room-rows-target="rangeField"]')["class"]).to include("hidden")
+        expect(dialog.at_css('[data-booking-room-rows-target="dayUseFields"]')["class"]).not_to include("hidden")
+        controller = dialog.at_css('[data-controller="booking-room-rows"]')
+        expect(controller["data-booking-room-rows-day-use-date-value"]).to eq(Time.current.in_time_zone(hotel.hotel_time_zone).to_date.iso8601)
+        expect(controller["data-booking-room-rows-day-use-selected-value"]).to eq("true")
+        expect(dialog.at_css("input#day_use_arrival_time")["value"]).to match(/\A\d{2}:\d{2}\z/)
+        hotel_today = Time.current.in_time_zone(hotel.hotel_time_zone).to_date.iso8601
+        expect(dialog.at_css("input#day_use_arrival_date").attributes.slice("value", "min").transform_values(&:value)).to eq("value" => hotel_today, "min" => hotel_today)
+      end
+
+      it "keeps a future arrival date when the form is re-rendered, so a day-use booking can be made ahead" do
+        future = Time.current.in_time_zone(hotel.hotel_time_zone).to_date + 9.days
+        arrival = hotel.hotel_time_zone.parse("#{future} 10:00")
+
+        dialog = dialog_for(hotel_booking_action_new_booking_path(hotel, stay_type: "day_use", booking: { check_in: arrival.iso8601, check_out: (arrival + 4.hours).iso8601 }))
+
+        expect(dialog.at_css("input#day_use_arrival_date")["value"]).to eq(future.iso8601)
+        expect(dialog.at_css("input#day_use_arrival_time")["value"]).to eq("10:00")
+      end
+
+      it "is not offered on a per-person hotel" do
+        per_person_hotel = create(:hotel, :per_person, account: hotel.account)
+        create(:user_hotel_access, user: user, hotel: per_person_hotel, role: role)
+        BusinessDates::ResetAuthority.call!(hotel: per_person_hotel, date: Date.current)
+
+        dialog = dialog_for(hotel_booking_action_new_booking_path(per_person_hotel))
+
+        expect(dialog.at_css("#stay-type")).to be_nil
+      end
+
+      it "is not offered on a backdated check-in" do
+        dialog = dialog_for(hotel_booking_action_backdated_check_in_path(hotel))
+
+        expect(dialog.at_css("#stay-type")).to be_nil
+      end
     end
 
     it "renders the Quick Booking sheet on the right" do
@@ -210,7 +266,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(row.at_css("[data-role='room-type'] select[name='booking[rooms][3][room_type_id]']")).to be_present
       expect(row.at_css("[data-role='rate-plan'] select")).to be_present
       popover = row.at_css("#booking-room-rate-breakdown-3")
-      expect(popover["data-panels-ui--popover-trigger-on-value"]).to eq("hover")
+      expect(popover["data-ui--popover-trigger-on-value"]).to eq("hover")
       expect(popover.at_css("button[aria-label='Show rate breakdown'] svg")).to be_present
       expect(popover.at_css("[data-role='nightly-breakdown']")).to be_present
       expect(popover.at_css("[data-role='tax-breakdown']")).to be_present
@@ -312,7 +368,7 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       get hotel_booking_action_walk_in_check_in_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
 
       options = Nokogiri::HTML(response.body).css('select[name="booking[boat_out_time]"] option').map { |option| option["value"] }
-      expect(options).to eq([ "", "15:30" ])
+      expect(options).to eq([ "", "15:30", "charter", "own" ])
 
       hotel.update!(allow_boat_information: false)
       get hotel_booking_action_walk_in_check_in_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
@@ -358,11 +414,13 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(booking.guest_phone).to eq("+60123456789")
     end
 
-    it "still requires a phone number" do
+    it "takes a booking with no phone or email, so the guest can add them at check-in" do
       expect {
         post hotel_booking_action_new_booking_path(hotel),
           params: { booking: booking_params.merge(guest_email: "", guest_phone: "") }
-      }.not_to change(Booking, :count)
+      }.to change(Booking, :count).by(1)
+
+      expect(Booking.last.guest_phone).to be_blank
     end
 
     context "when the stay is priced by hand" do
@@ -447,6 +505,28 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking))
       expect(booking.deposits.kind_prepayment).to be_empty
       expect(booking.payment_status).to eq("pending")
+    end
+
+    %w[new_booking walk_in_check_in].each do |action|
+      it "records custom transfers through #{action}" do
+        hotel.update!(allow_boat_information: true)
+        path = public_send("hotel_booking_action_#{action}_path", hotel)
+        post path, params: { booking: booking_params.merge(boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own") }
+        expect(response).to have_http_status(:redirect)
+        expect(Booking.last.booking_guests.find(&:primary?)).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
+      end
+    end
+
+    it "rejects Charter without a time and restores custom fields on creation failure" do
+      hotel.update!(allow_boat_information: true)
+      expect do
+        post hotel_booking_action_new_booking_path(hotel), params: {
+          booking: booking_params.merge(boat_in_time: "charter", boat_in_custom_time: "", boat_out_time: "own", boat_out_custom_time: "17:12")
+        }
+      end.not_to change(Booking, :count)
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body.at_css("select[name='booking[boat_in_time]'] option[selected]")["value"]).to eq("charter")
+      expect(response.parsed_body.at_css("input[name='booking[boat_out_custom_time]']")["value"]).to eq("17:12")
     end
 
     it "records the boat slots picked while creating a walk-in" do

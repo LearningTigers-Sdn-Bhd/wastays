@@ -39,7 +39,7 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
       admin_reconciliations_path => 'Payment Issues',
       admin_margin_rules_path => 'Margin Settings',
       admin_setup_fee_rules_path => 'Setup Fee Settings',
-      admin_audit_logs_path => 'Audit Logs'
+      admin_activity_logs_path => 'Activity log'
     }.each do |path, heading|
       get path
 
@@ -101,13 +101,6 @@ RSpec.describe 'Admin mobile responsive views', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('id="admin-payment-issues-mobile-list"')
-  end
-
-  it 'renders the audit logs mobile list container' do
-    get admin_audit_logs_path
-
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include('id="admin-audit-logs-mobile-list"')
   end
 
   it 'renders the margin rules mobile list container' do

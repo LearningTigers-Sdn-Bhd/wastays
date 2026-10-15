@@ -19,7 +19,7 @@ RSpec.describe "Hotel rate calendar", type: :system do
   end
 
   it "shows calendar with rate labels and sold-out days" do
-    visit hotel_path(hotel)
+    visit hotel_path(hotel.unique_id, hotel.public_id)
 
     find("[data-action='click->rate-calendar#openPicker']").click
 
@@ -37,7 +37,7 @@ RSpec.describe "Hotel rate calendar", type: :system do
     tomorrow = today + 1.day
     RoomRate.where(room_type: room_type, date: tomorrow).update_all(min_stay: 3)
 
-    visit hotel_path(hotel)
+    visit hotel_path(hotel.unique_id, hotel.public_id)
     find("[data-action='click->rate-calendar#openPicker']").click
 
     # Click check-in date as tomorrow
@@ -68,7 +68,7 @@ RSpec.describe "Hotel rate calendar", type: :system do
     tomorrow = today + 1.day
     RoomRate.where(room_type: room_type, date: tomorrow).update_all(max_stay: 2)
 
-    visit hotel_path(hotel)
+    visit hotel_path(hotel.unique_id, hotel.public_id)
     find("[data-action='click->rate-calendar#openPicker']").click
 
     # Click check-in date as tomorrow

@@ -1,0 +1,44 @@
+<% frame_id = turbo_frame_request_id.presence || "settings_action_sheet" %>
+<% form_id = "add-ota-login-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(id: "add-ota-login-sheet", side: :right, size: :lg,
+          title: "Add OTA Login", description: "Passwords are never shown in the hotel portal.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @credential, url: hotel_ota_logins_path(current_hotel), method: :post,
+              id: form_id, class: "space-y-5 py-2" do |form| %>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <%= render PanelsUI::FormField.new(form: form, attribute: :channel_name, label: "Channel", required: true) do |field| %>
+              <% field.with_input(placeholder: "e.g. Booking.com", required: true) %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :property_code, label: "Property ID") do |field| %>
+              <% field.with_input(placeholder: "e.g. 623847") %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :username, label: "Username") do |field| %>
+              <% field.with_input(placeholder: "e.g. hotel@example.com", autocomplete: "off") %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :password, label: "Password", hint: @password_typed ? "Re-enter the password before saving." : nil) do |field| %>
+              <% field.with_input(type: :password, placeholder: "Enter the OTA login password", autocomplete: "new-password") %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :market_manager_name, label: "Market manager") do |field| %>
+              <% field.with_input(placeholder: "e.g. Amina") %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :market_manager_phone, label: "Market manager phone") do |field| %>
+              <% field.with_input(type: :tel, placeholder: "e.g. +60123456789", autocomplete: "off") %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :market_manager_email, label: "Market manager email") do |field| %>
+              <% field.with_input(type: :email, placeholder: "e.g. manager@example.com", autocomplete: "off") %>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(label: "Cancel", type: :button, variant: :secondary, size: :sm,
+              data: { action: "click->ui--sheet#close" }) %>
+        <%= render PanelsUI::Button.new(label: "Add OTA Login", type: :submit, form: form_id, size: :sm,
+              data: { turbo_submits_with: "Saving…" }) %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

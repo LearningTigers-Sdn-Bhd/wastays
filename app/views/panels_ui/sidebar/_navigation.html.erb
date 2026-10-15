@@ -2,7 +2,7 @@
   <% component.sections.each_with_index do |section, section_index| %>
     <% next unless section.items? %>
     <div class="panel-sidebar__section"
-         data-panels-ui--sidebar-search-target="section"
+         data-ui--sidebar-search-target="section"
          data-section-label="<%= section.label %>">
       <span class="panel-sidebar__section-label"><%= section.label %></span>
       <div class="panel-sidebar__section-items">
@@ -20,6 +20,6 @@
   <% end %>
   <% if component.searchable? %>
     <div class="panel-sidebar__empty hidden"
-         data-panels-ui--sidebar-search-target="empty"><%= component.empty_message %></div>
+         data-ui--sidebar-search-target="empty"><%= component.empty_message %></div>
   <% end %>
 </nav>

@@ -60,6 +60,22 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
       expect(response.body).to include("Your account has been suspended. Please contact support.")
     end
 
+    it "labels a day-use stay as Day use instead of 0 nights on every stay card" do
+      arrival = hotel.hotel_time_zone.parse("#{hotel_today} 09:00")
+      stay = booking(status: "confirmed", confirmation_token: "DAY-USE", check_in: arrival, check_out: arrival + 5.hours)
+      room_type = create(:room_type, hotel:)
+      plan = create(:rate_plan, :custom, hotel:, room_type:, day_use_hours: 5)
+      create(:booking_room, booking: stay, room_type:, rate_plan: plan)
+
+      %w[bookings arrivals].each do |tab|
+        get hotel_front_desk_path(hotel), params: { tab: }
+
+        expect(response.body).to include("DAY-USE")
+        expect(response.body).to include("Day use · 5h")
+        expect(response.body).not_to include("0 nights")
+      end
+    end
+
     it "does not expose another hotel's records" do
       own_booking = booking(status: "checked_in", confirmation_token: "OWN-STAY", checked_in_at: Time.current)
       other_booking = create(:booking, hotel: other_hotel, status: "checked_in", confirmation_token: "OTHER-STAY", checked_in_at: Time.current)
@@ -1174,6 +1190,133 @@ RSpec.describe "HotelPortal::FrontDesk", type: :request do
 
       expect(response).to redirect_to(hotel_front_desk_path(hotel, tab: "checkout", view: "list", checkout_query: "Aisha", checkout_page: 2))
       expect(response).to have_http_status(:moved_permanently)
+    end
+  end
+
+  # An agent booking's `source` is "internal", the same as one keyed at the
+  # desk, so this badge is the only thing on the list that says an agency sold
+  # the room -- and who there sold it.
+  describe "agent bookings" do
+    let(:corporate_user) { create(:user, :corporate) }
+    let(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account, account_type: "travel_agent")
+    end
+
+    it "marks a booking made through the corporate portal, naming the agency and the person" do
+      booking(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+              corporate_booked_at: Time.current)
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response).to have_http_status(:success)
+      body = response.parsed_body.text
+      expect(body).to include("Booked by an agency")
+      expect(body).to include(relationship.corporate_account.name)
+      expect(body).to include(corporate_user.name)
+    end
+
+    it "leaves a staff-keyed booking unmarked" do
+      booking
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response.parsed_body.text).not_to include("Booked by an agency")
+    end
+
+    # The cards carry only an icon for the source, which says "an agent" and not
+    # which one. Every card now names the agency under the confirmation code.
+    %w[cards list].each do |view|
+      it "names the travel agent on each booking in the #{view} view" do
+        booking(hotel_corporate_account: relationship)
+
+        get hotel_front_desk_path(hotel), params: { tab: "bookings", view: view }
+
+        page = Capybara.string(response.body)
+        if view == "cards"
+          expect(page.find("[data-testid='card-agency']")).to have_text(relationship.corporate_account.name)
+        else
+          expect(response.body).to include(ERB::Util.html_escape(relationship.corporate_account.name))
+        end
+      end
+    end
+
+    it "names the travel agent on an arrival's card" do
+      booking(hotel_corporate_account: relationship, check_in: Time.current.beginning_of_day + 14.hours, check_out: Time.current + 2.days)
+
+      get hotel_front_desk_path(hotel), params: { tab: "arrivals", view: "cards" }
+
+      expect(response.body).to include("card-agency", ERB::Util.html_escape(relationship.corporate_account.name))
+    end
+
+    it "shows no agency line on a booking made at the desk" do
+      booking
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "cards" }
+
+      expect(response.body).not_to include("card-agency")
+    end
+
+    it "marks a travel agent's unattributed booking with its agency's name" do
+      booking(hotel_corporate_account: relationship)
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response.body).to include(ERB::Util.html_escape(relationship.corporate_account.name))
+      expect(response.body).to include("Booked by an agency")
+    end
+
+    it "leaves a company's booking that predates attribution unmarked" do
+      relationship.update!(account_type: "company")
+      booking(hotel_corporate_account: relationship)
+
+      get hotel_front_desk_path(hotel, tab: "bookings", view: "list")
+
+      expect(response.parsed_body.text).not_to include("Booked by an agency")
+    end
+  end
+
+  # The reservations list is scanned for what needs doing, so a booking that is
+  # over and needs nothing recedes rather than competing for attention.
+  describe "cancelled reservations in the list" do
+    it "dims the cancelled row and leaves a live one at full weight" do
+      cancelled = booking(status: "cancelled")
+      live = booking(status: "confirmed")
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
+
+      rows = response.parsed_body.css("#front-desk-results table tbody tr[data-booking-token]")
+      cancelled_row = rows.find { |row| row["data-booking-token"] == cancelled.confirmation_token }
+      live_row = rows.find { |row| row["data-booking-token"] == live.confirmation_token }
+
+      expect(cancelled_row["class"]).to include("grayscale-[60%]")
+      expect(live_row["class"]).not_to include("grayscale-[60%]")
+    end
+
+    # The card view is the default on narrow screens, so it has to agree with
+    # the table rather than leaving cancelled stays at full weight there.
+    it "dims the cancelled card in the card view too" do
+      cancelled = booking(status: "cancelled")
+      live = booking(status: "confirmed")
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings" }
+
+      cards = response.parsed_body.css("article.front-desk-stay-card[data-booking-token]")
+      cancelled_card = cards.find { |card| card["data-booking-token"] == cancelled.confirmation_token }
+      live_card = cards.find { |card| card["data-booking-token"] == live.confirmation_token }
+
+      expect(cancelled_card["class"]).to include("grayscale-[60%]")
+      expect(live_card["class"]).not_to include("grayscale-[60%]")
+    end
+
+    it "dims a voided reservation the same way" do
+      voided = booking(status: "voided")
+
+      get hotel_front_desk_path(hotel), params: { tab: "bookings", view: "list" }
+
+      rows = response.parsed_body.css("#front-desk-results table tbody tr[data-booking-token]")
+      voided_row = rows.find { |row| row["data-booking-token"] == voided.confirmation_token }
+
+      expect(voided_row["class"]).to include("grayscale-[60%]")
     end
   end
 end

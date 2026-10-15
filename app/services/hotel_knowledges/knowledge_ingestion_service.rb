@@ -31,7 +31,7 @@ module HotelKnowledges
       ActiveRecord::Base.transaction do
         @document.chunks.destroy_all
         HotelKnowledgeChunk.insert_all(chunk_records)
-        @document.update!(embedding_status: "indexed", metadata: @document.metadata.except("last_error"))
+        @document.update!(embedding_status: "indexed", metadata: successful_metadata)
       end
 
       @document.chunks.reload
@@ -69,7 +69,11 @@ module HotelKnowledges
     end
 
     def mark_indexed
-      @document.update!(embedding_status: "indexed", metadata: @document.metadata.except("last_error"))
+      @document.update!(embedding_status: "indexed", metadata: successful_metadata)
+    end
+
+    def successful_metadata
+      @document.metadata.except("last_error", *HotelKnowledgeDocument::INDEXING_RECOVERY_METADATA_KEYS)
     end
   end
 end

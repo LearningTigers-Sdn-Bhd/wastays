@@ -28,6 +28,18 @@ RSpec.describe HotelKnowledges::GenerateEmbeddingsJob do
       expect { described_class.perform_now(0) }.not_to raise_error
     end
 
+    it "does not restart a recovery job after the document has reached terminal failure" do
+      document.update_columns(
+        embedding_status: "failed",
+        metadata: { "indexing_recovery_attempts" => 1 }
+      )
+
+      described_class.perform_now(document.id, recovery_attempt: 1)
+
+      expect(HotelKnowledges::KnowledgeIngestionService).not_to have_received(:new)
+      expect(document.reload.embedding_status).to eq("failed")
+    end
+
     context "when ingestion fails" do
       it "marks document as failed" do
         allow(HotelKnowledges::KnowledgeIngestionService).to receive_message_chain(:new, :call)

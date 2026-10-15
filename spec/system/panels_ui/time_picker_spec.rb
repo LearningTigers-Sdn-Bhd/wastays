@@ -10,7 +10,7 @@ RSpec.describe "PanelsUI::TimePicker", type: :system do
   end
 
   it "synchronizes keyboard column selection with the hidden value" do
-    expect(page).to have_css("#{input_css('check_in_time')}[data-panels-ui--time-picker-target='input']", visible: :all, wait: 10)
+    expect(page).to have_css("#{input_css('check_in_time')}[data-ui--time-picker-target='input']", visible: :all, wait: 10)
     result = page.evaluate_script(<<~JS)
       (() => {
         const input = document.querySelector(#{input_css('check_in_time').to_json})

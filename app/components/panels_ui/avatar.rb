@@ -70,7 +70,7 @@ module PanelsUI
           data: data.merge(
             slot: "avatar",
             size: @size,
-            controller: (@src.present? ? "panels-ui--avatar" : nil)
+            controller: (@src.present? ? "ui--avatar" : nil)
           ).compact
         )
       ) do
@@ -109,8 +109,8 @@ module PanelsUI
         class: "panel-avatar__image",
         data: {
           slot: "avatar-image",
-          panels_ui__avatar_target: "image",
-          action: "error->panels-ui--avatar#hideFailedImage"
+          ui__avatar_target: "image",
+          action: "error->ui--avatar#hideFailedImage"
         }
       )
     end

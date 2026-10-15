@@ -65,4 +65,13 @@ RSpec.describe CorporateInvitation, type: :model do
       invitation.update_column(:metadata, {})
     }.to raise_error(ActiveRecord::StatementInvalid)
   end
+
+  it "removes the onboarding draft that created it when destroyed" do
+    invitation = create(:corporate_invitation, :held)
+    draft = create(:onboarding_corporate_draft, hotel: invitation.hotel, email: invitation.email, invitation: invitation)
+
+    invitation.destroy!
+
+    expect(OnboardingCorporateDraft.exists?(draft.id)).to be(false)
+  end
 end

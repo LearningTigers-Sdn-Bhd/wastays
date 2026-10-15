@@ -31,6 +31,21 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
   end
 
   describe "GET /hotel/:hotel_id/bookings/:booking_id/workspace" do
+    it "shows the linked agency beneath the source in References" do
+      account = create(:hotel_corporate_account, hotel: hotel,
+        corporate_account: create(:account, :corporate, name: "Sand Bay Travel"))
+      booking.update!(source: "travel_agent", hotel_corporate_account: account)
+
+      get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      table = document.css("table").find { |node| node.css("th").map { |header| header.text.strip }.include?("Source") }
+      source_cell = table.at_css("tbody tr").css("td")[3]
+      expect(source_cell.text.squish).to eq("Travel Agent Sand Bay Travel")
+      expect(source_cell.at_css("span").text).to eq("Sand Bay Travel")
+    end
+
     it "lazily renders five empty document sections only on the Documents tab" do
       get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
       expect(response.body).not_to include('data-testid="booking-documents"')
@@ -191,7 +206,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(panel.css('[data-document-section="ledgers"] tbody td:nth-child(2)').map { |cell| cell.text.squish }).to include("Guest", "External")
       expect(panel.text).to include(ar_invoice.formatted_invoice_number, direct_bill_account.corporate_account.name, "Consolidated AR")
       expect(panel.text).not_to include("Not issued", "Folio still open", "Permission required")
-      expect(panel.at_css('[data-controller="panels-ui--popover"]')).to be_nil
+      expect(panel.at_css('[data-controller="ui--popover"]')).to be_nil
       expect(panel.at_css("a[href='#{hotel_folio_ledger_path(hotel, guest_folio, format: :pdf)}'][target='_blank'][data-turbo='false']")).to be_present
 
       get hotel_booking_workspace_path(hotel, booking, tab: "documents", child_booking_id: sibling.id)
@@ -259,6 +274,18 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       overview = document.at_css('[data-testid="booking-overview"]')
       expect(header["class"]).to include("px-5", "pt-3")
       expect(overview.at_xpath('.//h2[normalize-space()="Overview"]')).to be_nil
+    end
+
+    it "shows the OTA's notes apart from the staff's special requests, with where they come from" do
+      booking.update!(channel_notes: "Request 1 pillow\nBooked by: Henry Tan", special_requests: "VIP, late check-in arranged")
+      create(:booking_guest, booking: booking, guest: create(:guest, name: "Aina Rahman"), is_primary: true)
+
+      get hotel_booking_workspace_path(hotel, booking)
+
+      notes = Nokogiri::HTML(response.body).at_css('[data-testid="channel-notes"]')
+      expect(notes.text).to include("OTA notes", "Request 1 pillow", "Booked by: Henry Tan")
+      expect(notes.to_html).to include("From the OTA / channel manager")
+      expect(response.body).to include("VIP, late check-in arranged")
     end
 
     it "labels the overview references section and demotes the confirmation code" do
@@ -390,8 +417,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(row).to eq([
         booking.formatted_reservation_number,
         "Boat Guest",
-        "#{booking.check_in.in_time_zone(zone).strftime('%d %b %Y')} 09:30",
-        "#{booking.check_out.in_time_zone(zone).strftime('%d %b %Y')} 16:45"
+        "#{booking.check_in.in_time_zone(zone).strftime('%d %b %Y')} 09:30 · Resort Boat",
+        "#{booking.check_out.in_time_zone(zone).strftime('%d %b %Y')} 16:45 · Resort Boat"
       ])
     end
 
@@ -496,10 +523,10 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include("Acme Engineering")
       expect(response.body).to include("City Ledger · Direct bill enabled")
       panel = Nokogiri::HTML(response.body).at_css("#billing-preferences-panel")
-      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-panels-ui--popover-trigger-on-value='hover']]")
+      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-ui--popover-trigger-on-value='hover']]")
       expect(panel.at_css("th:nth-child(4)").text.squish).to eq("Outstanding (MYR)")
       expect(folio_cell.at_xpath("./span/span").text.squish).to eq("1")
-      expect(panel.at_css("[data-panels-ui--popover-trigger-on-value='hover']")).to be_present
+      expect(panel.at_css("[data-ui--popover-trigger-on-value='hover']")).to be_present
       expect(panel.at_css("[role='dialog']").text).to include("Corporate Folio")
       expect(panel.at_css("td[data-column='outstanding']").text.squish).to match(/\A\d[\d,.]*\z/)
       expect(panel.at_css("td[data-column='outstanding']").text).not_to include("MYR")
@@ -527,7 +554,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(text).to include("Child Booking Guest", account.corporate_account.name,
         "Add billing party", "Edit terms")
       panel = document.at_css("#billing-preferences-panel")
-      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-panels-ui--popover-trigger-on-value='hover']]")
+      folio_cell = panel.at_xpath(".//td[@data-column='folios'][.//*[@data-ui--popover-trigger-on-value='hover']]")
       expect(folio_cell.at_xpath("./span/span").text.squish).to eq("1")
       expect(panel.at_css("[role='dialog']").text).to include("Child Corporate Folio")
       expect(text).not_to include("Booking-local billing exception", "Group accommodation payer")
@@ -830,6 +857,28 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(summary.at_xpath('.//button[normalize-space()="Actions"]')).to be_nil
     end
 
+    it "renders the stay-link resend button in the Documents tab" do
+      role.permissions << manage_bookings
+      booking.update_columns(status: "checked_in", guest_email: "guest@example.com")
+      create(:concierge_stay_access, hotel: hotel, booking: booking)
+
+      path = hotel_booking_workspace_path(hotel, booking, tab: "documents")
+      get path
+
+      expect(response).to have_http_status(:success)
+      document = Nokogiri::HTML(response.body)
+      summary = document.at_css('[data-testid="booking-workspace-header"]')
+      section = document.at_css('[data-document-section="stay_concierge"]')
+      form = section&.at_css("form[action='#{hotel_booking_action_resend_stay_link_path(hotel, booking, return_to: path)}']")
+      button = form&.at_css("button[type='submit']")
+
+      expect(section.at_css("h2").text.squish).to eq("Stay Concierge page")
+      expect(section.text.squish).to include(booking.formatted_reservation_number, "g•••@example.com", "Available")
+      expect(button&.text&.squish).to eq("Resend stay link")
+      expect(button&.at_css("svg")).to be_present
+      expect(summary.text.squish).not_to include("Resend stay link")
+    end
+
     it "renders only the workspace frame for workspace turbo requests" do
       room_type = create(:room_type, hotel: hotel, name: "Garden Suite")
       create(:booking_room, booking: booking, room_type: room_type, room_number: "208")
@@ -859,7 +908,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(response.body).to include('data-layout-mode="entity"')
       expect(response.body).to include('role="alertdialog"')
       expect(response.body).to include("Change this room’s rate?")
-      expect(response.body).to include('data-controller="panels-ui--dialog warning-dialog"')
+      expect(response.body).to include('data-controller="ui--dialog warning-dialog"')
       expect(response.body).not_to include('data-testid="workspace-action-drawer"')
     end
 
@@ -1335,6 +1384,11 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       get hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
 
       expect(add_guest_in.call(first_child)["href"]).to include(first_child.id.to_s)
+
+      first_child.update_column(:status, "completed")
+      get hotel_booking_workspace_path(hotel, booking, tab: "guest_details")
+
+      expect(add_guest_in.call(first_child)["href"]).to include(first_child.id.to_s)
     end
 
     it "falls back to the first folio and guest when the first child has no primary entities" do
@@ -1495,6 +1549,32 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
   describe "PATCH /hotel/:hotel_id/bookings/:booking_id/workspace" do
     before { role.permissions << manage_bookings }
+
+    it "saves the primary guest with a blank phone so the guest can add it at check-in" do
+      booking_guest = create(:booking_guest, booking: booking, is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "Fang Yi", phone: "", country: "Malaysia" },
+        save_scope: "snapshot"
+      }
+
+      expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id))
+      expect(booking.reload.guest_phone).to be_blank
+      expect(booking_guest.reload.phone_snapshot).to be_blank
+    end
+
+    it "shows only the real error when the guest details cannot be saved" do
+      booking_guest = create(:booking_guest, booking: booking, is_primary: true)
+
+      patch hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: booking_guest.id), params: {
+        guest: { name: "", country: "Malaysia" },
+        save_scope: "snapshot"
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Name can&#39;t be blank")
+      expect(response.body).not_to include("has already been taken")
+    end
 
     it "updates the selected stay snapshot without changing the reusable guest" do
       guest = create(:guest, name: "Reusable Guest")
@@ -1664,6 +1744,29 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
       expect(guest.reload).to have_attributes(name: "Original Guest", email: "original@example.com")
     end
 
+    it "saves custom types without schedule slots and restores submitted values on error" do
+      hotel.update!(allow_boat_information: true)
+      lead = create(:booking_guest, booking: booking, guest: create(:guest, name: "Boat Guest"), is_primary: true)
+      path = hotel_booking_workspace_path(hotel, booking, tab: "guest_details", booking_guest_id: lead.id)
+      patch path, params: {
+        guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
+        booking_guest: { boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own" }
+      }
+      expect(response).to have_http_status(:see_other)
+      expect(lead.reload).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
+      log = BookingAuditLog.where(auditable: booking, action_type: "guest_updated").last
+      expect(log.new_value).to include("boat_in_type" => "charter", "boat_out_type" => "own")
+
+      patch path, params: {
+        guest: { name: "Boat Guest", country: "Malaysia", document_type: "passport" },
+        booking_guest: { boat_in_time: "charter", boat_in_custom_time: "", boat_out_time: "own", boat_out_custom_time: "17:12" }
+      }
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body.at_css("select[name='booking_guest[boat_in_time]'] option[selected]")["value"]).to eq("charter")
+      expect(response.parsed_body.at_css("input[name='booking_guest[boat_out_custom_time]']")["value"]).to eq("17:12")
+      expect(lead.reload.boat_out_at).to be_nil
+    end
+
     it "shows the stay date read-only beside each boat slot" do
       hotel.update!(allow_boat_information: true)
       create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
@@ -1701,7 +1804,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         .to eq("#{booking.check_out.in_time_zone(zone).strftime('%Y-%m-%d')} 16:45")
     end
 
-    it "ignores a submitted time that is not on the property's timetable" do
+    it "rejects a submitted choice that is not on the property's timetable" do
       hotel.update!(allow_boat_information: true)
       create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
       booking_guest = create(:booking_guest, booking: booking, guest: create(:guest, name: "Charter Guest"), is_primary: true)
@@ -1711,6 +1814,8 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
         booking_guest: { boat_in_time: "custom" }
       }
 
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Choose a boat-in option")
       expect(booking_guest.reload.boat_in_at).to be_nil
     end
 
@@ -1740,7 +1845,7 @@ RSpec.describe "HotelPortal::Bookings::Workspaces", type: :request do
 
       document = Nokogiri::HTML(response.body)
       options = document.css("select[name='booking_guest[boat_in_time]'] option").map { |option| option["value"] }
-      expect(options).to contain_exactly("", "06:15", "09:30")
+      expect(options).to contain_exactly("", "06:15", "09:30", "charter", "own")
       expect(document.at_css("select[name='booking_guest[boat_in_time]'] option[selected]")["value"]).to eq("06:15")
     end
 

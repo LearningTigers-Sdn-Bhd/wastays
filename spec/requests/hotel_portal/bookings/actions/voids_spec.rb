@@ -27,7 +27,7 @@ RSpec.describe "HotelPortal::Bookings::Actions voids", frozen_time: :business_da
 
     expect(response).to have_http_status(:success)
     document = Nokogiri::HTML(response.body)
-    dialog = document.at_css("turbo-frame#booking_action_sheet dialog#booking-void-sheet[data-controller='panels-ui--sheet']")
+    dialog = document.at_css("turbo-frame#booking_action_sheet dialog#booking-void-sheet[data-controller='ui--sheet']")
     expect(dialog).to be_present
     expect(dialog.text).to include("Void booking", "Existing folios, charges, payments, deposits, and invoices will not be changed")
     expect(dialog.at_css("textarea[name='void_reason'][required]")).to be_present

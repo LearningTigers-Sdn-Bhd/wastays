@@ -71,7 +71,7 @@ RSpec.describe "Corporate portal pagination migration", type: :request do
     navigation = pagination_in("ar_statements_results")
     expect(response).to have_http_status(:ok)
     expect(navigation.at_css('[aria-current="page"]').text).to eq("2")
-    expect(response.body).to include(relationships.last.hotel.name)
+    expect(response.body).to include(CGI.escapeHTML(relationships.last.hotel.name))
     expect(navigation.at_css('a[aria-label="Previous page"]')["href"]).to include("query=Statement+Hotel")
   end
 

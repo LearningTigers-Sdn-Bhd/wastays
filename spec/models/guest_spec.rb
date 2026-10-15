@@ -28,20 +28,22 @@ RSpec.describe Guest, type: :model do
       expect(record).to be_valid
     end
 
-    it 'requires date_of_birth for reporting guests who are non-Malaysian' do
+    it 'allows a blank date_of_birth for non-Malaysian national ID guests' do
       record = build(:guest, date_of_birth: nil, country: 'Singapore', document_type: 'ic')
 
-      record.validate
-
-      expect(record.errors[:date_of_birth]).to include('is required for passport guests')
+      expect(record).to be_valid
     end
 
-    it 'requires date_of_birth for passport guests' do
+    it 'allows a blank date_of_birth for Malaysian passport guests' do
       record = build(:guest, date_of_birth: nil, country: 'Malaysia', document_type: 'passport')
 
-      record.validate
+      expect(record).to be_valid
+    end
 
-      expect(record.errors[:date_of_birth]).to include('is required for passport guests')
+    it 'allows a blank date_of_birth for non-Malaysian passport guests' do
+      record = build(:guest, date_of_birth: nil, country: 'Singapore', document_type: 'passport')
+
+      expect(record).to be_valid
     end
 
     it 'rejects date_of_birth on or after today' do
@@ -327,6 +329,21 @@ RSpec.describe Guest, type: :model do
 
       expect { record.safely_read_encrypted(:government_id) }.not_to raise_error
       expect(record.safely_read_encrypted(:government_id)).to be_nil
+    end
+  end
+
+  describe "the not-captured phone placeholder" do
+    it "is recognised, and never offered as a phone number to show" do
+      placeholder = "#{described_class::PHONE_NOT_CAPTURED} RES4773-13"
+
+      expect(described_class.placeholder_phone?(placeholder)).to be(true)
+      expect(described_class.displayable_phone(placeholder)).to be_nil
+    end
+
+    it "leaves a real number alone" do
+      expect(described_class.placeholder_phone?("+60123456789")).to be(false)
+      expect(described_class.displayable_phone("+60123456789")).to eq("+60123456789")
+      expect(described_class.displayable_phone(nil)).to be_nil
     end
   end
 end

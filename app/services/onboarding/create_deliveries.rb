@@ -28,6 +28,14 @@ module Onboarding
       DeliveryRecipients.owners_for(submission.hotel).each do |email|
         create(submission, type, "User", nil, email:)
       end
+      for_agent(submission) if type == "owner_approved"
+    end
+
+    # The linked super agent hears only when the hotel goes live. The other
+    # onboarding steps need no action from the agent.
+    def self.for_agent(submission)
+      email = DeliveryRecipients.agent_for(submission.hotel)
+      create(submission, "agent_approved", "User", nil, email:) if email
     end
 
     def self.create(submission, type, source_type, source_id, email: nil)

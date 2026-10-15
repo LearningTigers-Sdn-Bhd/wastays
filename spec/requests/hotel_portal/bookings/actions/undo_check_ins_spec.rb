@@ -39,7 +39,7 @@ RSpec.describe "HotelPortal::Bookings::Actions undo check-ins", frozen_time: :bu
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      dialog = document.at_css("turbo-frame#booking_action_sheet dialog#booking-undo-check-in-sheet[data-controller='panels-ui--sheet']")
+      dialog = document.at_css("turbo-frame#booking_action_sheet dialog#booking-undo-check-in-sheet[data-controller='ui--sheet']")
 
       expect(dialog).to be_present
       expect(dialog["data-panels-ui-sheet-side"]).to eq("right")

@@ -103,6 +103,22 @@ RSpec.describe "HotelPortal::NightAuditRuns", type: :request do
     expect(Nokogiri::HTML(response.body).text).not_to include("missing_folio")
   end
 
+  it "refreshes a blocked scheduled audit and shows the departure resolution action" do
+    role.permissions << permission("manage_bookings", "Manage Bookings")
+    booking = create_booking(status: "checked_in", check_in: business_date - 1.day, check_out: business_date, checked_in_at: hotel_time(14), token: "WS-REFRESH-1")
+    create(:booking_folio, hotel:, booking:)
+    audit = create(:night_audit, hotel:, business_date:, status: "blocked", trigger_mode: "scheduled", performed_by_user: nil)
+    hotel.current_business_date_record.update!(status: "audit_blocked")
+
+    post start_review_hotel_night_audit_run_path(hotel), headers: sheet_headers
+
+    expect(response).to have_http_status(:ok)
+    expect(booking.reload.status).to eq("due_out_detected")
+    expect(response.body).to include("Handle late checkout")
+    expect(audit.reload).to have_attributes(status: "blocked", trigger_mode: "scheduled", performed_by_user_id: nil)
+    expect(hotel.current_business_date_record).to be_audit_blocked
+  end
+
   it "shows a direct manager close action only while items need attention" do
     role.permissions << permission("override_financial_date_lock", "Override Financial Date Lock")
     create_booking(status: "checked_in", check_in: business_date - 1.day, check_out: business_date + 1.day, checked_in_at: hotel_time(14), token: "WS-MANAGER-1")

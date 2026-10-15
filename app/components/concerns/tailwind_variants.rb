@@ -19,7 +19,7 @@
 #
 #   class_for(variant: :ghost, class_override: "w-full") # merged string, ghost + md + w-full
 #
-# Lives outside both libraries on purpose: PublicUI dresses guest-facing pages
+# Lives outside both libraries on purpose: GuestUI dresses guest-facing pages
 # that are explicitly out of DESIGN.md scope, so it must not inherit from the
 # portal's PanelsUI to borrow this.
 module TailwindVariants

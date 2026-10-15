@@ -1,0 +1,42 @@
+<%= render GuestUI::GuideCard.new(title: label, icon: "wifi", subtitle: subtitle, **card_attributes) do %>
+  <div class="guest-wifi__fields">
+    <div class="guest-wifi__field">
+      <div class="min-w-0">
+        <p class="guest-fact-list__label">Network</p>
+        <p class="guest-wifi__value"><%= ssid %></p>
+      </div>
+      <%= render GuestUI::Button.new(label: "Copy", icon: "copy", variant: :secondary, size: :sm,
+                                     aria_label: "Copy network name",
+                                     data: { action: "clipboard#copy", clipboard_text_value: ssid }) %>
+    </div>
+    <div class="guest-wifi__field">
+      <div class="min-w-0">
+        <p class="guest-fact-list__label">Password</p>
+        <p class="guest-wifi__value"><%= password || "No password needed" %></p>
+      </div>
+      <% if password %>
+        <%= render GuestUI::Button.new(label: "Copy", icon: "copy", variant: :secondary, size: :sm,
+                                       aria_label: "Copy password",
+                                       data: { action: "clipboard#copy", clipboard_text_value: password }) %>
+      <% end %>
+    </div>
+  </div>
+  <p class="sr-only" role="status" data-clipboard-target="status"></p>
+
+  <% if steps.size > 1 %>
+    <ol class="guest-wifi__steps">
+      <% steps.each do |step| %>
+        <li><%= step %></li>
+      <% end %>
+    </ol>
+  <% elsif steps.any? %>
+    <p class="text-muted-foreground"><%= steps.first %></p>
+  <% end %>
+
+  <%= render GuestUI::Disclosure.new(title: "Join from another device") do %>
+    <div class="guest-wifi__qr">
+      <%= image_tag qr_data_url, alt: "Code to join #{ssid}", class: "size-40" %>
+      <p>Open the camera on the other device and point it at this code.</p>
+    </div>
+  <% end %>
+<% end %>

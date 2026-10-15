@@ -1,0 +1,15 @@
+<%= tag.div(**page_attributes) do %>
+  <%= hero %>
+
+  <%# A landmark, so a guest navigating by them gets straight to the content. %>
+  <main class="guest-page__main">
+    <div class="guest-page__grid" data-columns="<%= columns %>">
+      <% if context? %>
+        <div class="guest-page__context"><%= context %></div>
+      <% end %>
+      <div class="guest-page__content"><%= content %></div>
+    </div>
+  </main>
+
+  <%= render "public/concierge/shared/footer" if footer? %>
+<% end %>

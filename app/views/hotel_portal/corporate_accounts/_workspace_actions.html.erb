@@ -1,0 +1,22 @@
+<%= render PanelsUI::DropdownMenu.new(id: "corporate-account-workspace-actions", placement: :bottom_end, class: "w-56") do |menu| %>
+  <% menu.with_trigger(variant: :secondary, size: :sm, aria_label: "Account actions") do %>
+    More
+    <%= cached_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+  <% end %>
+  <% if CorporateAccounts::RevealTemporaryPassword.available?(user: @corporate_user, hotel: current_hotel) %>
+    <% menu.with_item(href: hotel_corporate_account_temporary_password_path(current_hotel, @relationship, return_to: request.fullpath),
+      data: { turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>Show temporary password<% end %>
+  <% end %>
+  <% if @relationship.unclaimed? %>
+    <% menu.with_item(href: new_hotel_corporate_account_path(current_hotel, hotel_corporate_account_id: @relationship.id, return_to: request.fullpath),
+      data: { turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>Invite contact<% end %>
+  <% end %>
+  <% if @relationship.active? %>
+    <% menu.with_item(href: suspend_hotel_corporate_account_path(current_hotel, @relationship, tab: @active_tab, return_to: @return_to),
+      method: :patch, variant: :danger, data: { testid: "external-account-suspend-#{@relationship.id}" },
+      form: { data: { turbo_frame: "_top", turbo_confirm: "Suspend #{@corporate_account.name}? Direct bill invoicing pauses until reactivated." } }) do %>Suspend account<% end %>
+  <% else %>
+    <% menu.with_item(href: reactivate_hotel_corporate_account_path(current_hotel, @relationship, tab: @active_tab, return_to: @return_to),
+      method: :patch, data: { testid: "external-account-reactivate-#{@relationship.id}" }, form: { data: { turbo_frame: "_top" } }) do %>Reactivate account<% end %>
+  <% end %>
+<% end %>

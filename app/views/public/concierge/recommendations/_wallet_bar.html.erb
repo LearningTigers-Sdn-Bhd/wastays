@@ -1,0 +1,16 @@
+<%# Only shown once a guest holds something. Before that it is a link to an
+    empty page, and an empty page is worse than no link. %>
+<% if voucher_wallet&.any? %>
+  <%= link_to concierge_recommendations_wallet_path(@hotel.unique_id, @hotel.public_id),
+        class: "group mb-6 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 transition-all hover:border-primary/40 active:scale-[0.98]" do %>
+    <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+      <%= cached_icon "ticket", class: "h-5 w-5" %>
+    </div>
+    <div class="min-w-0 flex-1">
+      <p class="text-[13px] font-black uppercase tracking-wider text-foreground">My vouchers</p>
+      <p class="mt-0.5 text-[12px] font-medium text-muted-foreground"><%= pluralize(voucher_wallet.size, "voucher") %> ready to show</p>
+    </div>
+    <%= cached_icon "chevron-right", stroke_width: 2.5,
+          class: "h-4 w-4 flex-shrink-0 text-primary transition-transform group-hover:translate-x-0.5" %>
+  <% end %>
+<% end %>

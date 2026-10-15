@@ -35,16 +35,15 @@
         data: { action: "change->auto-submit#submitNow" }) %>
     </div>
 
-    <%= render PanelsUI::Button.new(
-      as: :a,
-      href: new_hotel_corporate_account_path(current_hotel, return_to: request.fullpath),
-      variant: :primary,
-      size: :md,
-      aria_label: "Invite an external account",
-      class: "shrink-0",
-      data: { turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>
-      <%= cached_icon "plus", stroke_width: 2.5, class: "size-4" %>
-      <span class="hidden sm:inline">Invite</span>
+    <%= render PanelsUI::DropdownMenu.new(id: "external-account-create", placement: :bottom_end, class: "w-48") do |menu| %>
+      <% menu.with_trigger(variant: :primary, size: :md, aria_label: "Add or invite an account") do %>
+        Add / Invite
+        <%= cached_icon "chevron-down", class: "size-4", aria: { hidden: true } %>
+      <% end %>
+      <% menu.with_item(href: new_hotel_corporate_account_path(current_hotel, return_to: request.fullpath),
+        data: { turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>Invite account<% end %>
+      <% menu.with_item(href: new_hotel_corporate_account_addition_path(current_hotel, return_to: request.fullpath),
+        data: { turbo_frame: HotelPortal::CorporateAccountsController::SHEET_FRAME }) do %>Add account<% end %>
     <% end %>
   </div>
 <% end %>

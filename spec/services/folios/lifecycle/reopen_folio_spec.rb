@@ -56,7 +56,7 @@ RSpec.describe Folios::Lifecycle::ReopenFolio do
     expect(issued_folio.reload).to be_closed
   end
 
-  it "blocks reopening a folio with an active AR invoice" do
+  it "blocks correction of a legacy AR invoice without an issue-time snapshot" do
     relationship = create(:hotel_corporate_account, :direct_bill, hotel: booking.hotel)
     company_folio = create(:booking_folio, :secondary, booking: booking, hotel: booking.hotel,
       hotel_corporate_account: relationship, status: "closed", closed_at: Time.current)
@@ -64,7 +64,7 @@ RSpec.describe Folios::Lifecycle::ReopenFolio do
 
     result = described_class.call(folio: company_folio, user: user, reason: "Correction")
 
-    expect(result.error).to include("Accounts Receivable")
+    expect(result.error).to include("issue-time snapshot")
     expect(company_folio.reload).to be_closed
   end
 

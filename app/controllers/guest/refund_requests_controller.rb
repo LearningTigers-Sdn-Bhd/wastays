@@ -1,6 +1,7 @@
 class Guest::RefundRequestsController < Guest::BaseController
   before_action :authenticate_guest!
   before_action :set_booking, only: [ :new, :create ]
+  before_action :set_refund_mode, only: [ :new, :create ]
   before_action :set_refund_preview, only: [ :new, :create ]
   before_action :set_booking_for_show, only: [ :show ]
   before_action :set_form_breadcrumbs, only: [ :new, :create ]
@@ -24,7 +25,7 @@ class Guest::RefundRequestsController < Guest::BaseController
 
     if @search_query.present?
       scope = scope.joins(:hotel).where(
-        "hotels.name ILIKE :query OR bookings.confirmation_token ILIKE :query",
+        "hotels.name ILIKE :query OR bookings.confirmation_token ILIKE :query OR bookings.reservation_reference ILIKE :query",
         query: "%#{@search_query}%"
       )
     end
@@ -39,18 +40,7 @@ class Guest::RefundRequestsController < Guest::BaseController
 
   def new
     @return_to = normalized_return_to
-    if @booking.refund_request&.rejected?
-      @refund_request = RefundRequest.new(
-        reason: @booking.refund_request.reason,
-        bank_name: @booking.refund_request.bank_name,
-        account_holder_name: @booking.refund_request.account_holder_name,
-        account_number: @booking.refund_request.account_number,
-        account_type: @booking.refund_request.account_type
-      )
-    else
-      @refund_request = RefundRequest.new
-    end
-    @presenter = RefundRequestPresenter.new(@refund_request)
+    @refund_request = Refunds::Draft.new(booking: @booking).call
   end
 
   def show
@@ -59,17 +49,14 @@ class Guest::RefundRequestsController < Guest::BaseController
 
   def create
     @return_to = normalized_return_to
-    @refund_request = RefundRequest.new(refund_request_params)
+    refund_params = Refunds::RequestParams.new(params).call
 
-    result = Refunds::SubmitRequest.new(
-      booking: @booking,
-      params: refund_request_params
-    ).call
+    result = Refunds::SubmitRequest.new(booking: @booking, params: refund_params, mode: @refund_mode).call
 
     if result.success?
-      redirect_to success_redirect_path, notice: "Refund request submitted. Your booking has been cancelled.", status: :see_other
+      redirect_to success_redirect_path, notice: success_message, status: :see_other
     else
-      @presenter = RefundRequestPresenter.new(@refund_request)
+      @refund_request = RefundRequest.new(refund_params.except(:refund_amount))
       flash.now[:alert] = result.error
       render :new, status: :unprocessable_content
     end
@@ -94,26 +81,30 @@ class Guest::RefundRequestsController < Guest::BaseController
     redirect_to guest_refund_requests_path, alert: "Refund request not found."
   end
 
-  def set_refund_preview
+  # A guest in house asks without cancelling; any other booking goes through
+  # the cancel-and-refund path, which also explains why a booking cannot.
+  def set_refund_mode
+    return unless @booking
+
     @refund_policy = RefundPolicy.first
-    return unless @refund_policy
+    @refund_mode = Refunds::ModeFor.new(booking: @booking, policy: @refund_policy).call || :pre_stay
+  end
+
+  def set_refund_preview
+    return unless @booking && @refund_mode == :pre_stay && @refund_policy
 
     @refund_percentage = @refund_policy.refund_percentage
     @estimated_refund_amount = (@booking.total_amount * (@refund_percentage / 100.0)).round(2)
   end
 
   def set_form_breadcrumbs
-    append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
+    append_booking_breadcrumb(@booking)
     append_breadcrumb "Request Refund"
   end
 
   def set_show_breadcrumbs
-    append_breadcrumb @booking.confirmation_token.upcase, guest_booking_path(@booking)
+    append_booking_breadcrumb(@booking)
     append_breadcrumb "Refund Details"
-  end
-
-  def refund_request_params
-    params.require(:refund_request).permit(:reason, :bank_name, :account_holder_name, :account_number, :account_type)
   end
 
   def normalized_return_to
@@ -122,6 +113,12 @@ class Guest::RefundRequestsController < Guest::BaseController
     return RETURN_TO_REFUND if value == RETURN_TO_REFUND
 
     RETURN_TO_DETAILS
+  end
+
+  def success_message
+    return "We have your refund request. The property will reply to you." if @refund_mode == :post_stay
+
+    "Refund request submitted. Your booking has been cancelled."
   end
 
   def success_redirect_path

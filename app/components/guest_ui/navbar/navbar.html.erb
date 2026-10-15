@@ -1,0 +1,28 @@
+<%= tag.header(**navbar_attributes) do %>
+  <div class="guest-navbar__inner">
+    <% if title.present? || back_path.present? %>
+      <div class="<%= heading_class %>">
+        <% if back_path.present? %>
+          <%= link_to back_path, class: "guest-navbar__back", aria: { label: back_label } do %>
+            <%= helpers.app_icon "arrow-left", class: "size-5", aria: { hidden: "true" } %>
+          <% end %>
+        <% end %>
+        <% if title.present? %>
+          <p class="guest-navbar__title"><%= title %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if items.any? %>
+      <nav class="guest-navbar__nav" aria-label="Guest portal">
+        <% items.each do |item| %>
+          <%= link_to item.label, item.path, class: "guest-navbar__link", aria: { current: ("page" if item.active) } %>
+        <% end %>
+      </nav>
+    <% end %>
+
+    <% if actions? %>
+      <div class="guest-navbar__actions"><%= actions %></div>
+    <% end %>
+  </div>
+<% end %>

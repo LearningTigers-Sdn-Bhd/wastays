@@ -10,6 +10,10 @@ module EInvoice
       submission = EInvoiceSubmission.find_by(id: submission_id)
       return unless submission
 
+      if submission.ar_invoice_correction
+        ArInvoices::ProcessCorrectionJob.perform_later(submission.ar_invoice_correction_id)
+        return
+      end
       result = EInvoice::Submit.call(submission)
       return unless result[:success]
 

@@ -27,6 +27,12 @@
                   <%= row.reference %>
                 </span>
                 <p class="mt-0.5 text-xs font-medium text-muted-foreground"><%= row.method_label %> · <%= row.received_on %></p>
+                <% if row.kind == :submission && row.booking_flag_label %>
+                  <p class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                    <%= cached_icon "triangle-alert", class: "size-3", aria: { hidden: true } %>
+                    <%= row.booking_flag_label %>
+                  </p>
+                <% end %>
               </td>
             </tr>
           <% end %>
@@ -62,6 +68,12 @@
                 <%= row.reference %>
               </p>
               <p class="mt-0.5 text-[11px] font-medium text-muted-foreground"><%= row.method_label %> · <%= row.received_on %></p>
+              <% if row.kind == :submission && row.booking_flag_label %>
+                <p class="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                  <%= cached_icon "triangle-alert", class: "size-3", aria: { hidden: true } %>
+                  <%= row.booking_flag_label %>
+                </p>
+              <% end %>
             </div>
           </div>
         </article>

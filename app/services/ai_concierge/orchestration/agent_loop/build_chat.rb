@@ -21,7 +21,7 @@ module AiConcierge
           instructions = BuildInstructions.new(context: context)
           # Two blocks, not one string: the cache breakpoint goes at the end of
           # the first, so what changes every turn has to arrive after it.
-          chat.with_instructions(client.cacheable(instructions.stable))
+          client.add_cacheable_instructions(chat, instructions.stable)
           chat.with_instructions(instructions.volatile, append: true)
           # `calls: :one` disables parallel tool calls, so a single response
           # cannot contain two advance_booking calls.

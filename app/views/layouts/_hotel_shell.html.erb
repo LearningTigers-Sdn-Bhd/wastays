@@ -18,7 +18,12 @@
   </head>
 
   <body class="h-full overflow-hidden" data-theme="panel-light" data-controller="<%= content_for(:body_controllers) %>" <%= content_for(:body_attributes) %>>
-    <div class="panel-shell flex flex-col bg-background">
+    <% operational_dates = HotelPortal::OperationalDatesPresenter.new(hotel: current_hotel) if current_hotel %>
+    <div class="panel-shell flex flex-col bg-background"
+         <% unless locked_hotel_portal_shell? %>
+           data-controller="hotel-portal--operational-dates"
+           data-hotel-portal--operational-dates-url-value="<%= hotel_operational_dates_path(current_hotel) %>"
+         <% end %>>
       <%= render PanelsUI::Navbar.new(key: navigation_key, sidebar_state_key: navigation_state_key, navigation: !locked_hotel_portal_shell?) do |navbar| %>
         <% navbar.with_brand do %>
           <% if current_hotel %>
@@ -66,6 +71,9 @@
             <% if (settings_path = hotel_settings_landing_path) %>
               <% menu.with_item(label: "Settings", href: settings_path, icon: "settings") %>
             <% end %>
+            <% if current_user.super_agent? %>
+              <% menu.with_item(label: "Partner portal", href: agent_hotels_path, icon: "briefcase") %>
+            <% end %>
             <% menu.with_item(label: "Help", href: help_center_path, icon: "circle-question-mark") %>
             <% menu.with_sign_out(label: "Sign out", path: logout_path) %>
           <% end %>
@@ -79,7 +87,8 @@
           <%= render "shared/navigation/layer_sidebar",
                      key: navigation_key,
                      home_path: sidebar_home_path,
-                     sections: sidebar_sections %>
+                     sections: sidebar_sections,
+                     operational_dates: operational_dates %>
         <% end %>
 
         <main class="flex-1 flex flex-col overflow-hidden">

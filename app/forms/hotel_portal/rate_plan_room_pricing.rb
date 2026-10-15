@@ -15,6 +15,9 @@ module HotelPortal
     PER_ROOM_MODES = %w[manual derived].freeze
     PER_PERSON_MODES = %w[manual derived auto].freeze
     DERIVE_MODES = %w[multiplier offset].freeze
+    # The inputs an Auto price list is generated from, kept on the assignment
+    # so the plan reopens as Auto rather than as the list it produced.
+    LADDER_ATTRIBUTES = %w[primary_occupancy increase_by increase_unit decrease_by decrease_unit].freeze
 
     attribute :rate_mode, :string, default: "manual"
     attribute :default_rate, :decimal
@@ -52,7 +55,12 @@ module HotelPortal
     def self.from_assignment(assignment, room_type:, sells_per_person:)
       return from_h({}, room_type: room_type, sells_per_person: sells_per_person) unless assignment
 
-      attrs = if sells_per_person
+      attrs = if sells_per_person && assignment.occupancy_ladder.present?
+        assignment.occupancy_ladder.slice("default_rate", *LADDER_ATTRIBUTES).merge(
+          "rate_mode" => "auto",
+          "prices" => assignment.occupancy_prices.index_by(&:adults).transform_values(&:price)
+        )
+      elsif sells_per_person && !assignment.derives_price?
         {
           "rate_mode" => "manual",
           "prices" => assignment.occupancy_prices.index_by(&:adults).transform_values(&:price)
@@ -105,12 +113,22 @@ module HotelPortal
                       .derive_price(room_type&.base_price)
     end
 
-    # The full matrix this form contributes. Empty for a per-room plan, which
-    # prices the room once rather than per adult count.
+    # One representative nightly price, for illustrating what a discount does.
+    # A per-room plan has a single figure; a per-person plan is read at its
+    # primary occupancy (two adults unless set), clamped to what the room fits.
+    # Nil when the form holds nothing usable yet, so callers can fall back.
+    def example_price
+      per_person? ? example_price_per_person : example_price_per_room
+    end
+
+    # The full matrix this form stores. Empty for a per-room plan, which prices
+    # the room once rather than per adult count, and for a derived per-person
+    # plan, which works its prices out from Standard's each night so a change
+    # to Standard carries through without re-saving this plan.
     def occupancy_matrix
       return {} unless per_person?
       return manual_matrix if manual?
-      return derived_matrix if derived?
+      return {} if derived?
 
       RatePlans::OccupancyLadder.call(
         anchor: anchor,
@@ -123,17 +141,47 @@ module HotelPortal
       )
     end
 
-    # Per-person plans always store a complete matrix, so the assignment itself
-    # carries no scalar price and stays on "fixed". Per-room plans put the
-    # money here: a typed rate, or the rule that derives one from the standard.
+    # A derived plan, per-room or per-person, keeps only its rule against the
+    # standard. Otherwise a per-person plan stores a complete matrix, so the
+    # assignment carries no scalar price and stays on "fixed" -- plus, for
+    # Auto, the inputs that matrix came from. A per-room plan keeps its rate.
     def assignment_attributes
-      return { pricing_mode: "fixed", pricing_value: nil } if per_person?
-      return { pricing_mode: derive_mode, pricing_value: derive_value } if derived?
+      return { pricing_mode: derive_mode, pricing_value: derive_value, occupancy_ladder: nil } if derived?
+      return { pricing_mode: "fixed", pricing_value: nil, occupancy_ladder: ladder_settings } if per_person?
 
-      { pricing_mode: "fixed", pricing_value: default_rate }
+      { pricing_mode: "fixed", pricing_value: default_rate, occupancy_ladder: nil }
     end
 
+    # Standard's price for each adult count, for a derived per-person plan to
+    # adjust. The Pricing tab's live example needs it in the browser.
+    def standard_prices = standard_occupancy_prices.transform_values(&:to_f)
+
     private
+
+    def example_price_per_room
+      value = derived? ? anchor : default_rate
+      value if value.to_d.positive?
+    end
+
+    def example_price_per_person
+      adults = primary_occupancy.to_i.clamp(1, max_adults)
+      value = if manual?
+        price_for(adults)
+      elsif derived?
+        standard = standard_occupancy_prices[adults]
+        RoomTypeRatePlan.new(pricing_mode: derive_mode, pricing_value: derive_value).derive_price(standard) if standard
+      else
+        occupancy_matrix[adults]
+      end
+      value = value.to_s.to_d
+      value if value.positive?
+    end
+
+    def ladder_settings
+      return unless auto?
+
+      { "default_rate" => default_rate.to_s }.merge(LADDER_ATTRIBUTES.index_with { |name| public_send(name).to_s })
+    end
 
     def manual_matrix
       adult_counts.index_with { |adults| price_for(adults).to_s.to_d.round(2) }

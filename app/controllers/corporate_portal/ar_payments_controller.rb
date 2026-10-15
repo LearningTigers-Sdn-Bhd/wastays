@@ -9,9 +9,9 @@ module CorporatePortal
 
     def show
       if params[:legacy] == "true"
-        @payment = ArPayment.joins(:hotel_corporate_account)
+        @payment = ArPayment.not_voided.joins(:hotel_corporate_account)
           .where(hotel_corporate_accounts: { corporate_account_id: current_user.account.id })
-          .includes(:hotel, ar_payment_allocations: [ { ar_invoice: [ :hotel, :invoice ] }, { reversal: :reversed_by } ])
+          .includes(:hotel, ar_payment_allocations: [ { ar_invoice: [ :hotel, :invoice, { booking_folio: :booking } ] }, { reversal: :reversed_by } ])
           .find(params[:id])
         append_breadcrumb @payment.reference_number, corporate_ar_payment_path(@payment, legacy: true)
       else
@@ -19,6 +19,7 @@ module CorporatePortal
           .includes(:hotel, :ar_payment, hotel_corporate_account: :corporate_account)
           .find(params[:id])
         @payment = @intent.ar_payment
+        @suggestion_guest_names = suggestion_guest_names(@intent)
         append_breadcrumb @intent.external_reference.presence || "Payment attempt ##{@intent.id}", corporate_ar_payment_path(@intent)
       end
     end
@@ -118,6 +119,14 @@ module CorporatePortal
       from_redirect = params.permit(:razorpay_payment_id, :razorpay_order_id, :razorpay_signature).to_h
 
       from_nested.merge(from_redirect).symbolize_keys
+    end
+
+    # The remittance snapshot holds invoice ids only, so guest names come from the live invoices.
+    def suggestion_guest_names(intent)
+      ids = Array(intent.remittance_suggestions).filter_map { |suggestion| suggestion["ar_invoice_id"] || suggestion[:ar_invoice_id] }
+      intent.hotel.ar_invoices.where(id: ids, hotel_corporate_account_id: intent.hotel_corporate_account_id)
+        .includes(booking_folio: :booking)
+        .to_h { |invoice| [ invoice.id.to_s, invoice.booking.guest_name ] }
     end
   end
 end

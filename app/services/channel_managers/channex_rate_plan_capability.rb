@@ -19,6 +19,7 @@ module ChannelManagers
     end
 
     def call
+      return unsupported("Day-use plans are not distributed to channels") if rate_plan.day_use?
       return unsupported("#{rate_plan.kind.humanize} plans are not distributed to channels") unless distributable_kind?
 
       assignments = assignments_in_scope
@@ -33,8 +34,6 @@ module ChannelManagers
       return unsupported("Complete the adult occupancy prices", missing) if missing.any?
 
       if rate_plan.age_banded?
-        return unsupported("Set both flat Channex child and infant fees") unless flat_child_fees_configured?
-
         return supported(:flattened)
       end
 
@@ -58,10 +57,6 @@ module ChannelManagers
         rate_plan.room_type_rate_plans.includes(:room_type, :occupancy_prices).to_a
       end
       room_type ? scope.select { |assignment| assignment.room_type_id == room_type.id } : scope
-    end
-
-    def flat_child_fees_configured?
-      !rate_plan.channex_children_fee.nil? && !rate_plan.channex_infant_fee.nil?
     end
 
     def available_occupancies(assignment)

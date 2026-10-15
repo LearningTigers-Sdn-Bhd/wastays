@@ -3,8 +3,12 @@
     <% header.with_caption do %>
       <%= presenter.company_name %>
     <% end %>
-    <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
+    <% if current_user.has_permission?("manage_folio_windows", hotel: current_hotel) || current_user.has_permission?("manage_ar_payments", hotel: current_hotel) %>
       <% header.with_actions do %>
+        <% if current_user.has_permission?("manage_folio_windows", hotel: current_hotel) && !ar_invoice.void? && ar_invoice.booking_folio.closed? %>
+          <%= render PanelsUI::Button.new(as: :a, href: hotel_folio_action_reopen_window_path(current_hotel, ar_invoice.booking, ar_invoice.booking_folio), variant: :secondary, data: { turbo_frame: "folio_action_sheet" }) do %>Reopen folio<% end %>
+        <% end %>
+        <% if current_user.has_permission?("manage_ar_payments", hotel: current_hotel) && !ar_invoice.void? && !ar_invoice.invoice&.under_correction? %>
         <%= render PanelsUI::Button.new(
               as: :a,
               href: new_hotel_ar_payment_path(current_hotel, ar_invoice_id: ar_invoice.id, hotel_corporate_account_id: ar_invoice.hotel_corporate_account_id),
@@ -13,6 +17,7 @@
               class: "w-full lg:w-auto") do %>
           <%= cached_icon "circle-dollar-sign", class: "size-4", aria: { hidden: true } %>
           Record Received Payment
+        <% end %>
         <% end %>
       <% end %>
     <% end %>

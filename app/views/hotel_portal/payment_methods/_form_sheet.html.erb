@@ -4,7 +4,7 @@
 <% surcharge_enabled = payment_method.surcharge? %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: persisted ? "manage-payment-method-sheet" : "add-payment-method-sheet",
           side: :right,
@@ -139,7 +139,7 @@
       <% end %>
 
       <% sheet.with_footer do %>
-        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->panels-ui--sheet#close" }) do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->ui--sheet#close" }) do %>
           Cancel
         <% end %>
         <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, size: :sm, data: { turbo_submits_with: "Saving…" }) do %>

@@ -5,8 +5,8 @@
       title: "Confirm action",
       description: "Are you sure you want to continue?",
       data: {
-        controller: "panels-ui--turbo-confirm",
-        action: "close->panels-ui--turbo-confirm#closed"
+        controller: "ui--turbo-confirm",
+        action: "close->ui--turbo-confirm#closed"
       }
     ) do |dialog| %>
   <% dialog.with_icon do %>
@@ -26,11 +26,11 @@
   <% dialog.with_cancel(
        label: "Cancel",
        id: "turbo-cancel-button",
-       data: { action: "panels-ui--turbo-confirm#cancel" }
+       data: { action: "ui--turbo-confirm#cancel" }
      ) %>
   <% dialog.with_action(
        label: "Confirm",
        id: "turbo-confirm-button",
-       data: { action: "panels-ui--turbo-confirm#confirm" }
+       data: { action: "ui--turbo-confirm#confirm" }
      ) %>
 <% end %>

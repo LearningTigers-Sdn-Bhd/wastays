@@ -14,6 +14,7 @@ module HotelPortal
       actions = [ open_action(booking, tab) ]
       actions.concat(lifecycle_actions(booking, tab))
       actions << print_action(booking, tab)
+      actions << summary_action(booking, tab)
       actions << audit_trail_action(booking)
       actions.compact
     end
@@ -64,6 +65,15 @@ module HotelPortal
       else
         { label: "Print invoice", path: invoice_booking_path(booking.confirmation_token), target: "_blank", data: { turbo: false } }
       end
+    end
+
+    # The voucher states no money, so before arrival the desk needs another page that
+    # does: the booking summary with charges, paid and balance.
+    def summary_action(booking, tab)
+      return unless tab.in?(%w[bookings arrivals])
+      return unless current_user.has_permission?("manage_bookings", hotel: current_hotel)
+
+      { label: "Print booking summary", path: hotel_booking_booking_summary_path(current_hotel, booking), target: "_blank", data: { turbo: false } }
     end
 
     def audit_trail_action(booking)

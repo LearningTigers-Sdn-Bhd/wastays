@@ -1,0 +1,11 @@
+<%# The Wi-Fi networks this stay may use, the main network first. Only the
+    stay page renders it. One card for each network, so the name and the
+    password of one network never sit beside those of another. %>
+<div class="space-y-6">
+  <% @info.wifi_networks.each do |network| %>
+    <%= render GuestUI::WifiCard.new(label: network.label, ssid: network.ssid,
+                                     password: (network.password unless network.security_type_open?),
+                                     primary: network.primary_network?,
+                                     instructions: network.connection_instructions) %>
+  <% end %>
+</div>

@@ -18,7 +18,8 @@ class HotelPortal::Bookings::RateOptionsController < HotelPortal::BaseController
       apply_stay_length: params[:apply_stay_length_restrictions],
       audience: :staff,
       adults: params[:adults].presence,
-      children: params[:children].presence
+      children: params[:children].presence,
+      child_ages: Bookings::ChildAges.normalize(params[:child_ages], params[:children])
     ).call
 
     render json: { rate_options: options }

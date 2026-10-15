@@ -137,6 +137,34 @@ module HotelPortal
       refund_deposit
     end
 
+    # An agent booking's payment schedule. Each action needs the permission of
+    # the money it moves: recording a payment, giving one back, or moving the
+    # deadline the sweeper enforces.
+    def mark_agent_instalment_paid
+      authorize_agent_payment!("post_folio_payments")
+      result = ::Bookings::PaymentInstalments::MarkPaid.call(
+        instalment: agent_instalment, user: current_user, payment_method: params[:payment_method],
+        reference: params[:reference], note: params[:note]
+      )
+      redirect_agent_payments(result, "Payment recorded.")
+    end
+
+    def refund_agent_instalment
+      authorize_agent_payment!("execute_folio_refunds")
+      result = ::Bookings::PaymentInstalments::Refund.call(
+        instalment: agent_instalment, user: current_user, refund_source: params[:refund_source], reason: params[:reason]
+      )
+      redirect_agent_payments(result, "Refund recorded.")
+    end
+
+    def reopen_agent_instalment
+      authorize_agent_payment!("manage_ar_payments")
+      result = ::Bookings::PaymentInstalments::Reopen.call(
+        instalment: agent_instalment, user: current_user, due_at: reopen_deadline
+      )
+      redirect_agent_payments(result, "Payment reopened.")
+    end
+
     def refund_deposit
       deposit = accessible_deposits.find(params[:deposit_id] || params[:group_deposit_id])
       result = ::Deposits::Return.call(
@@ -315,6 +343,27 @@ module HotelPortal
       else
         [ @booking.id ]
       end
+    end
+
+    def authorize_agent_payment!(permission)
+      raise Pundit::NotAuthorizedError unless current_user.has_permission?(permission, hotel: current_hotel)
+    end
+
+    def agent_instalment
+      BookingPaymentInstalment.joins(:booking).where(bookings: { hotel_id: current_hotel.id }).find(params[:instalment_id])
+    end
+
+    # The agent is given the whole of the chosen day, in the hotel's own zone.
+    def reopen_deadline
+      date = Date.iso8601(params[:due_on].to_s)
+      current_hotel.hotel_time_zone.local(date.year, date.month, date.day).end_of_day
+    rescue ArgumentError
+      nil
+    end
+
+    def redirect_agent_payments(result, notice)
+      flash_options = result.success? ? { notice: notice } : { alert: result.error }
+      redirect_to hotel_booking_workspace_path(current_hotel, @booking, tab: "agent_payments"), flash_options
     end
 
     def authorize_manage_bookings!

@@ -35,14 +35,14 @@ RSpec.describe "Hotel settings tabs", type: :system, js: true do
     expect(page).to have_no_css("h2", text: "AI Concierge Settings")
     expect(page).to have_css("#hotel-breadcrumb", text: "Notifications")
 
-    within(".breadcrumb-dropdown[data-controller~='panels-ui--dropdown-menu']") do
+    within(".breadcrumb-dropdown[data-controller~='ui--dropdown-menu']") do
       expect(page).to have_link("General", visible: :all)
     end
     within("[data-testid='settings-tabs']") do
       expect(page).to have_link("Notifications", href: hotel_notification_settings_path(hotel))
       expect(page).to have_css("a[aria-current='page']", text: "Notifications")
-      expect(page).to have_no_css("[data-controller='panels-ui--tabs']")
-      expect(all("a").map { |link| link.text.squish }).to eq([ "General", "Boat Settings", "Notifications", "Plan & Billing" ])
+      expect(page).to have_no_css("[data-controller='ui--tabs']")
+      expect(all("a").map { |link| link.text.squish }).to eq([ "General", "OTA Logins", "Boat Settings", "Notifications", "Plan & Billing" ])
     end
 
     visit hotel_ai_concierge_settings_path(hotel)

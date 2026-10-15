@@ -4,7 +4,7 @@ module HotelPortal
   module ArPayments
     class ShowPresenter
       AllocationRow = Struct.new(
-        :allocation, :invoice_label, :invoice_path, :allocated_amount, :allocated_at,
+        :allocation, :invoice_label, :invoice_path, :guest_name, :allocated_amount, :allocated_at,
         :reversed, :reversal_reason, :reversed_by, :reversed_at,
         keyword_init: true
       )
@@ -43,6 +43,7 @@ module HotelPortal
 
       def status_class
         case allocation_status
+        when "voided" then "border-border bg-muted text-muted-foreground"
         when "unapplied" then "border-red-200 bg-red-50 text-red-700"
         when "partially_allocated" then "border-amber-200 bg-amber-50 text-amber-700"
         else "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -65,6 +66,16 @@ module HotelPortal
         payment.notes.presence || "—"
       end
 
+      # Present when the payment was recorded off an agent's bank-transfer
+      # submission; the slip behind it stays reachable from the payment.
+      def submission
+        payment.ar_payment_submission
+      end
+
+      def submitted_by_label
+        submission&.submitted_by&.name
+      end
+
       def corporate_gateway_payment?
         payment.metadata.to_h["source"] == "corporate_portal_gateway"
       end
@@ -81,15 +92,54 @@ module HotelPortal
         Array(payment.metadata.to_h["remittance_suggestions"])
       end
 
+      # The snapshot holds invoice ids only, so guest names come from the live invoices.
+      def remittance_guest_name(suggestion)
+        invoice_id = suggestion["ar_invoice_id"] || suggestion[:ar_invoice_id]
+        remittance_guest_names[invoice_id.to_s]
+      end
+
       def can_manage?
         @can_manage
       end
 
       def can_allocate?
-        can_manage? && unapplied_amount_value.positive? && eligible_invoices.any?
+        can_manage? && !voided? && unapplied_amount_value.positive? && eligible_invoices.any?
+      end
+
+      def voided?
+        payment.voided?
+      end
+
+      def void
+        payment.void
+      end
+
+      def voided_by
+        void&.voided_by&.name
+      end
+
+      def voided_at
+        void&.voided_at&.in_time_zone(hotel.hotel_time_zone)&.strftime("%d %b %Y, %I:%M %p")
+      end
+
+      def void_reason
+        void&.reason
+      end
+
+      # Allocated funds must be reversed first; gateway money is refunded there.
+      def can_void?
+        can_manage? && !voided? && allocated_amount.zero? && !payment.gateway_payment?
+      end
+
+      def void_blocked_hint
+        return unless can_manage? && !voided?
+        return "Reverse the active allocations before voiding this payment." if allocated_amount.positive?
+        "This payment came from a gateway charge. Refund it through the gateway." if payment.gateway_payment?
       end
 
       def unapplied_amount_value
+        return 0.to_d if voided?
+
         payment.amount.to_d - allocated_amount
       end
 
@@ -103,6 +153,7 @@ module HotelPortal
               allocation: allocation,
               invoice_label: allocation.ar_invoice.formatted_invoice_number,
               invoice_path: Rails.application.routes.url_helpers.hotel_ar_invoice_path(hotel, allocation.ar_invoice),
+              guest_name: allocation.ar_invoice.booking.guest_name,
               allocated_amount: money(allocation.amount),
               allocated_at: allocation.created_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p"),
               reversed: reversal.present?,
@@ -117,17 +168,26 @@ module HotelPortal
         @eligible_invoices ||= hotel.ar_invoices
           .with_open_balance
           .where(hotel_corporate_account: payment.hotel_corporate_account, currency: payment.currency)
-          .includes(booking_folio: :booking)
+          .includes(:invoice, booking_folio: :booking)
           .order(due_on: :asc, invoice_number: :asc)
       end
 
       private
+
+      def remittance_guest_names
+        @remittance_guest_names ||= begin
+          ids = remittance_suggestions.filter_map { |suggestion| suggestion["ar_invoice_id"] || suggestion[:ar_invoice_id] }
+          hotel.ar_invoices.where(id: ids).includes(booking_folio: :booking)
+            .to_h { |invoice| [ invoice.id.to_s, invoice.booking.guest_name ] }
+        end
+      end
 
       def allocated_amount
         @allocated_amount ||= payment.ar_payment_allocations.reject(&:reversed?).sum { |allocation| allocation.amount.to_d }
       end
 
       def allocation_status
+        return "voided" if voided?
         return "unapplied" if allocated_amount.zero?
         return "fully_allocated" if unapplied_amount_value.zero?
 

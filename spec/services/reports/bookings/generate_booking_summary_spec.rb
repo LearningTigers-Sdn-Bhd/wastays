@@ -37,15 +37,55 @@ RSpec.describe Reports::Bookings::GenerateBookingSummary do
     expect(pdf.force_encoding("BINARY")[0, 5]).to eq("%PDF-")
   end
 
+  it "settles the RM992 total including the auto-applied jetty fee before and after posting" do
+    booking.update!(total_amount: 972, adults: 2, children: 0, status: "confirmed",
+      check_in: hotel.current_business_date + 1.day, check_out: hotel.current_business_date + 2.days)
+    booking.booking_rooms.first.update!(subtotal: 972)
+    folio = create(:booking_folio, booking:, hotel:)
+    code = create(:transaction_code, hotel:, kind: "charge", category: "other", code: "JETTY", name: "Tourist Jetty Fee")
+    create(:hotel_extra_charge, hotel:, transaction_code: code, pricing_type: "fixed", rate_value: 10,
+      charging_unit: "per_person", allow_amount_override: false, auto_apply: true)
+    result = ExtraCharges::ApplyAutomatic.call(booking: booking.reload)
+    expect(result).to be_success
+    scheduled = result.forecasts.first
+    create(:folio_transaction, booking_folio: folio, transaction_type: "payment", category: "booking_payment", amount: 992)
+
+    text = summary_for(booking.reload)
+    expect(text).to include("JETTY", "Tourist Jetty Fee", "Extra charges", "20.00", "992.00", "Booking balance settled")
+    expect(text.squish).to include("Nine hundred and ninety-two ringgit only")
+    expect(text).not_to include("Credit balance")
+
+    posted = create(:folio_transaction, booking_folio: folio, transaction_code: code, category: "other",
+      amount: scheduled.amount, description: scheduled.description, metadata: scheduled.metadata.merge("forecast_id" => scheduled.id))
+    scheduled.actualize!(transaction: posted)
+
+    posted_text = summary_for(booking.reload)
+    expect(posted_text).to include("992.00", "Booking balance settled")
+    expect(posted_text.scan("Tourist Jetty Fee").size).to eq(1)
+    expect(posted_text).not_to include("Credit balance")
+  end
+
+  it "renders extra-charge taxes in the charges table and financial summary" do
+    folio = create(:booking_folio, booking:, hotel:)
+    create(:folio_forecasted_charge, booking_folio: folio, charge_kind: "extra_charge", identity: "extra",
+      amount: 20, description: "Booked add-on", metadata: { transaction_code_code: "ADDON" })
+    create(:folio_forecasted_charge, booking_folio: folio, charge_kind: "extra_charge_tax", identity: "extra:sst",
+      amount: 1.60, description: "SST on booked add-on", metadata: { transaction_code_code: "SST-EXTRA" })
+
+    text = summary_for(booking)
+    expect(text).to include("ADDON", "SST-EXTRA", "Taxes on extra charges", "1.60", "321.60")
+    expect(text.squish).to include("Three hundred and twenty-one ringgit and sixty sen only")
+  end
+
   # The whole risk of splitting this out is that it gets mistaken for the invoice, so the
   # qualification has to arrive before any number on the page does.
-  it "opens on a band saying it is the booked position rather than the final bill" do
+  it "opens on a band explaining the preliminary total includes scheduled and posted extras" do
     text = summary_for(booking)
 
-    expect(text).to include("BOOKED POSITION")
+    expect(text).to include("PRELIMINARY BOOKING TOTAL")
     # The note wraps, so the extracted text carries newlines the sentence does not.
-    expect(text.squish).to include("Charges posted during the stay are billed on the invoice, which is the final bill.")
-    expect(text.index("BOOKED POSITION")).to be < text.index("Total due")
+    expect(text.squish).to include(described_class::NOTICE_NOTE)
+    expect(text.index("PRELIMINARY BOOKING TOTAL")).to be < text.index("Total due")
   end
 
   it "renders the dense nightly charge breakdown from the booking snapshots" do
@@ -183,6 +223,19 @@ RSpec.describe Reports::Bookings::GenerateBookingSummary do
       expect(text).to include(first_child.confirmation_token, second_child.confirmation_token)
     end
 
+    it "includes each child's scheduled and posted extras once" do
+      first_folio = create(:booking_folio, booking: first_child, hotel:)
+      second_folio = create(:booking_folio, booking: second_child, hotel:)
+      create(:folio_forecasted_charge, booking_folio: first_folio, charge_kind: "extra_charge", amount: 20, description: "Jetty fee")
+      create(:folio_transaction, booking_folio: second_folio, category: "other", amount: 30,
+        description: "Selected add-on", metadata: { extra_charge_id: 123 })
+
+      text = group_summary
+      expect(text).to include("Jetty fee", "Selected add-on", "550.00", first_child.confirmation_token, second_child.confirmation_token)
+      expect(text.scan("Jetty fee").size).to eq(1)
+      expect(text.scan("Selected add-on").size).to eq(1)
+    end
+
     # A deposit taken against the group belongs to no child booking, so nothing in the
     # per-booking folio scope can see it. Before this, an organiser who had paid saw nothing.
     it "counts a deposit held against the group itself" do
@@ -200,5 +253,67 @@ RSpec.describe Reports::Bookings::GenerateBookingSummary do
       expect(text).to include("DEP-GRP", "Held against the group", "(150.00)")
       expect(text).to include("Balance due", "350.00")
     end
+  end
+
+  context "when an agent pays for the booking" do
+    let(:agency) do
+      create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent",
+        corporate_account: create(:account, :corporate, name: "Super Sightseeing Holidays"))
+    end
+
+    before do
+      booking.update!(hotel_corporate_account: agency, agent_reference: "SSH-881", guest_phone: "+60 12-111 2222")
+      booking.booking_rooms.first.update!(room_number: "B8", rate_plan: create(:rate_plan, hotel: hotel, name: "Agent Rate International"))
+      booking.payment_instalments.create!(position: 1, kind: "deposit", amount: 150, due_at: Time.zone.local(2026, 4, 3))
+      booking.payment_instalments.create!(position: 2, kind: "balance", amount: 150, due_at: Time.zone.local(2026, 4, 20))
+    end
+
+    it "names the agent as the payer, ahead of the guest" do
+      text = summary_for(booking.reload)
+
+      expect(text).to include("BILL TO", "Super Sightseeing Holidays", "Travel agent", "SSH-881", "+60 12-111 2222")
+      expect(text.index("BILL TO")).to be < text.index("GUEST DETAILS")
+      expect(text).not_to include("CONTACT DETAILS")
+    end
+
+    it "prints the room, rate plan, payment schedule and total in words" do
+      text = summary_for(booking.reload)
+
+      expect(text).to include("ROOM & RATE", "Deluxe · B8", "Agent Rate International")
+      expect(text).to include("Payment schedule", "Deposit", "Balance", "03 Apr 2026", "20 Apr 2026")
+      expect(text.squish).to include("Total due in words: Three hundred ringgit only")
+    end
+  end
+
+  it "keeps the guest and contact blocks when no agent or company pays" do
+    text = summary_for(booking)
+
+    expect(text).to include("GUEST DETAILS", "CONTACT DETAILS")
+    expect(text).not_to include("BILL TO", "Payment schedule")
+  end
+
+  it "drops placeholder contact values and an address that is only a country" do
+    booking.update!(guest_phone: ".", guest_home_address: nil, guest_city: nil, guest_country: "Malaysia")
+
+    text = summary_for(booking)
+
+    expect(text).to include("Address", "Not provided", "Nationality")
+    expect(text).not_to include("Phone")
+  end
+
+  it "prints no payment total when no payment is recorded" do
+    text = summary_for(booking)
+
+    expect(text).to include("No payments have been recorded for this reservation.")
+    expect(text).not_to include("Total payments")
+  end
+
+  it "shows nothing due on a voided booking" do
+    booking.update_columns(status: "voided")
+
+    text = summary_for(booking)
+
+    expect(text).to include("Booking voided - nothing due")
+    expect(text).not_to include("Balance due", "Total due in words")
   end
 end

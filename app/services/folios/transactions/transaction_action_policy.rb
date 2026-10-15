@@ -123,6 +123,10 @@ module Folios
       private
 
       def non_reversible_reason
+        if transaction.booking_folio.receivable_history.exists?
+          return "Reopen the AR folio for correction before changing its charges." unless transaction.booking_folio.ar_invoice_corrections.editing.exists?
+          return "Existing folio payments cannot change during AR correction." if transaction.payment?
+        end
         return "Transaction has already been reversed." if transaction.voided_by_transaction_id.present?
         return "Reversal transactions cannot be reversed." if transaction.reversal_of_transaction_id.present?
         return "Generated tax rows reverse with their parent charge." if generated_tax_child?

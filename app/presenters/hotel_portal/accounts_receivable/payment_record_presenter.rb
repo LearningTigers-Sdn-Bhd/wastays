@@ -119,18 +119,18 @@ module HotelPortal
         {
           payment: hotel.ar_payments
             .where(id: ids.fetch(:payment, []))
-            .includes(hotel_corporate_account: :corporate_account)
+            .includes(:void, hotel_corporate_account: :corporate_account)
             .index_by(&:id),
           submission: hotel.ar_payment_submissions
             .where(id: ids.fetch(:submission, []))
-            .includes(hotel_corporate_account: :corporate_account)
+            .includes(:booking, hotel_corporate_account: :corporate_account)
             .index_by(&:id)
         }
       end
 
       def business_month_scope
         date = hotel.current_business_date
-        hotel.ar_payments.where(received_at: date.beginning_of_month..date.end_of_month)
+        hotel.ar_payments.not_voided.where(received_at: date.beginning_of_month..date.end_of_month)
       end
 
       def received_this_month
@@ -197,10 +197,12 @@ module HotelPortal
         end
 
         def status_label
-          "Received"
+          payment.voided? ? "Voided" : "Received"
         end
 
         def status_class
+          return "border-border bg-muted text-muted-foreground" if payment.voided?
+
           "border-emerald-200 bg-emerald-50 text-emerald-700"
         end
 
@@ -261,6 +263,26 @@ module HotelPortal
 
         def status_label
           submission.pending? ? "Pending Review" : status.humanize
+        end
+
+        # A booking prepayment (see Bookings::PaymentHold) targets the booking
+        # directly rather than an invoice, so this is the one place a reviewer
+        # can otherwise miss that the booking it was sent against has since
+        # been closed -- voided or cancelled -- while the slip itself still
+        # reads as merely pending. Nil for an ordinary invoice settlement,
+        # which has no booking to close.
+        def booking
+          submission.booking
+        end
+
+        def booking_closed?
+          booking.present? && booking.closed?
+        end
+
+        def booking_flag_label
+          return nil unless booking_closed?
+
+          "Booking #{booking.status}"
         end
 
         def status_class

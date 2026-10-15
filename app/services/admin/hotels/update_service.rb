@@ -5,11 +5,9 @@ module Admin
     class UpdateService
       Result = Struct.new(:success?, :hotel, :error)
 
-      def initialize(hotel:, hotel_params:, salesperson_params:, current_user:)
+      def initialize(hotel:, hotel_params:)
         @hotel = hotel
         @hotel_params = hotel_params
-        @salesperson_params = salesperson_params
-        @current_user = current_user
       end
 
       def call
@@ -22,13 +20,6 @@ module Admin
           # update is enough -- the hotel gets its timetable the first time the
           # toggle goes on, and nothing happens on any other save.
           Boats::EnsureDefaults.call(@hotel)
-
-          Admin::SyncHotelSalesperson.new(
-            hotel: @hotel,
-            name: @salesperson_params[:name],
-            email: @salesperson_params[:email],
-            current_user: @current_user
-          ).call
         end
         Result.new(true, @hotel, nil)
       rescue ActiveRecord::RecordInvalid => e

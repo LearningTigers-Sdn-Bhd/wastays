@@ -182,6 +182,8 @@
                             schedule: presenter.boat_schedule,
                             boat_in: presenter.guest_details_boat_in_time,
                             boat_out: presenter.guest_details_boat_out_time,
+                            boat_in_custom_time: presenter.guest_details_boat_in_custom_time,
+                            boat_out_custom_time: presenter.guest_details_boat_out_custom_time,
                             boat_in_date: presenter.check_in_date,
                             boat_out_date: presenter.check_out_date,
                             error: presenter.guest_details_boat_error %>
@@ -207,7 +209,7 @@
       <div>
         <p class="font-semibold text-foreground">No guest is linked to this booking.</p>
         <p class="mt-1 text-sm text-muted-foreground">Add a primary guest before check-in.</p>
-        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && entity_booking.status.in?(%w[confirmed checked_in]) %>
+        <% if current_user.has_permission?("manage_bookings", hotel: current_hotel) && entity_booking.status.in?(Booking::GUEST_ADDABLE_STATUSES) %>
           <div class="mt-4">
             <%= render PanelsUI::Button.new(
                   href: hotel_booking_action_manage_guest_path(current_hotel, entity_booking, mode: "add", return_to: presenter.close_drawer_path),

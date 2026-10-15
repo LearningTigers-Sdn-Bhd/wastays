@@ -26,9 +26,11 @@ class HotelExtraCharge < ApplicationRecord
   validate :transaction_code_code_is_short
   validate :percentage_rate_is_valid
   validate :percentage_amount_cannot_be_overridden
+  validate :auto_apply_is_fixed_price
 
   scope :active, -> { joins(:transaction_code).merge(TransactionCode.active) }
   scope :ordered, -> { order(:position, :id) }
+  scope :auto_applied, -> { where(auto_apply: true) }
 
   def manual? = pricing_type == "manual"
   def fixed? = pricing_type == "fixed"
@@ -36,6 +38,16 @@ class HotelExtraCharge < ApplicationRecord
   def priced? = fixed? || percentage?
   def active? = transaction_code.active?
   def nightly? = charging_unit.in?(NIGHTLY_CHARGING_UNITS)
+
+  # How many units one posting of this charge covers for a party: the rooms,
+  # the people (children only when the charge counts them), or just one.
+  def units_for(rooms:, adults:, children:)
+    case charging_unit
+    when "per_room_night", "per_room" then [ rooms.to_i, 1 ].max
+    when "per_person_night", "per_person" then [ adults.to_i + (charge_children? ? children.to_i : 0), 1 ].max
+    else 1
+    end
+  end
 
   def pricing_label
     return "Enter when charging" if manual?
@@ -49,6 +61,12 @@ class HotelExtraCharge < ApplicationRecord
   end
 
   private
+
+  def auto_apply_is_fixed_price
+    return unless auto_apply? && !fixed?
+
+    errors.add(:auto_apply, "needs a fixed price")
+  end
 
   def transaction_code_belongs_to_hotel
     return if hotel.blank? || transaction_code.blank? || transaction_code.hotel_id == hotel_id

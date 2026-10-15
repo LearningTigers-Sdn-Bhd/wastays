@@ -473,7 +473,7 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       body_text = CGI.unescapeHTML(response.body)
       expect(body_text).to include(%(<turbo-frame id="settings_action_sheet">))
       expect(body_text).to include(%(<dialog id="new-guest-sheet"))
-      expect(body_text).to include("panels-ui--sheet-frame")
+      expect(body_text).to include("ui--sheet-frame")
       expect(body_text).to include("New guest record")
       expect(body_text).to include("Create guest record")
       # No page chrome: the sheet arrives on its own.
@@ -870,6 +870,22 @@ RSpec.describe "HotelPortal::Guests", type: :request do
       expect(response).to have_http_status(:success)
       expect(body_text).to include(confirmed_booking.confirmation_token)
       expect(body_text).to include(cancelled_booking.confirmation_token)
+    end
+
+    it "opens a stay's booking from its row, cancelled ones included" do
+      guest = create(:guest, created_by_hotel: hotel)
+      cancelled = create(:booking, hotel: hotel, status: "cancelled", guest_name: guest.name, currency: "MYR", total_amount: 200.0)
+      create(:booking_guest, booking: cancelled, guest: guest, is_primary: true)
+
+      get booking_history_hotel_guest_path(hotel, guest)
+
+      booking_path = hotel_booking_workspace_path(hotel, cancelled, tab: "booking_details")
+      page = Capybara.string(response.body)
+      row = page.find("tbody tr[data-clickable-row-url-value='#{booking_path}']")
+      link = row.find("a", text: cancelled.confirmation_token)
+      expect(link[:href]).to eq(booking_path)
+      # The record sits in a Turbo frame; the link has to leave it for the full page.
+      expect(link["data-turbo-frame"]).to eq("_top")
     end
 
     it "paginates booking history without limiting lifetime totals or adding Turbo history" do

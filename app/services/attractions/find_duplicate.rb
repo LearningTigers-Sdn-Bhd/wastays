@@ -11,12 +11,13 @@ module Attractions
       END
     SQL
 
-    def self.call(fingerprint:)
-      return if fingerprint.blank?
+    def self.call(fingerprint:, google_maps_url: nil)
+      return if fingerprint.blank? && google_maps_url.blank?
 
-      Attraction.where(coordinate_fingerprint: fingerprint)
-        .order(Arel.sql(STATUS_ORDER), :id)
-        .first
+      matches = Attraction.none
+      matches = matches.or(Attraction.where(coordinate_fingerprint: fingerprint)) if fingerprint.present?
+      matches = matches.or(Attraction.where(google_maps_url: google_maps_url)) if google_maps_url.present?
+      matches.order(Arel.sql(STATUS_ORDER), :id).first
     end
   end
 end

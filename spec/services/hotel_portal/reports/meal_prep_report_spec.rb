@@ -16,6 +16,7 @@ RSpec.describe HotelPortal::Reports::MealPrepReport do
       hotel: target_hotel, kind: kind, time: time,
       has_breakfast: meals.include?(:breakfast),
       has_lunch: meals.include?(:lunch),
+      has_hi_tea: meals.include?(:hi_tea),
       has_dinner: meals.include?(:dinner)
     )
   end
@@ -148,5 +149,32 @@ RSpec.describe HotelPortal::Reports::MealPrepReport do
       expect(report.pax_for("breakfast")).to eq(2)
       expect(report.pax_for("dinner")).to eq(2)
     end
+  end
+  describe "hi-tea" do
+    it "counts guests on a slot entitled to hi-tea in its own section" do
+      slot(hotel, "boat_in", "15:00", %i[hi_tea dinner])
+      booking = create(:booking, hotel: hotel, adults: 2, children: 0)
+      create(:booking_guest, booking: booking, boat_in_at: Time.utc(2026, 5, 10, 15, 0, 0))
+
+      report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+      expect(report.sections.map { |section| section[:title] }).to eq(%w[Breakfast Lunch Hi-Tea Dinner])
+      expect(report.pax_for("hi_tea")).to eq(2)
+      expect(report.records.sole[:meals]).to eq(%w[Hi-Tea Dinner])
+
+      hi_tea = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, meal_type: "hi_tea").call
+      expect(hi_tea.records.sole[:meal_type]).to eq("Hi-Tea")
+      expect(hi_tea.total_pax).to eq(2)
+    end
+  end
+  it "uses custom meal rules and excludes untimed Own Boat from derived meals" do
+    create(:hotel_boat_setting, hotel: hotel, breakfast_time: "08:00", lunch_time: "12:00", hi_tea_time: nil, dinner_time: "19:00")
+    booking = create(:booking, hotel: hotel, adults: 2, children: 0)
+    create(:booking_guest, booking: booking, boat_in_type: "charter", boat_in_at: Time.utc(2026, 5, 10, 9), boat_out_type: "own")
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+    expect(report.records.size).to eq(1)
+    expect(report.records.first).to include(meals: [ "Lunch", "Dinner" ], formatted_boat_time: "9:00 AM · Charter Boat")
+    expect(report.pax_for("breakfast")).to eq(0)
+    expect(report.pax_for("lunch")).to eq(2)
   end
 end

@@ -333,7 +333,9 @@ module HotelDemoManagement
     # type the first one's plan and link them together, letting a rate edit on
     # one bleed into the other.
     def ensure_rate_plan(room_type, name, kind: "custom")
-      existing = room_type.rate_plans.find_by(name: name)
+      # A system plan may have been renamed, so it is found by kind; only
+      # custom plans are identified by name.
+      existing = kind == "custom" ? room_type.rate_plans.find_by(name: name) : room_type.rate_plans.find_by(kind: kind)
       return existing if existing
 
       rate_plan = @hotel.rate_plans.create!(
@@ -460,7 +462,7 @@ module HotelDemoManagement
     end
 
     def enqueue_channel_manager_sync
-      return if @hotel.preferred_channel_manager.blank?
+      return unless @hotel.channel_manager_enabled?
 
       @logger.puts "Triggering Channel Manager Sync..."
       ChannelManagers::SyncJob.perform_later(@hotel.id, @start_date, @end_date)

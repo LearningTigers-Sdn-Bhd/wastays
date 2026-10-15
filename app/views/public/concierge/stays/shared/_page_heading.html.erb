@@ -1,0 +1,23 @@
+<%# The heading of a stay page: the display line the guest reads first, and the
+    sentence under it. A back link goes above it when the page is not the stay
+    itself, so the way out sits before the title rather than after the form.
+    back_display sets its display utility, for a page that shows the way back
+    somewhere else on a phone. %>
+<div>
+  <% if local_assigns[:back_path].present? %>
+    <%= link_to local_assigns[:back_path],
+          class: "#{local_assigns.fetch(:back_display, "inline-flex")} min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary" do %>
+      <%= app_icon "chevron-left", class: "size-3.5", aria: { hidden: "true" } %>
+      <%= local_assigns.fetch(:back_label, "Back to my stay") %>
+    <% end %>
+  <% end %>
+
+  <% heading_size = local_assigns[:compact] ? "text-xl md:text-2xl" : "text-2xl md:text-3xl" %>
+  <h2 class="<%= local_assigns[:back_path].present? ? "mt-2" : "" %> font-guest-display <%= heading_size %> font-semibold text-foreground">
+    <%= title %><% if local_assigns[:title_accent].present? %> <span class="italic text-primary"><%= title_accent %></span><% end %>
+  </h2>
+
+  <% if local_assigns[:subtitle].present? %>
+    <p class="mt-1 text-sm leading-relaxed text-muted-foreground <%= "md:text-base" unless local_assigns[:compact] %>"><%= subtitle %></p>
+  <% end %>
+</div>

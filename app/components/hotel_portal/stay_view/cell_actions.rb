@@ -14,6 +14,11 @@ module HotelPortal
         raise ArgumentError, "CellActions requires a StayView::DayCell" unless @cell.is_a?(::StayView::DayCell)
       end
 
+      # The trigger stretches over the whole night so the menu opens wherever the
+      # cell is pressed. `timeline_passthrough` tells the timeline's drag
+      # controller that a press landing here is a press on the night behind it,
+      # so drawing a stay across free cells still works; a press that never
+      # becomes a drag still opens the menu.
       def call
         return if actions.empty?
 
@@ -23,7 +28,7 @@ module HotelPortal
             size: :icon_sm,
             aria_label: "Actions for room #{@room.room_number} on #{@cell.date.to_fs(:long)}",
             class: "panel-timeline__cell-action",
-            data: { alignment: }
+            data: { alignment:, timeline_passthrough: "true" }
           ) do
             tag.span(class: "panel-timeline__cell-action-indicator", aria: { hidden: true }) do
               helpers.app_icon("plus", class: "size-3")

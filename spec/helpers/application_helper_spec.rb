@@ -159,9 +159,9 @@ RSpec.describe ApplicationHelper, type: :helper do
         adult_line = lines.find { |l| l[:label].include?("Adult") }
         child_line = lines.find { |l| l[:label].include?("Child") }
 
-        # 2 adults = the 300 matrix total (not 2 x 300); child(8) = (300/2)*40% = 60
+        # 2 adults = the 300 matrix total (not 2 x 300); child(8) = 40% of the 1-adult 180 = 72
         expect(adult_line[:amount]).to include("300")
-        expect(child_line[:amount]).to include("60")
+        expect(child_line[:amount]).to include("72")
         expect(lines.none? { |l| l[:label].include?("Supplement") }).to eq(true)
       end
 
@@ -169,7 +169,7 @@ RSpec.describe ApplicationHelper, type: :helper do
         rate_plan = create(:rate_plan, :age_banded, hotel: hotel, name: "Matrix Plan", room_type: room_type, child_price_multiplier: 0.5)
         item = build_matrix_item(rate_plan: rate_plan, adults: 2, children: 1, child_ages: [ 8 ])
 
-        expect(item.subtotal).to eq(360.0)
+        expect(item.subtotal).to eq(372.0)
       end
 
       it "does not drift when the rate plan is edited after the quote" do
@@ -182,7 +182,7 @@ RSpec.describe ApplicationHelper, type: :helper do
         lines = helper.pax_pricing_breakdown_items(item.reload, hotel, "MYR")
         child_line = lines.find { |l| l[:label].include?("Child") }
 
-        expect(child_line[:amount]).to include("60")
+        expect(child_line[:amount]).to include("72")
       end
     end
   end

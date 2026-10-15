@@ -1,139 +1,85 @@
 <% content_for :title, "Request Refund | WAStays" %>
-<% is_resubmission = @booking.refund_request&.rejected? %>
-<% warning_title = if is_resubmission
-  "You are resubmitting your refund request for review."
-else
-  "Submitting this request will immediately cancel your booking."
-end %>
-<% warning_body = if is_resubmission
-  "Your booking is already cancelled. Please confirm your latest details before resubmitting."
-else
-  "This action cannot be undone. Your room will be released. The refund will be processed manually to your bank account below."
-end %>
-<% submit_label = is_resubmission ? "Resubmit Refund Request" : "Submit Refund Request & Cancel Booking" %>
-<% confirm_message = if is_resubmission
-  "Are you sure you want to resubmit this refund request for review?"
-else
-  "Are you absolutely sure? This will cancel your booking immediately and the action cannot be undone."
-end %>
-<% confirm_title = is_resubmission ? "Resubmit Refund Request" : "Cancel Booking & Request Refund" %>
-
-<div class="space-y-3.5">
-  <% if flash[:alert].present? %>
-    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-      <p class="text-sm font-semibold text-amber-800"><%= flash[:alert] %></p>
-    </div>
-  <% end %>
-
-  <%= render PanelsUI::PageHeader.new(title: "Request Refund") do |header| %>
-    <% header.with_caption do %>
-      <span class="font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></span>
-    <% end %>
-  <% end %>
-
-  <div class="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-x-4">
-    <svg class="size-5 text-red-600 shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-    </svg>
-    <div>
-      <p class="text-sm font-bold text-red-700"><%= warning_title %></p>
-      <p class="text-sm text-red-600 mt-1"><%= warning_body %></p>
-    </div>
-  </div>
-
-  <div class="bg-card rounded-2xl border border-border shadow-sm p-6">
-    <h2 class="font-semibold text-foreground mb-4">Booking Summary</h2>
-    <div class="grid grid-cols-2 gap-4 text-sm">
-      <div>
-        <p class="text-muted-foreground">Hotel</p>
-        <p class="font-medium text-foreground"><%= @booking.hotel.name %></p>
-      </div>
-      <div>
-        <p class="text-muted-foreground">Check-in</p>
-        <p class="font-medium text-foreground"><%= @booking.check_in.strftime("%d %b %Y") %></p>
-      </div>
-      <div>
-        <p class="text-muted-foreground">Total Paid</p>
-        <p class="font-medium text-foreground"><%= number_to_currency(@booking.total_amount, unit: @booking.currency + " ") %></p>
-      </div>
-      <div>
-        <p class="text-muted-foreground">Check-out</p>
-        <p class="font-medium text-foreground"><%= @booking.check_out.strftime("%d %b %Y") %></p>
-      </div>
-    </div>
-    <% if @refund_policy.present? %>
-      <div class="mt-4 border-t border-border pt-4">
-        <p class="text-sm text-muted-foreground">Refund Policy</p>
-        <p class="text-sm font-semibold text-foreground">
-          You are eligible for <%= number_to_percentage(@refund_percentage, precision: 0) %> refund
-          (<%= number_to_currency(@estimated_refund_amount, unit: @booking.currency + " ") %> estimated).
-        </p>
-        <p class="mt-1 text-xs text-muted-foreground">
-          Request must be submitted at least <%= @refund_policy.min_days_before_checkin %> day<%= @refund_policy.min_days_before_checkin == 1 ? "" : "s" %> before check-in.
-        </p>
-      </div>
-    <% end %>
-  </div>
-
-  <%= form_with model: @refund_request, url: guest_booking_refund_requests_path(@booking), method: :post, local: true, class: "space-y-6" do |f| %>
-    <%= hidden_field_tag :return_to, @return_to %>
-    <div class="bg-card rounded-2xl border border-border shadow-sm p-6 space-y-4">
-      <h2 class="font-semibold text-foreground">Reason for Refund</h2>
-      <div>
-        <%= f.label :reason, "Please describe why you are requesting a refund", class: "block text-sm font-medium text-foreground mb-1.5" %>
-        <%= f.text_area :reason, rows: 4, placeholder: "e.g. Change of travel plans, medical emergency...",
-            class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
-      </div>
-    </div>
-
-    <div class="bg-card rounded-2xl border border-border shadow-sm p-6 space-y-4">
-      <h2 class="font-semibold text-foreground">Bank Account Details</h2>
-      <p class="text-sm text-muted-foreground">Enter the bank account where you'd like to receive the refund.</p>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <%= f.label :bank_name, "Bank Name", class: "block text-sm font-medium text-foreground mb-1.5" %>
-          <%= f.text_field :bank_name, required: true, placeholder: "e.g. Maybank",
-              class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
-        </div>
-
-        <div>
-          <%= f.label :account_holder_name, "Account Holder Name", class: "block text-sm font-medium text-foreground mb-1.5" %>
-          <%= f.text_field :account_holder_name, required: true, placeholder: "Full name as per bank account",
-              class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
-        </div>
-
-        <div>
-          <%= f.label :account_number, "Account Number", class: "block text-sm font-medium text-foreground mb-1.5" %>
-          <%= f.text_field :account_number, required: true, placeholder: "e.g. 1234567890",
-              class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
-        </div>
-
-        <div>
-          <%= f.label :account_type, "Account Type", class: "block text-sm font-medium text-foreground mb-1.5" %>
-          <%= f.select :account_type, @presenter.account_type_options, { prompt: "Select type" },
-              required: true,
-              class: "w-full px-3 py-2.5 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent" %>
-        </div>
-      </div>
-    </div>
-
-    <% go_back_path = if @return_to == "list"
-      guest_bookings_path
+<%
+  post_stay = @refund_mode == :post_stay
+  resubmission = @booking.refund_request&.rejected?
+  go_back_path, go_back_label =
+    if @return_to == "list"
+      [ guest_bookings_path, "Back to bookings" ]
     elsif @return_to == "refund" && @booking.refund_request.present?
-      guest_refund_request_path(@booking.refund_request)
+      [ guest_refund_request_path(@booking.refund_request), "Back to refund request" ]
     else
-      guest_booking_path(@booking)
-    end %>
+      [ guest_booking_path(@booking), "Back to booking" ]
+    end
 
-    <div class="flex items-center justify-end gap-x-3">
-      <%= link_to "Go Back", go_back_path,
-          class: "px-5 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted" %>
-      <%= f.submit submit_label,
-          class: "px-5 py-2.5 text-sm font-bold rounded-xl bg-red-600 text-primary-foreground hover:bg-red-700 cursor-pointer",
-          data: { turbo_confirm: confirm_message,
-                  turbo_confirm_title: confirm_title,
-                  turbo_confirm_color: "red" } %>
-    </div>
-  <% end %>
+  title = if post_stay then "Ask for a refund"
+          elsif resubmission then "Resubmit your request"
+          else "Request a refund"
+          end
+  subtitle = if post_stay then "This is a request, not a payment. The property reads it and replies to you."
+             elsif resubmission then "Check your details and send the request again. The property reviews it."
+             else "Cancel this booking and ask for a refund under the property's policy."
+             end
+%>
+
+<%# The concierge's form frame. On a phone: the compact stay card, which is
+    also the way back, then the heading, then the form. From md: the back
+    link and the heading across the top, the stay card beside the form. %>
+<div class="guest-form-page" data-columns="2" data-width="form">
+  <div class="guest-form-page__compact md:hidden">
+    <%= render "public/concierge/shared/summary_compact",
+               path: go_back_path, back_label: go_back_label,
+               title: @booking.hotel.name, detail: guest_stay_dates(@booking),
+               aside: Guest::StatusBadges.booking(@booking.status).label %>
+  </div>
+
+  <div class="guest-form-page__header">
+    <%= render "public/concierge/stays/shared/page_heading",
+               back_path: go_back_path, back_label: go_back_label, back_display: "hidden md:inline-flex",
+               title:, subtitle: %>
+  </div>
+
+  <div class="guest-form-page__summary hidden md:block">
+    <%= render guest_stay_summary(@booking, eyebrow: "Your Stay") %>
+  </div>
+
+  <div class="guest-form-page__body space-y-6">
+    <% if resubmission && @booking.refund_request.hotel_note.present? %>
+      <%= render GuestUI::Notice.new(title: "The property asked for a change", message: @booking.refund_request.hotel_note,
+                                     variant: :warning) %>
+    <% end %>
+
+    <% if !post_stay && !resubmission %>
+      <%= render GuestUI::Notice.new(
+            title: "This cancels your booking",
+            message: "You cannot undo it. The property releases your room and pays the refund into the bank account below.",
+            variant: :danger, alert: false
+          ) %>
+    <% end %>
+
+    <% if !post_stay && @refund_policy.present? && @estimated_refund_amount %>
+      <%= render GuestUI::Notice.new(
+            title: "You get #{number_to_percentage(@refund_percentage, precision: 0)} back, about #{number_to_currency(@estimated_refund_amount, unit: "#{@booking.currency} ")}",
+            message: "Of the #{number_to_currency(@booking.total_amount, unit: "#{@booking.currency} ")} you paid. Requests close #{pluralize(@refund_policy.min_days_before_checkin, 'day')} before check-in."
+          ) %>
+    <% end %>
+
+    <%= form_with model: @refund_request, url: guest_booking_refund_requests_path(@booking), scope: :refund_request,
+          method: :post, local: true, class: "space-y-5" do |form| %>
+      <%= hidden_field_tag :return_to, @return_to %>
+
+      <%= render "shared/refunds/fields", form:, booking: @booking, mode: @refund_mode %>
+
+      <% if post_stay %>
+        <%= render GuestUI::Button.new(label: "Send my request", size: :lg, block: true, type: "submit",
+                                       data: { turbo_submits_with: "Sending…" }) %>
+      <% else %>
+        <%= render GuestUI::Button.new(
+              label: (resubmission ? "Resubmit Refund Request" : "Submit Request and Cancel Booking"),
+              variant: (resubmission ? :primary : :destructive), size: :lg, block: true, type: "submit",
+              confirm: (resubmission ? "Resubmit this refund request for review?" : "This cancels your booking at once and cannot be undone. Continue?"),
+              data: { turbo_submits_with: "Sending…" }
+            ) %>
+      <% end %>
+    <% end %>
+  </div>
 </div>

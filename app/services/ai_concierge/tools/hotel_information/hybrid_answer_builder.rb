@@ -6,10 +6,10 @@ module AiConcierge
       class HybridAnswerBuilder
         STRONG_MATCH_DISTANCE = 0.35
         FALLBACK_CATEGORIES = %w[general_info faq policy].freeze
-        CACHE_VERSION = "v3"
+        CACHE_VERSION = "v4"
         ANSWER_TTL = 6.hours
 
-        def initialize(hotel:, query:, intent:, topic:, categories:, source:, structured_facts: {},
+        def initialize(hotel:, query:, intent:, topic:, categories:, source:, structured_facts: {}, structured_metadata: {},
                        fallback_text: nil, scope: nil,
                        hints: Retrieval::QueryHints.none, search_service: HotelKnowledges::SearchService,
                        answer_agent: AiConcierge::Agents::KnowledgeAnswerAgent)
@@ -20,6 +20,7 @@ module AiConcierge
           @categories = Array(categories)
           @source = source
           @structured_facts = structured_facts.to_h
+          @structured_metadata = structured_metadata.to_h
           @fallback_text = fallback_text.to_s.presence
           @scope = scope.to_s.presence
           @hints = Retrieval::QueryHints.from(hints)
@@ -37,11 +38,21 @@ module AiConcierge
         private
 
         def build_reply
-          matches = search_matches
-
-          return broad_reply(matches) if broad?
+          return broad_reply(search_matches) if broad?
           structured = direct_structured_fact
-          return reply(facts: [ structured ], answer_mode: "structured", matches: matches) if structured
+          if structured
+            metadata = structured_metadata.fetch(asked_fact.to_s, {})
+            return reply(
+              facts: [ structured ],
+              answer_mode: "structured",
+              matches: [],
+              structured_fact_key: asked_fact,
+              structured_source: metadata["source"],
+              structured_fields: metadata["fields"]
+            )
+          end
+
+          matches = search_matches
 
           if deterministic_match?(matches)
             return reply(facts: [ fact_from_match(matches.first, 1) ], answer_mode: "deterministic", matches: matches)
@@ -74,7 +85,7 @@ module AiConcierge
             )
           end
 
-          if fallback_text.present?
+          if fallback_text.present? && (query.blank? || explicit_category_request?)
             return reply(
               facts: [ fact(topic: topic_label, text: fallback_text) ],
               answer_mode: "fallback",
@@ -163,12 +174,12 @@ module AiConcierge
             source,
             categories.map(&:to_s).sort.join(","),
             Digest::SHA256.hexdigest(query.downcase.squish),
-            Digest::SHA256.hexdigest([ structured_facts, fallback_text, hints.digest, resolved_scope ].to_json),
+            Digest::SHA256.hexdigest([ structured_facts, structured_metadata, fallback_text, hints.digest, resolved_scope ].to_json),
             hotel.knowledge_documents.maximum(:updated_at).to_i
           ].join("/")
         end
 
-        attr_reader :hotel, :query, :intent, :topic, :categories, :source, :structured_facts,
+        attr_reader :hotel, :query, :intent, :topic, :categories, :source, :structured_facts, :structured_metadata,
           :fallback_text, :scope, :hints, :search_service, :answer_agent
 
         # A thin first pass sends this same question through a second search
@@ -285,10 +296,8 @@ module AiConcierge
         end
 
         def asked_fact
-          normalized = query.downcase
-          return "check_in_time" if normalized.match?(/\bcheck[ -]?in\b/)
-          return "check_out_time" if normalized.match?(/\bcheck[ -]?out\b/)
-          return "cancellation_policy" if normalized.match?(/\bcancell?ation|cancel\b/)
+          deterministic = Retrieval::QueryHints.fact_for_query(query)
+          return deterministic if deterministic.present?
           return if ambiguous_opening_hours_question?
 
           hints.fact
@@ -374,7 +383,8 @@ module AiConcierge
           Orchestration::HotelKnowledge::Reply::Fact.new(topic: topic, text: text, source_refs: source_refs)
         end
 
-        def reply(shape: "direct", answer_mode:, facts: [], matches:, remaining_topics: [], missing_topic: nil, success: true)
+        def reply(shape: "direct", answer_mode:, facts: [], matches:, remaining_topics: [], missing_topic: nil, success: true,
+                  structured_fact_key: nil, structured_source: nil, structured_fields: [])
           Orchestration::HotelKnowledge::Reply.new(
             shape: shape,
             answer_mode: answer_mode,
@@ -385,7 +395,10 @@ module AiConcierge
             knowledge_matches: matches,
             searched_categories: categories,
             fallback_categories: @fallback_categories_used || [],
-            success: success
+            success: success,
+            structured_fact_key: structured_fact_key,
+            structured_source: structured_source,
+            structured_fields: structured_fields
           )
         end
 
@@ -403,9 +416,14 @@ module AiConcierge
           )
         end
 
+        def explicit_category_request?
+          query.downcase.match?(/\b(?:do you have|show|list|share)\b.*\bfaqs?\b|\bfaqs?\s*(?:please)?\z/)
+        end
+
         def topic_label = topic.tr("_", " ").presence || categories.first.to_s.tr("_", " ")
 
         def missing_topic
+          return "service information" if asked_fact.in?(Retrieval::QueryHints::GUEST_CONTENT_FACTS)
           return "#{structured_topic(asked_fact)} details" if asked_fact.present?
           return "service information" if service_question?
 

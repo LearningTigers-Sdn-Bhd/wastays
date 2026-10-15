@@ -86,11 +86,11 @@ class ProspectMessage < ApplicationRecord
   # The empty-state line has to go before the first bubble lands on top of it.
   # Removing a target that is not there is a no-op, so this is safe every time.
   def broadcast_to_guest
-    broadcast_remove_to([ conversation, :guest ], target: "#{PublicUI::Chat::Log::DEFAULT_ID}-empty")
+    broadcast_remove_to([ conversation, :guest ], target: "#{GuestUI::Chat::Log::DEFAULT_ID}-empty")
     broadcast_append_to(
       [ conversation, :guest ],
-      target: PublicUI::Chat::Log::DEFAULT_ID,
-      renderable: PublicUI::Chat::Message.new(message: self, hotel: conversation.hotel)
+      target: GuestUI::Chat::Log::DEFAULT_ID,
+      renderable: GuestUI::Chat::Message.new(message: self, hotel: conversation.hotel)
     )
   end
 

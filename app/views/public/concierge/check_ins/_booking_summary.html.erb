@@ -1,0 +1,44 @@
+<%# The booking the guest is checking in to, beside the form on a wider
+    screen. The same card as the stay summary: who, when, then the code in
+    small type at the foot. %>
+<%= render GuestUI::Card.new(class: "guest-stay-summary") do %>
+  <div class="flex items-center justify-between gap-3">
+    <h2 class="guest-card__title">Your Booking</h2>
+    <span class="guest-stay-summary__status" data-state="<%= presenter.pre_checkin_completed? ? "in-house" : "closed" %>">
+      <%= presenter.status_label %>
+    </span>
+  </div>
+
+  <dl class="mt-4 space-y-4">
+    <div>
+      <dt class="text-xs font-medium text-muted-foreground">Guest</dt>
+      <dd class="guest-stay-summary__room font-guest-display"><%= presenter.guest_name %></dd>
+    </div>
+
+    <div>
+      <dt class="sr-only">Dates</dt>
+      <dd class="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+        <span><%= presenter.check_in_label %></span>
+        <%= app_icon "arrow-right", class: "size-4 shrink-0 text-muted-foreground", aria: { hidden: "true" } %>
+        <span><%= presenter.check_out_label %></span>
+      </dd>
+      <dd class="mt-1 text-xs font-medium text-muted-foreground"><%= pluralize(presenter.nights, "night") %></dd>
+    </div>
+
+    <% if presenter.room_type_names.any? %>
+      <div>
+        <dt class="text-xs font-medium text-muted-foreground">Room</dt>
+        <% presenter.room_type_names.tally.each do |name, count| %>
+          <dd class="text-sm font-semibold text-foreground"><%= count %>× <%= name %></dd>
+        <% end %>
+      </div>
+    <% end %>
+  </dl>
+
+  <dl class="guest-stay-summary__refs">
+    <div class="flex items-baseline gap-1.5">
+      <dt><span aria-hidden="true">Code</span><span class="sr-only">Booking confirmation code</span></dt>
+      <dd class="font-mono text-foreground"><%= presenter.confirmation_code %></dd>
+    </div>
+  </dl>
+<% end %>

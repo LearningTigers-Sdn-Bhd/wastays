@@ -101,6 +101,16 @@ RSpec.describe Bookings::BuildFinancialSnapshot do
         expect(tourism_line["transaction_code_system_key"]).to eq("tourism_tax")
         expect(tourism_line["transaction_code_code"]).to eq("TAX_TTX")
       end
+
+      it "does not charge tourism tax on a day-use block" do
+        day_use_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, day_use_hours: 6)
+        result = described_class.new(
+          hotel: hotel, check_in: check_in, check_out: check_in, guest_country: guest_country,
+          room_type: room_type, rate_plan: day_use_plan
+        ).call
+
+        expect(result.tax_lines.pluck("type")).not_to include("tourism_tax")
+      end
     end
 
     context "with custom hotel taxes" do

@@ -15,7 +15,7 @@ module PanelsUI
   #         description: "They'll get an email with a join link.") do |dialog| %>
   #     <% dialog.with_body   { render "invites/form" } %>
   #     <% dialog.with_footer do %>
-  #       <button data-action="panels-ui--dialog#close">Cancel</button>
+  #       <button data-action="ui--dialog#close">Cancel</button>
   #     <% end %>
   #   <% end %>
   #

@@ -13,19 +13,19 @@ RSpec.describe PanelsUI::Popover, type: :component do
   it "wires the controller, values, and the trigger/panel contract" do
     render_popover
 
-    expect(page).to have_css("span.popover-root[data-controller='panels-ui--popover']")
+    expect(page).to have_css("span.popover-root[data-controller='ui--popover']")
     root = page.find("span.popover-root")
-    expect(root["data-panels-ui--popover-placement-value"]).to eq("bottom")
-    expect(root["data-panels-ui--popover-offset-value"]).to eq("8.0")
-    expect(root["data-panels-ui--popover-trigger-on-value"]).to eq("click")
-    expect(root["data-panels-ui--popover-close-delay-value"]).to eq("0")
-    expect(root["data-panels-ui--popover-focus-value"]).to eq("false")
+    expect(root["data-ui--popover-placement-value"]).to eq("bottom")
+    expect(root["data-ui--popover-offset-value"]).to eq("8.0")
+    expect(root["data-ui--popover-trigger-on-value"]).to eq("click")
+    expect(root["data-ui--popover-close-delay-value"]).to eq("0")
+    expect(root["data-ui--popover-focus-value"]).to eq("false")
 
     trigger = page.find("#pop-trigger")
     expect(trigger["aria-haspopup"]).to eq("dialog")
     expect(trigger["aria-controls"]).to eq("pop-panel")
-    expect(trigger["data-action"]).to include("click->panels-ui--popover#toggle")
-    expect(trigger["data-action"]).to include("keydown->panels-ui--popover#onTriggerKeydown")
+    expect(trigger["data-action"]).to include("click->ui--popover#toggle")
+    expect(trigger["data-action"]).to include("keydown->ui--popover#onTriggerKeydown")
   end
 
   it "supports a headless trigger without button variant or size styling" do
@@ -36,7 +36,7 @@ RSpec.describe PanelsUI::Popover, type: :component do
     expect(trigger[:class]).not_to include("panel-button")
     expect(trigger["data-variant"]).to be_nil
     expect(trigger["data-size"]).to be_nil
-    expect(trigger["data-action"]).to include("click->panels-ui--popover#toggle")
+    expect(trigger["data-action"]).to include("click->ui--popover#toggle")
     expect(trigger["aria-controls"]).to eq("pop-panel")
   end
 
@@ -63,7 +63,7 @@ RSpec.describe PanelsUI::Popover, type: :component do
 
     expect(page).to have_button("Open")
     expect(page).to have_css(
-      "#pop-panel[role='dialog'][popover='manual'][data-state='closed'][data-panels-ui--popover-target='panel']",
+      "#pop-panel[role='dialog'][popover='manual'][data-state='closed'][data-ui--popover-target='panel']",
       text: "Body content",
       visible: :all
     )
@@ -73,7 +73,7 @@ RSpec.describe PanelsUI::Popover, type: :component do
     render_popover
 
     expect(page).to have_css(
-      "#pop-panel .floating-arrow[aria-hidden='true'][data-panels-ui--popover-target='arrow']",
+      "#pop-panel .floating-arrow[aria-hidden='true'][data-ui--popover-target='arrow']",
       visible: :all
     )
   end
@@ -87,7 +87,7 @@ RSpec.describe PanelsUI::Popover, type: :component do
   it "normalizes placement for Floating UI and merges panel classes" do
     render_popover(placement: :top_end, class: "w-72")
 
-    expect(page).to have_css("span.popover-root[data-panels-ui--popover-placement-value='top-end']")
+    expect(page).to have_css("span.popover-root[data-ui--popover-placement-value='top-end']")
     expect(page.find("#pop-panel", visible: :all)[:class]).to include("w-72")
   end
 
@@ -110,17 +110,17 @@ RSpec.describe PanelsUI::Popover, type: :component do
   it "falls back to a bottom placement for an unknown placement" do
     render_popover(placement: :nowhere)
 
-    expect(page).to have_css("span.popover-root[data-panels-ui--popover-placement-value='bottom']")
+    expect(page).to have_css("span.popover-root[data-ui--popover-placement-value='bottom']")
   end
 
   it "wires hover-open actions onto the root when trigger_on: :hover" do
     render_popover(trigger_on: :hover, close_delay: 180)
 
     root = page.find("span.popover-root")
-    expect(root["data-panels-ui--popover-trigger-on-value"]).to eq("hover")
-    expect(root["data-panels-ui--popover-close-delay-value"]).to eq("180")
-    expect(root["data-action"]).to include("mouseenter->panels-ui--popover#show")
-    expect(root["data-action"]).to include("focusout->panels-ui--popover#hide")
+    expect(root["data-ui--popover-trigger-on-value"]).to eq("hover")
+    expect(root["data-ui--popover-close-delay-value"]).to eq("180")
+    expect(root["data-action"]).to include("mouseenter->ui--popover#show")
+    expect(root["data-action"]).to include("focusout->ui--popover#hide")
   end
 
   it "does not put hover actions on the root for the default click trigger" do
@@ -133,9 +133,9 @@ RSpec.describe PanelsUI::Popover, type: :component do
     render_popover(focus: true, trigger_on: :hover)
 
     root = page.find("span.popover-root")
-    expect(root["data-panels-ui--popover-focus-value"]).to eq("true")
+    expect(root["data-ui--popover-focus-value"]).to eq("true")
     # A hover-open focus trap makes no sense, so it downgrades to a click trigger.
-    expect(root["data-panels-ui--popover-trigger-on-value"]).to eq("click")
+    expect(root["data-ui--popover-trigger-on-value"]).to eq("click")
     expect(root["data-action"]).to be_nil
     expect(page.find("#pop-panel", visible: :all)["aria-modal"]).to eq("true")
   end

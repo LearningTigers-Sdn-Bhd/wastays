@@ -80,8 +80,13 @@ RSpec.describe PanelsUI::Table, type: :component do
     expect(stylesheet).to match(
       /\[data-sticky-column="true"\]\[data-hoverable="true"\][^{]*:hover[^{]*\{[^}]*background:\s*var\(--muted\);/m
     )
+    # The corner cell is pinned on both axes, so it must outrank the sticky
+    # header (3) and the pinned group rows (2), not tie with them.
     expect(stylesheet).to match(
-      /\[data-sticky-column="true"\]\[data-sticky-header="true"\][^{]*\{[^}]*z-index:\s*2;/m
+      /\[data-sticky-header="true"\] thead th\s*\{[^}]*z-index:\s*3;/m
+    )
+    expect(stylesheet).to match(
+      /\[data-sticky-column="true"\]\[data-sticky-header="true"\][^{]*\{[^}]*z-index:\s*4;/m
     )
   end
 

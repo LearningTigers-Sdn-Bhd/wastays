@@ -77,7 +77,7 @@ export default class extends Controller {
   }
 
   clearSuggestions() {
-    this.element.querySelector(".public-chat__quick-replies")?.remove()
+    this.element.querySelector(".guest-chat__quick-replies")?.remove()
   }
 
   onBeforeStreamRender(event) {

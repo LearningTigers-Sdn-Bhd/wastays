@@ -43,9 +43,9 @@ export default class extends Controller {
     const trigger = event.target.closest("a[data-turbo-frame^='booking_action_sheet']")
     if (!trigger || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
 
-    const owner = trigger.closest("[data-controller~='panels-ui--dropdown-menu'], [data-controller~='panels-ui--popover']")
+    const owner = trigger.closest("[data-controller~='ui--dropdown-menu'], [data-controller~='ui--popover']")
     const ownerTrigger = owner?.querySelector(
-      "[data-panels-ui--dropdown-menu-target='trigger'], [data-panels-ui--popover-target='trigger']"
+      "[data-ui--dropdown-menu-target='trigger'], [data-ui--popover-target='trigger']"
     )
     // Match the room container by its explicit marker, not an id prefix: the
     // room's popovers/menus carry ids like "#{dom_id}-housekeeping" that also
@@ -64,7 +64,7 @@ export default class extends Controller {
 
   // The booking-action Sheet lives in the shell layout, outside this element, so
   // its native `close` event is caught on `document` in the capture phase — that
-  // runs before panels-ui--sheet-frame clears the frame, while the dialog (and
+  // runs before ui--sheet-frame clears the frame, while the dialog (and
   // its navigation-pending flag) is still in the DOM. A pending navigation means
   // complete_sheet is about to move the page, so focus must not be restored here.
   sheetClosed(event) {

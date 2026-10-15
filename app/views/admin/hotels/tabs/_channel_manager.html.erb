@@ -1,0 +1,68 @@
+<div class="space-y-8 py-4">
+  <section class="space-y-5">
+    <div>
+      <h2 class="text-base font-semibold">Channel manager</h2>
+      <p class="text-sm text-muted-foreground">Connection and room mapping for this hotel.</p>
+    </div>
+    <% connected = @hotel.channel_mapping&.external_id.present? %>
+    <dl class="grid gap-5 text-sm sm:grid-cols-3">
+      <div>
+        <dt class="font-medium">Connection</dt>
+        <dd class="mt-1"><%= render PanelsUI::Badge.new(label: connected ? "Connected" : "Not connected", variant: connected ? :success : :neutral, size: :sm) %></dd>
+      </div>
+      <div>
+        <dt class="font-medium">External ID</dt>
+        <dd class="mt-1 break-all text-muted-foreground"><%= connected ? @hotel.channel_mapping.external_id : "Not assigned" %></dd>
+      </div>
+      <div>
+        <dt class="font-medium">Mapped room types</dt>
+        <dd class="mt-1"><%= @mapped_room_type_count %> of <%= @room_type_count %></dd>
+      </div>
+    </dl>
+    <% if @hotel.sells_per_person? %>
+      <p class="text-sm text-muted-foreground">This property sells per guest. Room types and availability sync; rates and restrictions do not.</p>
+    <% end %>
+    <% unless @hotel.feature_enabled?("manage_40_otas") %>
+      <p class="text-sm text-muted-foreground">The current plan does not include Channel Manager. Select an eligible plan in Hotel details before connecting.</p>
+    <% end %>
+  </section>
+
+  <section class="space-y-4 border-t border-border pt-6">
+    <h2 class="text-base font-semibold">Connection actions</h2>
+    <% if connected %>
+      <div class="flex flex-wrap gap-3">
+        <%= form_with url: onboard_channex_admin_hotel_path(@hotel), method: :post do %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary) do %>Sync channel structure<% end %>
+        <% end %>
+        <%= form_with url: full_refresh_admin_hotel_path(@hotel), method: :post do %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, data: { turbo_confirm: "Push 500 days of availability, rates, and restrictions?" }) do %>Full refresh (500 days)<% end %>
+        <% end %>
+        <%= form_with url: repair_channex_mapping_admin_hotel_path(@hotel), method: :post do %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :secondary, data: { turbo_confirm: "Check and repair the channel mapping?" }) do %>Refresh channel mapping<% end %>
+        <% end %>
+        <%= form_with url: disconnect_channex_admin_hotel_path(@hotel), method: :post do %>
+          <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, data: { turbo_confirm: "Disconnect the channel manager and remove its room mappings?" }) do %>Disconnect channel manager<% end %>
+        <% end %>
+      </div>
+    <% elsif @hotel.feature_enabled?("manage_40_otas") %>
+      <%= form_with url: onboard_channex_admin_hotel_path(@hotel), method: :post do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Connect to channel manager<% end %>
+      <% end %>
+    <% else %>
+      <p class="text-sm text-muted-foreground">Choose an eligible plan before connecting this hotel.</p>
+    <% end %>
+  </section>
+
+  <%= form_with model: @hotel, url: admin_hotel_path(@hotel), method: :patch, class: "space-y-4" do |form| %>
+    <%= hidden_field_tag :tab, "channel_manager" %>
+    <% if @hotel.errors.any? %><p role="alert" class="text-sm text-destructive"><%= @hotel.errors.full_messages.to_sentence %></p><% end %>
+    <%= render PanelsUI::FieldSet.new(legend: "Preference", description: "This setting records the preferred provider. Connection actions are separate.") do %>
+      <%= render PanelsUI::FieldGroup.new do %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :preferred_channel_manager, label: "Preferred channel manager") do |field| %>
+          <% field.with_select_menu(Admin::Hotels::CreateForm::CHANNEL_MANAGER_OPTIONS.map { |label, value| { label:, value: } }) %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Save preference<% end %>
+  <% end %>
+</div>

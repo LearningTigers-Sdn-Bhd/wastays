@@ -19,14 +19,15 @@
             <th scope="col" class="w-[170px]">Room number</th>
             <th scope="col" class="w-[170px]"><%= section[:date_header] %></th>
             <th scope="col" class="w-[170px]"><%= section[:time_header] %></th>
+            <th scope="col" class="w-[170px]"><%= section[:label_header] %></th>
           </tr>
         <% end %>
         <% table.with_body do %>
           <% if section[:rows].any? %>
-            <% report_rows_grouped_by_month(section[:rows], date_preset: @date_preset) { |row| row[:boat_at] }.each do |month, rows| %>
+            <% report_rows_grouped_by_month(section[:rows], date_preset: @date_preset) { |row| row[:transfer_date] }.each do |month, rows| %>
               <% if month %>
                 <tr class="bg-muted/55" data-slot="report-month-group">
-                  <th scope="rowgroup" colspan="4" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+                  <th scope="rowgroup" colspan="5" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
                 </tr>
               <% end %>
             <% rows.each do |row| %>
@@ -60,11 +61,12 @@
                 <td class="whitespace-nowrap"><%= row[:room_number] %></td>
                 <td class="whitespace-nowrap"><%= row[section[:date_key]] %></td>
                 <td class="whitespace-nowrap tabular-nums text-foreground"><%= row[:boat_time] %></td>
+                <td class="whitespace-nowrap"><%= row[:boat_label] %></td>
               </tr>
             <% end %>
             <% end %>
           <% else %>
-            <%= render "table_empty_state", colspan: 4, message: section[:empty_message] %>
+            <%= render "table_empty_state", colspan: 5, message: section[:empty_message] %>
           <% end %>
         <% end %>
       <% end %>

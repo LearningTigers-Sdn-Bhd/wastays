@@ -51,7 +51,7 @@ RSpec.describe "PanelsUI::DateTimePicker", type: :system do
         const picker = input.closest('.panel-date-time-picker')
         const calendar = picker.querySelector('calendar-range')
         calendar.value = '2026-08-10/2026-08-12'; calendar.dispatchEvent(new Event('change', { bubbles: true }))
-        const end = picker.querySelector('[data-panels-ui--date-time-picker-target="endTimeControl"]')
+        const end = picker.querySelector('[data-ui--date-time-picker-target="endTimeControl"]')
         end.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
         end.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
         return input.value

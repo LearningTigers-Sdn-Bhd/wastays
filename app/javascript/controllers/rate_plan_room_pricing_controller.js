@@ -8,20 +8,46 @@ import { Controller } from "@hotwired/stimulus"
 // that produces before committing to them. The server stays the authority — this
 // only ever writes to a <p>.
 export default class extends Controller {
-  static targets = ["mode", "manualPanel", "derivedPanel", "autoPanel", "ladderPanel", "preview"]
-  static values = { anchor: Number, maxAdults: Number, currency: String, perPerson: Boolean }
+  static targets = ["mode", "manualPanel", "derivedPanel", "autoPanel", "preview", "rungTemplate"]
+  static values = { anchor: Number, maxAdults: Number, currency: String, perPerson: Boolean, standardPrices: Object }
 
   connect() {
     this.refresh()
   }
 
-  refresh() {
+  refresh(event) {
     const mode = this.currentMode
     this.toggle(this.manualPanelTargets, mode === "manual")
     this.toggle(this.derivedPanelTargets, mode === "derived")
     this.toggle(this.autoPanelTargets, mode === "auto")
-    this.toggle(this.ladderPanelTargets, mode === "derived" || mode === "auto")
     this.renderPreview(mode)
+    // The server already rendered the discount examples with the saved price;
+    // only a user edit needs to tell them the price moved.
+    if (event) this.announceExamplePrice(mode)
+  }
+
+  // Mirrors HotelPortal::RatePlanRoomPricing#example_price: the one nightly
+  // figure the Discounts tab uses to illustrate a rule. A per-guest plan is read
+  // at its primary occupancy. Null while the form holds nothing usable, so the
+  // examples keep their last price rather than dropping to zero.
+  announceExamplePrice(mode) {
+    const price = this.examplePrice(mode)
+    if (price === null || !(price > 0)) return
+
+    window.dispatchEvent(new CustomEvent("rate-plan-room-pricing:example-price", { detail: { price } }))
+  }
+
+  examplePrice(mode) {
+    if (!this.perPersonValue) return mode === "derived" ? this.derivedAnchor() : this.field("default_rate")
+
+    const adults = this.clamp(this.field("primary_occupancy") ?? 2, 1, this.maxAdultsValue)
+    if (mode === "manual") return this.field(`prices][${adults}`)
+    if (mode === "auto") return this.field("default_rate")
+
+    const standard = this.standardPricesValue[adults]
+    const value = this.field("derive_value")
+    if (standard === undefined || value === null) return null
+    return this.select("derive_mode") === "offset" ? Math.max(standard + value, 0) : Math.max(standard * (1 + value / 100), 0)
   }
 
   get currentMode() {
@@ -36,12 +62,14 @@ export default class extends Controller {
   renderPreview(mode) {
     if (!this.hasPreviewTarget) return
     if (mode !== "derived" && mode !== "auto") {
-      this.previewTarget.textContent = ""
+      this.resetPreviewClass()
+      this.previewTarget.replaceChildren()
       return
     }
 
     const anchor = mode === "auto" ? this.field("default_rate") : this.derivedAnchor()
     if (anchor === null || Number.isNaN(anchor)) {
+      this.resetPreviewClass()
       this.previewTarget.textContent = this.perPersonValue
         ? "Enter a rate to preview the ladder."
         : "Enter an adjustment to preview the nightly price."
@@ -52,6 +80,7 @@ export default class extends Controller {
     // would print the same figure max_adults times and imply an occupancy
     // matrix this plan does not have.
     if (!this.perPersonValue) {
+      this.resetPreviewClass()
       this.previewTarget.textContent = `${this.currencyValue} ${this.money(Math.max(anchor, 0))} per night`
       return
     }
@@ -66,10 +95,38 @@ export default class extends Controller {
       let price = anchor
       if (steps > 0) price = anchor + increase * steps
       if (steps < 0) price = anchor - decrease * Math.abs(steps)
-      rungs.push(`${adults}p ${this.money(Math.max(price, 0))}`)
+      rungs.push({ adults, price: Math.max(price, 0) })
     }
 
-    this.previewTarget.textContent = `${this.currencyValue} ${rungs.join(" · ")}`
+    this.renderRungs(rungs)
+  }
+
+  // Mirrors HotelPortal::RatePlansHelper#occupancy_price_ladder's guest-count
+  // tags (Room Inventory) instead of a plain "1p 200.00 · 2p 200.00" string.
+  renderRungs(rungs) {
+    if (!this.hasRungTemplateTarget) {
+      this.previewTarget.textContent = `${this.currencyValue} ${rungs.map((rung) => `${rung.adults}p ${this.money(rung.price)}`).join(" · ")}`
+      return
+    }
+
+    const nodes = rungs.map((rung) => {
+      const node = this.rungTemplateTarget.content.firstElementChild.cloneNode(true)
+      node.title = `${rung.adults} ${rung.adults === 1 ? "guest" : "guests"}: ${this.currencyValue} ${this.money(rung.price)}`
+      node.querySelector('[data-role="count"]').textContent = rung.adults
+      node.querySelector('[data-role="price"]').textContent = this.money(rung.price)
+      return node
+    })
+
+    const label = document.createElement("span")
+    label.className = "me-0.5 text-xs text-muted-foreground"
+    label.textContent = this.currencyValue
+
+    this.previewTarget.className = "inline-flex flex-wrap items-center gap-1.5"
+    this.previewTarget.replaceChildren(label, ...nodes)
+  }
+
+  resetPreviewClass() {
+    this.previewTarget.className = "text-sm text-muted-foreground"
   }
 
   derivedAnchor() {

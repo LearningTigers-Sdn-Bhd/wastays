@@ -6,14 +6,18 @@ module ChannelManagers
   # check-in, so newly-created guest profiles are marked incomplete rather than
   # leaving the booking disconnected.
   class InitializeBookingConnections
-    def self.call!(booking:, guest_details:)
-      new(booking:, guest_details:).call!
+    # previous_guest_name is the guest the OTA named on the revision before
+    # this one, which tells a real change of guest apart from a routine
+    # revision of a booking whose profile staff have since chosen.
+    def self.call!(booking:, guest_details:, previous_guest_name: nil)
+      new(booking:, guest_details:, previous_guest_name:).call!
     end
 
-    def initialize(booking:, guest_details:)
+    def initialize(booking:, guest_details:, previous_guest_name: nil)
       @booking = booking
       @hotel = booking.hotel
       @guest_details = guest_details.to_h.symbolize_keys
+      @previous_guest_name = previous_guest_name
     end
 
     def call!
@@ -37,25 +41,56 @@ module ChannelManagers
     def ensure_primary_guest!
       existing = @booking.booking_guests.find_by(role: "primary")
       if existing
+        follow_guest_change!(existing)
         BookingGuests::CapturePrimaryStay.call(booking_guest: existing)
         return existing
       end
 
-      guest = find_guest || create_guest!
+      guest = matcher.call || create_guest!
       booking_guest = @booking.booking_guests.create!(guest:, is_primary: true)
       BookingGuests::CapturePrimaryStay.call(booking_guest: booking_guest)
       booking_guest
     end
 
-    def find_guest
-      government_id = @guest_details[:government_id].to_s.downcase.strip.presence
-      return Guest.find_by(government_id:) if government_id
+    # A later revision may name a different guest. A profile this channel made
+    # for this booking alone, and nobody has completed since, simply takes the
+    # new name. Any other profile belongs to someone, so the booking moves to
+    # the right person's profile only when the OTA itself changed the guest
+    # (a profile staff chose survives routine revisions), only before arrival
+    # (after that the desk owns it), and only when the names share no word (a
+    # respelling stays put).
+    def follow_guest_change!(booking_guest)
+      guest = booking_guest.guest
+      name = @guest_details[:name].to_s.strip
+      return if guest.nil? || name.blank? || MatchChannelGuest.same_name?(guest.name, name)
 
-      email = @guest_details[:email].to_s.downcase.strip.presence
-      return Guest.find_by(email:) if email
+      if renamable?(guest)
+        guest.update!(name: name)
+      elsif ota_changed_guest?(name) && !arrived? && MatchChannelGuest.different_people?(guest.name, name)
+        booking_guest.update!(guest: matcher.call || create_guest!)
+      end
+    end
 
-      phone = @guest_details[:phone].to_s.strip.presence
-      Guest.find_by(phone:) if phone
+    def ota_changed_guest?(name)
+      @previous_guest_name.present? && !MatchChannelGuest.same_name?(@previous_guest_name, name)
+    end
+
+    def renamable?(guest)
+      guest.metadata.to_h["profile_source"] == "channel_manager" &&
+        guest.metadata.to_h["profile_incomplete"] &&
+        !guest.booking_guests.where.not(booking_id: @booking.id).exists?
+    end
+
+    # Arrived, or started online pre-check-in: either way the profile now holds
+    # what the guest themselves gave, so it is the desk's to change.
+    def arrived?
+      @booking.checked_in_at.present? ||
+        !%w[pending confirmed overbooked].include?(@booking.status) ||
+        %w[in_progress completed].include?(@booking.pre_checkin_status)
+    end
+
+    def matcher
+      @matcher ||= MatchChannelGuest.new(@guest_details)
     end
 
     def create_guest!
@@ -65,10 +100,14 @@ module ChannelManagers
         "profile_incomplete" => date_of_birth.blank?
       }
 
+      # The booker's email and phone stay on the booking. They only go on the
+      # profile when the booker is the guest staying.
+      own_contact = matcher.contact_belongs_to_guest?
+
       Guest.create!(
         name: @guest_details[:name],
-        email: @guest_details[:email],
-        phone: @guest_details[:phone],
+        email: (@guest_details[:email] if own_contact),
+        phone: (@guest_details[:phone] if own_contact),
         government_id: @guest_details[:government_id],
         home_address: @guest_details[:home_address] || @guest_details[:address],
         city: @guest_details[:city],

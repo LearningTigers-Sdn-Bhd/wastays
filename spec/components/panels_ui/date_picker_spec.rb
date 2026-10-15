@@ -16,26 +16,26 @@ RSpec.describe PanelsUI::DatePicker, type: :component do
     render_inline(described_class.new(form: form_for, attribute: :check_in))
 
     root = page.find(".panel-date-picker")
-    expect(root["data-controller"]).to include("panels-ui--date-picker")
-    expect(root["data-panels-ui--date-picker-mode-value"]).to eq("single")
+    expect(root["data-controller"]).to include("ui--date-picker")
+    expect(root["data-ui--date-picker-mode-value"]).to eq("single")
     expect(root["data-size"]).to eq("md")
 
     # Hidden field is the form source of truth; the visible field is a button trigger.
-    expect(page).to have_css("input#booking_check_in[type='hidden'][data-panels-ui--date-picker-target='input']", visible: :all)
-    expect(page).to have_css("button.panel-input.panel-date-picker__display[data-panels-ui--date-picker-target='trigger']")
+    expect(page).to have_css("input#booking_check_in[type='hidden'][data-ui--date-picker-target='input']", visible: :all)
+    expect(page).to have_css("button.panel-input.panel-date-picker__display[data-ui--date-picker-target='trigger']")
     expect(page).to have_css(".panel-date-picker__value[data-placeholder='Select a date']")
     # The nested Popover shell + a Cally single-date calendar.
     expect(page).to have_css(".panel-date-picker .popover-root")
-    expect(page).to have_css("calendar-date[data-panels-ui--date-picker-target='calendar'] calendar-month")
+    expect(page).to have_css("calendar-date[data-ui--date-picker-target='calendar'] calendar-month")
   end
 
   it "wires the popover outlet to the nested popover root" do
     render_inline(described_class.new(form: form_for, attribute: :check_in))
 
     root = page.find(".panel-date-picker")
-    selector = root["data-panels-ui--date-picker-panels-ui--popover-outlet"]
+    selector = root["data-ui--date-picker-ui--popover-outlet"]
     expect(selector).to eq(".booking_check_in-date-picker__popover")
-    expect(page).to have_css(".popover-root#{selector}[data-controller~='panels-ui--popover']")
+    expect(page).to have_css(".popover-root#{selector}[data-controller~='ui--popover']")
   end
 
   it "applies the requested size to the visible trigger" do
@@ -47,10 +47,10 @@ RSpec.describe PanelsUI::DatePicker, type: :component do
   it "renders a range calendar and range placeholder for a single-input range" do
     render_inline(described_class.new(form: form_for, attribute: :window, range: true))
 
-    expect(page.find(".panel-date-picker")["data-panels-ui--date-picker-mode-value"]).to eq("range")
+    expect(page.find(".panel-date-picker")["data-ui--date-picker-mode-value"]).to eq("range")
     expect(page).to have_css("input#booking_window[type='hidden']", visible: :all)
     expect(page).to have_css(".panel-date-picker__value[data-placeholder='Select a range']")
-    expect(page).to have_css("calendar-range[data-panels-ui--date-picker-target='calendar']")
+    expect(page).to have_css("calendar-range[data-ui--date-picker-target='calendar']")
   end
 
   it "renders an adjacent two-month range and themed dropdown caption controls" do
@@ -75,8 +75,8 @@ RSpec.describe PanelsUI::DatePicker, type: :component do
     ))
 
     root = page.find(".panel-date-picker")
-    expect(root["data-panels-ui--date-picker-months-value"]).to eq("2")
-    expect(root["data-panels-ui--date-picker-responsive-months-value"]).to eq("true")
+    expect(root["data-ui--date-picker-months-value"]).to eq("2")
+    expect(root["data-ui--date-picker-responsive-months-value"]).to eq("true")
     expect(page).to have_css("input[value='2026-07-01/2026-07-31']", visible: :all)
   end
 
@@ -97,10 +97,10 @@ RSpec.describe PanelsUI::DatePicker, type: :component do
 
     root = page.find(".panel-date-picker")
     # A linked range still runs each field in single mode.
-    expect(root["data-panels-ui--date-picker-mode-value"]).to eq("single")
-    expect(root["data-panels-ui--date-picker-linked-to-value"]).to eq("booking_check_out")
+    expect(root["data-ui--date-picker-mode-value"]).to eq("single")
+    expect(root["data-ui--date-picker-linked-to-value"]).to eq("booking_check_out")
     expect(page).to have_css("input#booking_check_in[type='hidden']", visible: :all)
-    expect(page).to have_css("calendar-date[data-panels-ui--date-picker-target='calendar']")
+    expect(page).to have_css("calendar-date[data-ui--date-picker-target='calendar']")
   end
 
   it "serializes Date/Time bounds to ISO-8601 and passes strings through" do
@@ -109,8 +109,8 @@ RSpec.describe PanelsUI::DatePicker, type: :component do
     ))
 
     root = page.find(".panel-date-picker")
-    expect(root["data-panels-ui--date-picker-min-value"]).to eq("2026-07-12")
-    expect(root["data-panels-ui--date-picker-max-value"]).to eq("2026-12-31")
+    expect(root["data-ui--date-picker-min-value"]).to eq("2026-07-12")
+    expect(root["data-ui--date-picker-max-value"]).to eq("2026-12-31")
   end
 
   it "seeds the hidden field with an initial value" do
@@ -123,8 +123,8 @@ RSpec.describe PanelsUI::DatePicker, type: :component do
     render_inline(described_class.new(form: form_for, attribute: :check_in))
 
     root = page.find(".panel-date-picker")
-    expect(root["data-panels-ui--date-picker-min-value"]).to be_nil
-    expect(root["data-panels-ui--date-picker-linked-to-value"]).to be_nil
+    expect(root["data-ui--date-picker-min-value"]).to be_nil
+    expect(root["data-ui--date-picker-linked-to-value"]).to be_nil
   end
 
   it "reflects disabled/readonly on the root and disables the trigger so it cannot open" do

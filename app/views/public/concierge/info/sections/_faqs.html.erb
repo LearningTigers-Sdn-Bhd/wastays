@@ -1,0 +1,48 @@
+<%# The questions, one group for each FAQ document staff wrote, and a help
+    card for the question that is not here. A long list gets a search box; it
+    matches the question and the answer, and hides a group with no match.
+
+    The help card sits beside the questions on the public page. The stay
+    page already has the stay card on the left, so there it goes under them. %>
+<% info = @info %>
+<% groups = info.faq_groups %>
+<% contact_path = info.stay? ? concierge_stay_contact_path(*stay_route_args) : concierge_contact_path(@hotel.unique_id, @hotel.public_id) %>
+<div class="guest-aside-layout" data-aside="<%= !info.stay? %>" data-side="end">
+  <div class="space-y-6" <%= tag.attributes(data: { controller: ("admin-sidebar-search" if info.faq_search?) }) %>>
+    <% if info.faq_search? %>
+      <div class="relative">
+        <label for="faq-search" class="sr-only">Search questions</label>
+        <%= app_icon "search", class: "pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground", aria: { hidden: "true" } %>
+        <input id="faq-search" type="search" autocomplete="off" placeholder="Search questions"
+               class="guest-input pl-11" data-size="md"
+               data-admin-sidebar-search-target="input" data-action="input->admin-sidebar-search#filter">
+      </div>
+    <% end %>
+
+    <% groups.each do |group| %>
+      <%= render GuestUI::Card.new(title: (group.title if groups.size > 1), padding: :tight,
+                                   data: { admin_sidebar_search_target: "section" }) do %>
+        <% group.questions.each do |question, answer| %>
+          <%= render GuestUI::Disclosure.new(title: question,
+                                             data: { admin_sidebar_search_target: "item", search_text: "#{question} #{answer}" }) do %>
+            <%= simple_format(answer) %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% if info.faq_search? %>
+      <p class="hidden text-sm text-muted-foreground" role="status" data-admin-sidebar-search-target="empty">
+        No question matches your search. Ask us instead.
+      </p>
+    <% end %>
+  </div>
+
+  <%= render GuestUI::Card.new(title: "Still have a question?", class: "guest-aside-layout__aside") do |card| %>
+    <% if @hotel.concierge_chat_available? %>
+      <% card.with_row(label: "Chat with us", hint: "Instant answers, any time", icon: "message-circle",
+                       href: concierge_chat_path(@hotel.unique_id, @hotel.public_id, return_to: request.fullpath)) %>
+    <% end %>
+    <% card.with_row(label: "Contact the property", hint: "Phone, WhatsApp or email", icon: "phone", href: contact_path) %>
+  <% end %>
+</div>

@@ -29,9 +29,9 @@ RSpec.describe PanelsUI::Dropzone, type: :component do
     )
 
     root = page.find(".panel-dropzone")
-    expect(root["data-controller"]).to eq("panels-ui--dropzone")
-    expect(root["data-panels-ui--dropzone-max-files-value"]).to eq("5")
-    expect(root["data-panels-ui--dropzone-max-size-value"]).to eq(2.megabytes.to_s)
+    expect(root["data-controller"]).to eq("ui--dropzone")
+    expect(root["data-ui--dropzone-max-files-value"]).to eq("5")
+    expect(root["data-ui--dropzone-max-size-value"]).to eq(2.megabytes.to_s)
     expect(root["aria-labelledby"]).to eq("photos-label")
 
     input = page.find("input#room_photos[type='file']", visible: :all)
@@ -40,7 +40,7 @@ RSpec.describe PanelsUI::Dropzone, type: :component do
     expect(input[:multiple]).to eq("multiple")
     expect(input["aria-describedby"]).to eq("photos-hint room_photos-dropzone-error")
     expect(page).to have_css("label.panel-dropzone__browse[for='room_photos']", text: "Browse")
-    expect(page).to have_css("template[data-panels-ui--dropzone-target='template']", visible: :all)
+    expect(page).to have_css("template[data-ui--dropzone-target='template']", visible: :all)
     expect(page.native.to_html).to include("panel-attachment")
     expect(page).to have_css("#room_photos-dropzone-error[role='alert'][aria-live='polite']", visible: :all)
   end
@@ -88,7 +88,7 @@ RSpec.describe PanelsUI::Dropzone, type: :component do
       )
     )
 
-    expect(page).to have_css(".panel-dropzone[data-panels-ui--dropzone-presentation-value='single_image']")
+    expect(page).to have_css(".panel-dropzone[data-ui--dropzone-presentation-value='single_image']")
     expect(page).to have_css("input#room_icon[type='file'][accept='image/png,image/jpeg,image/webp']", visible: :all)
     expect(page).to have_css("input#room_remove_icon[type='hidden'][name='room[remove_icon]'][value='0']", visible: :all)
     expect(page).to have_css(".panel-dropzone__single-image img[src='/hotel-icon.png'][alt='Seaside Hotel icon']")

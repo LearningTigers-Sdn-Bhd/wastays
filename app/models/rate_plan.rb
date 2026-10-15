@@ -8,8 +8,13 @@ class RatePlan < ApplicationRecord
   has_many :booking_rooms, dependent: :restrict_with_error
   has_many :rate_plan_age_bands, -> { order(:position, :min_age) }, dependent: :destroy
   has_one :channel_mapping, as: :mappable, dependent: :destroy
+  has_many :rate_plan_agency_rules, dependent: :destroy
+  has_many :rate_plan_stay_discounts, -> { order(:min_nights) }, dependent: :destroy, inverse_of: :rate_plan
+  has_many :agency_rule_accounts, through: :rate_plan_agency_rules, source: :hotel_corporate_account
 
   accepts_nested_attributes_for :rate_plan_age_bands, allow_destroy: true, reject_if: :all_blank
+  accepts_nested_attributes_for :rate_plan_stay_discounts, allow_destroy: true,
+    reject_if: ->(attributes) { attributes.slice("min_nights", "value").values.all?(&:blank?) }
 
   KINDS = %w[standard walk_in corporate ota custom].freeze
 
@@ -32,8 +37,33 @@ class RatePlan < ApplicationRecord
   # which desk sold it.
   ANCHORED_KINDS = %w[walk_in corporate].freeze
 
+  # Which travel agencies see this plan in the corporate portal. Agencies are
+  # named in rate_plan_agency_rules: excluded under "except", admitted under
+  # "only". Only kinds the corporate audience may be sold are ever offered.
+  TA_ACCESS = %w[hidden all except only].freeze
+  TA_ACCESS_LABELS = {
+    "hidden" => "Hidden from travel agents",
+    "all" => "All travel agents",
+    "except" => "All travel agents except…",
+    "only" => "Only selected travel agents"
+  }.freeze
+
+  # Which market of travel agent a plan is for. "all" offers it to any agent the
+  # access rule above admits; "local" or "international" offers it only to agents
+  # the hotel has marked that way, so a local agent never sees an international
+  # rate (and an agent with no market set sees only "all" plans).
+  TA_MARKETS = %w[all local international].freeze
+  TA_MARKET_LABELS = {
+    "all" => "Local and international agents",
+    "local" => "Local agents only",
+    "international" => "International agents only"
+  }.freeze
+
   validates :name, presence: true
+  validates :ta_market, inclusion: { in: TA_MARKETS }
   validates :kind, presence: true, inclusion: { in: KINDS }
+  validates :ta_access, inclusion: { in: TA_ACCESS }
+  validate :agency_accounts_fit_access
   validates :sell_mode, presence: true, inclusion: { in: %w[per_room per_person] }
   validates :currency, presence: true, inclusion: { in: ->(_) { CurrencyCatalog.codes } }
   validates :single_supplement, numericality: { greater_than_or_equal_to: 0 }
@@ -42,14 +72,43 @@ class RatePlan < ApplicationRecord
   validates :extra_pax_charge, numericality: { greater_than_or_equal_to: 0 }
   validates :channex_children_fee, :channex_infant_fee,
     numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :day_use_hours, numericality: { only_integer: true, in: 1..24 }, allow_nil: true
+  validate :day_use_hours_locked_once_booked
+  validate :day_use_needs_per_room_selling
 
   before_validation :normalize_currency
   before_validation :inherit_sell_mode_from_hotel
+  before_validation :normalize_channex_child_fees
 
+  scope :day_use, -> { where.not(day_use_hours: nil) }
+  scope :overnight, -> { where(day_use_hours: nil) }
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
-  scope :for_audience, ->(audience) { active.where(kind: RatePlan.kinds_for(audience)) }
+  scope :for_audience, lambda { |audience|
+    scope = active.where(kind: RatePlan.kinds_for(audience))
+    audience.to_sym == :public ? scope.where(hidden_from_public: false) : scope
+  }
 
+  # The plans one agency may book, as a relation so callers can keep chaining.
+  # "All except" is a list of agencies to leave out, so it only ever offers to
+  # an agency it can check against that list -- with none, only "all" answers.
+  scope :offered_to_agency, lambda { |relationship|
+    # Only plans for the agent's market -- or for every market -- however the
+    # access rule below admits them.
+    markets = [ "all", relationship&.market ].compact
+    in_market = where(ta_market: markets)
+    open_to_all = in_market.for_audience(:corporate).where(ta_access: "all")
+    next open_to_all if relationship.nil?
+
+    named = RatePlanAgencyRule.where(hotel_corporate_account_id: relationship.id)
+      .where(RatePlanAgencyRule.arel_table[:rate_plan_id].eq(arel_table[:id]))
+      .arel.exists
+    open_to_all
+      .or(in_market.for_audience(:corporate).where(ta_access: "except").where.not(named))
+      .or(in_market.for_audience(:corporate).where(ta_access: "only").where(named))
+  }
+
+  after_save :sync_agency_rules, if: -> { @agency_account_ids }
   after_commit :sync_with_channel_manager, on: [ :create, :update ]
   after_destroy_commit :delete_from_channel_manager, if: :synced_with_channel_manager?
 
@@ -74,8 +133,80 @@ class RatePlan < ApplicationRecord
     kind.in?(ANCHORED_KINDS)
   end
 
+  # A fixed-price block of hours on one date. Sold at the front desk only: the
+  # public site, travel agents and channels all sell nights.
+  def day_use?
+    day_use_hours.present?
+  end
+
   def bookable_by?(audience)
-    !archived? && kind.in?(self.class.kinds_for(audience))
+    return false if archived?
+    return false if day_use? && audience.to_sym != :staff
+    return false unless kind.in?(self.class.kinds_for(audience))
+    return false if audience.to_sym == :public && hidden_from_public?
+
+    true
+  end
+
+  # The agencies a TA access rule names, as the editor submits them. Written
+  # to rate_plan_agency_rules after save, and dropped when the access mode
+  # names no one.
+  def agency_account_ids
+    @agency_account_ids || rate_plan_agency_rules.map(&:hotel_corporate_account_id)
+  end
+
+  def agency_account_ids=(ids)
+    @agency_account_ids = Array(ids).compact_blank.map(&:to_i).uniq
+  end
+
+  # Plans made by the system keep their kind after a rename, so the name alone
+  # doesn't say who can book them. Standard and custom are self-evident.
+  KIND_LABELS = {
+    "walk_in" => "Walk-in",
+    "corporate" => "Corporate",
+    "ota" => "OTA"
+  }.freeze
+
+  KIND_HINTS = {
+    "walk_in" => "Walk-in plan: sold by front desk only.",
+    "corporate" => "Corporate plan: sold to corporate accounts and front desk.",
+    "ota" => "OTA plan: only sent to your channel manager."
+  }.freeze
+
+  def kind_label
+    KIND_LABELS[kind]
+  end
+
+  def kind_hint
+    KIND_HINTS[kind]
+  end
+
+  def ta_access_label
+    TA_ACCESS_LABELS.fetch(ta_access)
+  end
+
+  def ta_market_label = TA_MARKET_LABELS.fetch(ta_market)
+
+  # Whether this plan is meant for the agent's market (or for all of them).
+  def in_market_for?(relationship)
+    ta_market == "all" || (relationship&.market.present? && ta_market == relationship.market)
+  end
+
+  def agency_rules?
+    ta_access.in?(%w[except only])
+  end
+
+  # Mirrors .offered_to_agency for a plan already in hand.
+  def offered_to_agency?(relationship)
+    return false unless bookable_by?(:corporate)
+    return false unless in_market_for?(relationship)
+
+    case ta_access
+    when "all" then true
+    when "except" then relationship.present? && !agency_named?(relationship)
+    when "only" then agency_named?(relationship)
+    else false
+    end
   end
 
   def archived?
@@ -116,6 +247,50 @@ class RatePlan < ApplicationRecord
 
   private
 
+  # A block of hours has one fixed price for the room; a per-person plan prices
+  # each guest by the night, so the two cannot describe the same plan.
+  def day_use_needs_per_room_selling
+    return unless day_use? && sell_mode == "per_person"
+
+    errors.add(:day_use_hours, "is only available when the hotel sells per room")
+  end
+
+  def day_use_hours_locked_once_booked
+    return unless persisted? && day_use_hours_changed? && booking_rooms.exists?
+
+    errors.add(:day_use_hours, "cannot change once bookings use this plan")
+  end
+
+  def agency_accounts_fit_access
+    return if @agency_account_ids.nil?
+
+    if ta_access == "only" && @agency_account_ids.empty?
+      errors.add(:agency_account_ids, "must name at least one travel agent")
+    elsif agency_rules? && hotel && hotel.hotel_corporate_accounts.where(id: @agency_account_ids).count != @agency_account_ids.size
+      errors.add(:agency_account_ids, "must belong to this property")
+    end
+  end
+
+  def sync_agency_rules
+    wanted = agency_rules? ? @agency_account_ids : []
+    rate_plan_agency_rules.where.not(hotel_corporate_account_id: wanted).destroy_all
+    (wanted - rate_plan_agency_rules.pluck(:hotel_corporate_account_id)).each do |account_id|
+      rate_plan_agency_rules.create!(hotel_corporate_account_id: account_id)
+    end
+    rate_plan_agency_rules.reset
+    @agency_account_ids = nil
+  end
+
+  def agency_named?(relationship)
+    return false if relationship.blank?
+
+    if association(:rate_plan_agency_rules).loaded?
+      rate_plan_agency_rules.any? { |rule| rule.hotel_corporate_account_id == relationship.id }
+    else
+      rate_plan_agency_rules.exists?(hotel_corporate_account_id: relationship.id)
+    end
+  end
+
   def normalize_currency
     self.currency = CurrencyCatalog.normalize(currency)
   end
@@ -128,9 +303,18 @@ class RatePlan < ApplicationRecord
     self.sell_mode = hotel.sell_mode if hotel
   end
 
+  def normalize_channex_child_fees
+    if channex_children_fee.present? && channex_infant_fee.blank?
+      self.channex_infant_fee = 0.to_d
+    elsif channex_infant_fee.present? && channex_children_fee.blank?
+      self.channex_children_fee = 0.to_d
+    end
+  end
+
   def sync_with_channel_manager
     return if Thread.current[:skip_ari_sync]
-    return if hotel.preferred_channel_manager.blank?
+    return if day_use?
+    return unless hotel.channel_manager_enabled?
     room_ids = room_type_rate_plans.pluck(:room_type_id)
     return if room_ids.empty?
 
@@ -142,6 +326,6 @@ class RatePlan < ApplicationRecord
   end
 
   def synced_with_channel_manager?
-    hotel.preferred_channel_manager.present? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
+    hotel.channel_manager_enabled? && channel_mapping.present? && !channel_mapping.external_id.to_s.start_with?("pending")
   end
 end

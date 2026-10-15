@@ -4,7 +4,8 @@
 # entitlements when staff add a schedule slot -- the report always reads the
 # stored flags on HotelBoatSchedule, never these.
 class HotelBoatSetting < ApplicationRecord
-  MEALS = %i[breakfast lunch dinner].freeze
+  MEALS = %i[breakfast lunch hi_tea dinner].freeze
+  MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", hi_tea: "Hi-Tea", dinner: "Dinner" }.freeze
 
   # Service times are wall-clock labels, not instants -- see HotelBoatSchedule.
   self.time_zone_aware_types = [ :datetime ]
@@ -13,6 +14,12 @@ class HotelBoatSetting < ApplicationRecord
 
   validates :hotel_id, uniqueness: true
   validate :meals_in_service_order
+
+  # How a meal is written everywhere staff read it -- "Hi-Tea", which
+  # titleize would render as "Hi Tea".
+  def self.meal_label(meal)
+    MEAL_LABELS.fetch(meal.to_s.to_sym) { meal.to_s.titleize }
+  end
 
   # Which meals a boat at this time of day would catch, given the property's
   # service times. An arrival catches every meal it lands before; a departure
@@ -39,6 +46,6 @@ class HotelBoatSetting < ApplicationRecord
     times = MEALS.filter_map { |meal| public_send(:"#{meal}_time") }
     return if times.size < 2 || times.each_cons(2).all? { |a, b| minutes_since_midnight(a) < minutes_since_midnight(b) }
 
-    errors.add(:base, "Meal times must run breakfast, then lunch, then dinner")
+    errors.add(:base, "Meal times must run breakfast, then lunch, then hi-tea, then dinner")
   end
 end

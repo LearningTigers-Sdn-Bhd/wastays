@@ -1,0 +1,10 @@
+<%# locals: (booking:) %>
+<%# The travel agent or company a stay was booked under, named on the card. The source
+    icon beside the status only says "an agent"; the desk needs to know which. %>
+<% agency = booking.hotel_corporate_account %>
+<% if agency&.corporate_account.present? %>
+  <p class="mt-0.5 flex min-w-0 items-center gap-1 text-xs font-medium text-foreground" data-testid="card-agency" title="<%= agency.travel_agent? ? "Travel agent" : "Corporate account" %>: <%= agency.corporate_account.name %>">
+    <%= cached_icon "briefcase", class: "size-3 shrink-0 text-muted-foreground", aria: { hidden: true } %>
+    <span class="truncate"><%= agency.corporate_account.name %></span>
+  </p>
+<% end %>

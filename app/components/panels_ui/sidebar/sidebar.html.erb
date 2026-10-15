@@ -1,5 +1,6 @@
 <%
   head_markup = header if header?
+  footer_details_markup = footer_details if footer_details?
 
   search_box = lambda do |input_id|
     capture do
@@ -10,8 +11,8 @@
       <%= helpers.app_icon "search", class: "panel-sidebar__search-icon", aria: { hidden: "true" } %>
       <input id="<%= input_id %>" type="search" placeholder="<%= search_placeholder %>" autocomplete="off"
              class="panel-sidebar__search-input"
-             data-panels-ui--sidebar-search-target="input"
-             data-action="input->panels-ui--sidebar-search#filter">
+             data-ui--sidebar-search-target="input"
+             data-action="input->ui--sidebar-search#filter">
     </div>
   </div>
 <%
@@ -26,14 +27,14 @@
        data-locked="false"
        <%= "data-turbo-permanent" if permanent? %>
        data-controller="<%= desktop_controllers %>"
-       data-panels-ui--sidebar-key-value="<%= key %>"
-       data-panels-ui--sidebar-surface-value="desktop">
+       data-ui--sidebar-key-value="<%= key %>"
+       data-ui--sidebar-surface-value="desktop">
   <% if head_markup %><div class="panel-sidebar__header"><%= head_markup %></div><% end %>
   <div class="panel-sidebar__body">
     <% if searchable? %><%= search_box.call(desktop_search_id) %><% end %>
     <%= render_sidebar_partial(:navigation, surface: :desktop) %>
   </div>
-  <%= render_sidebar_partial(:footer, surface: :desktop) %>
+  <%= render_sidebar_partial(:footer, surface: :desktop, footer_details: footer_details_markup) %>
 </aside>
 
 <%= render PanelsUI::Sheet.new(
@@ -53,7 +54,7 @@
         <span class="panel-sidebar__brand-name"><%= brand_name %></span>
       </a>
       <button type="button" class="panel-sidebar__close"
-              data-action="panels-ui--sheet#close"
+              data-action="ui--sheet#close"
               aria-label="Close navigation">
         <%= helpers.app_icon "x", class: "panel-sidebar__icon" %>
       </button>
@@ -62,14 +63,14 @@
   <% sheet.with_body do %>
     <div class="flex min-h-0 flex-1 flex-col"
          data-controller="<%= mobile_controllers %>"
-         data-panels-ui--sidebar-key-value="<%= key %>"
-         data-panels-ui--sidebar-surface-value="mobile">
+         data-ui--sidebar-key-value="<%= key %>"
+         data-ui--sidebar-surface-value="mobile">
       <% if head_markup %><div class="panel-sidebar__header"><%= head_markup %></div><% end %>
       <div class="panel-sidebar__body">
         <% if searchable? %><%= search_box.call(mobile_search_id) %><% end %>
         <%= render_sidebar_partial(:navigation, surface: :mobile) %>
       </div>
-      <%= render_sidebar_partial(:footer, surface: :mobile) %>
+      <%= render_sidebar_partial(:footer, surface: :mobile, footer_details: footer_details_markup) %>
     </div>
   <% end %>
 <% end %>

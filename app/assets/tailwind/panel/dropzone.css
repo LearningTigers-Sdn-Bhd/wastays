@@ -37,11 +37,11 @@
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 32%, transparent);
   }
 
-  .panel-dropzone[data-panels-ui--dropzone-presentation-value="single_image"] {
+  .panel-dropzone[data-ui--dropzone-presentation-value="single_image"] {
     width: min(12rem, 100%);
   }
 
-  .panel-dropzone[data-panels-ui--dropzone-presentation-value="single_image"] .panel-dropzone__surface {
+  .panel-dropzone[data-ui--dropzone-presentation-value="single_image"] .panel-dropzone__surface {
     position: relative;
     aspect-ratio: 1;
     min-height: 0;

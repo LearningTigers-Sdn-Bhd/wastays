@@ -13,7 +13,7 @@ RSpec.describe PanelsUI::Collapsible, type: :component do
   it "wires the native trigger to its content" do
     render_collapsible
 
-    expect(page).to have_css("#booking-details.panel-collapsible[data-controller='panels-ui--collapsible'][data-state='closed']")
+    expect(page).to have_css("#booking-details.panel-collapsible[data-controller='ui--collapsible'][data-state='closed']")
     expect(page).to have_css("button#booking-details-trigger[type='button'][aria-expanded='false'][aria-controls='booking-details-content']", text: "Booking details")
     expect(page).to have_css("#booking-details-content.panel-collapsible__content[hidden][inert][data-state='closed']", visible: :all)
     expect(page).to have_link("Guest profile", visible: :all)
@@ -22,7 +22,7 @@ RSpec.describe PanelsUI::Collapsible, type: :component do
   it "renders an initially open disclosure" do
     render_collapsible(open: true)
 
-    expect(page).to have_css("#booking-details[data-panels-ui--collapsible-open-value='true'][data-state='open']")
+    expect(page).to have_css("#booking-details[data-ui--collapsible-open-value='true'][data-state='open']")
     expect(page).to have_css("#booking-details-trigger[aria-expanded='true'][data-state='open']")
     expect(page).to have_css("#booking-details-content:not([hidden]):not([inert])[data-state='open']")
   end
@@ -30,7 +30,7 @@ RSpec.describe PanelsUI::Collapsible, type: :component do
   it "renders a disabled trigger and state hooks" do
     render_collapsible(disabled: true)
 
-    expect(page).to have_css("#booking-details[data-disabled][data-panels-ui--collapsible-disabled-value='true']")
+    expect(page).to have_css("#booking-details[data-disabled][data-ui--collapsible-disabled-value='true']")
     expect(page).to have_css("#booking-details-trigger[disabled][data-disabled]")
     expect(page).to have_css("#booking-details-content[data-disabled]", visible: :all)
   end
@@ -45,7 +45,7 @@ RSpec.describe PanelsUI::Collapsible, type: :component do
     )
 
     expect(page).to have_css("#booking-details.mt-4[aria-label='Reservation information'][data-testid='details']")
-    expect(page.find("#booking-details")["data-controller"]).to eq("analytics panels-ui--collapsible")
+    expect(page.find("#booking-details")["data-controller"]).to eq("analytics ui--collapsible")
     expect(page).to have_css("#booking-details-trigger.px-3")
     expect(page).to have_css("#booking-details-content.text-sm", visible: :all)
   end

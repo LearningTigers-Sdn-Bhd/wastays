@@ -44,7 +44,7 @@ module PanelsUI
           has_title: @title.present? ? "true" : "false",
           has_icon: @show_icon ? "true" : "false",
           actions_layout: @actions_layout,
-          controller: (@dismissible ? "panels-ui--dismissible" : nil)
+          controller: (@dismissible ? "ui--dismissible" : nil)
         ).compact
       ).compact
     end

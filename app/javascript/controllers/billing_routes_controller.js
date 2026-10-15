@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { selectMenuFor, syncSelectMenu } from "controllers/panels_ui/select_menu_sync"
+import { selectMenuFor, syncSelectMenu } from "controllers/ui/select_menu_sync"
 
 export default class extends Controller {
   static targets = ["row", "children", "chevron", "party", "folio", "childChoice"]

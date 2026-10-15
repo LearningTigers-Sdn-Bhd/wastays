@@ -5,10 +5,14 @@ module HotelPortal
     class DailyRevenueAccounting
       ZERO_BUCKET = {
         accommodation: 0.to_d,
+        day_use: 0.to_d,
+        room_fees: 0.to_d,
         other_charges: 0.to_d,
         tax: 0.to_d,
         adjustments: 0.to_d
       }.freeze
+
+      ROOM_FEE_CATEGORIES = %w[no_show_charge early_departure_charge late_checkout_charge cancellation_charge].freeze
 
       def initialize(transactions)
         @transactions = transactions
@@ -20,8 +24,9 @@ module HotelPortal
         case transaction.transaction_type
         when "charge"
           key = case transaction.category
-          when "accommodation" then :accommodation
+          when "accommodation" then day_use_booking?(transaction) ? :day_use : :accommodation
           when "tax" then :tax
+          when *ROOM_FEE_CATEGORIES then :room_fees
           else :other_charges
           end
           { key => amount }
@@ -30,6 +35,37 @@ module HotelPortal
         else
           {}
         end
+      end
+
+      # Room revenue from a booking on a day-use rate plan is reported on its
+      # own line, so overnight Accommodation stays an overnight figure.
+      # DailyRevenueReport selects `booking_day_use` onto each transaction.
+      def day_use_booking?(transaction)
+        transaction.respond_to?(:booking_day_use) && transaction.booking_day_use == true
+      end
+
+      def tax_charge?(transaction)
+        transaction.transaction_type == "charge" && transaction.category == "tax"
+      end
+
+      def self.extra_charge?(transaction)
+        transaction.transaction_type == "charge" && !(%w[accommodation tax] + ROOM_FEE_CATEGORIES).include?(transaction.category)
+      end
+
+      def extra_charge?(transaction) = self.class.extra_charge?(transaction)
+
+      def tax_name_for(transaction)
+        transaction.transaction_code_name_snapshot.presence ||
+          transaction.metadata.to_h.dig("tax_line", "name").presence || "Tax"
+      end
+
+      def item_name_for(transaction)
+        transaction.transaction_code_name_snapshot.presence || transaction.category.humanize
+      end
+
+      # A tax line keeps the id of its charge in metadata, even when routing moved it to another folio.
+      def parent_id_for(transaction)
+        transaction.parent_transaction_id || transaction.metadata.to_h["parent_folio_transaction_id"]
       end
 
       def totals
@@ -43,7 +79,7 @@ module HotelPortal
       end
 
       def with_derived_fields(bucket)
-        total_charges = bucket.values_at(:accommodation, :other_charges, :tax).sum
+        total_charges = bucket.values_at(:accommodation, :day_use, :room_fees, :other_charges, :tax).sum
 
         bucket.merge(
           total_charges: total_charges,

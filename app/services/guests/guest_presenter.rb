@@ -52,7 +52,7 @@ module Guests
     end
 
     def phone
-      safe_attr(:phone)
+      ::Guest.displayable_phone(safe_attr(:phone))
     end
 
     def government_id

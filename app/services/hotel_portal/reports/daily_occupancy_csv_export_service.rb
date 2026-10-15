@@ -10,7 +10,7 @@ module HotelPortal
 
       def generate
         @csv.generate do |csv|
-          csv << [ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)", "Tax", "Total Revenue" ]
+          csv << [ "Date", "Rooms Sold", "Rooms Available", "Occupancy %", "Room Revenue", "Average Daily Rate (ADR)", "Revenue per Available Room (RevPAR)", "Day Use Sold", "Day Use Revenue", "Tax", "Total Revenue" ]
 
           @report.rows.each do |row|
             csv << [
@@ -21,6 +21,8 @@ module HotelPortal
               @csv.money(row[:room_revenue]),
               @csv.money(row[:adr]),
               @csv.money(row[:revpar]),
+              row[:day_use_sold],
+              @csv.money(row[:day_use_revenue]),
               @csv.money(row[:tax_amount]),
               @csv.money(row[:total_revenue])
             ]
@@ -34,6 +36,8 @@ module HotelPortal
             @csv.money(@report.totals[:room_revenue]),
             @csv.money(@report.totals[:adr]),
             @csv.money(@report.totals[:revpar]),
+            @report.totals[:day_use_sold],
+            @csv.money(@report.totals[:day_use_revenue]),
             @csv.money(@report.totals[:tax_amount]),
             @csv.money(@report.totals[:total_revenue])
           ]

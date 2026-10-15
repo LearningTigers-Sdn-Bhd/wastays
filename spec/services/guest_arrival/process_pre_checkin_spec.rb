@@ -103,7 +103,7 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
     expect(booking.reload.primary_guest.date_of_birth).to eq(Date.new(1994, 8, 21))
   end
 
-  it "fails cleanly when a passport guest submits without date of birth" do
+  it "completes pre-checkin when a passport guest submits without date of birth" do
     params_without_dob = params.merge(
       "guest_country" => "Singapore",
       "guest_document_type" => "passport",
@@ -112,7 +112,9 @@ RSpec.describe GuestArrival::ProcessPreCheckin do
 
     result = described_class.new(booking: booking, pre_checkin: pre_checkin, params: params_without_dob).call
 
-    expect(result.success?).to be(false)
-    expect(result.message).to include("Date of birth")
+    expect(result.success?).to be(true)
+    expect(pre_checkin.reload.status).to eq("completed")
+    expect(booking.reload.primary_guest.date_of_birth).to be_nil
+    expect(booking.primary_booking_guest.date_of_birth_snapshot).to be_nil
   end
 end

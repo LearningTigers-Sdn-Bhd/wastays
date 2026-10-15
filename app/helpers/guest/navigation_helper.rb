@@ -1,83 +1,34 @@
 # frozen_string_literal: true
 
 module Guest::NavigationHelper
-  def guest_sidebar_sections
-    return @_guest_sidebar_sections if defined?(@_guest_sidebar_sections)
-
-    @_guest_sidebar_sections = [
-      PanelsUI::Navigation::Section.new(
-        label: "My Account",
-        items: [
-          PanelsUI::Navigation::Item.new(
-            label: "Dashboard",
-            path: guest_dashboard_path,
-            search_text: "Dashboard Home Overview",
-            active: controller_name == "dashboard",
-            icon: "layout-dashboard"
-          ),
-          PanelsUI::Navigation::Item.new(
-            label: "My Bookings",
-            path: guest_bookings_path,
-            search_text: "My Bookings Stays Reservations History",
-            active: controller_name == "bookings",
-            icon: "calendar-days"
-          ),
-          PanelsUI::Navigation::Item.new(
-            label: "Refunds",
-            path: guest_refund_requests_path,
-            search_text: "Refund Requests Cancellations",
-            active: controller_name == "refund_requests",
-            icon: "file-text"
-          )
-        ]
-      )
+  def guest_nav_items
+    @_guest_nav_items ||= [
+      GuestUI::NavItem.new(label: "Home", path: guest_dashboard_path, icon: "house",
+                           active: controller_name == "dashboard"),
+      GuestUI::NavItem.new(label: "Bookings", path: guest_bookings_path, icon: "calendar-days",
+                           active: controller_name == "bookings"),
+      GuestUI::NavItem.new(label: "Refunds", path: guest_refund_requests_path, icon: "receipt",
+                           active: controller_name == "refund_requests")
     ]
   end
 
-
-  def guest_breadcrumb_trail
-    return @_guest_breadcrumb_trail if defined?(@_guest_breadcrumb_trail)
-
-    guest_sidebar_sections.each do |section|
-      section.items.each do |item|
-        next unless item.active
-
-        siblings = section.items.map { |sibling| { label: sibling.label, path: sibling.path } }
-        return @_guest_breadcrumb_trail = {
-          section: section.label,
-          menu: item.label,
-          path: item.path,
-          siblings: siblings
-        }
-      end
-    end
-
-    @_guest_breadcrumb_trail = nil
-  end
-
+  # The trail from the active destination down to this page: the destination
+  # itself, then what the controller appended with `append_breadcrumb`. The
+  # portal no longer draws it as a breadcrumb. The Navbar takes its last step
+  # as the page title and the step before it as the way back.
   def guest_breadcrumb_parts
     return breadcrumb_override if respond_to?(:breadcrumbs_overridden?) && breadcrumbs_overridden?
 
+    active = guest_nav_items.find(&:active)
     appends = respond_to?(:breadcrumb_appends) ? breadcrumb_appends : []
-    guest_default_breadcrumb_parts + appends
+    [ (active && { label: active.label, path: active.path }), *appends ].compact
   end
 
-  def render_guest_breadcrumbs
-    parts = guest_breadcrumb_parts
-    return if parts.blank?
-
-    render PanelsUI::Breadcrumb.new(id: "guest-breadcrumb", parts:)
+  def guest_page_title
+    guest_breadcrumb_parts.last&.dig(:label)
   end
 
-  private
-
-  def guest_default_breadcrumb_parts
-    trail = guest_breadcrumb_trail
-    return [] unless trail
-
-    [
-      { type: :section, label: trail[:section] },
-      { type: :menu, label: trail[:menu], path: trail[:path], siblings: trail[:siblings] }
-    ]
+  def guest_back_path
+    guest_breadcrumb_parts[0...-1].reverse.find { |part| part[:path].present? }&.dig(:path)
   end
 end

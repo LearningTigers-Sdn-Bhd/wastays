@@ -3,8 +3,8 @@
 require "rails_helper"
 
 RSpec.describe Rooms::Rename do
-  let(:hotel) { create(:hotel) }
-  let!(:room_type) do
+  let_it_be(:hotel) { create(:hotel, :without_financial_defaults) }
+  let_it_be(:room_type) do
     create(:room_type, hotel:, room_number_mode: "custom", quantity: 2, room_numbers: %w[101 102])
   end
   let(:room) { hotel.rooms.find_by!(number: "101") }

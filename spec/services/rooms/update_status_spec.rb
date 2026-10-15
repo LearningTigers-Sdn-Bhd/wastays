@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Rooms::UpdateStatus do
-  let(:hotel) { create(:hotel) }
-  let(:user) { create(:user) }
-  let(:room_type) { create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ]) }
+  let_it_be(:hotel) { create(:hotel, :without_financial_defaults) }
+  let_it_be(:user) { create(:user) }
+  let_it_be(:room_type) { create(:room_type, hotel: hotel, quantity: 1, room_numbers: [ "101" ]) }
   let(:room_status) { create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty", priority: false, dnd: false) }
 
   context "updating priority and notes" do

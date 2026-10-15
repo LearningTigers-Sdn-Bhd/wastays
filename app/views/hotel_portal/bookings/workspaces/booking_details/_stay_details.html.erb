@@ -9,6 +9,20 @@
 
   <%= render "hotel_portal/bookings/workspaces/booking_details/references_table", presenter: workspace_presenter %>
 
+  <% if booking.channel_notes.present? %>
+    <div data-testid="channel-notes">
+      <div class="flex items-center gap-1.5">
+        <h2 class="text-base font-semibold text-foreground">OTA notes</h2>
+        <%= render PanelsUI::Tooltip.new(text: "From the OTA / channel manager. Updated automatically whenever the booking changes there, so edit Special requests instead.", placement: :top_start) do %>
+          <button type="button" class="cursor-help rounded-sm text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" aria-label="About OTA notes: from the OTA / channel manager, updated automatically">
+            <%= cached_icon "info", class: "size-3.5", aria: { hidden: true } %>
+          </button>
+        <% end %>
+      </div>
+      <p class="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground"><%= booking.channel_notes %></p>
+    </div>
+  <% end %>
+
   <% if booking.special_requests.present? %>
     <div>
       <h2 class="text-base font-semibold text-foreground">Special requests</h2>

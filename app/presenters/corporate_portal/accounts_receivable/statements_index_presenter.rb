@@ -39,7 +39,7 @@ module CorporatePortal
           .includes(
             :ar_invoices,
             :hotel,
-            ar_payments: { ar_payment_allocations: :reversal }
+            ar_payments: [ :void, { ar_payment_allocations: :reversal } ]
           )
           .joins(:hotel)
           .order(Arel.sql("LOWER(hotels.name) ASC"), :id)
@@ -78,14 +78,14 @@ module CorporatePortal
         end
 
         def last_activity
-          dates = relationship.ar_invoices.reject(&:void?).map(&:issued_on) + relationship.ar_payments.map(&:received_at)
+          dates = relationship.ar_invoices.reject(&:void?).map(&:issued_on) + relationship.ar_payments.reject(&:voided?).map(&:received_at)
           dates.compact.max&.strftime("%d %b %Y") || "No activity"
         end
 
         def balance_labels
           grouped = Hash.new(0.to_d)
           relationship.ar_invoices.reject(&:void?).each { |invoice| grouped[invoice.currency] += invoice.amount.to_d }
-          relationship.ar_payments.each { |payment| grouped[payment.currency] -= payment.amount.to_d }
+          relationship.ar_payments.reject(&:voided?).each { |payment| grouped[payment.currency] -= payment.amount.to_d }
           grouped[relationship.credit_currency] ||= 0.to_d
           grouped.sort.map { |currency, amount| "#{currency} #{format('%.2f', amount)}" }
         end

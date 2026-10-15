@@ -149,6 +149,16 @@
       <% end %>
     </div>
 
+    <div class="mt-4">
+      <%= render PanelsUI::Checkbox.new(
+            form: f,
+            attribute: :guest_registration_card_show_pricing,
+            label: "Show pricing on registration card",
+            description: "Show the full payment section on draft and signed cards. Applies to new downloads and emails too.",
+            variant: :card,
+            size: :sm) %>
+    </div>
+
     <div class="mt-6">
       <%# One fixed policy per property, so the front desk never has to pick or
           type it per booking — every card and every "sign" link uses it as-is. %>

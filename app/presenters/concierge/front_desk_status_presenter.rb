@@ -61,6 +61,17 @@ module Concierge
       after_hours_message || closed_handover_message
     end
 
+    def support_message(reason: nil)
+      prefix = reason.to_s == "emergency" ? emergency_message : nil
+      handoff = if !render? || open?
+        "I have asked a team member to join. You can continue chatting while you wait."
+      else
+        closed_support_message
+      end
+
+      [ prefix, handoff ].compact_blank.join(" ")
+    end
+
     DEFAULT_HANDOVER = "You asked to speak to a team member. Someone will join shortly."
 
     private
@@ -78,6 +89,24 @@ module Concierge
       parts << "Call the duty manager on #{duty_manager_phone} for urgent help." if duty_manager_phone
       parts << "We answer other messages after #{format_minute(opens_minute)}." if opens_minute
       parts.join(" ")
+    end
+
+    def closed_support_message
+      parts = [ "The front desk is closed." ]
+      parts << after_hours_message if after_hours_message
+      parts << "Call the duty manager on #{duty_manager_phone} for urgent help." if duty_manager_phone
+      parts << "The team will answer other messages after #{format_minute(opens_minute)}." if opens_minute
+      parts.join(" ")
+    end
+
+    def emergency_message
+      parts = []
+      parts << contact&.emergency_instructions.to_s.squish if contact&.emergency_instructions.present?
+      parts << "Call #{contact.emergency_phone}." if contact&.emergency_phone.present?
+      if contact&.emergency_services_number.present?
+        parts << "Local emergency services: #{contact.emergency_services_number}."
+      end
+      parts.presence&.join(" ") || "If anyone is in immediate danger, call local emergency services now."
     end
 
     def crosses_midnight? = closes_minute <= opens_minute

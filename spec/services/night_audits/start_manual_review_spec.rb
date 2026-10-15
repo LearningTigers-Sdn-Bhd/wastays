@@ -84,4 +84,90 @@ RSpec.describe NightAudits::StartManualReview do
     expect(unauthorized).not_to be_success
     expect(hotel.night_audits).to be_empty
   end
+
+  describe "refreshing a blocked audit" do
+    let!(:audit) { create(:night_audit, hotel:, business_date:, status: "blocked", trigger_mode: "scheduled", performed_by_user: nil) }
+
+    before do
+      hotel.current_business_date_record.update!(status: "audit_blocked", blockers_snapshot: { "stale" => [] })
+      audit.update!(blocked_details: { "detection_failures" => [ { "reason" => "Old failure" } ] })
+    end
+
+    it "detects overdue stays and refreshes post-close snapshots without changing audit ownership" do
+      booking = create(:booking, hotel:, status: "checked_in", check_in: business_date - 1.day, check_out: business_date, checked_in_at: 1.day.ago)
+      create(:booking_room, booking:, nightly_rate_snapshot: { business_date.iso8601 => { "price" => "100" } })
+      create(:booking_folio, booking:, hotel:)
+      expect(NightAudits::Evaluate).to receive(:new).with(hotel:, business_date:, phase: :post_close).twice.and_call_original
+
+      result = described_class.call(hotel:, business_date:, actor:)
+
+      expect(result).to be_success
+      expect(booking.reload.status).to eq("due_out_detected")
+      expect(audit.reload).to have_attributes(status: "blocked", trigger_mode: "scheduled", performed_by_user_id: nil)
+      expect(audit.blocked_details).not_to have_key("detection_failures")
+      expect(audit.summary["manual_review"]).to include("started_by_user_id" => actor.id, "due_outs_detected_count" => 1)
+      expect(hotel.current_business_date_record).to have_attributes(status: "audit_blocked", blockers_snapshot: audit.blocked_details)
+
+      repeated = described_class.call(hotel:, business_date:, actor:)
+      expect(repeated).to be_success
+      expect(repeated.detected_count).to eq(0)
+      expect(audit.night_audit_logs.where(action_type: "item_detected").count).to eq(1)
+    end
+
+    it "replaces old detection failures and stores the new business-date snapshot" do
+      item = { "booking_id" => 42, "reason" => "New failure" }
+      allow(NightAudits::DetectDueOuts).to receive(:call).and_return(
+        NightAudits::DetectDueOuts::Result.new(detected: [], skipped: [], failed: [ item ])
+      )
+
+      result = described_class.call(hotel:, business_date:, actor:)
+
+      expect(result).to be_success
+      expect(audit.reload.blocked_details["detection_failures"]).to eq([ item ])
+      expect(hotel.current_business_date_record.blockers_snapshot).to eq(audit.blocked_details)
+    end
+
+    it "retains missing nightly charges and warnings in the refreshed snapshot" do
+      evaluation = {
+        blocked_details: { "missing_nightly_charges" => [ { "booking_id" => 42 } ] },
+        exceptions: { "open_operational_requests" => [ { "booking_id" => 43 } ] },
+        summary: { "checked_in_count" => 2 }
+      }
+      allow(NightAudits::Evaluate).to receive(:new).with(hotel:, business_date:, phase: :post_close)
+        .and_return(instance_double(NightAudits::Evaluate, call: evaluation))
+
+      result = described_class.call(hotel:, business_date:, actor:)
+
+      expect(result).to be_success
+      expect(audit.reload.blocked_details).to eq(evaluation[:blocked_details])
+      expect(audit.exceptions).to eq(evaluation[:exceptions])
+      expect(audit.summary).to include(evaluation[:summary])
+      expect(hotel.current_business_date_record.blockers_snapshot).to eq(evaluation[:blocked_details])
+    end
+
+    it "rejects unauthorized and early refreshes without detection" do
+      expect(NightAudits::DetectDueOuts).not_to receive(:call)
+      allow(actor).to receive(:has_permission?).with("manage_night_audit", hotel:).and_return(false)
+      expect(described_class.call(hotel:, business_date:, actor:)).not_to be_success
+      allow(actor).to receive(:has_permission?).with("manage_night_audit", hotel:).and_return(true)
+      allow(hotel).to receive(:can_audit_date?).with(business_date).and_return(false)
+      expect(described_class.call(hotel:, business_date:, actor:)).not_to be_success
+    end
+
+    %w[pending running completed failed].each do |status|
+      it "rejects an audit that is #{status}" do
+        audit.update!(status:)
+        expect(NightAudits::DetectDueOuts).not_to receive(:call)
+        expect(described_class.call(hotel:, business_date:, actor:)).not_to be_success
+        expect(audit.reload.status).to eq(status)
+      end
+    end
+
+    it "rejects a different business date" do
+      allow(hotel).to receive(:can_audit_date?).and_return(true)
+      expect(NightAudits::DetectDueOuts).not_to receive(:call)
+      expect(described_class.call(hotel:, business_date: business_date + 1.day, actor:)).not_to be_success
+      expect(audit.reload).to be_blocked
+    end
+  end
 end

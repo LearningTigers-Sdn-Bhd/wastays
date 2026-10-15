@@ -62,6 +62,63 @@ RSpec.describe "CorporatePortal::Dashboard", type: :request do
     expect(response.body).to include("MYR 125.00")
   end
 
+  # An overdue invoice is chased; an unpaid booking loses the rooms. The two
+  # debts are stated separately, so the panel has its own examples.
+  describe "bookings awaiting payment" do
+    let(:relationship) do
+      create(:hotel_corporate_account, corporate_account: user.account, account_type: "travel_agent", credit_currency: "MYR")
+    end
+
+    def held_booking(overrides = {})
+      create(:booking, {
+        hotel: relationship.hotel,
+        hotel_corporate_account: relationship,
+        status: "confirmed",
+        payment_status: "pending",
+        payment_due_at: 20.hours.from_now,
+        currency: "MYR",
+        total_amount: 400
+      }.merge(overrides))
+    end
+
+    it "lists what is owed, by when, and where to pay it" do
+      booking = held_booking
+
+      get corporate_dashboard_path
+
+      expect(response.body).to include("Bookings awaiting payment")
+      expect(response.body).to include(CGI.escapeHTML(booking.guest_name))
+      expect(response.body).to include("MYR 400.00")
+      expect(response.body).to include("Pay now")
+    end
+
+    it "calls out the ones whose deadline has already gone" do
+      held_booking(payment_due_at: 1.hour.ago)
+
+      get corporate_dashboard_path
+
+      expect(response.body).to include("1 overdue")
+    end
+
+    it "says a slip is under review rather than asking for payment again" do
+      booking = held_booking
+      create(:ar_payment_submission, hotel: relationship.hotel, hotel_corporate_account: relationship,
+                                     booking: booking, status: "pending")
+
+      get corporate_dashboard_path
+
+      expect(response.body).to include("1 under review")
+    end
+
+    it "shows nothing at all when nothing is owed on a booking" do
+      held_booking(payment_due_at: nil)
+
+      get corporate_dashboard_path
+
+      expect(response.body).not_to include("Bookings awaiting payment")
+    end
+  end
+
   it "rejects hotel users from the corporate portal" do
     hotel = create(:hotel)
     hotel_user = create(:user, account: hotel.account)

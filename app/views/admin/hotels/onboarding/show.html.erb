@@ -100,7 +100,7 @@
     <% end %>
     <% sheet.with_footer do %>
       <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost,
-                                      data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+                                      data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
       <%= render PanelsUI::Button.new(as: :button, type: :submit, form: "edit-onboarding-period-form",
                                       data: { turbo_submits_with: "Saving…" }) do %>Save period<% end %>
     <% end %>
@@ -128,7 +128,7 @@
         <% end %>
       <% end %>
       <% sheet.with_footer do %>
-        <button type="button" class="panel-button" data-variant="ghost" data-size="md" data-action="panels-ui--sheet#close">Cancel</button>
+        <button type="button" class="panel-button" data-variant="ghost" data-size="md" data-action="ui--sheet#close">Cancel</button>
         <button type="submit" form="request-onboarding-changes-form" class="panel-button" data-variant="primary" data-size="md">Request changes</button>
       <% end %>
     <% end %>

@@ -51,7 +51,7 @@
         </div>
       </div>
 
-      <div class="card p-6 md:p-8" data-controller="scanner guest-dob guest-identity">
+      <div class="card p-6 md:p-8" data-controller="guest-dob guest-identity">
         <% if @presenter.completed? %>
           <div class="rounded-2xl border border-green-200 bg-green-50 p-6">
             <h2 class="text-xl font-black text-foreground">Pre check-in completed</h2>
@@ -114,10 +114,12 @@
 
               <div class="grid gap-6 md:grid-cols-2 mt-4 transition-all duration-300 transform <%= @presenter.upload_section_class %>" data-pre-checkin-document-target="uploadSection">
                 <div data-pre-checkin-document-target="frontContainer" class="transition-all duration-300 transform <%= @presenter.front_container_class %>">
-                  <%= render "shared/id_scanner", f: f, field: :id_front, side: :front, label: @presenter.front_scanner_label, height_class: @presenter.front_scanner_height_class %>
+                  <%= render GuestUI::ImageUpload.new(form: f, attribute: :id_front, label: @presenter.front_scanner_label,
+                                                      preview_url: attachment_preview_url(f, :id_front)) %>
                 </div>
                 <div data-pre-checkin-document-target="backContainer" class="transition-all duration-300 transform <%= @presenter.back_container_class %>">
-                  <%= render "shared/id_scanner", f: f, field: :id_back, side: :back, label: "Back ID Card" %>
+                  <%= render GuestUI::ImageUpload.new(form: f, attribute: :id_back, label: "Back ID Card",
+                                                      preview_url: attachment_preview_url(f, :id_back)) %>
                 </div>
               </div>
             </section>
@@ -201,24 +203,7 @@
                 <p class="mt-1 text-xs text-muted-foreground">Please provide your signature below to confirm your check-in details.</p>
               </div>
 
-              <div data-controller="signature" class="relative space-y-2">
-                <div class="rounded-xl border border-border bg-white p-2">
-                  <canvas data-signature-target="canvas" class="w-full h-40 touch-none"></canvas>
-                </div>
-                <div class="flex justify-end">
-                  <button type="button" data-action="click->signature#clear" class="text-xs font-bold uppercase tracking-widest text-primary hover:underline">
-                    Clear Signature
-                  </button>
-                </div>
-                <%= f.text_field :signature, 
-                                  data: { signature_target: "input" }, 
-                                  required: true, 
-                                  oninvalid: "this.setCustomValidity('Please provide your signature')",
-                                  oninput: "this.setCustomValidity('')",
-                                  class: "absolute bottom-0 left-1/2 -z-10 h-px w-px opacity-0 pointer-events-none", 
-                                  tabindex: "-1", 
-                                  aria: { hidden: true } %>
-              </div>
+              <%= render GuestUI::SignaturePad.new(form: f, attribute: :signature, label: "Your signature", required: true) %>
             </section>
 
             <div class="rounded-xl border border-border bg-muted p-4 mt-8">
@@ -235,7 +220,6 @@
           <% end %>
         <% end %>
 
-        <%= render "shared/scanner_modal" %>
       </div>
     </div>
   </div>

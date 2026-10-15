@@ -11,7 +11,7 @@
                   class: "inline-flex",
                   data: {
                     controller: "tax-registry-status",
-                    action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish panels-ui:confirm-settled->tax-registry-status#settled",
+                    action: "turbo:submit-start->tax-registry-status#start turbo:submit-end->tax-registry-status#finish ui:confirm-settled->tax-registry-status#settled",
                     turbo_frame: "_top",
                     turbo_confirm: (row.active ? "Revoke access for #{row.name}?" : nil),
                     turbo_confirm_title: (row.active ? "Revoke access?" : nil),

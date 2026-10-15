@@ -40,6 +40,14 @@ RSpec.describe ChannelManagers::ChannexRatePlanCapability do
     expect(described_class.call(rate_plan:, room_type:)).to be_flattened
   end
 
+  it "marks age-banded pricing as flattened even when channel fees are unconfigured (nil)" do
+    add_occupancies(1, 2, 3)
+    create(:rate_plan_age_band, rate_plan:, min_age: 0, max_age: 17)
+    rate_plan.update_columns(channex_children_fee: nil, channex_infant_fee: nil)
+
+    expect(described_class.call(rate_plan:, room_type:)).to be_flattened
+  end
+
   it "supports per-room plans without an occupancy ladder" do
     per_room_hotel = create(:hotel)
     per_room_type = create(:room_type, hotel: per_room_hotel)

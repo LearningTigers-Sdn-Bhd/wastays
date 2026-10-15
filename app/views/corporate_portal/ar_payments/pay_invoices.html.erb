@@ -66,13 +66,14 @@
         </section>
 
         <div class="overflow-x-auto border-t border-border">
-          <table class="w-full min-w-[850px] text-left text-sm divide-y divide-border">
+          <table class="w-full min-w-[1000px] text-left text-sm divide-y divide-border">
             <thead class="bg-muted/50">
               <tr>
                 <th scope="col" class="w-16 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   <input type="checkbox" checked data-pay-invoices-selection-target="selectAll" data-action="change->pay-invoices-selection#toggleAll" class="size-4 rounded border-border-interactive text-foreground focus:ring-ring focus:ring-offset-2 cursor-pointer" aria-label="Select all invoices" />
                 </th>
                 <th scope="col" class="w-32 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Invoice</th>
+                <th scope="col" class="w-48 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Guest</th>
                 <th scope="col" class="w-48 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Booking Reference</th>
                 <th scope="col" class="w-36 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Due Date</th>
                 <th scope="col" class="w-48 px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Outstanding Balance</th>
@@ -87,7 +88,8 @@
                       class: "size-4 rounded border-border-interactive text-foreground focus:ring-ring focus:ring-offset-2 cursor-pointer" %>
                   </td>
                   <td class="px-6 py-3.5 font-bold text-foreground"><%= invoice.formatted_invoice_number %></td>
-                  <td class="px-6 py-3.5 text-sm font-semibold text-foreground"><%= invoice.booking.confirmation_token %></td>
+                  <td class="px-6 py-3.5 text-sm font-bold text-foreground break-words"><%= invoice.booking.guest_name %></td>
+                  <td class="px-6 py-3.5 text-xs font-medium text-muted-foreground"><%= invoice.booking.confirmation_token %></td>
                   <td class="px-6 py-3.5 text-sm text-muted-foreground"><%= invoice.due_on.strftime("%d %b %Y") %></td>
                   <td class="px-6 py-3.5 text-right text-sm font-bold tabular-nums text-foreground"><%= money.call(invoice.outstanding_amount) %></td>
                 </tr>

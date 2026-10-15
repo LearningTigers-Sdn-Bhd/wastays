@@ -148,8 +148,8 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Timeline events", visible: :all)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "Departure", visible: :all)
     expect(page).to have_no_css("#stay-view-status-guide-panel", text: "No-show detected", visible: :all)
-    expect(page).to have_css("div[data-slot='stay-view-status-swatch']", count: 17)
-    expect(page).to have_css("div[data-slot='stay-view-status-swatch'] svg.size-3", count: 17)
+    expect(page).to have_css("div[data-slot='stay-view-status-swatch']", count: 18)
+    expect(page).to have_css("div[data-slot='stay-view-status-swatch'] svg.size-3", count: 18)
     expect(page).to have_no_css("#stay-view-status-guide-panel .panel-badge-rounded", visible: :all)
     expect(page).to have_css(
       "[data-slot='stay-view-status-swatch'][data-state='arrival']" \
@@ -348,8 +348,8 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page).to have_css("[data-slot='stay-view-room-summary'][data-room='101']", text: "101")
     expect(page).to have_no_css("[data-slot='stay-view-room-summary']", text: room.room_type_name)
     expect(page).to have_css("button[aria-label='Room status: Inspection failed'] .panel-badge-circular[data-variant='destructive']")
-    expect(page).to have_css("##{room.dom_id}-status[data-action*='mouseenter->panels-ui--popover#show']")
-    expect(page).to have_css("##{room.dom_id}-status[data-action*='focusin->panels-ui--popover#show']")
+    expect(page).to have_css("##{room.dom_id}-status[data-action*='mouseenter->ui--popover#show']")
+    expect(page).to have_css("##{room.dom_id}-status[data-action*='focusin->ui--popover#show']")
     expect(page).to have_css("##{room.dom_id}-status-panel", text: "Inspection failed", visible: :all)
     expect(page).to have_css("##{room.dom_id}-status-panel", text: "Dust remains on the headboard", visible: :all)
   end
@@ -433,7 +433,7 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
     expect(page.find("#stay-view-booking-1-trigger")).to have_text(booking_segment.guest_label)
     expect(page).to have_css("#stay-view-booking-1-trigger .stay-view-booking-guest-name", text: booking_segment.guest_label)
     expect(page.find("#stay-view-booking-1-trigger")).to have_no_text("Checked in")
-    expect(page).to have_css("#stay-view-booking-1[data-action*='mouseenter->panels-ui--popover#show']")
+    expect(page).to have_css("#stay-view-booking-1[data-action*='mouseenter->ui--popover#show']")
     expect(page).to have_css("#stay-view-booking-1-panel", text: "Single booking", visible: :all)
     expect(page).to have_css("#stay-view-booking-1-panel dt", text: "Status", visible: :all)
     expect(page).to have_css("#stay-view-booking-1-panel dd", text: "Checked in", visible: :all)
@@ -452,6 +452,33 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
 
       expect(page).to have_css("#stay-view-booking-1[data-tone='#{tone}']")
     end
+  end
+
+  it "marks a day-use bar with its hours up front, drops the source badge from the narrow bar, and keeps the source in the popover" do
+    segment = booking_segment.with(
+      day_use_hours: 5, source: "phone", source_label: "Phone",
+      check_in_at: Time.zone.local(2026, 7, 16, 15, 30), check_out_at: Time.zone.local(2026, 7, 16, 20, 30)
+    )
+
+    render_inline(HotelPortal::StayView::BookingBar.new(segment:))
+
+    segment_node = page.find(".panel-timeline__segment")
+    expect(segment_node["data-day-use"]).to eq("true")
+    trigger = page.find("#stay-view-booking-1-trigger")
+    expect(trigger.find("[data-slot='stay-view-day-use']")).to have_text("5h")
+    expect(trigger.all("[data-slot]").map { |node| node["data-slot"] }.first).to eq("stay-view-day-use")
+    expect(trigger).to have_no_css("[data-slot='stay-view-booking-source']")
+    panel = page.find("#stay-view-booking-1-panel", visible: :all)
+    expect(panel).to have_text("Day use · 5 hours")
+    expect(panel).to have_text("16 Jul, 15:30 – 20:30")
+    expect(panel).to have_text("via Phone")
+  end
+
+  it "leaves an overnight bar unmarked" do
+    render_inline(HotelPortal::StayView::BookingBar.new(segment: booking_segment))
+
+    expect(page.find(".panel-timeline__segment")["data-day-use"]).to eq("false")
+    expect(page).to have_no_css("[data-slot='stay-view-day-use']")
   end
 
   it "shows the booking source at the left of the bar and in the popover when present" do
@@ -624,6 +651,36 @@ RSpec.describe "HotelPortal::StayView components", type: :component do
       text: "Air-conditioning maintenance"
     )
     expect(page).to have_no_link
+  end
+
+  it "carries the block reason beside its label, letting the reason truncate first" do
+    render_inline(HotelPortal::StayView::OperationalBar.new(
+      segment: operational_segment.with(reason: "Compressor replacement, parts on order")
+    ))
+
+    expect(page).to have_css(
+      "[data-slot='stay-view-operational-reason'].truncate",
+      text: "Compressor replacement, parts on order"
+    )
+  end
+
+  it "omits the reason element when the block carries none" do
+    render_inline(HotelPortal::StayView::OperationalBar.new(segment: operational_segment))
+
+    expect(page).to have_no_css("[data-slot='stay-view-operational-reason']")
+  end
+
+  it "links an operational bar to the block sheet when one is offered" do
+    render_inline(HotelPortal::StayView::OperationalBar.new(
+      segment: operational_segment,
+      href: "/hotel/1/stay-view/room_blocks/1/edit",
+      link_attributes: { data: { turbo_frame: "booking_action_sheet" } }
+    ))
+
+    link = page.find("a.panel-timeline__segment-action")
+    expect(link[:href]).to eq("/hotel/1/stay-view/room_blocks/1/edit")
+    expect(link[:"data-turbo-frame"]).to eq("booking_action_sheet")
+    expect(link[:"aria-label"]).to eq(operational_segment.accessible_label)
   end
 
   it "flags smoking and pet restrictions as icon-only circular badges" do

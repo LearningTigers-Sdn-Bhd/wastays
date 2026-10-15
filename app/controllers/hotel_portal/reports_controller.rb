@@ -1007,7 +1007,8 @@ module HotelPortal
           section: @cashier_report.section_by_transaction_id[transaction.id],
           origin: @cashier_report.non_cash_origin_by_transaction_id[transaction.id],
           handling: @cashier_report.handling_by_transaction_id[transaction.id],
-          received_by_key: @cashier_report.received_by_key_by_transaction_id[transaction.id]
+          received_by_key: @cashier_report.received_by_key_by_transaction_id[transaction.id],
+          payment_reference: @cashier_report.payment_reference_by_transaction_id&.[](transaction.id)
         )
       end
     end

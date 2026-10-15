@@ -55,6 +55,7 @@ module HotelPortal
           stay_dates: stay_dates(booking),
           room_details: room_details(booking),
           folio_number: folio.folio_number,
+          payment_reference: payment_references(transactions),
           booking_payment_amount: deposit_amount.round(2),
           earned_amount: earned_amount.round(2),
           refund_amount: refund_amount.round(2),
@@ -102,6 +103,7 @@ module HotelPortal
           stay_dates: booking ? stay_dates(booking) : group_stay_dates(deposit.group_booking),
           room_details: booking ? room_details(booking) : group_room_details(deposit.group_booking),
           folio_number: "Unapplied #{deposit.kind.humanize}",
+          payment_reference: deposit.external_reference.presence || "—",
           booking_payment_amount: available.round(2),
           earned_amount: 0.to_d,
           refund_amount: returned.round(2),
@@ -120,6 +122,13 @@ module HotelPortal
       def group_room_details(group)
         count = group.bookings.sum { |booking| booking.booking_rooms.size }
         "#{count} room#{'s' unless count == 1}"
+      end
+
+      # Every reference staff recorded against the deposits on this folio, in
+      # posting order, so each receipt can be traced to its bank or card slip.
+      def payment_references(transactions)
+        deposits = transactions.select { |transaction| transaction.transaction_type == "payment" && transaction.category == "booking_payment" }
+        ::Folios::PaymentReference.by_transaction_id(deposits.sort_by(&:id)).values.compact.uniq.join(", ").presence || "—"
       end
 
       def sum_amount(transactions, transaction_type:, category:)

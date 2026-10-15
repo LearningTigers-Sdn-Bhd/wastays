@@ -400,7 +400,7 @@ module HotelOps
     end
 
     def sync_to_channel_manager
-      return if hotel.preferred_channel_manager.blank?
+      return unless hotel.channel_manager_enabled?
 
       ChannelManagers::SyncJob.perform_later(
         hotel.id,

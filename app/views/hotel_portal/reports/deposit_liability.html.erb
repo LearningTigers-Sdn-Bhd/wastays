@@ -68,6 +68,9 @@
               <td>
                 <p><%= row[:room_details] %></p>
                 <p class="text-xs text-muted-foreground">Folio: <%= row[:folio_number] %></p>
+                <% if row[:payment_reference].present? && row[:payment_reference] != "—" %>
+                  <p class="text-xs text-muted-foreground">Ref: <%= row[:payment_reference] %></p>
+                <% end %>
               </td>
               <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:booking_payment_amount], precision: 2) %></td>
               <td class="whitespace-nowrap text-right font-semibold tabular-nums">MYR <%= format_number(row[:earned_amount], precision: 2) %></td>

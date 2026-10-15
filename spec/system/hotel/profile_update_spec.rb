@@ -28,7 +28,7 @@ RSpec.describe 'Hotel Profile Update', type: :system, js: true do
     end
 
     within('#hotel-information') do
-      expect(page).to have_link('See Hotel', href: hotel_path(hotel))
+      expect(page).to have_link('See Hotel', href: hotel_path(hotel.unique_id, hotel.public_id))
 
       fill_in 'Hotel Name', with: 'Updated Hotel Name'
       fill_in 'Description', with: 'A peaceful city retreat with locally inspired hospitality.'

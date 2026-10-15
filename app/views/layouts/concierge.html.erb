@@ -10,11 +10,14 @@
     <title><%= content_for?(:title) ? yield(:title) : "Concierge | WAStays" %></title>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&display=swap" rel="stylesheet">
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= stylesheet_link_tag :app, "data-turbo-track": (Rails.env.production? ? "reload" : nil) %>
     <%= javascript_importmap_tags %>
   </head>
-  <body class="h-full font-sans antialiased">
+  <body class="h-full font-guest-interface antialiased">
     <%= yield %>
   </body>
 </html>

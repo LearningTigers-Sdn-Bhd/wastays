@@ -42,7 +42,7 @@
       <%= render PanelsUI::FieldSet.new(legend: "Delivery Channels", legend_variant: :label) do %>
         <%= hidden_field_tag "notification_config[channels][]", "" %>
         <div class="mt-3 grid grid-cols-2 gap-3">
-          <% ["whatsapp", "email"].each do |channel| %>
+          <% local_assigns.fetch(:channels, ["whatsapp", "email"]).each do |channel| %>
             <%= render PanelsUI::Checkbox.new(
                   name: "notification_config[channels][]",
                   id: "notification_config_#{notification_type}_channel_#{channel}",

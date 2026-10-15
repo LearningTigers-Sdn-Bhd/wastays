@@ -1,0 +1,12 @@
+<%= tag.div(class: empty_class) do %>
+  <span class="guest-empty-state__icon">
+    <%= helpers.app_icon icon, class: "size-6", aria: { hidden: "true" } %>
+  </span>
+  <p class="guest-empty-state__title"><%= title %></p>
+  <% if description.present? %>
+    <p class="guest-empty-state__description"><%= description %></p>
+  <% end %>
+  <% if action? %>
+    <div class="guest-empty-state__action"><%= action %></div>
+  <% end %>
+<% end %>

@@ -1,5 +1,8 @@
 # Hotel Onboarding Delivery Plan
 
+> **Delivery record:** phase instructions and validation notes retain their original scope and dates.
+> Later lifecycle and invitation behavior is summarized in `CURRENT_BEHAVIOR.md`. Do not use this plan to restart completed phases.
+
 ## Purpose
 
 Deliver the integrated hotel onboarding flow incrementally. This work must not be attempted as one large change.
@@ -14,9 +17,9 @@ Existing hotel, tax, room, rate, financial, staff, corporate account, and channe
 
 Per-phase handoff briefs live in `docs/onboarding/handoffs/`, starting with `docs/onboarding/handoffs/README.md`. They exist so a session with no prior context can pick up a single phase.
 
-**Current position (2026-08-13): phases 0–11 implemented, phase 12 next.**
-`docs/onboarding/handoffs/REMAINING_WORK.md` holds the verified branch state and the scope
-of phases 12–13; where it disagrees with an older phase brief, it is right.
+**Historical position (2026-08-13): phases 0–11 implemented, phase 12 next.**
+`docs/onboarding/handoffs/REMAINING_WORK.md` records the branch state and the scope
+of phases 12–13 at that date. Later behavior is described in `CURRENT_BEHAVIOR.md`.
 
 ## Delivery principles
 

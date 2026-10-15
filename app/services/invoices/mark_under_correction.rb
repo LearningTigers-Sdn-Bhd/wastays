@@ -3,6 +3,7 @@
 module Invoices
   class MarkUnderCorrection
     def self.call!(folio:)
+      folio.association(:invoice).reset
       invoice = folio.invoice
       return if invoice.blank?
 

@@ -1,0 +1,140 @@
+<%# An agent booking's payment schedule: the stages the agent was promised, what
+    became of each, and the desk's actions on them. The folio holds the money --
+    marking a stage paid posts a payment to it and refunding posts a refund, so
+    the schedule and the ledger cannot disagree. %>
+<section aria-labelledby="agent-payments-heading" class="space-y-5">
+  <header class="px-5 pt-4">
+    <h2 id="agent-payments-heading" class="text-base font-semibold text-foreground">Agent payments</h2>
+    <p class="mt-1 text-sm text-muted-foreground">
+      What the agent owes and when. Recording a payment or a refund here posts it to the folio and is kept in the audit trail.
+    </p>
+  </header>
+
+  <% presenter.agent_payments_presenters.each do |payments| %>
+    <% booking_key = "agent-payments-#{payments.booking.id}" %>
+    <div class="space-y-3 px-5 pb-5" id="<%= booking_key %>">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 class="text-sm font-semibold text-foreground"><%= payments.reference %></h3>
+        <p class="text-sm text-muted-foreground tabular-nums">
+          Total <%= payments.total_label %> · Paid <%= payments.paid_label %> · Still owed <%= payments.owed_label %>
+        </p>
+      </div>
+
+      <%= render PanelsUI::Table.new(
+            caption: "Payment schedule for #{payments.reference}",
+            density: :compact,
+            bordered: true,
+            wrapper_class: "rounded-md border border-border",
+            class: "min-w-[760px]") do |table| %>
+        <% table.with_header do %>
+          <tr>
+            <th scope="col">Stage</th>
+            <th scope="col" class="text-right">Amount</th>
+            <th scope="col">Due</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
+          </tr>
+        <% end %>
+        <% table.with_body do %>
+          <% payments.rows.each do |row| %>
+            <tr id="agent-instalment-<%= row.instalment.id %>">
+              <td class="font-medium text-foreground"><%= row.stage %></td>
+              <td class="text-right tabular-nums"><%= row.amount %></td>
+              <td><%= row.due %></td>
+              <td>
+                <%= render PanelsUI::Badge.new(label: row.status_label, variant: row.badge_variant, size: :sm) %>
+                <% if row.detail.present? %>
+                  <span class="mt-1 block text-xs text-muted-foreground"><%= row.detail %></span>
+                <% end %>
+              </td>
+              <td>
+                <div class="flex justify-end gap-2">
+                  <% if row.can_mark_paid %>
+                    <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :secondary, command: "show-modal", commandfor: "agent-mark-paid-#{row.instalment.id}", aria: { haspopup: "dialog" }) do %>Mark paid<% end %>
+                  <% end %>
+                  <% if row.can_refund %>
+                    <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :ghost, command: "show-modal", commandfor: "agent-refund-#{row.instalment.id}", aria: { haspopup: "dialog" }) do %>Refund<% end %>
+                  <% end %>
+                  <% if row.can_reopen %>
+                    <%= render PanelsUI::Button.new(as: :button, type: :button, size: :sm, variant: :secondary, command: "show-modal", commandfor: "agent-reopen-#{row.instalment.id}", aria: { haspopup: "dialog" }) do %>Reopen<% end %>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% payments.rows.each do |row| %>
+      <% if row.can_mark_paid %>
+        <%= render PanelsUI::Sheet.new(id: "agent-mark-paid-#{row.instalment.id}", side: :right, size: :md, title: "Mark #{row.stage.downcase} paid", description: "Posts #{row.outstanding} to the folio", body_class: "p-0") do |sheet| %>
+          <% sheet.with_body do %>
+            <%= form_with url: mark_agent_instalment_paid_hotel_booking_workspace_path(current_hotel, payments.booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
+              <%= form.hidden_field :instalment_id, value: row.instalment.id %>
+              <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+                <p class="text-sm text-muted-foreground">Use this for money the agent paid outside the portal, such as cash at the desk. A payment they sent by transfer slip is approved from Payments instead.</p>
+                <%= render PanelsUI::FormField.new(form:, attribute: :payment_method, label: "How was it paid?", required: true) do |field| %>
+                  <% field.with_select_menu(payments.payment_method_options, selected: "bank_transfer") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :reference, label: "Reference", required: true, hint: "Receipt or transfer number.") do |field| %>
+                  <% field.with_input(autocomplete: "off", required: true) %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :note, label: "Note") do |field| %>
+                  <% field.with_input(autocomplete: "off") %>
+                <% end %>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-border p-4">
+                <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
+                <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Recording…" }) do %>Record payment<% end %>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if row.can_refund %>
+        <%= render PanelsUI::Sheet.new(id: "agent-refund-#{row.instalment.id}", side: :right, size: :md, title: "Refund #{row.stage.downcase}", description: "Returns #{row.amount} from the folio", body_class: "p-0") do |sheet| %>
+          <% sheet.with_body do %>
+            <%= form_with url: refund_agent_instalment_hotel_booking_workspace_path(current_hotel, payments.booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
+              <%= form.hidden_field :instalment_id, value: row.instalment.id %>
+              <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+                <p class="text-sm text-muted-foreground">The stage is no longer owed after a refund, so the booking will not be released for it. Reopen the stage afterwards if the agent should pay again.</p>
+                <%= render PanelsUI::FormField.new(form:, attribute: :refund_source, label: "Paid back by", required: true) do |field| %>
+                  <% field.with_select_menu(payments.refund_source_options, selected: "bank_transfer") %>
+                <% end %>
+                <%= render PanelsUI::FormField.new(form:, attribute: :reason, label: "Reason", required: true, hint: "Kept in the audit trail.") do |field| %>
+                  <% field.with_input(autocomplete: "off", required: true) %>
+                <% end %>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-border p-4">
+                <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
+                <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :destructive, data: { turbo_submits_with: "Refunding…" }) do %>Refund <%= row.amount %><% end %>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% if row.can_reopen %>
+        <%= render PanelsUI::Sheet.new(id: "agent-reopen-#{row.instalment.id}", side: :right, size: :md, title: "Reopen #{row.stage.downcase}", description: "Ask the agent for #{row.amount} again", body_class: "p-0") do |sheet| %>
+          <% sheet.with_body do %>
+            <%= form_with url: reopen_agent_instalment_hotel_booking_workspace_path(current_hotel, payments.booking), method: :post, class: "flex h-full min-h-0 flex-col" do |form| %>
+              <%= form.hidden_field :instalment_id, value: row.instalment.id %>
+              <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+                <p class="text-sm text-muted-foreground">Use this to correct a refund made in error, or when the agent is to pay again. The stage becomes owed and the booking is held until the date below.</p>
+                <%= render PanelsUI::FormField.new(form:, attribute: :due_on, label: "Pay by", required: true, hint: "The agent has until the end of this day, in the hotel's time.") do |field| %>
+                  <% field.with_input(type: :date, value: payments.default_reopen_date, min: payments.earliest_reopen_date, required: true) %>
+                <% end %>
+              </div>
+              <div class="flex justify-end gap-2 border-t border-border p-4">
+                <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
+                <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Reopening…" }) do %>Reopen stage<% end %>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</section>

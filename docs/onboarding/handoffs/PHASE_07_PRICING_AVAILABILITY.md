@@ -61,7 +61,7 @@ at those party sizes. Completeness of the ladder is a correctness requirement, n
 Any onboarding pricing save must materialize every adult count the room can hold.
 
 There is a prior rate-plan wizard effort with standing decisions in
-`docs/rate-plan-and-inventory-handover.md`. **Read it before designing this phase** — it
+`docs/rates/rate-plan-and-inventory-handover.md`. **Read it before designing this phase** — it
 covers the create wizard that already shipped and the edit/rate-inventory work that was
 next. Reconcile with it rather than designing a third pricing UI.
 

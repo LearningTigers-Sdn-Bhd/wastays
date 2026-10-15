@@ -15,13 +15,14 @@ module HotelPortal
         ReportColumns.column(key: "invoice", label: "Invoice", export_labels: [ "Invoice" ], pdf_label: "Invoice", pdf_width: 70, excel_width: 18, type: :text),
         ReportColumns.column(key: "handling", label: "Handling", export_labels: [ "Handling" ], pdf_label: "Handling", pdf_width: 62, excel_width: 18, type: :text),
         ReportColumns.column(key: "payment_mode", label: "Payment mode", export_labels: [ "Payment Mode" ], pdf_label: "Payment Mode", pdf_width: 86, excel_width: 24, type: :text),
+        ReportColumns.column(key: "payment_reference", label: "Payment reference", export_labels: [ "Payment Reference" ], pdf_label: "Reference", pdf_width: 80, excel_width: 22, type: :text),
         ReportColumns.column(key: "stage", label: "Stage", export_labels: [ "Stage" ], pdf_label: "Stage", pdf_width: 60, excel_width: 16, type: :text),
         ReportColumns.column(key: "received_by", label: "Received by", export_labels: [ "Received By" ], pdf_label: "Received By", pdf_width: 78, excel_width: 22, type: :text),
         ReportColumns.column(key: "remarks", label: "Remarks", export_labels: [ "Remarks" ], pdf_label: "Remarks", pdf_width: 100, excel_width: 30, type: :text),
         ReportColumns.column(key: "currency", label: "Currency", export_labels: [ "Currency" ], pdf_label: "Currency", pdf_width: 48, excel_width: 12, type: :text),
         ReportColumns.column(key: "amount", label: "Amount", export_labels: [ "Amount" ], pdf_label: "Amount", pdf_width: 68, excel_width: 16, type: :money)
       ],
-      defaults: %w[date_time booking_number guest_details handling payment_mode stage received_by currency amount]
+      defaults: %w[date_time booking_number guest_details handling payment_mode payment_reference stage received_by currency amount]
     )
   end
 end

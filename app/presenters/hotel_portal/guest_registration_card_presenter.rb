@@ -11,6 +11,10 @@ module HotelPortal
       @selected_booking_guest = find_booking_guest(booking_guest_id)
     end
 
+    def show_pricing?
+      hotel.guest_registration_card_show_pricing?
+    end
+
     def terms
       @terms ||= @card.signed? ? @card.terms_snapshot : @card.capture_terms_snapshot_preview
     end
@@ -67,20 +71,12 @@ module HotelPortal
       format("%<currency>s %<amount>.2f", currency: currency, amount: amount.to_d)
     end
 
-    def folios_charges
-      @folios_charges ||= @booking.booking_folios.sum { |f| f.total_charges.to_d + f.projected_forecasts.sum(&:amount).to_d }
-    end
+    def total_charges = guest_balance.total
+    def amount_paid = guest_balance.paid
+    def due_amount = guest_balance.due
 
-    def total_charges
-      folios_charges > 0 ? folios_charges : @booking.total_amount
-    end
-
-    def amount_paid
-      @amount_paid ||= @booking.booking_folios.sum { |f| f.total_payments.to_d }
-    end
-
-    def due_amount
-      total_charges - amount_paid
+    def guest_balance
+      @guest_balance ||= ::Bookings::GuestBalance.new(booking: @booking).call
     end
 
     def outstanding_balance?
@@ -159,11 +155,13 @@ module HotelPortal
     end
 
     def boat_in_display
-      format_boat_time(active_booking_guest&.boat_in_at)
+      ::Boats::Schedule.display(timestamp: active_booking_guest&.boat_in_at,
+        type: active_booking_guest&.boat_in_type, zone: hotel.hotel_time_zone, format: "%d %b %Y, %I:%M %p", empty: "-")
     end
 
     def boat_out_display
-      format_boat_time(active_booking_guest&.boat_out_at)
+      ::Boats::Schedule.display(timestamp: active_booking_guest&.boat_out_at,
+        type: active_booking_guest&.boat_out_type, zone: hotel.hotel_time_zone, format: "%d %b %Y, %I:%M %p", empty: "-")
     end
 
     def check_in_display
@@ -204,12 +202,6 @@ module HotelPortal
       return nil if booking_guest_id.blank?
 
       @booking.booking_guests.find { |bg| bg.id.to_s == booking_guest_id.to_s }
-    end
-
-    def format_boat_time(time)
-      return "-" if time.blank?
-
-      time.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y, %I:%M %p")
     end
 
     def format_stay_datetime(date, time)

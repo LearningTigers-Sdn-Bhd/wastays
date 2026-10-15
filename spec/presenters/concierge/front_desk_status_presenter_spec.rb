@@ -104,4 +104,42 @@ RSpec.describe Concierge::FrontDeskStatusPresenter do
       expect(status_at("2026-09-08 03:00").handover_message).to eq("Ring the night bell.")
     end
   end
+
+  describe "#support_message" do
+    it "says a team member has been asked to join while the desk is open" do
+      create(:hotel_guest_contact, hotel: hotel, front_desk_open_24h: true)
+
+      expect(status_at("2026-09-08 03:00").support_message)
+        .to eq("I have asked a team member to join. You can continue chatting while you wait.")
+    end
+
+    it "includes the configured after-hours message, duty number, and next opening time" do
+      create(
+        :hotel_guest_contact,
+        :with_hours,
+        hotel: hotel,
+        after_hours_message: "Ring the night bell.",
+        duty_manager_phone: "+60 12 987 6543"
+      )
+
+      message = status_at("2026-09-08 03:00").support_message
+
+      expect(message).to include("Ring the night bell.", "+60 12 987 6543", "7:00 AM")
+    end
+
+    it "leads an emergency handoff with the configured emergency instructions and numbers" do
+      create(
+        :hotel_guest_contact,
+        hotel: hotel,
+        emergency_instructions: "Leave by the nearest marked exit.",
+        emergency_phone: "+60 3 1111 2222",
+        emergency_services_number: "999"
+      )
+
+      message = status_at("2026-09-08 03:00").support_message(reason: "emergency")
+
+      expect(message).to start_with("Leave by the nearest marked exit.")
+      expect(message).to include("+60 3 1111 2222", "999", "asked a team member")
+    end
+  end
 end

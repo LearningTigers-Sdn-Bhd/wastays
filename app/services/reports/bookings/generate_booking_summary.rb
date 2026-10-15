@@ -11,11 +11,9 @@ module Reports
     # What a reservation is expected to cost, what has been paid against it, and what is
     # left. The money half of what the voucher used to carry.
     #
-    # These are booked amounts, taken from the reservation's own snapshots. The invoice is
-    # built from posted folio charges, and the two diverge as soon as anything is posted
-    # during the stay — an early departure, a late checkout, a minibar. That is why the page
-    # opens on a band saying which of the two this is: whoever is holding it has to know it
-    # is not the final bill before they read a number off it.
+    # Accommodation and taxes come from the reservation's snapshots. Configured extras
+    # include scheduled and posted charges, but the summary is still preliminary: the
+    # invoice confirms the actual posted charges, including other stay-event charges.
     #
     # A group settles one position, so a group gets one summary rather than one per room.
     class GenerateBookingSummary
@@ -25,14 +23,15 @@ module Reports
       SUMMARY_WIDTH_FRACTION = 0.48
       SUMMARY_LABEL_FRACTION = 0.62
 
-      NOTICE_LABEL = "BOOKED POSITION"
-      NOTICE_NOTE = "These are the amounts agreed when the reservation was made. Charges posted during " \
-        "the stay are billed on the invoice, which is the final bill."
+      NOTICE_LABEL = "PRELIMINARY BOOKING TOTAL"
+      NOTICE_NOTE = "Includes booked accommodation and taxes, plus configured extra charges currently attached " \
+        "to this booking, whether scheduled or posted. The final invoice confirms the actual posted charges."
 
       def initialize(booking: nil, group_booking: nil)
         @records = Reports::Bookings::GenerateReservationRecords.new(
           booking: booking,
-          group_booking: group_booking
+          group_booking: group_booking,
+          include_extra_charges: true
         ).call
       end
 
@@ -43,11 +42,14 @@ module Reports
 
         frame.draw_header
         draw_notice(pdf)
-        HotelPortal::Reports::Exports::PdfPartyBlocks.new(pdf: pdf).draw(@records.party_blocks)
+        party_blocks = HotelPortal::Reports::Exports::PdfPartyBlocks.new(pdf: pdf)
+        party_blocks.draw(@records.summary_party_blocks)
+        party_blocks.draw([ @records.room_rate_block ].compact)
         draw_charges(pdf)
         draw_payments(pdf)
         draw_summary(pdf)
         draw_closing_notes(pdf)
+        draw_terms(pdf)
         frame.stamp_page_furniture
         pdf.render
       end
@@ -100,12 +102,14 @@ module Reports
       end
 
       def draw_payments(pdf)
+        rows = @records.payment_rows
         HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
           section_title: "Payments",
           headers: [ "Date", "Code", "Description", "Amount (#{@records.currency})" ],
-          rows: @records.payment_rows.map { |row| payment_row(row) },
+          rows: rows.map { |row| payment_row(row) },
           numeric_columns: [ 3 ],
-          total_row: [ nil, nil, "Total payments", credit_amount(@records.total_payments) ],
+          # A total of (0.00) under "no payments" says the same thing twice.
+          total_row: rows.any? ? [ nil, nil, "Total payments", credit_amount(@records.total_payments) ] : nil,
           empty_message: "No payments have been recorded for this reservation.",
           column_widths: payment_column_widths(pdf),
           density: :dense
@@ -176,7 +180,35 @@ module Reports
       # printed as a charge that would not sum into it.
       def draw_closing_notes(pdf)
         prose = HotelPortal::Reports::Exports::PdfProseBlock.new(pdf: pdf)
-        prose.draw_muted(@records.tourism_tax_disclosure, trailing: THEME::SPACE[:sm])
+        prose.draw_muted("Total due in words: #{@records.total_in_words}", trailing: THEME::SPACE[:sm]) unless @records.voided?
+        prose.draw_muted(@records.tourism_tax_disclosure, trailing: THEME::SPACE[:lg])
+      end
+
+      # What the agent was promised and what a cancellation costs. A voided booking has
+      # neither left to honour.
+      def draw_terms(pdf)
+        return if @records.voided?
+
+        draw_payment_schedule(pdf)
+        Reports::Bookings::CancellationPolicySection.new(pdf: pdf).draw(@records.cancellation)
+      end
+
+      def draw_payment_schedule(pdf)
+        stages = @records.payment_schedule
+        return if stages.empty?
+
+        zone = @records.hotel.hotel_time_zone
+        HotelPortal::Reports::Exports::PdfDataTable.new(pdf: pdf).draw(
+          section_title: "Payment schedule",
+          headers: [ "Stage", "Due by", "Status", "Amount (#{@records.currency})" ],
+          rows: stages.map do |stage|
+            [ stage.stage_label, THEME.format_date(stage.due_at.in_time_zone(zone).to_date), stage.status.humanize, @records.money(stage.amount) ]
+          end,
+          numeric_columns: [ 3 ],
+          total_row: nil,
+          empty_message: "No payment schedule.",
+          density: :dense
+        )
       end
 
       def money_or_dash(value) = value.nil? ? "-" : @records.money(value)

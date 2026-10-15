@@ -1,0 +1,12 @@
+<%# One page of what the property wrote in Settings > Guest Content. The public
+    pages and the stay pages render this one partial, so they cannot drift
+    apart. A card with nothing filled does not show. %>
+<% if @info.section?(@section) %>
+  <div class="grid items-start gap-6">
+    <%= render partial: "public/concierge/info/sections/#{@section}", locals: local_assigns %>
+  </div>
+<% else %>
+  <%= render GuestUI::Card.new(variant: :dashed) do %>
+    <p class="text-sm text-muted-foreground">The property has not added this information yet. Ask the front desk.</p>
+  <% end %>
+<% end %>

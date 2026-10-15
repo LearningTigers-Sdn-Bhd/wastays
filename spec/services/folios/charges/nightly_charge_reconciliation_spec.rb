@@ -27,6 +27,26 @@ RSpec.describe Folios::Charges::NightlyChargeReconciliation do
     expect(result.issues).to be_empty
   end
 
+  it "accepts a catch-up charge stored in the dedicated key column" do
+    key = Folios::Charges::ChargePostingKeys.catch_up_charge_key(
+      booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id
+    )
+    create(:folio_transaction, booking_folio: guest_folio, amount: 100, transaction_code: room_code,
+      catch_up_key: key, metadata: { posting_source: "catch_up" })
+
+    expect(described_class.call(booking: booking, business_date: business_date)).to be_valid
+  end
+
+  it "accepts a legacy catch-up charge stored only in metadata" do
+    key = Folios::Charges::ChargePostingKeys.catch_up_charge_key(
+      booking: booking, date: business_date, charge_kind: "accommodation", identity: room.id
+    )
+    create(:folio_transaction, booking_folio: guest_folio, amount: 100, transaction_code: room_code,
+      metadata: { catch_up_key: key, posting_source: "catch_up" })
+
+    expect(described_class.call(booking: booking, business_date: business_date)).to be_valid
+  end
+
   it "reports the expected and actual folios for a misrouted line" do
     create(:folio_routing_rule, hotel: hotel, booking: booking, transaction_code: room_code, target_folio: company_folio)
     transaction = create_nightly_charge(guest_folio, 100.0)

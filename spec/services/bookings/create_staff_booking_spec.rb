@@ -36,6 +36,19 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     expect(room_type.room_inventories.find_by!(date: Date.current).quantity).to eq(4)
   end
 
+  it "schedules each auto-apply extra charge on the new booking" do
+    jetty_fee = create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 10,
+      charging_unit: "per_person", allow_amount_override: false, auto_apply: true)
+    rows = [ { room_type_id: room_type.id, room_number: "", adults: 2 } ]
+
+    result = described_class.new(hotel: hotel, common_params: common_params, room_rows: rows, user: nil).call
+
+    expect(result.success?).to be(true), result.errors.to_sentence
+    forecast = result.booking.booking_folio.folio_forecasted_charges.scheduled_extra_charges.sole
+    expect(forecast).to have_attributes(charge_kind: "extra_charge", amount: 20.to_d)
+    expect(forecast.metadata).to include("extra_charge_id" => jetty_fee.id)
+  end
+
   it "leaves the reservation unassigned when the property assigns rooms manually" do
     hotel.update!(auto_assign_rooms_enabled: false)
 
@@ -99,6 +112,22 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     # Accommodation forecasts land on the company folio; the guest folio has none.
     expect(company_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_present
     expect(guest_folio.folio_forecasted_charges.forecast.where(charge_kind: "accommodation")).to be_empty
+  end
+
+  it "links the booking to the company so the corporate portal lists it" do
+    corporate_account = create(:hotel_corporate_account, hotel: hotel)
+    params = common_params.merge(hotel_corporate_account_id: corporate_account.id)
+
+    booking = described_class.new(hotel: hotel, common_params: params, room_rows: room_rows, user: nil).call.booking
+
+    expect(booking.reload).to have_attributes(hotel_corporate_account_id: corporate_account.id, corporate_booked_by_id: nil)
+    expect(Booking.where(hotel_corporate_account_id: corporate_account.corporate_account.hotel_corporate_accounts.select(:id))).to include(booking)
+  end
+
+  it "leaves the company link empty when no company is billed" do
+    booking = described_class.new(hotel: hotel, common_params: common_params, room_rows: room_rows, user: nil).call.booking
+
+    expect(booking.reload.hotel_corporate_account_id).to be_nil
   end
 
   it "rolls back all rooms when cumulative unassigned reservations exceed inventory" do
@@ -243,5 +272,33 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     expect(result.success?).to be(false)
     expect(result.errors).to include("Security deposit amount must be greater than zero.")
     expect(Booking.where(hotel: hotel)).to be_empty
+  end
+  it "rolls back creation and payment when Charter has no time" do
+    hotel.update!(allow_boat_information: true)
+    payment = guest_advance_method
+    transaction_count = FolioTransaction.count
+    result = nil
+    expect do
+      result = described_class.new(hotel: hotel,
+        common_params: common_params.merge(collect_payment: "1", hotel_payment_method_id: payment.id, payment_amount: "200"),
+        room_rows: room_rows, user: nil, boat_params: { boat_in_time: "charter" }).call
+    end.not_to change(Booking, :count)
+    expect(result.success?).to be(false)
+    expect(result.errors.join).to include("Enter a boat-in time for Charter Boat.")
+    expect(FolioTransaction.count).to eq(transaction_count)
+  end
+
+  it "records custom transfers on every room in a group" do
+    hotel.update!(allow_boat_information: true)
+    rows = [ { room_type_id: room_type.id, room_number: "101" }, { room_type_id: room_type.id, room_number: "102" } ]
+    result = described_class.new(hotel: hotel, common_params: common_params, room_rows: rows, user: nil,
+      boat_params: { boat_in_time: "charter", boat_in_custom_time: "18:03", boat_out_time: "own" }).call
+    expect(result.errors).to be_empty
+    expect(result.bookings.size).to eq(2)
+    result.bookings.each do |record|
+      lead = record.booking_guests.find(&:primary?)
+      expect(lead).to have_attributes(boat_in_type: "charter", boat_out_type: "own", boat_out_at: nil)
+      expect(lead.boat_in_at.in_time_zone(hotel.hotel_time_zone).strftime("%H:%M")).to eq("18:03")
+    end
   end
 end

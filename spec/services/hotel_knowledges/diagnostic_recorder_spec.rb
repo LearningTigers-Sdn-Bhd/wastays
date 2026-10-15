@@ -16,7 +16,14 @@ RSpec.describe HotelKnowledges::DiagnosticRecorder do
         "source" => "general_hotel_info",
         "knowledge_matches" => [],
         "searched_categories" => [ "general_info" ],
-        "fallback_categories" => [ "general_info", "faq", "policy" ]
+        "fallback_categories" => [ "general_info", "faq", "policy" ],
+        "aggregate_outcome" => "unavailable",
+        "escalation_attempt" => 2,
+        "escalation_trigger" => "no_answer",
+        "human_requested" => true,
+        "structured_fact_key" => "parking",
+        "structured_source" => "transport_details",
+        "structured_fields" => [ "hotel_transport_details.parking_availability" ]
       }
     )
 
@@ -26,6 +33,15 @@ RSpec.describe HotelKnowledges::DiagnosticRecorder do
     expect(result.suggested_category).to eq("general_info")
     expect(result.routed_categories).to eq([ "general_info" ])
     expect(result.fallback_categories).to eq([ "general_info", "faq", "policy" ])
+    expect(result.metadata).to include(
+      "aggregate_outcome" => "unavailable",
+      "escalation_attempt" => 2,
+      "escalation_trigger" => "no_answer",
+      "human_requested" => true,
+      "structured_fact_key" => "parking",
+      "structured_source" => "transport_details",
+      "structured_fields" => [ "hotel_transport_details.parking_availability" ]
+    )
   end
 
   it "creates a diagnostic for weak vector matches" do

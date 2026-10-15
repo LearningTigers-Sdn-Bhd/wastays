@@ -1,6 +1,8 @@
+<%= turbo_frame_tag "folio_action_sheet" %>
 <div class="w-full">
   <div class="space-y-4">
     <%= render "hotel_portal/ar_invoices/show/header", presenter: @presenter, ar_invoice: @ar_invoice %>
+    <%= render "hotel_portal/ar_invoices/correction_history", folio: @ar_invoice.booking_folio %>
     <%= render "hotel_portal/ar_invoices/show/details", presenter: @presenter, ar_invoice: @ar_invoice %>
 
     <%= render PanelsUI::Tabs.new(id: "ar-invoice-tabs", active: "payment-allocations", variant: :pill, url: { param: "tab" }, class: "space-y-4", list_class: "mt-8 mb-3", aria_label: "Invoice tabs") do |tabs| %>

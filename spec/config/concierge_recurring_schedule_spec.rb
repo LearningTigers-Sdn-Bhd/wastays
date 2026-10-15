@@ -20,5 +20,14 @@ RSpec.describe "Concierge recurring schedule" do
         "schedule" => "every hour at minute 24"
       )
     end
+
+    it "recovers stale knowledge indexing every 15 minutes in #{environment}" do
+      task = schedule.fetch(environment).fetch("recover_stale_knowledge_indexing")
+
+      expect(task).to eq(
+        "class" => "HotelKnowledges::RecoverStaleIndexingJob",
+        "schedule" => "every 15 minutes"
+      )
+    end
   end
 end

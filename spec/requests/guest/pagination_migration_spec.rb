@@ -18,10 +18,10 @@ RSpec.describe "Guest portal pagination migration", type: :request do
 
     navigation = pagination_in("guest_bookings_results")
     expect(response).to have_http_status(:ok)
-    expect(navigation.at_css('[aria-current="page"]').text).to eq("2")
-    expect(navigation.at_css('a[aria-label="Previous page"]')["href"]).to include("q=Pagy", "status=confirmed")
+    expect(navigation.at_css('[aria-current="page"]').text).to eq("Page 2 of 2")
+    expect(navigation.at_css('a[rel="prev"]')["href"]).to include("q=Pagy", "status=confirmed")
     expect(response.body).to include(guest_booking_path(bookings.first))
-    expect(response.body).to include("Total", "26")
+    expect(response.body).to include("26 bookings")
 
     [ "invalid", "0", "-2" ].each do |invalid_page|
       get guest_bookings_path, params: { page: invalid_page }
@@ -41,10 +41,10 @@ RSpec.describe "Guest portal pagination migration", type: :request do
 
     navigation = pagination_in("guest_refunds_results")
     expect(response).to have_http_status(:ok)
-    expect(navigation.at_css('[aria-current="page"]').text).to eq("2")
-    expect(navigation.at_css('a[aria-label="Previous page"]')["href"]).to include("q=Pagy", "status=pending")
-    expect(response.body).to include(bookings.first.confirmation_token)
-    expect(response.body).to include("Total", "26")
+    expect(navigation.at_css('[aria-current="page"]').text).to eq("Page 2 of 2")
+    expect(navigation.at_css('a[rel="prev"]')["href"]).to include("q=Pagy", "status=pending")
+    expect(response.body).to include(bookings.first.confirmation_token.upcase)
+    expect(response.body).to include("26 refund requests")
   end
 
   private
@@ -65,6 +65,6 @@ RSpec.describe "Guest portal pagination migration", type: :request do
   end
 
   def pagination_in(frame_id)
-    Nokogiri::HTML(response.body).at_css("turbo-frame##{frame_id} nav.panel-pagination")
+    Nokogiri::HTML(response.body).at_css("turbo-frame##{frame_id} nav.guest-pagination")
   end
 end

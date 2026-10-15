@@ -19,7 +19,7 @@ RSpec.describe PanelsUI::ProfileMenu, type: :component do
   it "composes an accessible DropdownMenu with an account summary" do
     render_profile_menu
 
-    expect(page).to have_css("#hotel-profile[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("#hotel-profile[data-controller='ui--dropdown-menu']")
     expect(page).to have_css(
       "button#hotel-profile-trigger[aria-label='Open account menu'][aria-haspopup='menu'][aria-expanded='false'][aria-controls='hotel-profile-menu']"
     )

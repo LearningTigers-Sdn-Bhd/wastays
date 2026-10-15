@@ -27,6 +27,7 @@ module HotelPortal
         rows.filter_map { |row| row.currency.presence }.uniq.one?
       end
     end
+    StayConciergeRow = Data.define(:booking, :booking_number, :room, :email, :status, :last_sent_at, :sendable)
     FolioWindowBillingPartyOption = Data.define(:id, :group, :label, :description, :record)
     SummaryAction = Data.define(:key, :label, :tone, :offcanvas_variant, :icon, :target_booking)
     TABS = [
@@ -41,6 +42,8 @@ module HotelPortal
       Tab.new("audit_trails", "Audit Trail")
     ].freeze
     LEGACY_TABS = [ Tab.new("source_details", "Source Details") ].freeze
+    # Only for an agent booking that carries a payment schedule.
+    AGENT_PAYMENTS_TAB = Tab.new("agent_payments", "Agent payments")
     ALERT_ACTIONS = %w[change_rate].freeze
     ENTITY_TABS = %w[folio_operations billing_preferences guest_details room_and_rate].freeze
     DOCUMENT_SECTION_BY_TYPE = {
@@ -178,7 +181,7 @@ module HotelPortal
       if group_context_enabled?
         [ pluralize_count(child_bookings.size, "booking"), pluralize_count(group_room_count, "room"), group_stay_summary ].join(" · ")
       else
-        [ room_summary, short_stay_range, (pluralize_count(nights_count, "night") if nights_count) ].compact_blank.join(" · ")
+        [ room_summary, short_stay_range, (stay_length_summary if nights_count) ].compact_blank.join(" · ")
       end
     end
 
@@ -230,6 +233,19 @@ module HotelPortal
       clauses.join(" ")
     end
 
+    # A booking made by an agency through the corporate portal. Its `source` is
+    # "internal", the same as a staff-keyed booking, so without this the desk
+    # cannot tell who sold the room.
+    def agent_booking?
+      AgentAttribution.agent_booking?(booking)
+    end
+
+    # Shared with HotelPortal::BookingPresenter, which feeds the same badge on
+    # the reservations list.
+    def agent_attribution
+      @agent_attribution ||= AgentAttribution.for(booking, time_zone: hotel.hotel_time_zone)
+    end
+
     def header_status_badge
       presentable_badge(group_context_enabled? ? group_status_badge : status_badge(booking.status))
     end
@@ -279,6 +295,38 @@ module HotelPortal
     def document_amount_heading(label, rows)
       currencies = rows.filter_map { |row| row.currency.presence }.uniq
       currencies.one? ? "#{label} (#{currencies.first})" : label
+    end
+
+    def stay_concierge_rows
+      return [] unless document_permission?("manage_bookings")
+
+      @stay_concierge_rows ||= begin
+        documents unless defined?(@document_bookings)
+        @document_bookings.filter_map do |child|
+          access = child.live_concierge_stay_access
+          next unless access
+
+          eligibility = ::Concierge::StayAccess::Eligibility.new(booking: child).call
+          email = child.guest_email.presence || child.primary_guest&.email
+          status = if !eligibility.success?
+            "Unavailable"
+          elsif access.locked?
+            "Locked"
+          else
+            "Available"
+          end
+
+          StayConciergeRow.new(
+            child,
+            document_booking_label(child),
+            document_booking_room_label(child),
+            mask_email(email),
+            status,
+            access.link_sent_at,
+            eligibility.success? && email.present?
+          )
+        end
+      end
     end
 
     def group_overview_header_path
@@ -404,7 +452,23 @@ module HotelPortal
     end
 
     def tabs
-      hotel.feature_enabled?("full_audit_trail") ? TABS : TABS.reject { |tab| tab.key == "audit_trails" }
+      list = hotel.feature_enabled?("full_audit_trail") ? TABS : TABS.reject { |tab| tab.key == "audit_trails" }
+      return list unless agent_payments?
+
+      list.dup.insert(list.index { |tab| tab.key == "security_deposits" } + 1, AGENT_PAYMENTS_TAB)
+    end
+
+    # The bookings in view that are on a payment schedule, one presenter each.
+    def agent_payments_presenters
+      # One query for every child's stages, however the children were loaded.
+      ActiveRecord::Associations::Preloader.new(records: child_bookings, associations: :payment_instalments).call
+      @agent_payments_presenters ||= child_bookings
+        .select { |child| child.payment_instalments.any? }
+        .map { |child| AgentPaymentsPresenter.new(booking: child, user: @user, hotel: hotel) }
+    end
+
+    def agent_payments?
+      agent_payments_presenters.any?
     end
 
     def active_tab
@@ -575,7 +639,7 @@ module HotelPortal
           bookings
             .where(hotel_id: hotel.id)
             .includes(
-              :hotel, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
+              :hotel, { hotel_corporate_account: :corporate_account }, :housekeeping_requests, :complaint_requests, :folio_operation_logs,
               { deposits: { deposit_movements: [ :booking_folio, :folio_transaction ] } },
               booking_folios: [ :folio_transactions, :folio_forecasted_charges, { booking_billing_party: :booking_guest, hotel_corporate_account: :corporate_account } ],
               booking_rooms: [ :room_type, :rate_plan ],
@@ -666,11 +730,11 @@ module HotelPortal
     # property's local time-of-day so a stored time reads back as the slot it
     # was picked from.
     def guest_details_boat_in_time
-      boat_time_of_day(:boat_in_at)
+      boat_selection(:boat_in)
     end
 
     def guest_details_boat_out_time
-      boat_time_of_day(:boat_out_at)
+      boat_selection(:boat_out)
     end
 
     # The record validates the two columns against each other, so the boat-out
@@ -687,11 +751,23 @@ module HotelPortal
       @booking_guest_form || selected_booking_guest
     end
 
-    def boat_time_of_day(column)
-      record = guest_details_booking_guest_form
-      return unless record
+    def guest_details_boat_in_custom_time
+      submitted_boat_value(:boat_in_custom_time) { ::Boats::Schedule.custom_time(hotel: hotel, guest: guest_details_booking_guest_form, kind: :boat_in) }
+    end
 
-      ::Boats::Schedule.time_of_day(hotel: hotel, timestamp: record.public_send(column))
+    def guest_details_boat_out_custom_time
+      submitted_boat_value(:boat_out_custom_time) { ::Boats::Schedule.custom_time(hotel: hotel, guest: guest_details_booking_guest_form, kind: :boat_out) }
+    end
+
+    def boat_selection(kind)
+      submitted_boat_value(:"#{kind}_time") do
+        ::Boats::Schedule.selection(hotel: hotel, guest: guest_details_booking_guest_form, kind: kind)
+      end
+    end
+
+    def submitted_boat_value(field)
+      submitted = @params[:booking_guest] || {}
+      submitted.key?(field) ? submitted[field] : yield
     end
 
     def guest_details_errors
@@ -920,7 +996,7 @@ module HotelPortal
           room: room&.room_number.presence || "Unassigned",
           arrival: format_stay_date(child.check_in),
           departure: format_stay_date(child.check_out),
-          nights: nights_between(child.check_in, child.check_out),
+          nights: child.day_use? ? child.stay_length_label : nights_between(child.check_in, child.check_out),
           pax: pax_label(child),
           status: presentable_badge(status_badge(child.status)),
           balance: money_for(child, child.booking_folios.sum { |folio| folio.projected_outstanding_balance.to_d })
@@ -932,8 +1008,7 @@ module HotelPortal
       money(group_context_enabled? ? group_total_balance : total_balance)
     end
 
-    # Reading stored slots does not need a timetable, unlike picking one, so this
-    # follows the property switch rather than Schedule#enabled?.
+    # Stored transfer details follow the property's boat-information switch.
     def boat_transfers?
       hotel.allow_boat_information?
     end
@@ -948,8 +1023,8 @@ module HotelPortal
           booking: child,
           booking_number: child_booking_number(child),
           guest: booking_guest&.name_snapshot.presence || booking_guest&.guest&.name.presence || child.guest_name,
-          boat_in: time_label(booking_guest&.boat_in_at),
-          boat_out: time_label(booking_guest&.boat_out_at)
+          boat_in: boat_display(booking_guest, :boat_in),
+          boat_out: boat_display(booking_guest, :boat_out)
         }
       end
     end
@@ -958,11 +1033,11 @@ module HotelPortal
     # share that pair's format. A group collapses to the earliest boat-in and the
     # latest boat-out across its rooms, the way its arrival and departure already do.
     def summary_boat_in
-      format_summary_time(primary_guest_boat_times(:boat_in_at).min)
+      boat_summary(:boat_in)
     end
 
     def summary_boat_out
-      format_summary_time(primary_guest_boat_times(:boat_out_at).max)
+      boat_summary(:boat_out)
     end
 
     # One row per billing identity, not per folio and not per booking. Folios are resolved to
@@ -1012,7 +1087,18 @@ module HotelPortal
           ]
         end
 
+      pairs = booked_under_pairs + pairs
       pairs.map { |label, value| [ label, value.presence || "—" ] }
+    end
+
+    # The travel agent or company the reservation was booked under, when it was.
+    # Most reservations were not, and get no row at all rather than an empty one.
+    def booked_under_pairs
+      accounts = child_bookings.filter_map(&:hotel_corporate_account).uniq
+      return [] if accounts.empty?
+
+      label = accounts.all?(&:travel_agent?) ? "Travel Agent" : "Corporate Account"
+      [ [ label, accounts.map { |account| account.corporate_account&.name }.compact.to_sentence ] ]
     end
 
     # Identifiers for one room-booking: one row for a standalone booking, one per child for a
@@ -1026,6 +1112,7 @@ module HotelPortal
           confirmation_code: child.confirmation_token.presence || "—",
           receipt_number: child.formatted_receipt_number.presence || "—",
           source: format_source(child.source),
+          source_account_name: child.hotel_corporate_account&.corporate_account&.name.presence,
           invoice_number: child.formatted_invoice_number.presence || "—",
           folio_account: child.folio_account_reference_display.presence || "—",
           guest_registration: child.formatted_guest_registration_number.presence || "—"
@@ -1179,6 +1266,10 @@ module HotelPortal
 
     def can_manage_folio_windows?(user)
       user.has_permission?("manage_folio_windows", hotel: hotel)
+    end
+
+    def stay_length_summary
+      booking.stay_length_label
     end
 
     def nights_count
@@ -1460,12 +1551,13 @@ module HotelPortal
         .where(id: ids)
         .includes(
           :guest_registration_card,
+          :live_concierge_stay_access,
           { booking_rooms: :room_type },
           { booking_guests: :guest },
           booking_folios: [
             :booking_room,
-            { invoice: :revisions },
-            { ar_invoice: { hotel_corporate_account: :corporate_account } },
+            { invoice_history: :revisions },
+            { receivable_history: { hotel_corporate_account: :corporate_account } },
             { booking_billing_party: [ { booking_guest: :guest }, { hotel_corporate_account: :corporate_account } ] },
             { hotel_corporate_account: :corporate_account }
           ]
@@ -1505,7 +1597,7 @@ module HotelPortal
       end
       @document_deposits = booking_deposits + group_deposits
 
-      @document_ar_invoices = @document_folios.filter_map(&:ar_invoice)
+      @document_ar_invoices = @document_folios.flat_map(&:receivable_history)
       @document_ar_invoices_by_id = @document_ar_invoices.index_by(&:id)
       payment_ids = ArPaymentAllocation.where(ar_invoice_id: @document_ar_invoices.map(&:id)).select(:ar_payment_id)
       @document_ar_receipts = Receipt.where(hotel_id: hotel.id, ar_payment_id: payment_ids).includes(:ar_payment).to_a
@@ -1518,11 +1610,12 @@ module HotelPortal
     end
 
     def document_folio_invoice_rows
-      @document_folios.filter_map { |folio| document_folio_invoice_row(folio) }
+      @document_folios.flat_map do |folio|
+        folio.invoice_history.filter_map { |invoice| document_folio_invoice_row(folio, invoice: invoice) }
+      end
     end
 
-    def document_folio_invoice_row(folio)
-      invoice = folio.invoice
+    def document_folio_invoice_row(folio, invoice: folio.invoice)
       return unless invoice&.kind_settled?
 
       revision = invoice.current_revision
@@ -1868,6 +1961,13 @@ module HotelPortal
       @document_permissions[slug] = !!@user&.has_permission?(slug, hotel:)
     end
 
+    def mask_email(email)
+      local, domain = email.to_s.split("@", 2)
+      return if local.blank? || domain.blank?
+
+      "#{local.first}#{'•' * [ local.length - 1, 3 ].min}@#{domain}"
+    end
+
     def routes = Rails.application.routes.url_helpers
 
     # Only 40 of 76 folios carry a booking_billing_party. The rest are resolvable from the
@@ -1976,13 +2076,27 @@ module HotelPortal
       booking.booking_guests.find(&:is_primary?)
     end
 
-    # Falls back to the first guest the same way boat_transfer_rows does, so a booking
-    # whose primary flag was never set still reports its slots.
-    def primary_guest_boat_times(column)
-      child_bookings.filter_map do |child|
-        booking_guest = child.booking_guests.find(&:primary?) || child.booking_guests.first
-        booking_guest&.public_send(column)
+    def boat_display(guest, kind)
+      ::Boats::Schedule.display(timestamp: guest&.public_send("#{kind}_at"),
+        type: guest&.public_send("#{kind}_type"), zone: hotel.hotel_time_zone, format: "%d %b %Y %H:%M")
+    end
+
+    def boat_summary(kind)
+      guests = child_bookings.filter_map { |child| child.booking_guests.find(&:primary?) || child.booking_guests.first }
+      groups = guests.select { |guest| guest.public_send("#{kind}?") }.group_by do |guest|
+        guest.public_send("#{kind}_type") || "provided"
       end
+      return "—" if groups.empty?
+
+      groups.map do |type, records|
+        times = records.filter_map { |guest| guest.public_send("#{kind}_at") }
+        time = kind == :boat_in ? times.min : times.max
+        display = ::Boats::Schedule.display(timestamp: time, type: type, zone: hotel.hotel_time_zone, format: "%Y/%m/%d %H:%M")
+        if time.present? && records.any? { |guest| guest.public_send("#{kind}_at").nil? }
+          display += " (some times unknown)"
+        end
+        display
+      end.join(" / ")
     end
 
     def group_summary_action(key, label, tone, offcanvas_variant, icon, eligible_statuses)
@@ -2071,7 +2185,7 @@ module HotelPortal
     # Each group carries its own add action so it targets that child booking
     # rather than whichever child happens to be selected.
     def add_guest_path_for(child)
-      return unless child.status.in?(%w[confirmed checked_in])
+      return unless child.status.in?(Booking::GUEST_ADDABLE_STATUSES)
 
       Rails.application.routes.url_helpers.hotel_booking_action_manage_guest_path(
         hotel, child, mode: "add", return_to: close_drawer_path
@@ -2209,7 +2323,7 @@ module HotelPortal
     end
 
     def supported_tabs
-      @supported_tabs ||= TABS + LEGACY_TABS
+      @supported_tabs ||= TABS + LEGACY_TABS + [ AGENT_PAYMENTS_TAB ]
     end
 
     def booking_billing_parties

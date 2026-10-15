@@ -7,7 +7,7 @@
     The shell is here for a feed to land in.
 
     Tooltip wraps Popover rather than the reverse: the popover announces itself
-    on the shared `panels-ui:layer-open` channel as it opens, which is what makes
+    on the shared `ui:layer-open` channel as it opens, which is what makes
     the tooltip step aside instead of hanging beside an open panel. %>
 <%= render PanelsUI::Tooltip.new(text: label, placement: :bottom) do %>
   <%= render PanelsUI::Popover.new(id: id, placement: :bottom_end, offset: 8, class: "w-72") do |popover| %>

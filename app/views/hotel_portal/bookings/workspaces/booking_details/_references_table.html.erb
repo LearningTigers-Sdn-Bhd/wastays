@@ -41,7 +41,12 @@
             </td>
             <td class="tabular-nums"><%= row[:confirmation_code] %></td>
             <td class="tabular-nums"><%= row[:receipt_number] %></td>
-            <td><%= row[:source] %></td>
+            <td>
+              <%= row[:source] %>
+              <% if row[:source_account_name].present? %>
+                <span class="block text-xs text-muted-foreground"><%= row[:source_account_name] %></span>
+              <% end %>
+            </td>
             <td class="tabular-nums"><%= row[:invoice_number] %></td>
             <td class="tabular-nums"><%= row[:folio_account] %></td>
             <td class="tabular-nums"><%= row[:guest_registration] %></td>

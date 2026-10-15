@@ -22,9 +22,9 @@ RSpec.describe PanelsUI::Navbar, type: :component do
     expect(page).to have_css("[data-profile]", text: "Profile")
     expect(page).to have_css("button[aria-label='Open navigation'][command='show-modal'][commandfor='hotel-sidebar-mobile']")
     expect(page).to have_css(
-      "button[data-controller='panels-ui--sidebar-toggle']" \
-      "[data-panels-ui--sidebar-toggle-key-value='hotel']" \
-      "[data-panels-ui--sidebar-toggle-state-key-value='hotel']" \
+      "button[data-controller='ui--sidebar-toggle']" \
+      "[data-ui--sidebar-toggle-key-value='hotel']" \
+      "[data-ui--sidebar-toggle-state-key-value='hotel']" \
       "[aria-controls='hotel-sidebar'][aria-expanded='false']" \
       "[aria-pressed='false'][aria-label='Lock navigation open']"
     )
@@ -35,7 +35,7 @@ RSpec.describe PanelsUI::Navbar, type: :component do
   it "can share lock state across different sidebars" do
     render_navbar(sidebar_state_key: "shared-hotel")
 
-    expect(page).to have_css("[data-panels-ui--sidebar-toggle-state-key-value='shared-hotel']")
+    expect(page).to have_css("[data-ui--sidebar-toggle-state-key-value='shared-hotel']")
   end
 
   it "omits navigation controls when navigation is disabled" do
@@ -43,7 +43,7 @@ RSpec.describe PanelsUI::Navbar, type: :component do
 
     expect(page).to have_css("header.panel-navbar[data-sticky='false']")
     expect(page).to have_no_css("button[aria-label='Open navigation']")
-    expect(page).to have_no_css("[data-controller='panels-ui--sidebar-toggle']")
+    expect(page).to have_no_css("[data-controller='ui--sidebar-toggle']")
   end
 
   it "keeps the balancing end rail when the centre slot is empty" do

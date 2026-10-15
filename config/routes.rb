@@ -1,6 +1,10 @@
 require_relative "../app/constraints/superadmin_constraint"
 
 Rails.application.routes.draw do
+  hotel_code_constraint = /\d+/
+  public_uuid_v4_constraint = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/
+  stay_access_id_constraint = /[A-Za-z0-9]{12}/
+
   mount RailsIcons::Engine, at: "/rails_icons"
   namespace :hotel_portal do
     get "room_blocks/create"
@@ -36,6 +40,10 @@ Rails.application.routes.draw do
   get "terms-and-conditions", to: "legal_pages#terms_and_conditions", as: :terms_and_conditions
 
   # Help Center
+  get "forgot-password", to: "public/password_reset_requests#new", as: :forgot_password
+  post "forgot-password", to: "public/password_reset_requests#create"
+  get "owner-password-reset/:token", to: "public/owner_password_resets#show", as: :owner_password_reset
+  patch "owner-password-reset/:token", to: "public/owner_password_resets#update"
   get "help", to: "help_center#index", as: :help_center
   get "help/:audience/:id", to: "help_center#show", as: :help_guide
 
@@ -56,6 +64,7 @@ Rails.application.routes.draw do
         post :request_e_invoice
         get :voucher_pack, path: "voucher-pack"
         get :summary
+        get :concierge
         patch :toggle_dnd
       end
       resources :refund_requests, only: [ :new, :create ]
@@ -93,33 +102,97 @@ Rails.application.routes.draw do
   end
 
   # Public Concierge (front-desk QR)
-  scope "/concierge/:hotel_slug", module: "public/concierge", as: :concierge do
+  scope "/concierge/:hotel_code/:public_id", module: "public/concierge", as: :concierge,
+        constraints: { hotel_code: hotel_code_constraint, public_id: public_uuid_v4_constraint } do
     get  "/",                      to: "home#show",            as: :home
     get  "check-in",               to: "check_ins#new",        as: :check_in
     post "check-in/lookup",        to: "check_ins#lookup",     as: :check_in_lookup
     get  "check-in/now",           to: "check_ins#check_in_now",     as: :check_in_now
     post "check-in/now",           to: "check_ins#submit_check_in",  as: :submit_check_in
     get  "check-in/success",       to: "check_ins#check_in_success", as: :check_in_success
-    get  "check-out",              to: "check_outs#new",       as: :check_out
-    post "check-out",              to: "check_outs#create",    as: :create_check_out
-    get  "check-out/success",      to: "check_outs#success",   as: :check_out_success
     get  "book",                   to: "home#book",            as: :book
-    get  "requests/new",           to: "requests#new",         as: :new_request
-    post "requests",               to: "requests#create",      as: :requests
-    get  "requests/success",       to: "requests#success",     as: :request_success
     get  "contact",                to: "contact#show",         as: :contact
+    get  "info",                   to: "info#show",            as: :info
+    get  "info/:section",          to: "info#show",            as: :info_section,
+         constraints: { section: /amenities|policies|faqs/ }
     get    "chat",                 to: "chats#show",           as: :chat
     post   "chat",                 to: "chats#create",         as: :chat_messages
     post   "chat/booking",         to: "booking_links#create", as: :chat_booking
     delete "chat",                 to: "chats#destroy",        as: :clear_chat
     post   "chat/agent",           to: "chats#request_agent",  as: :chat_agent
+
+    # Static segments first: "wallet" and "unlock" must not be swallowed by the
+    # :vendor_id wildcard below.
+    get  "recommendations",                       to: "recommendations#index",  as: :recommendations
+    get  "recommendations/unlock",                to: "recommendations#new",    as: :recommendations_unlock
+    post "recommendations/unlock",                to: "recommendations#lookup", as: :recommendations_lookup
+    get  "recommendations/wallet",                to: "recommendations#wallet", as: :recommendations_wallet
+    get  "recommendations/:vendor_id",            to: "recommendations#vendor", as: :recommendation_vendor
+    post "recommendations/:vendor_id/reviews",    to: "recommendations#create_review", as: :recommendation_vendor_reviews
+    get  "recommendations/:vendor_id/:offer_id",  to: "recommendations#offer",  as: :recommendation_offer
+    post "recommendations/:vendor_id/:offer_id/claim", to: "recommendations#claim", as: :claim_recommendation_offer
+
+    # Checked-in Concierge. One stable link for one stay. The link identifies
+    # the stay; the stay-session cookie authorizes the browser. The same URL
+    # serves the locked page and the authenticated page.
+    scope "stay/:stay_access_id", module: :stays,
+          constraints: { stay_access_id: stay_access_id_constraint } do
+      get  "/",       to: "overview#show",         as: :stay
+      post "verify",  to: "verifications#create",  as: :stay_verification
+      post "recover", to: "verifications#recover", as: :stay_recovery
+
+      # The stay features. Each one gets its booking from the stay session, so
+      # no route carries a booking id or a confirmation code.
+      get    "documents/:kind", to: "documents#show",       as: :stay_document,
+             constraints: { kind: /receipt|invoice|summary|voucher_pack|e_invoice/ }
+      get    "e-invoice",       to: "e_invoices#show",      as: :stay_e_invoice
+      post   "e-invoice",       to: "e_invoices#create",    as: :stay_e_invoice_request
+      get    "e-invoice/status", to: "e_invoices#status",   as: :stay_e_invoice_status
+      get    "refund",          to: "refunds#new",          as: :stay_refund
+      post   "refund",          to: "refunds#create",       as: :stay_refunds
+      get    "check-out",       to: "check_outs#new",       as: :stay_check_out
+      post   "check-out",       to: "check_outs#create",    as: :stay_check_outs
+      get    "contact",         to: "contacts#show",        as: :stay_contact
+      get    "info",            to: "infos#show",           as: :stay_info
+      get    "info/:section",   to: "infos#show",           as: :stay_info_section,
+             constraints: { section: /amenities|policies|faqs/ }
+      get    "wifi",            to: "infos#show",           as: :stay_wifi, defaults: { section: "wifi" }
+      get    "requests/new",    to: "requests#new",         as: :new_stay_request
+      post   "requests",        to: "requests#create",      as: :stay_requests
+    end
+  end
+
+  scope "/concierge/:legacy_hotel_identifier", as: :legacy_concierge do
+    get  "/",                      to: "public/legacy_hotel_urls#concierge"
+    get  "check-in",               to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in" }
+    post "check-in/lookup",        to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/lookup" }
+    get  "check-in/now",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/now" }
+    post "check-in/now",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/now" }
+    get  "check-in/success",       to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "check-in/success" }
+    # Check-out and requests now live on the stay page only, so their old
+    # public links land on the concierge home.
+    get  "check-out",              to: "public/legacy_hotel_urls#concierge"
+    get  "check-out/success",      to: "public/legacy_hotel_urls#concierge"
+    get  "book",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "book" }
+    get  "requests/new",           to: "public/legacy_hotel_urls#concierge"
+    get  "requests/success",       to: "public/legacy_hotel_urls#concierge"
+    get  "contact",                to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "contact" }
+    get  "chat",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
+    post "chat",                   to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
+    post "chat/booking",           to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat/booking" }
+    delete "chat",                 to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat" }
+    post "chat/agent",             to: "public/legacy_hotel_urls#concierge", defaults: { legacy_suffix: "chat/agent" }
   end
 
   # Public Booking Engine
   scope module: :public do
-    resources :hotels, only: [ :index, :show ] do
-      get :rate_calendar, on: :member
-    end
+    get "hotels", to: "hotels#index", as: :hotels
+    get "hotels/:hotel_code/:public_id/rate_calendar", to: "hotels#rate_calendar", as: :rate_calendar_hotel,
+        constraints: { hotel_code: hotel_code_constraint, public_id: public_uuid_v4_constraint }
+    get "hotels/:hotel_code/:public_id", to: "hotels#show", as: :hotel,
+        constraints: { hotel_code: hotel_code_constraint, public_id: public_uuid_v4_constraint }
+    get "hotels/:legacy_hotel_identifier/rate_calendar", to: "legacy_hotel_urls#rate_calendar"
+    get "hotels/:legacy_hotel_identifier", to: "legacy_hotel_urls#hotel"
     resources :quotes, only: [ :create, :show ] do
       member do
         get :guest_lookup
@@ -145,6 +218,29 @@ Rails.application.routes.draw do
     resources :guest_registration_cards, only: [ :show, :update ], param: :token, path: "guest-registration-card" do
       get :pdf, on: :member
     end
+
+    # The tablet's own pages. `show` is the idle screen it parks on; `next`
+    # hands it whichever card is due, or sends it back to idle when the stay is
+    # done. Token-addressed like the card above, and for the same reason: the
+    # device holds no session.
+    resources :signing_devices, only: [ :show ], param: :token, path: "signing-device" do
+      get :next, on: :member
+      # The idle screen beats here while its stream is up, so the desk's tablet
+      # picker can tell a listening tablet from one that merely loaded the page
+      # once and went to sleep.
+      post :heartbeat, on: :member
+      # Lets the tablet itself back out of a stay the desk sent it by mistake,
+      # without waiting for every guest to sign or for the desk to notice.
+      post :release, on: :member
+    end
+    # Pairing a tablet, unauthenticated: the code IS the credential, and it is
+    # single use and measured in minutes. Kept short because it is read off one
+    # screen and typed into another.
+    get  "pair", to: "signing_device_pairings#new", as: :pair
+    post "pair", to: "signing_device_pairings#lookup", as: :pair_lookup
+    get  "pair/:token", to: "signing_device_pairings#show", as: :pair_token
+    post "pair/:token", to: "signing_device_pairings#create", as: :claim_pair_token
+
     post "payments/checkout_session", to: "payments#checkout_session", as: :checkout_payment_session
     get "payments/verify", to: "payments#verify"
     post "payments/verify", to: "payments#verify", as: :verify_payment
@@ -171,8 +267,15 @@ Rails.application.routes.draw do
 
   scope "/corporate", module: :corporate_portal, as: :corporate do
     get "dashboard", to: "dashboard#index", as: :dashboard
-    resource :profile, only: [ :show ]
+    resource :profile, only: [ :show, :update ]
     resources :hotel_relationships, only: [ :edit, :update ], path: "linked-hotels"
+    # An agent booking a stay for a guest at a hotel this account is linked to.
+    # Cancelling is its own resource rather than #destroy: the booking is not
+    # deleted, it becomes cancelled history and the rooms go back on sale.
+    resources :bookings, only: [ :index, :new, :create, :show ] do
+      resource :cancellation, only: [ :new, :create ], controller: "booking_cancellations"
+      resource :guests, only: [ :edit, :update ], controller: "booking_guests"
+    end
     resources :ar_invoices, only: [ :index, :show ], path: "invoices"
     resources :ar_statements, only: [ :index, :show ], path: "statements" do
       get "pdf/:filename", action: :pdf, as: :pdf, on: :member, constraints: { filename: /[^\/]+\.pdf/ }
@@ -191,16 +294,31 @@ Rails.application.routes.draw do
     resources :ar_payment_submissions, only: [ :show, :new, :create ], path: "payment-submissions"
   end
 
+  # A super agent creates hotels and opens the hotels they created.
+  get "/agent", to: redirect("/partner")
+  get "/agent/*path", to: redirect("/partner/%{path}")
+  scope "/partner", module: :agent_portal, as: :agent do
+    resources :hotels, only: [ :index, :new, :create ]
+    resource :profile, only: [ :edit, :update ]
+  end
+
   # Superadmin dashboard
+  get "/admin/hotels/:id/edit", to: redirect("/admin/hotels/%{id}?tab=hotel_details"), as: :edit_admin_hotel
   namespace :admin do
     resource :profile, only: [ :edit, :update ], controller: "profiles"
-    get "audit_logs/index"
     get "margin_rules/index"
     get "margin_rules/create"
     get "margin_rules/destroy"
     get "dashboard", to: "dashboard#index"
     get "analytics", to: "dashboard#analytics"
-    resources :hotels do
+    resources :hotels, except: [ :edit ] do
+      member do
+        patch :update_account, to: "hotels/settings#update_account"
+        patch :update_salesperson, to: "hotels/settings#update_salesperson"
+        patch :update_super_agent, to: "hotels/settings#update_super_agent"
+        post :send_owner_password_reset, to: "hotels/settings#send_owner_password_reset"
+        patch :set_owner_password, to: "hotels/settings#set_owner_password"
+      end
       member do
         get :onboarding, to: "hotels/onboarding#show"
         get "onboarding/:tab", to: "hotels/onboarding#show", as: :onboarding_tab,
@@ -216,6 +334,15 @@ Rails.application.routes.draw do
         post :disconnect_channex, to: "hotels/channel_managers#disconnect_channex"
         post :repair_channex_mapping, to: "hotels/channel_managers#repair_mapping"
       end
+      # Migrating a property's unarrived reservations off its old PMS. Run once
+      # per hotel by whoever onboards it, which is why it sits here and not in
+      # the hotel portal.
+      resources :reservation_imports, module: :hotels, only: [ :index, :new, :create, :show ] do
+        member do
+          get :rows
+          post :commit
+        end
+      end
       resources :onboarding_sessions, module: :hotels, only: [ :create, :show, :edit, :update, :destroy ] do
         member do
           post :complete
@@ -230,6 +357,7 @@ Rails.application.routes.draw do
       end
     end
     resources :salespersons, only: [ :index, :create, :update, :destroy ]
+    resources :super_agents, only: [ :index, :new, :create, :update, :destroy ], path: "super-agents"
     resources :reconciliations, only: [ :index, :show ] do
       member do
         post :retry
@@ -276,7 +404,10 @@ Rails.application.routes.draw do
         patch :merge
       end
     end
-    resources :audit_logs, only: [ :index ]
+    get "audit_logs", to: redirect("/admin/activity_logs")
+    resources :activity_logs, only: [ :index, :show ]
+    resources :mail_logs, only: [ :index, :show ]
+    resources :notification_logs, only: [ :index, :show ]
     resources :api_keys, only: [ :index, :new, :create, :destroy ] do
       get :docs, on: :collection
     end
@@ -306,6 +437,7 @@ Rails.application.routes.draw do
     end
     resource :integrations, only: [ :show, :update, :destroy ] do
       post :test_r2_connection, on: :collection
+      post :test_around_that_connection, on: :collection
     end
     resources :plans, only: [ :index ] do
       collection do
@@ -322,12 +454,20 @@ Rails.application.routes.draw do
   # nothing user-facing quotes them.
   get "/hotel/:hotel_id/settings/property/hotel-album", to: "hotel_portal/profiles#album", as: :hotel_album
   scope "/hotel/:hotel_id", module: :hotel_portal, as: :hotel do
+    get "operational-dates", to: "operational_dates#show", as: :operational_dates
+
     resource :training_decision, only: [] do
       post :keep
       post :reset
     end
 
     resource :user_profile, only: [ :edit, :update ], controller: "user_profiles"
+
+    # Managing the tablets a property signs on. Pairing is not here: the device
+    # that ends up holding the token has to be the one that claims it, so this
+    # screen only mints the QR and the tablet claims it under /pair.
+    resources :signing_devices, only: [ :index, :update, :destroy ]
+    resources :signing_device_pairings, only: [ :create, :destroy ]
     get "onboarding", to: "onboarding#index", as: :onboarding
     get "onboarding/:section_key", to: "onboarding#show", as: :onboarding_section
     patch "onboarding/:section_key", to: "onboarding#update"
@@ -343,7 +483,11 @@ Rails.application.routes.draw do
 
     resource :property_policy, only: [ :edit, :update ]
     scope "accounts-receivable" do
+      resource :corporate_account_addition, only: [ :new, :create ], path: "corporate-accounts/add" do
+        post :lookup
+      end
       resources :corporate_accounts, only: [ :index, :new, :create, :edit, :update ], path: "corporate-accounts" do
+        resource :temporary_password, only: :show, controller: "corporate_account_passwords"
         member do
           patch :suspend
           patch :reactivate
@@ -355,6 +499,9 @@ Rails.application.routes.draw do
         constraints: { filename: /[^\/]+\.pdf/ }
       get "agent-summary/:filename", to: "ar_invoices#aging_summary_pdf",
         constraints: { filename: /[^\/]+\.pdf/ }
+      resources :ar_invoice_corrections, only: [ :update ], path: "invoice-corrections" do
+        get :credit, on: :member
+      end
       resources :ar_invoices, only: [ :index, :show ], path: "invoices" do
         get :pdf, on: :member
       end
@@ -363,6 +510,7 @@ Rails.application.routes.draw do
       end
       resources :ar_payments, only: [ :index, :show, :new, :create ], path: "payments" do
         get :eligible_invoices, on: :collection
+        resource :void, only: [ :create ], controller: "ar_payment_voids"
         resources :allocations, only: [ :create ], controller: "ar_payment_allocations" do
           resource :reversal, only: [ :create ], controller: "ar_payment_allocation_reversals"
         end
@@ -376,6 +524,7 @@ Rails.application.routes.draw do
 
     resources :corporate_invitations, only: [ :destroy ], path: "corporate-invitations" do
       post :resend, on: :member
+      post :link, on: :member
     end
     get "room_groups", to: redirect("/hotel/%{hotel_id}/settings/property/room-groups"), as: :legacy_room_groups
     get "stay-view", to: "stay_view/board#index", as: :stay_view
@@ -407,6 +556,7 @@ Rails.application.routes.draw do
       end
 
       resources :refund_requests, only: [ :new, :create ]
+      resource :signing_handoff, only: [ :create ], module: :bookings
       resource :guest_registration_card, only: [ :show, :update, :destroy ], module: :bookings
       resource :guest_registration_card_pdf, only: [ :show ], module: :bookings
       resource :guest_registration_card_email, only: [ :create ], module: :bookings
@@ -431,6 +581,9 @@ Rails.application.routes.draw do
         post :refund_deposit, controller: :workspace_actions
         post :reverse_deposit_application, controller: :workspace_actions
         post :reverse_deposit_allocation, controller: :workspace_actions
+        post :mark_agent_instalment_paid, controller: :workspace_actions
+        post :refund_agent_instalment, controller: :workspace_actions
+        post :reopen_agent_instalment, controller: :workspace_actions
         post :collect_security_deposit, controller: :workspace_actions
         post :release_security_deposits, controller: :workspace_actions
         post :complete_housekeeping_request, controller: :workspace_actions
@@ -451,11 +604,15 @@ Rails.application.routes.draw do
       match "edit-dates/:booking_id", to: "booking_dates#show", via: [ :get, :patch ], as: :edit_dates
       match "edit-room/:booking_id", to: "room_assignments#show", via: [ :get, :patch ], as: :edit_room
       match "edit-rate/:booking_id", to: "rate_changes#show", via: [ :get, :patch ], as: :edit_rate
+      get "correct-room-charges/:booking_id", to: "room_charge_corrections#show", as: :correct_room_charges
+      post "correct-room-charges/:booking_id/review", to: "room_charge_corrections#review", as: :review_room_charge_correction
+      post "correct-room-charges/:booking_id/confirm", to: "room_charge_corrections#confirm", as: :confirm_room_charge_correction
       match "check-in/:booking_id", to: "check_ins#show", via: [ :get, :post ], as: :check_in
       match "cancel-booking/:booking_id", to: "cancellations#show", via: [ :get, :post ], as: :cancel_booking
       match "void-booking/:booking_id", to: "voids#show", via: [ :get, :post ], as: :void_booking
       match "mark-no-show/:booking_id", to: "no_shows#show", via: [ :get, :post ], as: :mark_no_show
       match "undo-check-in/:booking_id", to: "undo_check_ins#show", via: [ :get, :post ], as: :undo_check_in
+      post "resend-stay-link/:booking_id", to: "stay_links#create", as: :resend_stay_link
       match "review-backdated-check-in/:booking_id", to: "review_backdated_check_ins#show", via: [ :get, :post ], as: :review_backdated_check_in
       match "repair-no-show-folio/:booking_id", to: "no_show_folio_repairs#show", via: [ :get, :post ], as: :repair_no_show_folio
       match "reinstate-no-show/:booking_id", to: "reinstatements#show", via: [ :get, :post ], as: :reinstate_no_show
@@ -481,6 +638,7 @@ Rails.application.routes.draw do
       match "post-transaction/:booking_id", to: "transactions#show", via: [ :get, :post ], as: :post_transaction
       get "extra-charge-quote/:booking_id", to: "transactions#quote", as: :extra_charge_quote
       get "discount-quote/:booking_id", to: "transactions#discount_quote", as: :discount_quote
+      match "transfer-folios/:booking_id", to: "transfers#show", via: [ :get, :post ], as: :transfer_folios
       match "move-transaction/:booking_id/:transaction_id", to: "transaction_moves#show", via: [ :get, :post ], as: :move_transaction
       match "split-transaction/:booking_id/:transaction_id", to: "transaction_splits#show", via: [ :get, :post ], as: :split_transaction
       match "reverse-transaction/:booking_id/:transaction_id", to: "transaction_reversals#show", via: [ :get, :post ], as: :reverse_transaction
@@ -565,7 +723,7 @@ Rails.application.routes.draw do
     resources :arrivals, only: [ :index ]
     resources :checked_out_guests, only: [ :index ]
     resources :audit_logs, only: [ :index ]
-    resources :notification_logs, only: [ :index ] do
+    resources :notification_logs, only: [ :index, :show ] do
       post :resend, on: :member
     end
     resources :channel_settlement_receipts, only: %i[new create], path: "ota-settlement-receipts"
@@ -681,15 +839,21 @@ Rails.application.routes.draw do
     scope "settings" do
       get "general", to: "settings#index", as: :general_settings, defaults: { settings_page: "general" }
       patch "general", to: "settings#update", defaults: { settings_page: "general" }
+      get "general/ota-logins", to: "settings#index", as: :ota_logins_settings, defaults: { settings_page: "ota_logins" }
+      get "general/ota-logins/new", to: "ota_logins#new", as: :new_ota_login
+      post "general/ota-logins", to: "ota_logins#create", as: :ota_logins
       get "general/boat", to: "settings#index", as: :boat_settings, defaults: { settings_page: "boat" }
       patch "general/boat", to: "settings#update", defaults: { settings_page: "boat" }
       post "general/boat/slots", to: "boat_schedules#create", as: :boat_schedule_slots
+      patch "general/boat/slots/bulk_update", to: "boat_schedules#bulk_update", as: :boat_schedule_slots_bulk_update
       patch "general/boat/slots/:id", to: "boat_schedules#update", as: :boat_schedule_slot
       delete "general/boat/slots/:id", to: "boat_schedules#destroy"
       patch "general/boat/slots/:id/restore", to: "boat_schedules#restore", as: :boat_schedule_slot_restore
       get "general/rates", to: redirect("/hotel/%{hotel_id}/settings/property/room-inventory"), as: :rates_settings
       get "general/notifications", to: "settings#index", as: :notification_settings, defaults: { settings_page: "notifications" }
       patch "general/notifications", to: "settings#update", defaults: { settings_page: "notifications" }
+      get "general/corporate-ta-portal", to: "settings#index", as: :corporate_ta_portal_settings, defaults: { settings_page: "corporate_ta_portal" }
+      patch "general/corporate-ta-portal", to: "settings#update", defaults: { settings_page: "corporate_ta_portal" }
       get "general/plan-and-billing", to: "plans#show", as: :plan
 
       scope "property" do
@@ -715,6 +879,7 @@ Rails.application.routes.draw do
             patch "photos/feature", action: :set_featured_photo, as: :photo_feature
             patch "photos/reorder", action: :reorder_photos, as: :reorder_photos
           end
+          resource :primary_rate_plan, only: :update, controller: "room_type_primary_rate_plans"
         end
         resources :rate_plan_attachments, path: "room-inventory/rate-plans", only: %i[new create] do
           get :autocomplete, on: :collection
@@ -787,6 +952,8 @@ Rails.application.routes.draw do
         # Who a guest reaches when the concierge cannot answer, and when.
         resource :guest_contact, path: "contact-and-escalation",
           controller: "contacts", only: %i[show update]
+        get "concierge", to: "concierge#show", as: :concierge_settings
+        patch "concierge", to: "concierge#update"
         get "ai-concierge", to: "ai_concierge#show", as: :ai_concierge_settings
         patch "ai-concierge", to: "ai_concierge#update"
         resources :ai_healthchecks, path: "ai-concierge/healthcheck", only: [ :index, :show, :update ]
@@ -819,6 +986,10 @@ Rails.application.routes.draw do
         # row; #update owns the role. DELETE is a permanent removal.
         resources :users, only: [ :index, :new, :create, :edit, :update, :destroy ], path: "staff" do
           patch :status, on: :member
+          resource :temporary_password, only: :show, controller: "staff_passwords"
+        end
+        resource :staff_addition, path: "staff-addition", only: [ :new, :create ] do
+          post :lookup
         end
         resources :staff_invitations, path: "staff-invitations", only: [ :edit, :update, :destroy ] do
           post :resend, on: :member

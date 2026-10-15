@@ -1,0 +1,95 @@
+<%# The property's own summary, arrival, getting around, then the extra
+    topics staff added in Additional Information. Each part is a labelled
+    section, and a part with nothing filled does not show. The cards show
+    their facts at once: a guest reads this page on arrival, often with bags
+    in hand, and should not need a tap to find the check-in time. %>
+<% info = @info %>
+<% transport = info.transport %>
+<% instruction = info.instruction %>
+<% wide = local_assigns[:wide] %>
+
+<div class="space-y-8">
+  <% if info.description.present? %>
+    <section class="space-y-3" aria-labelledby="about-title">
+      <h2 id="about-title" class="guest-card__title guest-section-title">About the property</h2>
+      <%# Plain text, not a card: it is the property speaking about itself,
+          the official summary from Property Settings. %>
+      <div class="max-w-3xl text-sm leading-relaxed text-foreground md:text-base">
+        <%= simple_format(info.description) %>
+      </div>
+    </section>
+  <% end %>
+
+  <% if info.arrival? %>
+    <section class="space-y-3" aria-labelledby="arrival-title">
+      <h2 id="arrival-title" class="guest-card__title guest-section-title">Arrival and departure</h2>
+      <div class="guest-card-grid">
+        <%= render GuestUI::GuideCard.new(title: "Arrival", icon: "log-in",
+                                          subtitle: ("Check-in from #{info.policy.check_in_time}" if info.policy&.check_in_time.present?)) do %>
+          <%= simple_format(instruction.arrival_instructions) if instruction&.arrival_instructions.present? %>
+        <% end %>
+        <%= render GuestUI::GuideCard.new(title: "Departure", icon: "log-out",
+                                          subtitle: ("Check-out by #{info.policy.check_out_time}" if info.policy&.check_out_time.present?)) do %>
+          <%= simple_format(instruction.departure_instructions) if instruction&.departure_instructions.present? %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <% if transport %>
+    <section class="space-y-3" aria-labelledby="getting-around-title">
+      <h2 id="getting-around-title" class="guest-card__title guest-section-title">Getting around</h2>
+      <div class="guest-card-grid" <%= tag.attributes(data: { columns: (3 if wide) }) %>>
+        <% if transport.directions_present? %>
+          <%= render GuestUI::GuideCard.new(title: "Directions", icon: "map",
+                                            action: ({ label: "Open in Maps", href: @maps_link, icon: "navigation", new_tab: true } if @maps_link)) do %>
+            <%= render GuestUI::FactList.new(facts: [
+                  [ "Airport", travel_summary(transport.airport_distance_km, transport.airport_travel_minutes) ],
+                  [ "Train station", travel_summary(transport.station_distance_km, transport.station_travel_minutes) ],
+                  [ "City centre", travel_summary(transport.city_centre_distance_km, transport.city_centre_travel_minutes) ]
+                ]) %>
+            <%= simple_format(transport.directions, class: "text-muted-foreground") if transport.directions.present? %>
+          <% end %>
+        <% end %>
+        <% if transport.transportation_present? %>
+          <%= render GuestUI::GuideCard.new(title: "Transport", icon: "bus",
+                                            subtitle: ("Airport transfer available" if transport.airport_transfer_offered?)) do %>
+            <%= render GuestUI::FactList.new(facts: [
+                  [ "Transfer price", transfer_price_summary(transport, @hotel) ],
+                  [ "Book before", lead_time_summary(transport.airport_transfer_lead_hours) ],
+                  [ "Pickup point", transport.pickup_point ],
+                  [ "Nearest stop", transport.nearest_transit_stop ],
+                  [ "Shuttle", transport.shuttle_schedule ]
+                ]) %>
+            <%= simple_format(transport.transport_notes, class: "text-muted-foreground") if transport.transport_notes.present? %>
+          <% end %>
+        <% end %>
+        <% if transport.parking? %>
+          <%= render GuestUI::GuideCard.new(title: "Parking", icon: "car", subtitle: transport.parking_label) do %>
+            <%= render GuestUI::FactList.new(facts: [
+                  [ "Type", transport.parking_type_label ],
+                  [ "Price", parking_price_summary(transport, @hotel) ],
+                  [ "Height limit", height_limit_summary(transport.parking_height_limit_m) ],
+                  [ "EV charging", ("Yes" if transport.parking_ev_charging?) ],
+                  [ "Book ahead", ("Yes" if transport.parking_booking_required?) ]
+                ]) %>
+            <%= simple_format(transport.parking_notes, class: "text-muted-foreground") if transport.parking_notes.present? %>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <% if info.general_infos.any? %>
+    <section class="space-y-3" aria-labelledby="additional-info-title">
+      <h2 id="additional-info-title" class="guest-card__title guest-section-title">Additional information</h2>
+      <div class="guest-card-grid">
+        <% info.general_infos.each do |document| %>
+          <%= render GuestUI::GuideCard.new(title: document.title, icon: "book-open") do %>
+            <%= simple_format(document.content) %>
+          <% end %>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+</div>

@@ -153,7 +153,8 @@ RSpec.describe StayView::ProjectBooking do
       check_in: Date.new(2026, 7, 16), check_out: Date.new(2026, 7, 18),
       check_in_at:, check_out_at:,
       adults: 2, children: 1,
-      boat_in_at: Time.utc(2026, 7, 16, 7), boat_out_at: Time.utc(2026, 7, 18, 4)
+      boat_in_type: "charter", boat_out_type: "own",
+      boat_in_at: Time.utc(2026, 7, 16, 7), boat_out_at: nil
     )
 
     permitted = described_class.call(
@@ -167,12 +168,12 @@ RSpec.describe StayView::ProjectBooking do
     )
     expect(permitted.boat_in_at.time_zone.name).to eq(window.time_zone_name)
     expect(permitted.accessible_label).to include(
-      "2 adults, 1 children", "check-in 15:00", "check-out 12:00", "boat-in"
+      "2 adults, 1 children", "check-in 15:00", "check-out 12:00", "Charter Boat", "boat-out Own Boat"
     )
 
     redacted = described_class.call(booking:, room_type_name: "Deluxe", date_window: window, capabilities:)
     expect(redacted).to have_attributes(
-      adults: nil, children: nil, boat_in_at: nil, boat_out_at: nil,
+      adults: nil, children: nil, boat_in_at: nil, boat_out_at: nil, boat_in_type: nil, boat_out_type: nil,
       check_in_at: nil, check_out_at: nil
     )
     expect(redacted.accessible_label).not_to include("adults", "check-in", "check-out", "boat-in", "boat-out")
@@ -266,5 +267,34 @@ RSpec.describe StayView::ProjectBooking do
 
     expect(segment.financial_signals).to be_empty
     expect(segment.accessible_label).not_to include("MYR 240.00")
+  end
+  describe "a day-use stay" do
+    def booking_between(check_in, check_out)
+      StayView::BookingRecord.new(
+        booking_room_id: 12, booking_id: 8, room_type_id: 3, room_number: "102", status: :confirmed,
+        guest_name: "Day Guest", check_in:, check_out:
+      )
+    end
+
+    it "carries its hours and lands on the property's own day" do
+      zone = Time.find_zone!(window.time_zone_name)
+      # 06:00 at the property is the previous day in UTC.
+      arrival = zone.local(2026, 7, 17, 6, 0)
+
+      segment = described_class.call(booking: booking_between(arrival.utc, (arrival + 6.hours).utc),
+        room_type_name: "Deluxe", date_window: window, capabilities:)
+
+      expect(segment).to be_day_use
+      expect(segment.day_use_hours).to eq(6)
+      expect(segment.start_track).to eq(window.booking_tracks(arrival, arrival + 6.hours).start_track)
+      expect(segment.accessible_label).to include("day use 6 hours")
+    end
+
+    it "leaves an overnight stay unmarked" do
+      segment = described_class.call(booking: booking_between(Date.new(2026, 7, 17), Date.new(2026, 7, 18)),
+        room_type_name: "Deluxe", date_window: window, capabilities:)
+
+      expect(segment).not_to be_day_use
+    end
   end
 end

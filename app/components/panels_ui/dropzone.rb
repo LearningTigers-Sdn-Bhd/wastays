@@ -43,15 +43,15 @@ module PanelsUI
       {
         class: tw_merge("panel-dropzone", @class),
         data: {
-          controller: "panels-ui--dropzone",
+          controller: "ui--dropzone",
           action: dropzone_actions,
-          panels_ui__dropzone_accept_value: @accept,
-          panels_ui__dropzone_multiple_value: @multiple,
-          panels_ui__dropzone_max_files_value: @max_files,
-          panels_ui__dropzone_max_size_value: @max_size,
-          panels_ui__dropzone_existing_count_value: @existing_count,
-          panels_ui__dropzone_preview_value: @preview,
-          panels_ui__dropzone_presentation_value: @presentation,
+          ui__dropzone_accept_value: @accept,
+          ui__dropzone_multiple_value: @multiple,
+          ui__dropzone_max_files_value: @max_files,
+          ui__dropzone_max_size_value: @max_size,
+          ui__dropzone_existing_count_value: @existing_count,
+          ui__dropzone_preview_value: @preview,
+          ui__dropzone_presentation_value: @presentation,
           size: @size,
           invalid: @invalid.to_s,
           disabled: @disabled.to_s
@@ -76,8 +76,8 @@ module PanelsUI
         disabled: @disabled || attributes.delete(:disabled),
         class: tw_merge("sr-only", attributes.delete(:class)),
         data: data.merge(
-          panels_ui__dropzone_target: "input",
-          action: [ caller_action, "change->panels-ui--dropzone#select" ].compact.join(" ")
+          ui__dropzone_target: "input",
+          action: [ caller_action, "change->ui--dropzone#select" ].compact.join(" ")
         ),
         aria: aria.merge(describedby: described_by, invalid: (@invalid ? "true" : nil)).compact
       ).compact
@@ -94,7 +94,7 @@ module PanelsUI
         id: @form.field_id(@remove_attribute),
         name: @form.field_name(@remove_attribute),
         value: "0",
-        data: { panels_ui__dropzone_target: "removeInput" }
+        data: { ui__dropzone_target: "removeInput" }
       }
     end
 
@@ -129,11 +129,11 @@ module PanelsUI
 
     def dropzone_actions
       %w[
-        dragenter->panels-ui--dropzone#dragenter
-        dragover->panels-ui--dropzone#dragover
-        dragleave->panels-ui--dropzone#dragleave
-        drop->panels-ui--dropzone#drop
-        reset@document->panels-ui--dropzone#reset
+        dragenter->ui--dropzone#dragenter
+        dragover->ui--dropzone#dragover
+        dragleave->ui--dropzone#dragleave
+        drop->ui--dropzone#drop
+        reset@document->ui--dropzone#reset
       ].join(" ")
     end
   end

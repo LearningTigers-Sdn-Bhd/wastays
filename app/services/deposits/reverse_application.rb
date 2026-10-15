@@ -2,11 +2,12 @@
 
 module Deposits
   class ReverseApplication
-    def self.call(movement:, actor:, reason:, operation_key: nil)
-      new(movement:, actor:, reason:, operation_key:).call
+    def self.call(movement:, actor:, reason:, operation_key: nil, metadata: {})
+      new(movement:, actor:, reason:, operation_key:, metadata:).call
     end
 
-    def initialize(movement:, actor:, reason:, operation_key:)
+    def initialize(movement:, actor:, reason:, operation_key:, metadata:)
+      @metadata = metadata.to_h
       @movement = movement
       @deposit = movement.deposit
       @actor = actor
@@ -35,7 +36,7 @@ module Deposits
           correction_note: @reason,
           options: {
             operation_key: @operation_key && "deposit:#{@operation_key}",
-            metadata: { deposit_id: @deposit.id, deposit_movement_id: @movement.id }
+            metadata: @metadata.merge(deposit_id: @deposit.id, deposit_movement_id: @movement.id)
           }
         )
         return failure(result.error) unless result.success?
@@ -52,7 +53,7 @@ module Deposits
           operation_key: @operation_key
         )
         @deposit.refresh_status!
-        Deposits::SyncBookingPaymentStatus.call(@movement.booking_folio.booking)
+        Deposits::SyncBookingPaymentStatus.call(@movement.folio_transaction.source_booking) unless @metadata["internal_folio_movement"]
         Deposits::SyncBookingDepositStatus.call(@deposit.booking) if @deposit.kind_security?
       end
       success(reversal)

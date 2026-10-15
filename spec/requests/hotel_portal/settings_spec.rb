@@ -91,6 +91,50 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response.parsed_body.css("title").text).to eq("General | #{hotel.name}")
     end
 
+    it "shows the OTA Logins tab and an empty state" do
+      get hotel_ota_logins_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      expect(document.at_css("h1").text).to eq("OTA Logins")
+      expect(document.at_css("#ota-logins-heading").text).to eq("Recorded OTA Logins")
+      expect(document.at_css("#hotel-breadcrumb").text).to include("OTA Logins")
+      expect(document.at_css("[data-testid='settings-tabs'] a[aria-current='page']").text.squish).to eq("OTA Logins")
+      expect(document.css("table thead th").size).to eq(8)
+      expect(document.at_css("table tbody td[colspan='8']").text).to eq("No OTA logins added yet.")
+      expect(document.at_css("a[href='#{hotel_new_ota_login_path(hotel)}']").text.squish).to eq("Add OTA Login")
+      expect(document.at_css("a[href='#{hotel_new_ota_login_path(hotel)}']")["data-turbo-frame"]).to eq("settings_action_sheet")
+      expect(document.at_css("section[aria-labelledby='ota-logins-heading']").css("form")).to be_empty
+    end
+
+    it "shows only this hotel's saved OTA details without exposing passwords" do
+      create(:hotel_ota_credential, hotel: hotel, channel_name: "Booking.com", property_code: "BC-42",
+             username: "booking-user", password: "private-ota-password", status: "processed",
+             market_manager_name: "Amina", market_manager_phone: "+60123456789",
+             market_manager_email: "amina@example.com")
+      create(:hotel_ota_credential, hotel: hotel, channel_name: "Agoda", password: nil)
+      create(:hotel_ota_credential, hotel: create(:hotel, account: account), channel_name: "Foreign OTA")
+
+      get hotel_ota_logins_settings_path(hotel)
+
+      expect(response).to have_http_status(:ok)
+      document = response.parsed_body
+      rows = document.css("table tbody tr")
+      expect(rows.map { |row| row.at_css("th[scope='row']").text }).to eq([ "Booking.com", "Agoda" ])
+      expect(rows.first.text).to include("BC-42", "booking-user", "On file", "Amina", "+60123456789", "amina@example.com", "Processed")
+      expect(rows.last.text).to include("Not provided", "Pending")
+      expect(response.body).not_to include("private-ota-password", "Foreign OTA")
+      expect(document.at_css("section[aria-labelledby='ota-logins-heading']").css("form")).to be_empty
+    end
+
+    it "does not show OTA logins to a user with only account permission" do
+      RolePermission.find_by!(role: role, permission: Permission.find_by!(slug: "manage_hotel_profile")).destroy!
+
+      get hotel_ota_logins_settings_path(hotel)
+
+      expect(response).to redirect_to(hotel_banking_details_settings_path(hotel))
+    end
+
     it "shows concierge QR entry when AI concierge page is enabled" do
       get hotel_general_settings_path(hotel)
 
@@ -99,6 +143,16 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       trigger = document.at_css("a[href='#{hotel_concierge_qr_path(hotel)}'][data-turbo-frame='concierge_qr_dialog']")
       expect(trigger.text.squish).to eq("View QR")
       expect(document.at_css("turbo-frame#concierge_qr_dialog")).to be_present
+    end
+
+    it "shows pricing enabled by default with an accessible setting" do
+      get hotel_general_settings_path(hotel)
+
+      expect(hotel.reload.guest_registration_card_show_pricing?).to be(true)
+      section = Nokogiri::HTML(response.body).at_css("#guest-registration-card")
+      checkbox = section.at_css("input[type='checkbox'][name='hotel[guest_registration_card_show_pricing]']")
+      expect(checkbox["checked"]).to eq("checked")
+      expect(checkbox.ancestors("label").first.text.squish).to include("Show pricing on registration card", "draft and signed cards")
     end
 
     it "renders the guest registration card field selection" do
@@ -181,22 +235,33 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(document.at_css("#hotel_property_policy_attributes_check_out_time")["value"]).to eq("11:00")
     end
 
-    it "renders Notifications as two columns with five independent Panels UI cards" do
+    it "renders Notifications as two columns with six independent Panels UI cards" do
       get hotel_notification_settings_path(hotel)
 
       document = response.parsed_body
       section = document.at_css("section[aria-labelledby='communication-notifications-heading']")
       expect(section.at_css(".grid.lg\\:grid-cols-2")).to be_present
-      expect(section.css("article.panel-card").size).to eq(5)
-      expect(section.css("article.panel-card[data-dividers='none']").size).to eq(5)
+      expect(section.css("article.panel-card").size).to eq(6)
+      expect(section.css("article.panel-card[data-dividers='none']").size).to eq(6)
       expect(section.css("article.panel-card").first(2).map { |card| card["data-notification-type"] }).to eq(
         %w[check_in_confirmation check_out_receipt_message]
       )
-      expect(section.css("form[action='#{hotel_notification_settings_path(hotel)}']").size).to eq(5)
+      expect(section.css("form[action='#{hotel_notification_settings_path(hotel)}']").size).to eq(6)
       in_stay_wrapper = section.at_css("[data-notification-type='in_stay_guest_messaging']").ancestors.find { |node| node["class"].to_s.include?("lg:col-span-2") }
       expect(in_stay_wrapper).to be_present
       expect(section.at_css("input[name='notification_config[settings][review_link]']")).to be_present
       expect(section.at_css("input[name='notification_config[settings][rules][mid_stay][time]']")).to be_present
+      expect(section.at_css("input[name='notification_config[settings][offsets_hours]']")).to be_present
+    end
+
+    # The agent reminder goes to a business contact with no phone number on the
+    # booking, so it must not offer a channel it cannot send on.
+    it "offers the agent payment reminder on email only" do
+      get hotel_notification_settings_path(hotel)
+
+      card = response.parsed_body.at_css("[data-notification-type='agent_payment_reminder']")
+      channels = card.css("input[name='notification_config[channels][]']").filter_map { |input| input["value"].presence }
+      expect(channels).to eq([ "email" ])
     end
 
     it "shows setup tabs in the settings tab bar" do
@@ -233,7 +298,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(breadcrumb_items[2].at_css("a")&.text&.squish).to eq("General")
       expect(breadcrumb_items[2].at_css("button[aria-label='Open General navigation']")).to be_present
       expect(breadcrumb_items[2].css("[role='menuitem']").map { |item| item.text.squish }).to eq(
-        [ "General", "Notifications", "Plan & Billing" ]
+        [ "General", "OTA Logins", "Notifications", "Corporate/TA Portal", "Plan & Billing" ]
       )
     end
 
@@ -398,6 +463,20 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
   end
 
   describe 'PATCH /hotel/settings' do
+    %w[0 1].each do |value|
+      it "saves registration card pricing visibility as #{value}" do
+        hotel.update!(guest_registration_card_show_pricing: value == "0")
+
+        patch hotel_general_settings_path(hotel), params: {
+          form_id: "hotel_settings",
+          hotel: { guest_registration_card_show_pricing: value }
+        }
+
+        expect(response).to redirect_to(hotel_general_settings_path(hotel))
+        expect(hotel.reload.guest_registration_card_show_pricing?).to eq(value == "1")
+      end
+    end
+
     it "updates guest registration card fields" do
       patch hotel_general_settings_path(hotel), params: {
         form_id: "hotel_settings",
@@ -406,6 +485,49 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
 
       expect(response).to redirect_to(hotel_general_settings_path(hotel))
       expect(hotel.reload.guest_registration_card_fields).to eq(%w[phone address room_type check_in])
+    end
+
+    it "saves the agent payment terms from the Corporate/TA Portal tab" do
+      patch hotel_corporate_ta_portal_settings_path(hotel), params: {
+        form_id: "corporate_ta_portal_settings",
+        hotel: {
+          agent_payment_hold_amount: "5", agent_payment_hold_unit: "days",
+          agent_deposit_percentage: "30", agent_full_payment_days_before_arrival: "14", agent_deposit_non_refundable: "1"
+        }
+      }
+
+      expect(response).to redirect_to(hotel_corporate_ta_portal_settings_path(hotel))
+      expect(hotel.reload).to have_attributes(
+        agent_payment_hold_hours: 120, agent_deposit_percentage: 30,
+        agent_full_payment_days_before_arrival: 14, agent_deposit_non_refundable: true
+      )
+    end
+
+    it "re-renders the Corporate/TA Portal tab with the error when the terms are invalid" do
+      patch hotel_corporate_ta_portal_settings_path(hotel), params: {
+        form_id: "corporate_ta_portal_settings", hotel: { agent_deposit_percentage: "150" }
+      }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Agent deposit percentage")
+      expect(hotel.reload.agent_deposit_percentage).to eq(50)
+    end
+
+    it "shows the agent payment terms on their own tab, not on General" do
+      get hotel_corporate_ta_portal_settings_path(hotel)
+
+      doc = Nokogiri::HTML(response.body)
+      expect(doc.at_css("input[name='hotel[agent_deposit_percentage]']")["value"]).to eq("50")
+      expect(doc.at_css("input[name='hotel[agent_full_payment_days_before_arrival]']")["value"]).to eq("30")
+      expect(doc.at_css("input[type='checkbox'][name='hotel[agent_deposit_non_refundable]']")).to be_present
+      expect(doc.at_css("input[name='hotel[agent_payment_hold_amount]']")["value"]).to eq("3")
+      expect(doc.at_css("[data-testid='settings-tabs']").text.squish).to include("Corporate/TA Portal")
+
+      get hotel_general_settings_path(hotel)
+
+      general = Nokogiri::HTML(response.body)
+      expect(general.at_css("input[name='hotel[agent_deposit_percentage]']")).to be_nil
+      expect(general.at_css("input[name='hotel[agent_payment_hold_amount]']")).to be_nil
     end
 
     it "updates the guest registration card terms and conditions" do
@@ -434,7 +556,7 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(response.body).to include("09:30", "16:45")
     end
 
-    it "hides Save until a slot changes, keeps the new-slot card collapsed, and wires each button to its own form" do
+    it "hides Discard until a slot changes, keeps the new-slot card collapsed, and wires each button to its own form" do
       hotel.update!(allow_boat_information: true)
       slot = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
 
@@ -443,20 +565,18 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       document = Nokogiri::HTML(response.body)
       row = document.at_css("li[data-controller='boat-slot']:not([hidden])")
 
-      # Save and Discard are hidden on the buttons themselves -- no wrapper, so
-      # they stay direct children of the group -- and the row's Stimulus
-      # controller reveals both once the row differs from what was saved.
-      save = row.at_css("button[data-boat-slot-target='save']")
-      expect(save["hidden"]).not_to be_nil
-      expect(save["form"]).to eq("boat-slot-#{slot.id}")
-
-      # Discard resets the edit form rather than submitting anything, which is
-      # the only way out of a dirty row that is not Save.
+      # There's no per-row Save button -- every dirty row is saved together
+      # from the page-level bulk bar. Discard is hidden on the button itself
+      # -- no wrapper, so it stays a direct child of the group -- and the
+      # row's Stimulus controller reveals it once the row differs from what
+      # was saved.
+      expect(row.at_css("button[data-boat-slot-target='save']")).to be_nil
       discard = row.at_css("button[data-boat-slot-target='discard']")
       expect(discard["hidden"]).not_to be_nil
       expect(discard["type"]).to eq("button")
       expect(discard["data-action"]).to eq("boat-slot#discard")
       expect(row.at_css("form[data-boat-slot-target='form']")["id"]).to eq("boat-slot-#{slot.id}")
+      expect(row.at_css("form[data-boat-slot-target='form']")["data-slot-id"]).to eq(slot.id.to_s)
 
       # Retire submits its own form, so the two live in one button group
       # without nesting a form inside a form.
@@ -466,12 +586,12 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       state_form = document.at_css("form#boat-slot-#{slot.id}-state")
       expect(state_form.at_css("input[name='_method']")["value"]).to eq("delete")
 
-      # All three are icon-only direct children of one group -- a wrapper would
+      # Both are icon-only direct children of one group -- a wrapper would
       # drop out of the selectors that join their corners -- and neither
-      # secondary button falls back to the primary variant that an unknown
-      # variant name silently produces.
+      # falls back to the primary variant that an unknown variant name
+      # silently produces.
       group = row.at_css(".panel-button-group")
-      expect(group.css("> button").size).to eq(3)
+      expect(group.css("> button").size).to eq(2)
       expect(group.css("button").map { |button| button.text.squish }).to all(be_empty)
       expect(retire["data-variant"]).to eq("neutral")
       expect(discard["data-variant"]).to eq("neutral")
@@ -480,6 +600,32 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       section = document.at_css("section[data-controller='boat-slots']")
       expect(section.at_css("[data-boat-slots-target='trigger']").text).to include("Add slot")
       expect(section.at_css("li[data-boat-slots-target='card']")["hidden"]).not_to be_nil
+
+      # The bulk save bar wraps both sections and starts hidden -- shown once
+      # any row goes dirty.
+      bar = document.at_css("[data-boat-slots-bulk-target='bar']")
+      expect(bar["hidden"]).not_to be_nil
+      expect(bar.at_css("[data-action='boat-slots-bulk#save']").text).to include("Save changes")
+      expect(bar.at_css("[data-action='boat-slots-bulk#discardAll']").text).to include("Discard all")
+    end
+
+    # Every row shares the same form scope (:hotel_boat_schedule), so the
+    # generated id would default to the same string for every row's time
+    # picker -- a label's `for` or a popover's outlet class selector would
+    # then always resolve to the first row on the page, not its own, and
+    # Discard/reset on any other row would silently act on (or fail to act
+    # on) the wrong picker.
+    it "gives each row's time picker a distinct id, not the shared form scope's default" do
+      hotel.update!(allow_boat_information: true)
+      first = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      second = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "11:00")
+
+      get hotel_boat_settings_path(hotel)
+
+      document = Nokogiri::HTML(response.body)
+      ids = [ first, second ].map { |slot| document.at_css("form#boat-slot-#{slot.id} input[name='hotel_boat_schedule[time]']")["id"] }
+      expect(ids).to all(be_present)
+      expect(ids.uniq.size).to eq(2)
     end
 
     it "saves meal service times on the Boat Settings tab" do
@@ -508,6 +654,23 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(slot.meals).to eq(%i[lunch dinner])
     end
 
+    it "saves a hi-tea service time and a hi-tea entitlement on a slot" do
+      hotel.update!(allow_boat_information: true)
+
+      patch hotel_boat_settings_path(hotel), params: {
+        form_id: "boat_settings",
+        hotel: { hotel_boat_setting_attributes: { breakfast_time: "08:00", lunch_time: "12:00", hi_tea_time: "15:30", dinner_time: "19:00" } }
+      }
+      expect(hotel.reload.hotel_boat_setting.hi_tea_time.strftime("%H:%M")).to eq("15:30")
+
+      post hotel_boat_schedule_slots_path(hotel), params: { hotel_boat_schedule: { kind: "boat_in", time: "14:00" } }
+      slot = hotel.hotel_boat_schedules.find_by!(kind: "boat_in", time: "14:00")
+      expect(slot.meals).to eq(%i[hi_tea dinner])
+
+      get hotel_boat_settings_path(hotel)
+      expect(Nokogiri::HTML(response.body).css("label").map { |label| label.text.squish }).to include("Hi-Tea")
+    end
+
     it "retires a slot rather than destroying it, so booked guests keep it" do
       hotel.update!(allow_boat_information: true)
       slot = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
@@ -533,6 +696,55 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       }.not_to change(HotelBoatSchedule, :count)
 
       expect(flash[:alert]).to include("already has a slot at this time")
+    end
+
+    it "saves several boat slots in one bulk request" do
+      hotel.update!(allow_boat_information: true)
+      morning = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30", has_breakfast: true, has_lunch: false)
+      evening = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "18:00", has_dinner: false)
+
+      patch hotel_boat_schedule_slots_bulk_update_path(hotel), params: {
+        hotel_boat_schedules: {
+          morning.id.to_s => { time: "09:45", has_breakfast: "0", has_lunch: "1" },
+          evening.id.to_s => { has_dinner: "1" }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_boat_settings_path(hotel))
+      expect(flash[:notice]).to eq("2 boat slots updated.")
+      expect(morning.reload.time_of_day).to eq("09:45")
+      expect(morning.has_breakfast).to eq(false)
+      expect(morning.has_lunch).to eq(true)
+      expect(evening.reload.has_dinner).to eq(true)
+    end
+
+    it "saves none of the batch when one slot in it fails validation" do
+      hotel.update!(allow_boat_information: true)
+      keeper = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_in", time: "09:30")
+      breaker = create(:hotel_boat_schedule, hotel: hotel, kind: "boat_out", time: "18:00")
+
+      patch hotel_boat_schedule_slots_bulk_update_path(hotel), params: {
+        hotel_boat_schedules: {
+          keeper.id.to_s => { time: "10:00" },
+          breaker.id.to_s => { time: "" }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_boat_settings_path(hotel))
+      expect(flash[:alert]).to be_present
+      expect(keeper.reload.time_of_day).to eq("09:30")
+    end
+
+    it "ignores a bulk-update id that doesn't belong to this hotel" do
+      hotel.update!(allow_boat_information: true)
+      other_slot = create(:hotel_boat_schedule, kind: "boat_in", time: "09:30")
+
+      patch hotel_boat_schedule_slots_bulk_update_path(hotel), params: {
+        hotel_boat_schedules: { other_slot.id.to_s => { time: "10:00" } }
+      }
+
+      expect(flash[:alert]).to be_present
+      expect(other_slot.reload.time_of_day).to eq("09:30")
     end
 
     it "discards unknown guest registration card fields and allows none" do
@@ -626,6 +838,39 @@ RSpec.describe 'HotelPortal::Settings', type: :request do
       expect(config.enabled).to be(true)
       expect(config.channels).to match_array(%w[whatsapp email])
       expect(config.settings["stages"]).to eq(%w[d2 d1])
+    end
+
+    it "updates agent payment reminder offsets, largest first" do
+      patch hotel_notification_settings_path(hotel), params: {
+        form_id: "notification_settings",
+        notification_config: {
+          notification_type: "agent_payment_reminder",
+          enabled: "1",
+          channels: [ "email" ],
+          settings: { offsets_hours: "4, 48" }
+        }
+      }
+
+      expect(response).to redirect_to(hotel_notification_settings_path(hotel))
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: "agent_payment_reminder")
+      expect(config.enabled).to be(true)
+      expect(config.settings["offsets_hours"]).to eq([ 48, 4 ])
+    end
+
+    # A stray comma should not cost the hotel its reminders.
+    it "drops nonsense offsets rather than refusing the save" do
+      patch hotel_notification_settings_path(hotel), params: {
+        form_id: "notification_settings",
+        notification_config: {
+          notification_type: "agent_payment_reminder",
+          enabled: "1",
+          channels: [ "email" ],
+          settings: { offsets_hours: "24, , abc, 0" }
+        }
+      }
+
+      config = NotificationConfig.find_by!(hotel: hotel, notification_type: "agent_payment_reminder")
+      expect(config.settings["offsets_hours"]).to eq([ 24 ])
     end
 
     it "updates check-out receipt message settings with both channels" do

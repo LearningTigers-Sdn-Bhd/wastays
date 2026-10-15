@@ -1,0 +1,41 @@
+<% content_for :title, "Ready to sign" %>
+<%# This screen only ever runs on a paired tablet -- no marketing nav or login
+    link belongs on it. %>
+<% content_for :hide_chrome, true %>
+
+<%# The screen a tablet shows for most of its life. It holds the stream open and
+    waits; the desk writes into the command region below to move it on.
+
+    Connection state is on the screen deliberately. A tablet whose socket has
+    dropped looks exactly like one that is waiting, and the desk finds out by
+    pressing send and watching nothing happen. Better to say so here. %>
+<%= turbo_stream_from @device, :signing %>
+
+<div class="flex min-h-dvh flex-col items-center justify-center gap-8 bg-muted px-6 text-center"
+     data-controller="signing-kiosk"
+     data-signing-kiosk-heartbeat-url-value="<%= heartbeat_signing_device_path(@device.public_token) %>"
+     data-signing-kiosk-online-class="text-emerald-600"
+     data-signing-kiosk-offline-class="text-amber-600">
+  <div>
+    <p class="text-xs font-black uppercase tracking-widest text-primary">Guest registration</p>
+    <h1 class="mt-3 text-4xl font-black text-foreground"><%= @hotel.name %></h1>
+  </div>
+
+  <div class="card w-full max-w-md p-8">
+    <p class="text-lg font-semibold text-foreground">Ready to sign</p>
+    <p class="mt-2 text-sm text-muted-foreground">
+      The front desk will send a registration card to this tablet.
+    </p>
+
+    <p class="mt-6 flex items-center justify-center gap-2 text-sm font-bold"
+       data-signing-kiosk-target="status"
+       role="status">
+      <span class="inline-block size-2 rounded-full bg-current" aria-hidden="true"></span>
+      <span data-signing-kiosk-target="statusLabel">Connecting…</span>
+    </p>
+  </div>
+
+  <p class="text-xs text-muted-foreground"><%= @device.label %></p>
+</div>
+
+<%= render "public/signing_devices/command", url: nil %>

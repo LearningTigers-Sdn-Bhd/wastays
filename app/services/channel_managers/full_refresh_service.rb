@@ -4,19 +4,28 @@ require "ostruct"
 
 module ChannelManagers
   class FullRefreshService
-    def initialize(hotel:)
+    # wait delays the push, so a batch of hotels can be spread out.
+    def initialize(hotel:, wait: nil)
       @hotel = hotel
+      @wait = wait
     end
 
     def call
       return OpenStruct.new(success?: false, message: "Channel publishing is unavailable while this property is in training.") if @hotel.training_mode?
-      return OpenStruct.new(success?: false, message: "Channel manager not selected") if @hotel.preferred_channel_manager.blank?
+      return OpenStruct.new(success?: false, message: "Channel manager not selected") unless @hotel.channel_manager_enabled?
 
-      # We use 500 days as per Channex Certification requirements
-      start_date = Date.current
+      # A full refresh is the moment to pick up newly connected OTAs; routine
+      # pushes reuse the cached channel list.
+      Rails.cache.delete("channex:channels:#{@hotel.id}")
+
+      # We use 500 days as per Channex Certification requirements. The window
+      # opens on the hotel's today: the 2 am refresh in Kuala Lumpur runs while
+      # it is still yesterday in UTC.
+      start_date = @hotel.hotel_time_zone.today
       end_date = start_date + 499.days
 
-      ChannelManagers::SyncJob.perform_later(
+      job = @wait ? ChannelManagers::SyncJob.set(wait: @wait) : ChannelManagers::SyncJob
+      job.perform_later(
         @hotel.id,
         start_date,
         end_date,

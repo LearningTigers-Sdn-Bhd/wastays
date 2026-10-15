@@ -2,10 +2,11 @@ module AiConcierge
   module Orchestration
     module HotelKnowledge
       class ToolRouter
-        def initialize(hotel:, message:, interpretation:)
+        def initialize(hotel:, message:, interpretation:, fact_catalogue: nil)
           @hotel = hotel
           @message = message.to_s
           @interpretation = interpretation
+          @fact_catalogue = fact_catalogue
         end
 
         def call
@@ -15,7 +16,9 @@ module AiConcierge
             { reply_type: :hotel_policy, active_topic: "hotel_policy", active_flow: "hotel_policy", result: result }
           when "hotel_information"
             tool_class, reply_type = hotel_information_tool_and_reply_type
-            result = tool_class.new(hotel: hotel, query: message, scope: interpretation["scope"], hints: hints).call
+            arguments = { hotel: hotel, query: message, scope: interpretation["scope"], hints: hints }
+            arguments[:fact_catalogue] = fact_catalogue if tool_class == Tools::HotelInformation::GetGeneralHotelInfoTool
+            result = tool_class.new(**arguments).call
             { reply_type: reply_type, active_topic: interpretation["topic"], active_flow: "hotel_information", result: result }
           when "nearby_attractions"
             result = Tools::HotelInformation::GetNearbyAttractionsTool.new(hotel: hotel).call
@@ -35,7 +38,7 @@ module AiConcierge
 
         private
 
-        attr_reader :hotel, :message, :interpretation
+        attr_reader :hotel, :message, :interpretation, :fact_catalogue
 
         # The interpretation is the one thing already threaded through every
         # layer between the model and the search, so the hints ride along in it
@@ -43,6 +46,11 @@ module AiConcierge
         def hints = @hints ||= Retrieval::QueryHints.from(interpretation["retrieval_hints"])
 
         def hotel_information_tool_and_reply_type
+          structured_fact = hints.fact.presence || Retrieval::QueryHints.fact_for_query(message)
+          if structured_fact.in?(Retrieval::QueryHints::GUEST_CONTENT_FACTS)
+            return [ Tools::HotelInformation::GetGeneralHotelInfoTool, :general_hotel_info ]
+          end
+
           case interpretation["topic"]
           when "hotel_faq"
             [ Tools::HotelInformation::GetHotelFaqTool, :hotel_faq ]

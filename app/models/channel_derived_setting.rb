@@ -14,7 +14,7 @@ class ChannelDerivedSetting < ApplicationRecord
 
   def trigger_derived_rates_sync
     return if Thread.current[:skip_ari_sync]
-    return if hotel.preferred_channel_manager.blank?
+    return unless hotel.channel_manager_enabled?
 
     # 1. Sync rates & availability for the immediate 30-day window synchronously for instant feedback
     ChannelManagers::SyncJob.perform_now(

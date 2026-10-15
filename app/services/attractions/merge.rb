@@ -17,6 +17,7 @@ module Attractions
     def call
       return Result.failure("Select two different attractions.") if @source == @target
       return Result.failure("The source attraction was already merged.") if @source.merged_into_id.present?
+      return Result.failure("The target attraction was already merged.") if @target.merged_into_id.present?
       return Result.failure("The target attraction must be pending or approved.") unless @target.status_pending? || @target.status_approved?
 
       merged_links_count = 0

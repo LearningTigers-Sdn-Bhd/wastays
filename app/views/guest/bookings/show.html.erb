@@ -1,257 +1,159 @@
 <% content_for :title, "Booking Details | WAStays" %>
+<%
+  refund_request = @booking.refund_request
+  ready_e_invoice = @booking.original_ready_guest_e_invoice_submission
+  ready_adjustment = @booking.latest_ready_adjustment_guest_e_invoice_submission
+  pending_e_invoice = @booking.pending_guest_e_invoice_submission
+  failed_e_invoice = @booking.failed_guest_e_invoice_submission
+%>
 
-<div class="space-y-3.5">
-  <%= render PanelsUI::PageHeader.new(title: "Booking Details") do |header| %>
-    <% header.with_caption do %>
-      <span class="font-mono tracking-wider"><%= @booking.confirmation_token.upcase %></span>
+<%# The concierge's split: the stay at a third, what the guest does with it
+    at two thirds. They stack on a phone, stay first. %>
+<div class="guest-page__grid" data-columns="2">
+  <div class="guest-page__context">
+    <%= render guest_stay_summary(@booking, eyebrow: "Your Stay", heading_level: 1) do |summary| %>
+      <% summary.with_actions do %>
+        <%= render "guest/bookings/concierge_button", booking: @booking, variant: :secondary %>
+      <% end %>
     <% end %>
-  <% end %>
+  </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Main Info -->
-    <div class="lg:col-span-2 space-y-6">
-      <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 class="font-semibold text-foreground">Reservation Information</h2>
-          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider <%= guest_booking_badge_class(@booking) %>">
-            <%= guest_booking_status(@booking).humanize %>
-          </span>
-        </div>
-
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="space-y-6">
-              <div>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Hotel</p>
-                <p class="text-base font-semibold text-foreground"><%= @booking.hotel.name %></p>
-                <p class="text-sm text-muted-foreground"><%= @booking.hotel.city %>, <%= @booking.hotel.country %></p>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Check-in</p>
-                  <p class="text-sm font-semibold text-foreground"><%= @booking.check_in.strftime("%d %b %Y") %></p>
-                </div>
-                <div>
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Check-out</p>
-                  <p class="text-sm font-semibold text-foreground"><%= @booking.check_out.strftime("%d %b %Y") %></p>
-                </div>
-              </div>
-            </div>
-
-            <div class="space-y-6">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Guests</p>
-                  <p class="text-sm font-semibold text-foreground">
-                    <%= @booking.adults %> adult<%= @booking.adults != 1 ? "s" : "" %>
-                    <% if @booking.children > 0 %>, <%= @booking.children %> child<%= @booking.children != 1 ? "ren" : "" %><% end %>
+  <div class="guest-page__content">
+    <% if @booking.status == "checked_in" %>
+      <% rooms = @booking.booking_rooms.where.not(room_number: [ nil, "" ]) %>
+      <% if rooms.any? %>
+        <%= render GuestUI::Card.new(title: "In-Stay Preferences") do %>
+          <div class="space-y-4">
+            <% rooms.each do |room| %>
+              <% dnd = @room_statuses[[ room.room_type_id, room.room_number ]]&.active_dnd? %>
+              <div class="flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-foreground">Room <%= room.room_number %></p>
+                  <p class="text-xs text-muted-foreground">
+                    <%= dnd ? "Do Not Disturb is on." : "Turn on Do Not Disturb for privacy." %>
                   </p>
                 </div>
-
-                <div>
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Room Category</p>
-                  <p class="text-sm font-semibold text-foreground"><%= @booking.room_type_summary %></p>
-                </div>
-              </div>
-
-              <div>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Stay Duration</p>
-                <p class="text-sm font-semibold text-foreground">
-                  <%= @booking.duration_in_nights %> Nights
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sidebar Summary -->
-    <div class="space-y-6">
-      <% if @booking.status == "checked_in" %>
-        <!-- In-Stay Preferences -->
-        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-border">
-            <h2 class="font-semibold text-foreground">In-Stay Preferences</h2>
-          </div>
-          <div class="p-6 space-y-4">
-            <% @booking.booking_rooms.where.not(room_number: [nil, ""]).each do |br| %>
-              <% room_status = @room_statuses[[br.room_type_id, br.room_number]] %>
-              <% is_dnd = room_status&.active_dnd? %>
-
-              <div class="flex flex-col gap-y-3 p-4 rounded-xl border border-border <%= is_dnd ? 'bg-orange-50/50 border-orange-200' : 'bg-muted/30' %>">
-                <div class="flex items-center gap-3">
-                  <div class="p-2 rounded-lg <%= is_dnd ? 'bg-orange-100 text-orange-600' : 'bg-muted text-muted-foreground' %>">
-                    <%= cached_icon "bell", class: "size-5", fill: (is_dnd ? "currentColor" : "none") %>
-                  </div>
-                  <div>
-                    <p class="text-sm font-semibold text-foreground">Room <%= br.room_number %></p>
-                    <p class="text-xs text-muted-foreground">
-                      <%= is_dnd ? "Do Not Disturb is active." : "Toggle Do Not Disturb for privacy." %>
-                    </p>
-                  </div>
-                </div>
-
-                <%= button_to toggle_dnd_guest_booking_path(@booking), method: :patch, class: "w-full inline-flex items-center justify-center gap-x-1.5 px-3 py-1.5 rounded-lg border transition-all text-xs font-bold shadow-sm #{is_dnd ? 'bg-orange-600 border-orange-600 text-primary-foreground hover:bg-orange-700' : 'bg-card border-border text-foreground hover:bg-background'}" do %>
-                  <%= is_dnd ? "Remove Do Not Disturb" : "Activate Do Not Disturb" %>
-                <% end %>
+                <%= render GuestUI::Button.new(
+                      label: (dnd ? "Turn off" : "Turn on"), size: :sm,
+                      variant: (dnd ? :primary : :secondary),
+                      href: toggle_dnd_guest_booking_path(@booking), method: :patch,
+                      aria_label: "#{dnd ? 'Turn off' : 'Turn on'} Do Not Disturb for room #{room.room_number}"
+                    ) %>
               </div>
             <% end %>
           </div>
-        </div>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= render GuestUI::Card.new(title: "Reservation") do %>
+      <%= render GuestUI::FactList.new(facts: [
+            [ "Check-in", @booking.check_in.strftime("%d %b %Y") ],
+            [ "Check-out", @booking.check_out.strftime("%d %b %Y") ],
+            [ "Room Category", @booking.room_type_summary ]
+          ]) %>
+    <% end %>
+
+    <%= render GuestUI::Card.new(title: "Payment and Documents") do %>
+      <%= render GuestUI::FactList.new(facts: [
+            [ "Payment Status", @booking.payment_status.to_s.humanize ],
+            [ "Total Amount", number_to_currency(@booking.total_amount, unit: "#{@booking.currency} ") ]
+          ]) %>
+
+      <% if pending_e_invoice && !(ready_e_invoice || ready_adjustment) %>
+        <%= render GuestUI::Notice.new(message: "E-Invoice is being prepared…", class: "mt-4") %>
+      <% elsif failed_e_invoice && !(ready_e_invoice || ready_adjustment) %>
+        <%= render GuestUI::Notice.new(
+              title: "E-Invoice submission failed.",
+              message: failed_e_invoice.error_message.presence || "The submission to LHDN failed. The property can retry it for you.",
+              variant: :danger, class: "mt-4"
+            ) %>
       <% end %>
 
-      <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-border">
-          <h2 class="font-semibold text-foreground">Payment Summary</h2>
-        </div>
-        <div class="p-6 space-y-4">
-          <div class="flex items-center justify-between">
-            <p class="text-sm text-muted-foreground">Payment Status</p>
-            <span class="text-sm font-bold text-foreground capitalize"><%= @booking.payment_status %></span>
-          </div>
-          <div class="pt-4 border-t border-border flex items-center justify-between">
-            <p class="text-sm font-bold text-foreground">Total Amount</p>
-            <p class="text-lg font-bold text-brand-primary"><%= number_to_currency(@booking.total_amount, unit: @booking.currency + " ") %></p>
-          </div>
-          <div class="pt-4 border-t border-border">
-            <%
-              ready_e_invoice = @booking.original_ready_guest_e_invoice_submission
-              ready_adjustment = @booking.latest_ready_adjustment_guest_e_invoice_submission
-              pending_e_invoice = @booking.pending_guest_e_invoice_submission
-              failed_e_invoice = @booking.failed_guest_e_invoice_submission
-              can_request_e_invoice = @booking.e_invoice_guest_request_possible?
-            %>
-
-            <% if ready_e_invoice || ready_adjustment %>
-              <% if ready_e_invoice %>
-                <%= link_to e_invoice_guest_booking_path(@booking, submission_id: ready_e_invoice.id), class: "mb-2 w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted transition-colors", data: { turbo: false } do %>
-                  <%= cached_icon "download", class: "w-4 h-4" %>
-                  Download E-Invoice
-                <% end %>
-              <% end %>
-              <% if ready_adjustment %>
-                <%= link_to e_invoice_guest_booking_path(@booking, submission_id: ready_adjustment.id), class: "mb-2 w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted transition-colors", data: { turbo: false } do %>
-                  <%= cached_icon "download", class: "w-4 h-4" %>
-                  Download <%= ready_adjustment.document_type_label %>
-                <% end %>
-              <% end %>
-            <% elsif pending_e_invoice %>
-              <div class="mb-2 flex items-center gap-x-2 rounded-xl border border-border bg-muted px-4 py-2.5">
-                <%= cached_icon "loader-circle", class: "w-4 h-4 animate-spin text-muted-foreground" %>
-                <p class="text-sm font-medium text-foreground">E-Invoice is being prepared…</p>
-              </div>
-            <% elsif failed_e_invoice %>
-              <div class="mb-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5">
-                <p class="text-sm font-semibold text-destructive">E-Invoice submission failed.</p>
-                <p class="mt-1 text-sm text-destructive/90"><%= failed_e_invoice.error_message.presence || "The submission to LHDN failed. The hotel can retry it for you." %></p>
-              </div>
-            <% elsif can_request_e_invoice %>
-              <div class="mb-2"
-                   data-controller="e-invoice-request-modal"
-                   data-e-invoice-request-modal-request-url-value="<%= request_e_invoice_guest_booking_path(@booking) %>"
-                   data-e-invoice-request-modal-status-url-value="<%= status_e_invoice_guest_booking_path(@booking) %>">
-                <button type="button"
-                        class="w-full cursor-pointer inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted transition-colors"
-                        data-action="e-invoice-request-modal#open">
-                  <%= cached_icon "file-text", class: "w-4 h-4" %>
-                  Request E-Invoice
-                </button>
-                <%= render "shared/e_invoice_request_modal", booking: @booking %>
-              </div>
-            <% end %>
-
-            <% if @booking.status == "completed" %>
-              <%= link_to invoice_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[#0a2e29] hover:bg-[#0d3d35] text-[#d9c5a0] transition-colors", data: { turbo: false } do %>
-                <%= cached_icon "download", class: "w-4 h-4" %>
-                Download Invoice
-              <% end %>
-            <% else %>
-              <%# Named for what the document is: it confirms the reservation. Payment
-                  receipts are issued per payment and delivered on their own. %>
-              <%= link_to receipt_guest_booking_path(@booking), class: "w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[#0a2e29] hover:bg-[#0d3d35] text-[#d9c5a0] transition-colors", data: { turbo: false } do %>
-                <%= cached_icon "download", class: "w-4 h-4" %>
-                Download Confirmation
-              <% end %>
-            <% end %>
-            <%= link_to summary_guest_booking_path(@booking), class: "mt-2 w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted transition-colors", data: { turbo: false } do %>
-              <%= cached_icon "download", class: "w-4 h-4" %>
-              <%= @booking.group_booking_id? ? "Download Group Summary" : "Download Booking Summary" %>
-            <% end %>
-            <% if @booking.group_booking_id? %>
-              <%= link_to voucher_pack_guest_booking_path(@booking), class: "mt-2 w-full inline-flex items-center justify-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted transition-colors", data: { turbo: false } do %>
-                <%= cached_icon "download", class: "w-4 h-4" %>
-                Download All Vouchers
-              <% end %>
-            <% end %>
-          </div>
-        </div>
+      <div class="mt-2">
+        <%# Named for what the document is: it confirms the reservation. Payment
+            receipts are issued per payment and delivered on their own. %>
+        <% if @booking.status == "completed" %>
+          <%= render GuestUI::Card::Row.new(label: "Invoice", hint: "Download the final PDF", icon: "download",
+                           href: invoice_guest_booking_path(@booking), data: { turbo: false }) %>
+        <% else %>
+          <%= render GuestUI::Card::Row.new(label: "Booking Confirmation", hint: "Download a PDF copy", icon: "download",
+                           href: receipt_guest_booking_path(@booking), data: { turbo: false }) %>
+        <% end %>
+        <%= render GuestUI::Card::Row.new(label: (@booking.group_booking_id? ? "Group Summary" : "Booking Summary"),
+                         hint: "Download a PDF copy", icon: "download",
+                         href: summary_guest_booking_path(@booking), data: { turbo: false }) %>
+        <% if @booking.group_booking_id? %>
+          <%= render GuestUI::Card::Row.new(label: "All Vouchers", hint: "Download one PDF for every room", icon: "download",
+                           href: voucher_pack_guest_booking_path(@booking), data: { turbo: false }) %>
+        <% end %>
+        <% if ready_e_invoice %>
+          <%= render GuestUI::Card::Row.new(label: "E-Invoice", hint: "Download the validated PDF", icon: "download",
+                           href: e_invoice_guest_booking_path(@booking, submission_id: ready_e_invoice.id), data: { turbo: false }) %>
+        <% end %>
+        <% if ready_adjustment %>
+          <%= render GuestUI::Card::Row.new(label: ready_adjustment.document_type_label, hint: "Download the validated PDF", icon: "download",
+                           href: e_invoice_guest_booking_path(@booking, submission_id: ready_adjustment.id), data: { turbo: false }) %>
+        <% end %>
       </div>
 
-      <% if @booking.eligible_for_refund?(@refund_policy) %>
-        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-border">
-            <h2 class="font-semibold text-foreground">Need a Refund?</h2>
-          </div>
-          <div class="p-6">
-            <p class="text-sm text-muted-foreground mb-4">If you need to cancel this booking and request a refund, you can submit a refund request below. Please note that submitting will immediately cancel your booking.</p>
-            <%= link_to new_guest_booking_refund_request_path(@booking, return_to: "details"),
-                class: "inline-flex items-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-red-200 text-red-600 hover:bg-red-50" do %>
-              <%= cached_icon "credit-card", class: "size-4" %>
-              Request Refund
-            <% end %>
-          </div>
-        </div>
-      <% elsif @booking.status == "confirmed" && @booking.refund_request.nil? %>
-        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-border">
-            <h2 class="font-semibold text-foreground">Refund Availability</h2>
-          </div>
-          <div class="p-6">
-            <% if @refund_policy.blank? %>
-              <p class="text-sm text-muted-foreground">We're preparing refund requests for this booking right now. If you need help urgently, please contact the hotel and they'll assist you.</p>
-            <% else %>
-              <p class="text-sm text-muted-foreground">Thanks for checking in. This booking is currently outside the online refund request window (minimum <%= @refund_policy.min_days_before_checkin %> days before check-in).</p>
-              <p class="text-sm text-muted-foreground mt-2">If your plans changed unexpectedly, please contact the hotel directly. They can still guide you on available options.</p>
-            <% end %>
-          </div>
-        </div>
-      <% elsif @booking.refund_request.present? %>
-        <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-border">
-            <h2 class="font-semibold text-foreground">Refund Request</h2>
-          </div>
-          <div class="p-6 space-y-3">
-            <div class="flex items-center justify-between">
-              <p class="text-sm text-muted-foreground">Status</p>
-              <% rr = @booking.refund_request %>
-              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider <%= refund_status_class(rr.status) %>">
-                <%= rr.status.humanize %>
-              </span>
-            </div>
-            <div class="flex items-center justify-between">
-              <p class="text-sm text-muted-foreground">Refund Amount</p>
-              <p class="text-sm font-bold text-foreground"><%= number_to_currency(@booking.refund_request.refund_amount, unit: @booking.currency + " ") %></p>
-            </div>
-            <% if @booking.refund_request.hotel_note.present? %>
-              <div class="pt-3 border-t border-border">
-                <p class="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Hotel Note</p>
-                <p class="text-sm text-foreground"><%= @booking.refund_request.hotel_note %></p>
-              </div>
-            <% end %>
-            <% if @booking.refund_request.rejected? %>
-              <div class="pt-3 border-t border-border">
-                <%= link_to new_guest_booking_refund_request_path(@booking, return_to: "details"),
-                    class: "inline-flex items-center gap-x-2 px-4 py-2.5 text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-muted" do %>
-                  <%= cached_icon "credit-card", class: "size-4" %>
-                  Resubmit Refund Request
-                <% end %>
-              </div>
-            <% end %>
-          </div>
+      <% if !(ready_e_invoice || ready_adjustment || pending_e_invoice || failed_e_invoice) && @booking.e_invoice_guest_request_possible? %>
+        <div class="mt-4"
+             data-controller="e-invoice-request-modal"
+             data-e-invoice-request-modal-request-url-value="<%= request_e_invoice_guest_booking_path(@booking) %>"
+             data-e-invoice-request-modal-status-url-value="<%= status_e_invoice_guest_booking_path(@booking) %>">
+          <%= render GuestUI::Button.new(label: "Request E-Invoice", variant: :secondary, icon: "file-text", block: true,
+                                         data: { action: "e-invoice-request-modal#open" }) %>
+          <%= render "shared/e_invoice_request_modal", booking: @booking %>
         </div>
       <% end %>
-    </div>
+    <% end %>
+
+    <%# A new request only; a rejected one is resubmitted from its own card. %>
+    <% if @refund_mode == :pre_stay && refund_request.nil? %>
+      <%= render GuestUI::Card.new(title: "Need a Refund?") do %>
+        <p class="text-sm text-muted-foreground">
+          You can ask for a refund below. Sending the request cancels this booking at once.
+        </p>
+        <%= render GuestUI::Button.new(label: "Request Refund", variant: :destructive, class: "mt-4",
+                                       href: new_guest_booking_refund_request_path(@booking, return_to: "details")) %>
+      <% end %>
+    <% elsif @refund_mode == :post_stay && refund_request.nil? %>
+      <%= render GuestUI::Card.new(title: "Need a Refund?") do %>
+        <p class="text-sm text-muted-foreground">
+          Tell the property what went wrong and how much you are asking for. This does not cancel your stay.
+        </p>
+        <%= render GuestUI::Button.new(label: "Ask for a refund", variant: :secondary, class: "mt-4",
+                                       href: new_guest_booking_refund_request_path(@booking, return_to: "details")) %>
+      <% end %>
+    <% elsif @booking.status == "confirmed" && refund_request.nil? %>
+      <%= render GuestUI::Card.new(title: "Refund Availability") do %>
+        <% if @refund_policy.blank? %>
+          <p class="text-sm text-muted-foreground">Online refund requests are not open for this booking yet. If you need help now, contact the property.</p>
+        <% else %>
+          <p class="text-sm text-muted-foreground">
+            This booking is outside the online refund window. Requests close
+            <%= pluralize(@refund_policy.min_days_before_checkin, "day") %> before check-in.
+            If your plans changed, contact the property. They can tell you your options.
+          </p>
+        <% end %>
+      <% end %>
+    <% elsif refund_request.present? %>
+      <%= render GuestUI::Card.new(title: "Refund Request") do %>
+        <%= render GuestUI::FactList.new(facts: [
+              [ "Status", Guest::StatusBadges.refund(refund_request.status).label ],
+              [ "Refund Amount", number_to_currency(refund_request.refund_amount, unit: "#{@booking.currency} ") ],
+              [ "Property Note", refund_request.hotel_note ]
+            ]) %>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <%= render GuestUI::Button.new(label: "View Request", variant: :secondary,
+                                         href: guest_refund_request_path(refund_request)) %>
+          <% if refund_request.rejected? %>
+            <%= render GuestUI::Button.new(label: "Resubmit Request",
+                                           href: new_guest_booking_refund_request_path(@booking, return_to: "details")) %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
   </div>
 </div>

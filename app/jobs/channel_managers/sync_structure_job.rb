@@ -3,14 +3,14 @@
 module ChannelManagers
   class SyncStructureJob < ApplicationJob
     queue_as :default
-    retry_on Channex::Client::RetryableRequestError, wait: :exponentially_longer, attempts: 8
+    retry_on Channex::Client::RetryableRequestError, wait: :polynomially_longer, attempts: 8
 
     def perform(mappable_type, mappable_id, action = "sync", options = {})
       if action == "delete"
         hotel_id = options[:hotel_id] || options["hotel_id"]
         external_id = options[:external_id] || options["external_id"]
         hotel = Hotel.find_by(id: hotel_id)
-        return if hotel.nil? || hotel.training_mode? || hotel.preferred_channel_manager.blank?
+        return if hotel.nil? || hotel.training_mode? || !hotel.channel_manager_enabled?
 
         adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
         case mappable_type
@@ -31,7 +31,7 @@ module ChannelManagers
       when "Hotel" then mappable
       end
 
-      return if hotel.nil? || hotel.training_mode? || hotel.preferred_channel_manager.blank?
+      return if hotel.nil? || hotel.training_mode? || !hotel.channel_manager_enabled?
 
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(hotel)
 

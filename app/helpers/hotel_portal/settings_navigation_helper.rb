@@ -64,6 +64,10 @@ module HotelPortal
       guest_content_page?("ai_concierge") || guest_content_page?("ai_healthchecks")
     end
 
+    def concierge_settings_page?
+      guest_content_page?("concierge")
+    end
+
     def hotel_information_page?
       guest_content_page?("knowledge_general_infos") || guest_content_page?("arrival_departures") ||
         guest_content_page?("transport_details")
@@ -195,8 +199,10 @@ module HotelPortal
       when :general
         [
           hotel_permission_granted?("manage_hotel_profile") ? { key: "general", label: "General", path: hotel_general_settings_path(current_hotel), icon: "settings", active: controller_name == "settings" && settings_active_page == "general" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "ota-logins", label: "OTA Logins", path: hotel_ota_logins_settings_path(current_hotel), icon: "globe", active: controller_name == "ota_logins" || (controller_name == "settings" && settings_active_page == "ota_logins") } : nil,
           hotel_permission_granted?("manage_hotel_profile") && current_hotel.allow_boat_information? ? { key: "boat", label: "Boat Settings", path: hotel_boat_settings_path(current_hotel), icon: "ship", active: controller_name.in?(%w[settings boat_schedules]) && settings_active_page == "boat" } : nil,
           hotel_permission_granted?("manage_hotel_profile") ? { key: "notifications", label: "Notifications", path: hotel_notification_settings_path(current_hotel), icon: "bell", active: controller_name == "settings" && settings_active_page == "notifications" } : nil,
+          hotel_permission_granted?("manage_hotel_profile") ? { key: "corporate-ta-portal", label: "Corporate/TA Portal", path: hotel_corporate_ta_portal_settings_path(current_hotel), icon: "briefcase", active: controller_name == "settings" && settings_active_page == "corporate_ta_portal" } : nil,
           { key: "plan", label: "Plan & Billing", path: hotel_plan_path(current_hotel), icon: "layers", active: controller_name == "plans" }
         ].compact
       when :property
@@ -205,8 +211,13 @@ module HotelPortal
           { key: "hotel-album", label: "Hotel Album", path: hotel_album_path(current_hotel), icon: "images", active: controller_name == "profiles" && action_name == "album" },
           { key: "room-groups", label: "Room Groups", path: hotel_room_groups_path(current_hotel), icon: "layout-grid", active: controller_name == "room_groups" },
           { key: "room-inventory", label: "Room Inventory", path: hotel_room_types_path(current_hotel), icon: "layers", active: controller_name.in?(%w[room_types rate_plan_attachments rate_plans rate_plan_room_pricings]) },
-          { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" }
-        ]
+          { key: "nearby-attractions", label: "Nearby Attractions", path: hotel_nearby_attractions_path(current_hotel), icon: "map-pin", active: controller_name == "nearby_attractions" },
+          # Only for a property a superadmin has granted the feature to. The tab
+          # is the only way in, so hiding it is most of the gate -- the
+          # controllers refuse as well, for the case where the grant is
+          # withdrawn while someone is on the page.
+          current_hotel.grc_tablet_signing_enabled? ? { key: "signing-tablets", label: "Signing Tablets", path: hotel_signing_devices_path(current_hotel), icon: "tablet-smartphone", active: controller_name.in?(%w[signing_devices signing_device_pairings]) } : nil
+        ].compact
       when :commercial
         [
           hotel_permission_granted?("manage_hotel_profile") ? { key: "taxes-fees", label: "Taxes & Fees", path: hotel_taxes_fees_path(current_hotel), icon: "receipt", active: controller_name.in?(%w[taxes_fees hotel_taxes]) } : nil,
@@ -232,6 +243,7 @@ module HotelPortal
           { key: "amenities", label: "Amenities", path: hotel_guest_amenities_path(current_hotel), icon: "sparkles", active: guest_content_page?("amenities") },
           { key: "wifi", label: "Wi-Fi", path: hotel_wifi_networks_path(current_hotel), icon: "wifi", active: guest_content_page?("wifi_networks") },
           { key: "contact", label: "Contact & Escalation", path: hotel_guest_contact_path(current_hotel), icon: "phone", active: guest_content_page?("contacts") },
+          feature_enabled_for_hotel?("ai_concierge_page", current_hotel) ? { key: "concierge", label: "Concierge", path: hotel_concierge_settings_path(current_hotel), icon: "concierge-bell", active: concierge_settings_page? } : nil,
           feature_enabled_for_hotel?("ai_concierge_page", current_hotel) ? { key: "ai-concierge", label: "AI Concierge", path: hotel_ai_concierge_settings_path(current_hotel), icon: "bot", active: ai_concierge_page? } : nil
         ].compact
       when :team

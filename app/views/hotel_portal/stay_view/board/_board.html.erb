@@ -4,8 +4,10 @@
       title: stay_view_board_title(board.view_mode),
       description: stay_view_board_description(board.view_mode)
     ) do |header| %>
-      <% header.with_caption do %>
-        <%= stay_view_board_caption(board.view_mode) %>
+      <% if stay_view_board_caption(board.view_mode).present? %>
+        <% header.with_caption do %>
+          <%= stay_view_board_caption(board.view_mode) %>
+        <% end %>
       <% end %>
       <% header.with_actions do %>
         <%= render PanelsUI::Tabs.new(id: "stay-view-modes", active: board.view_mode, variant: :pill, aria_label: "Stay View mode") do |tabs| %>

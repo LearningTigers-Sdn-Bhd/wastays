@@ -1,0 +1,154 @@
+<% content_for :title, "Recommendations | #{@hotel.name}" %>
+<%# A directory earns a wider column and a shorter run-up than a single-purpose
+    form does: the grid is the page, so the shell's default centred prose width
+    and deep top padding both get overridden here. %>
+<%= render layout: "public/concierge/shared/page_shell",
+           locals: { content_class: "flex-1 px-4 pt-[26px] pb-16 sm:px-6 md:pt-[38px]",
+                     container_class: "w-full max-w-6xl" } do %>
+  <%# No back link: this is the top of its own section. The hero is no longer
+      a link home; the Recommendations redesign adds the way back. %>
+  <%# !mt-0 tightens the gap under the heading for this page specifically --
+      the shared partial's own mt-3/mt-2 still apply everywhere else, and
+      margin-collapse with the heading's mb-2 keeps a real gap here too, just
+      a shorter one. title_wrapper_class and the page's own pt- above are both
+      the shared defaults (mb-6 sm:mb-8 / pt-8 md:pt-12) cut 20%, scoped to
+      this page only -- every other page keeps the shared spacing. %>
+  <%= render "public/concierge/shared/page_header",
+             back: false,
+             eyebrow: "Recommendations",
+             title_prefix: "Around the",
+             title_accent: "Corner",
+             subtitle: "Partner restaurants, bars, spas and shops nearby.",
+             subtitle_class: "!mt-0",
+             title_wrapper_class: "mb-[19px] sm:mb-[26px]" %>
+
+  <%= render "public/concierge/recommendations/wallet_bar" %>
+
+  <%# Everything that depends on @category lives inside this frame, tabs
+      included -- the active pill has to repaint along with the list under it,
+      or a desktop click would swap the vendors while leaving the old tab
+      looking selected. data-turbo-action="advance" promotes frame navigations
+      to real page visits: the URL and browser history still update, only the
+      request and the swap are scoped to this frame instead of the whole page. %>
+  <%= turbo_frame_tag "category_content", class: "contents", data: { turbo_action: "advance" } do %>
+    <%= render "public/concierge/recommendations/tabs", categories: @categories, category: @category %>
+
+    <% if @featured.any? %>
+      <section class="mb-8" data-controller="concierge-modal">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <%= cached_icon "sparkles", class: "h-4 w-4 text-accent-foreground" %>
+            <h3 class="text-[12px] font-black uppercase tracking-[0.2em] text-foreground">Worth grabbing</h3>
+          </div>
+
+          <% if @all_offers.size > @featured.size %>
+            <button type="button"
+                    data-action="concierge-modal#open"
+                    class="text-[10px] font-black uppercase tracking-wider text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground">
+              View all (<%= @all_offers.size %>)
+            </button>
+          <% end %>
+        </div>
+
+        <%# Never a scrolling rail -- there is nothing to swipe past and nothing
+            hidden off-screen. The shape differs by width on purpose: a phone
+            has the vertical room to spare but not the horizontal, so it gets
+            two rows of two (four cards, less to scan per row, lower cognitive
+            load than three squeezed across); a wider screen has the opposite
+            trade, so it gets one row of three and the fourth fetched card
+            (VendorDirectory.featured_in fetches up to four for exactly this)
+            stays unrendered there. Anything beyond what's shown lives in the
+            "View all" sheet. %>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+          <% @featured.each_with_index do |offer, index| %>
+            <%= render "public/concierge/recommendations/featured_offer", offer: offer,
+                  wrapper_class: ("sm:hidden" if index >= 3) %>
+          <% end %>
+        </div>
+
+        <%= render "public/concierge/recommendations/voucher_sheet", offers: @all_offers %>
+      </section>
+    <% end %>
+
+    <%# List is the default: it shows enough of a vendor -- tagline, a line of
+        description, distance, price, tags -- to decide without tapping in.
+        Card trades that for density, two to a row, when a guest already
+        knows what they want and is scanning for the name and the distance.
+        Both render up front; the controller only ever toggles which is
+        hidden, so switching is instant and needs no request. %>
+    <section data-controller="concierge-view-mode concierge-dietary-filter">
+      <div class="mb-1 flex items-baseline justify-between gap-3">
+        <h3 class="text-[12px] font-black uppercase tracking-[0.2em] text-foreground"><%= @category.name %></h3>
+        <div class="flex items-center gap-3">
+          <p class="text-[12px] font-medium text-muted-foreground"><%= pluralize(@vendors.size, "place") %></p>
+
+          <div class="flex items-center gap-0.5 rounded-full border border-border/60 bg-white p-0.5">
+            <% [ [ "list", "rows-3", "List" ], [ "card", "layout-grid", "Card" ] ].each do |mode, icon, label| %>
+              <button type="button"
+                      data-action="concierge-view-mode#show"
+                      data-mode="<%= mode %>"
+                      data-concierge-view-mode-target="tab"
+                      aria-pressed="<%= mode == "list" %>"
+                      aria-label="<%= label %> view"
+                      class="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors aria-pressed:bg-primary aria-pressed:text-primary-foreground">
+                <%= cached_icon icon, class: "h-3.5 w-3.5" %>
+              </button>
+            <% end %>
+          </div>
+        </div>
+      </div>
+      <p class="mb-3 text-[13px] font-medium leading-relaxed text-muted-foreground"><%= @category.tagline %></p>
+
+      <%# Only where it means something -- Wellness, Health and Shopping vendors
+          carry no dietary_tags at all, so the row simply doesn't render there
+          rather than offering three buttons that would filter nothing. Bars
+          is excluded on purpose even though its vendors do carry a dietary
+          label: every bar here is Non-Halal by definition of serving alcohol,
+          so filtering by it would only ever leave the list exactly as it was
+          or empty it out entirely -- neither is a useful filter. %>
+      <% if @category.slug != "bars" && @vendors.any?(&:dietary_tags?) %>
+        <div class="-mx-4 mb-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div class="flex w-max gap-1.5">
+            <% [ [ "", "All" ], [ "Halal", "Halal" ], [ "Non-Halal", "Non-Halal" ], [ "Vegetarian Options", "Vegetarian" ] ].each do |value, label| %>
+              <button type="button"
+                      data-action="concierge-dietary-filter#filter"
+                      data-value="<%= value %>"
+                      data-concierge-dietary-filter-target="button"
+                      aria-pressed="<%= value == "" %>"
+                      class="flex-shrink-0 whitespace-nowrap rounded-full border border-border/60 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-muted-foreground transition-colors aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground">
+                <%= label %>
+              </button>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <div data-concierge-view-mode-target="panel" data-mode="list" class="space-y-3">
+        <% @vendors.each do |vendor| %>
+          <%= render "public/concierge/recommendations/vendor_row", vendor: vendor %>
+        <% end %>
+      </div>
+
+      <div data-concierge-view-mode-target="panel" data-mode="card" hidden class="grid grid-cols-2 gap-2.5 sm:gap-4">
+        <% @vendors.each do |vendor| %>
+          <%= render "public/concierge/recommendations/vendor_card", vendor: vendor %>
+        <% end %>
+      </div>
+
+      <% if @vendors.empty? %>
+        <div class="rounded-2xl border border-dashed border-border bg-white/60 p-8 text-center">
+          <p class="text-sm font-bold text-foreground">Nothing here yet</p>
+          <p class="mt-1.5 text-[13px] font-medium text-muted-foreground">We are still signing up partners in this category.</p>
+        </div>
+      <% end %>
+
+      <%# Shown by the filter controller itself when a dietary filter matches
+          nothing in this category -- distinct from the empty-category message
+          above, which is a server-rendered state and never both at once. %>
+      <div data-concierge-dietary-filter-target="empty" hidden class="rounded-2xl border border-dashed border-border bg-white/60 p-8 text-center">
+        <p class="text-sm font-bold text-foreground">No matches here</p>
+        <p class="mt-1.5 text-[13px] font-medium text-muted-foreground">Try a different filter, or browse all of <%= @category.name %>.</p>
+      </div>
+    </section>
+  <% end %>
+<% end %>

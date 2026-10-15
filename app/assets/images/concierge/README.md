@@ -8,10 +8,10 @@ matching any particular colour. Only two things matter:
 - **Tileable.** It repeats; a visible seam becomes a grid of seams.
 - **Alpha carries the drawing.** Ink colour is ignored entirely.
 
-To change how it looks, edit the three variables on `.public-chat` in
-`app/assets/tailwind/public/chat.css` -- ink, strength, tile size. Not the file.
+To change how it looks, edit the three variables on `.guest-chat` in
+`app/assets/tailwind/guest/chat.css` -- ink, strength, tile size. Not the file.
 
-`--public-chat-doodle-strength` has a ceiling of about 0.15, and it is not a
+`--guest-chat-doodle-strength` has a ceiling of about 0.15, and it is not a
 matter of taste: the author labels sit on this surface, and past that they fall
 under 4.5:1. The note above the variables has the arithmetic.
 

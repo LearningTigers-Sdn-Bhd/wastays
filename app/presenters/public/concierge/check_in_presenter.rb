@@ -10,6 +10,20 @@ module Public
         @hotel = hotel
       end
 
+      # ------------------------------------------------------------ the booking
+
+      def guest_name = booking.guest_name
+      def confirmation_code = booking.confirmation_token.to_s.upcase
+      def nights = (booking.check_out.to_date - booking.check_in.to_date).to_i
+      def check_in_label = I18n.l(booking.check_in.to_date, format: StayPresenter::SHORT_DATE)
+      def check_out_label = I18n.l(booking.check_out.to_date, format: StayPresenter::SHORT_DATE)
+
+      def room_type_names
+        booking.booking_rooms.map { |room| room.room_type_snapshot&.dig("name") }.compact
+      end
+
+      def status_label = pre_checkin_completed? ? "Details done" : "Details needed"
+
       def subtitle
         if pre_checkin_completed?
           "Your pre-check-in is complete. Confirm below to check in and get your room assigned."
@@ -51,7 +65,7 @@ module Public
         when :registration_error
           "Please check the details below and try again."
         when :too_far_away
-          "You are too far from the hotel to self-check-in. Self-check-in is only available when you are physically at the property."
+          "You are too far from the property to self-check-in. Self-check-in is only available when you are physically at the property."
         when :missing_location
           "Location access is required for verification. Please enable GPS and allow location permissions."
         else
@@ -64,7 +78,7 @@ module Public
       end
 
       def form_data(view_context, is_mobile: false)
-        controllers = [ "scanner", "pre-checkin-document", "guest-identity" ]
+        controllers = [ "pre-checkin-document", "guest-identity" ]
         controllers << "guest-dob" if registration_required?
         controllers << "geolocation-check-in" if geolocation_active?
 
@@ -112,10 +126,6 @@ module Public
 
       def front_scanner_label
         guest_document_type == "passport" ? "Passport Photo Page" : "Front ID Card"
-      end
-
-      def front_scanner_height_class
-        guest_document_type == "passport" ? "h-44 md:h-64 md:max-w-[700px]" : "h-44"
       end
     end
   end

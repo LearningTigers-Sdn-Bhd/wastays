@@ -57,7 +57,7 @@ module ChannelManagers
       retirement = retire_unsupported_mappings(
         client,
         property_id,
-        Date.current..(Date.current + 499.days)
+        @hotel.hotel_time_zone.today..(@hotel.hotel_time_zone.today + 499.days)
       )
       unless retirement[:ok]
         return failure(retirement[:message], warnings: retirement[:warnings], task_ids: { restrictions: retirement[:task_id] })
@@ -172,8 +172,8 @@ module ChannelManagers
         }
       }
       if capability.flattened?
-        payload[:rate_plan][:children_fee] = format_money(rate_plan.channex_children_fee)
-        payload[:rate_plan][:infant_fee] = format_money(rate_plan.channex_infant_fee)
+        payload[:rate_plan][:children_fee] = format_money(rate_plan.channex_children_fee || 0)
+        payload[:rate_plan][:infant_fee] = format_money(rate_plan.channex_infant_fee || 0)
       end
 
       response = if mapping.external_id.to_s.start_with?("pending")
@@ -287,6 +287,13 @@ module ChannelManagers
       client = Channex::Client.new
       property_id = mapping_for(@hotel).external_id
       task_ids = {}
+
+      endpoints = []
+      endpoints << "/availability" if sync_availability
+      endpoints << "/restrictions" if sync_rates || sync_restrictions
+      unless Channex::AriRateLimiter.room_for?(property_id, endpoints)
+        raise Channex::Client::RetryableRequestError, "Channex rate budget spent this minute for #{endpoints.join(' and ')}"
+      end
 
       if sync_availability
         availability_result = push_availability(client, property_id, date_range, room_type_ids: room_type_ids)
@@ -452,7 +459,10 @@ module ChannelManagers
         check_in: safe_parse_date(check_in),
         check_out: safe_parse_date(check_out),
         guest_details: {
-          name: extract_guest_name(attributes),
+          name: extract_room_guest_name(attributes) || extract_guest_name(attributes),
+          # Whose email and phone these are, so a guest profile is only matched
+          # on them when the booker is the one staying.
+          booker_name: extract_guest_name(attributes),
           email: attributes.dig("customer", "email") || attributes.dig("customer", "mail"),
           phone: attributes.dig("customer", "phone") || attributes.dig("customer", "Telephone", "@PhoneNumber"),
           country: attributes.dig("customer", "country")
@@ -464,6 +474,7 @@ module ChannelManagers
         total_amount: financials[:breakdown_complete] ? financials[:gross_amount] : nil,
         currency: financials[:currency] || valid_currency(attributes["currency"]),
         source: attributes["ota_name"] || "channex",
+        channel_notes: channel_notes_for(attributes),
         settlement: settlement,
         financials: financials
       }
@@ -736,7 +747,27 @@ module ChannelManagers
 
       return full_name if full_name.present?
 
-      attributes.dig("customer", "name").to_s.strip.presence || "Guest"
+      name = [ attributes.dig("customer", "name"), attributes.dig("customer", "surname") ]
+        .map { |part| part.to_s.strip }.reject(&:blank?).join(" ")
+      name.presence || "Guest"
+    end
+
+    # The guest staying, which Booking.com lets the booker set apart from
+    # themselves. The front desk checks in this person, not the booker.
+    def extract_room_guest_name(attributes)
+      guest = Array(attributes["rooms"]).first.to_h["guests"].to_a.first.to_h
+      [ guest["name"], guest["surname"] ].map { |part| part.to_s.strip }.reject(&:blank?).join(" ").presence
+    end
+
+    # Channex's notes carry the guest's request plus the meal plan, smoking
+    # preference and payment collection it adds. When the room guest is not the
+    # booker, the booker is noted so their contact details still make sense.
+    def channel_notes_for(attributes)
+      booker = extract_guest_name(attributes)
+      room_guest = extract_room_guest_name(attributes)
+      booker_line = "Booked by: #{booker}" if room_guest.present? && room_guest != booker
+
+      [ attributes["notes"].to_s.strip.presence, booker_line ].compact.join("\n").presence
     end
 
     def provider_name
@@ -843,10 +874,12 @@ module ChannelManagers
           is_full_sync = room_type_ids.nil?
           next if inventory.nil? && !is_full_sync
 
+          # A closed date keeps its count of free rooms for when it reopens,
+          # but nothing on it is for sale.
           val_data = {
             property_id: property_id,
             room_type_id: ext_rt_id,
-            availability: inventory&.quantity || 0
+            availability: inventory.nil? || inventory.status == "closed" ? 0 : inventory.quantity
           }
 
           if current_range.nil?
@@ -973,7 +1006,12 @@ module ChannelManagers
             }
 
             if final_sync_rates
-              val_data[:rate] = resolved_rates_by_date.fetch(date)
+              rate_val = resolved_rates_by_date.fetch(date)
+              if rate_plan.sell_mode == "per_person"
+                val_data[:rates] = rate_val.map { |occ, amt| { occupancy: occ, rate: amt } }
+              else
+                val_data[:rate] = rate_val
+              end
             end
 
             if final_sync_restrictions
@@ -995,6 +1033,11 @@ module ChannelManagers
                 val_data[:stop_sell] = (rate&.stop_sell ? 1 : 0)
               end
             end
+
+            # The fields that changed may have no value on this row (the same
+            # plan on another room type, say). An entry with nothing in it
+            # tells Channex nothing, so it isn't sent.
+            next if val_data.except(:property_id, :rate_plan_id).empty?
 
             if current_range.nil?
               current_range = val_data.merge(date_from: date.to_s, date_to: date.to_s)
@@ -1042,12 +1085,19 @@ module ChannelManagers
 
                   if final_sync_rates
                     base_rate = resolved_rates_by_date[date]
-                    val_data[:rate] = channel_rate_value(
-                      base_rate,
-                      override: override,
-                      derived_setting: derived_setting_for(channel["id"]),
-                      per_person: rate_plan.sell_mode == "per_person"
-                    ) if base_rate
+                    if base_rate
+                      adj_rate = channel_rate_value(
+                        base_rate,
+                        override: override,
+                        derived_setting: derived_setting_for(channel["id"]),
+                        per_person: rate_plan.sell_mode == "per_person"
+                      )
+                      if rate_plan.sell_mode == "per_person"
+                        val_data[:rates] = adj_rate.map { |occ, amt| { occupancy: occ, rate: amt } }
+                      else
+                        val_data[:rate] = adj_rate
+                      end
+                    end
                   end
 
                   if final_sync_restrictions
@@ -1376,89 +1426,18 @@ module ChannelManagers
     end
 
     def sync_channel_availability_rules(client, property_id, date_range, room_type_ids)
-      overrides = ChannelRoomRate.where(
-        room_type_id: room_type_ids,
-        rate_plan_id: nil,
-        date: date_range
-      )
-
-      overrides.group_by { |o| [ o.room_type_id, o.channel_id ] }.each do |(room_type_id, channel_id), chan_overrides|
-        room_type = RoomType.find(room_type_id)
-        ext_rt_id = mapping_for(room_type).external_id
-        next if ext_rt_id.to_s.start_with?("pending")
-
-        # 1. Clean up existing rules for this room/channel in this range to avoid duplicates
-        existing_rules = client.get("/channel_availability_rules", { "filter" => { "property_id" => property_id } }) rescue {}
-        if existing_rules["data"].is_a?(Array)
-          existing_rules["data"].each do |rule|
-            attr = rule["attributes"] || {}
-            if attr["title"] == "PMS Override" && attr["affected_channels"]&.include?(channel_id) && attr["affected_room_types"]&.include?(ext_rt_id)
-              r_start = Date.parse(attr["start_date"]) rescue nil
-              r_end = Date.parse(attr["end_date"]) rescue nil
-              if r_start && r_end && (r_start..r_end).overlaps?(date_range)
-                client.delete("/channel_availability_rules/#{rule['id']}") rescue nil
-              end
-            end
-          end
-        end
-
-        # 2. Push contiguous close_out rules
-        close_out_dates = chan_overrides.select(&:stop_sell).map(&:date).sort
-        group_dates_into_ranges(close_out_dates).each do |range|
-          client.post("/channel_availability_rules", {
-            channel_availability_rule: {
-              title: "PMS Override",
-              type: "close_out",
-              affected_channels: [ channel_id ],
-              affected_room_types: [ ext_rt_id ],
-              days: [ "mo", "tu", "we", "th", "fr", "sa", "su" ],
-              start_date: range.first.to_s,
-              end_date: range.last.to_s,
-              property_id: property_id
-            }
-          }) rescue nil
-        end
-
-        # 3. Push contiguous max_availability rules (allotments)
-        max_avail_overrides = chan_overrides.select { |o| o.availability.present? && !o.stop_sell }
-        max_avail_overrides.group_by(&:availability).each do |avail_value, overrides_with_val|
-          avail_dates = overrides_with_val.map(&:date).sort
-          group_dates_into_ranges(avail_dates).each do |range|
-            client.post("/channel_availability_rules", {
-              channel_availability_rule: {
-                title: "PMS Override",
-                type: "max_availability",
-                value: avail_value.to_i,
-                affected_channels: [ channel_id ],
-                affected_room_types: [ ext_rt_id ],
-                days: [ "mo", "tu", "we", "th", "fr", "sa", "su" ],
-                start_date: range.first.to_s,
-                end_date: range.last.to_s,
-                property_id: property_id
-              }
-            }) rescue nil
-          end
-        end
+      external_room_type_ids = @hotel.room_types.where(id: room_type_ids).each_with_object({}) do |room_type, ids|
+        external_id = mapping_for(room_type).external_id
+        ids[room_type.id] = external_id unless external_id.to_s.start_with?("pending")
       end
-    end
 
-    def group_dates_into_ranges(dates)
-      return [] if dates.empty?
-      ranges = []
-      start_date = dates.first
-      prev_date = dates.first
-
-      dates[1..].each do |d|
-        if d == prev_date + 1.day
-          prev_date = d
-        else
-          ranges << (start_date..prev_date)
-          start_date = d
-          prev_date = d
-        end
-      end
-      ranges << (start_date..prev_date)
-      ranges
+      ChannexAvailabilityRules.new(
+        client: client,
+        property_id: property_id,
+        external_room_type_ids: external_room_type_ids,
+        owned_rule_ids: @hotel.channel_availability_rules.where.not(external_id: nil).pluck(:external_id),
+        today: @hotel.hotel_time_zone.today
+      ).call(date_range)
     end
   end
 end

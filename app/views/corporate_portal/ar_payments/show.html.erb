@@ -124,12 +124,13 @@
             <dt class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Corporate remittance suggestions</dt>
             <dd class="mt-2 overflow-x-auto">
               <table class="min-w-[560px] text-left text-xs">
-                <thead class="text-[9px] font-bold uppercase tracking-wider text-muted-foreground"><tr><th class="py-2 pr-4">Invoice</th><th class="py-2 pr-4">Due</th><th class="py-2 pr-4 text-right">Outstanding snapshot</th><th class="py-2 text-right">Suggested</th></tr></thead>
+                <thead class="text-[9px] font-bold uppercase tracking-wider text-muted-foreground"><tr><th class="py-2 pr-4">Invoice</th><th class="py-2 pr-4">Guest</th><th class="py-2 pr-4">Due</th><th class="py-2 pr-4 text-right">Outstanding snapshot</th><th class="py-2 text-right">Suggested</th></tr></thead>
                 <tbody class="divide-y divide-border">
                   <% remittance_suggestions.each do |suggestion| %>
                     <% due_on = suggestion["due_on"] || suggestion[:due_on] %>
                     <tr>
                       <td class="py-2 pr-4 font-bold"><%= suggestion["invoice_label"] || suggestion[:invoice_label] || suggestion["invoice_number"] || suggestion[:invoice_number] %></td>
+                      <td class="py-2 pr-4 font-semibold break-words"><%= (suggestion["ar_invoice_id"] || suggestion[:ar_invoice_id]).then { |id| @suggestion_guest_names&.dig(id.to_s) } || "—" %></td>
                       <td class="py-2 pr-4 text-muted-foreground"><%= due_on.present? ? Date.iso8601(due_on).strftime("%d %b %Y") : "—" %></td>
                       <td class="py-2 pr-4 text-right"><%= currency %> <%= format_number(suggestion["outstanding_amount"] || suggestion[:outstanding_amount], precision: 2) %></td>
                       <td class="py-2 text-right font-bold"><%= currency %> <%= format_number(suggestion["suggested_amount"] || suggestion[:suggested_amount], precision: 2) %></td>
@@ -159,13 +160,14 @@
         </h2>
         <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"><%= pluralize(@payment.ar_payment_allocations.size, "entry") %></span>
       </header>
-      <% allocations = @payment.ar_payment_allocations.includes(:ar_invoice, reversal: :reversed_by).order(created_at: :desc) %>
+      <% allocations = @payment.ar_payment_allocations.includes({ ar_invoice: { booking_folio: :booking } }, { reversal: :reversed_by }).order(created_at: :desc) %>
       <% if allocations.any? %>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[720px] text-left text-sm">
             <thead class="border-b border-border bg-muted text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th class="px-6 py-3">Invoice</th>
+                <th class="px-6 py-3">Guest</th>
                 <th class="px-6 py-3 text-right">Allocated</th>
                 <th class="px-6 py-3">Recorded</th>
                 <th class="px-6 py-3">Status / Reversal</th>
@@ -177,6 +179,7 @@
                   <td class="px-6 py-4 font-bold">
                     <%= link_to alloc.ar_invoice.formatted_invoice_number, corporate_ar_invoice_path(alloc.ar_invoice), class: "underline decoration-muted-foreground underline-offset-2 hover:text-muted-foreground" %>
                   </td>
+                  <td class="px-6 py-4 font-semibold break-words"><%= alloc.ar_invoice.booking.guest_name %></td>
                   <td class="px-6 py-4 text-right font-semibold <%= "line-through" if alloc.reversed? %>">
                     <%= money.call(alloc.amount) %>
                   </td>

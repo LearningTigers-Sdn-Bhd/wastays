@@ -18,6 +18,19 @@ module HotelPortal
       end
     end
 
+    # For a contact the email never reaches. The invitation stores only a digest
+    # of its token, so the address cannot be read back: a fresh link is made
+    # instead, shown once, and the earlier link or email stops working. Nothing
+    # is sent, and an unsent invitation stays unsent.
+    def link
+      token = @invitation.refresh!(invited_by_user: current_user)
+      @revealed_link = { id: @invitation.id, url: corporate_invitation_url(token) }
+
+      respond_with_results(notice: "Link ready to copy. The previous link or email no longer works.")
+    rescue ActiveRecord::RecordInvalid
+      respond_with_results(alert: "Unable to create a link for this invitation.")
+    end
+
     def destroy
       email = @invitation.email
       @invitation.destroy!
@@ -41,7 +54,16 @@ module HotelPortal
           flash.now[:alert] = alert if alert
           render "hotel_portal/corporate_accounts/results"
         end
-        format.html { redirect_to hotel_corporate_accounts_path(current_hotel, results_params), notice: notice, alert: alert }
+        format.html do
+          # A redirect would lose the link: it is shown once, and not stored.
+          if @revealed_link
+            # The list's partials are looked up beside the template that renders them.
+            lookup_context.prefixes << "hotel_portal/corporate_accounts"
+            next render("hotel_portal/corporate_accounts/index")
+          end
+
+          redirect_to hotel_corporate_accounts_path(current_hotel, results_params), notice: notice, alert: alert
+        end
       end
     end
 

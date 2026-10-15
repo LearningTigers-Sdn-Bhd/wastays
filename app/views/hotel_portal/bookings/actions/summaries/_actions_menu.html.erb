@@ -36,7 +36,7 @@
             <% group.with_item(
                  href:,
                  variant: action.key.in?([ :cancel, :mark_no_show ]) ? :danger : :default,
-                 data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
+                 data: { turbo_frame: "booking_action_sheet_secondary", action: "click->ui--dropdown-menu#restoreTriggerFocus" }) do %>
               <%= app_icon action.icon, class: "size-4", aria: { hidden: true } %>
               <span><%= action.key == :cancel ? "Cancel booking" : action.label %></span>
             <% end %>
@@ -52,7 +52,7 @@
                [ "Change room", hotel_booking_action_edit_room_path(current_hotel, booking, navigation), "bed-double" ],
                [ "Change rate", hotel_booking_action_edit_rate_path(current_hotel, booking, navigation), "tag" ]
              ].each do |label, href, icon| %>
-            <% group.with_item(href:, data: { turbo_frame: "booking_action_sheet_secondary", action: "click->panels-ui--dropdown-menu#restoreTriggerFocus" }) do %>
+            <% group.with_item(href:, data: { turbo_frame: "booking_action_sheet_secondary", action: "click->ui--dropdown-menu#restoreTriggerFocus" }) do %>
               <%= app_icon icon, class: "size-4", aria: { hidden: true } %>
               <span><%= label %></span>
             <% end %>

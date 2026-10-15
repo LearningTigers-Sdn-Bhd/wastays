@@ -7,7 +7,7 @@ module PanelsUI
   #
   #   <button command="show-modal" commandfor="filters">Filters</button>
   #
-  # Close through `panels-ui--sheet#close` so the exit transition and overlay
+  # Close through `ui--sheet#close` so the exit transition and overlay
   # stack complete before the native dialog leaves the top layer.
   class Sheet < PanelsUI::BaseComponent
     renders_one :header

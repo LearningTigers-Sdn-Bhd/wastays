@@ -1,0 +1,22 @@
+<%# A summary cut to one tap target for a phone. It sits above the form, so
+    the guest still sees what they act on, and the whole card is the way back:
+    a guest reaches for the top of the screen to go back.
+
+    Locals: path, back_label (read by a screen reader first), title, detail,
+    and an optional aside on the title line. %>
+<%= link_to path,
+      class: "guest-card guest-stay-summary guest-summary-compact group",
+      data: { padding: "tight" } do %>
+  <%= app_icon "chevron-left", class: "guest-summary-compact__back", aria: { hidden: "true" } %>
+  <span class="sr-only"><%= back_label %>.</span>
+
+  <span class="min-w-0 flex-1">
+    <span class="flex items-baseline justify-between gap-3">
+      <span class="truncate text-base font-semibold text-foreground"><%= title %></span>
+      <% if local_assigns[:aside].present? %>
+        <span class="shrink-0 text-xs font-medium text-muted-foreground"><%= aside %></span>
+      <% end %>
+    </span>
+    <span class="mt-0.5 block truncate text-xs text-muted-foreground"><%= detail %></span>
+  </span>
+<% end %>

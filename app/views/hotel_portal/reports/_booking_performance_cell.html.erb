@@ -20,12 +20,18 @@
     <%= row.check_in.strftime("%d %b %Y") %>
     <span class="block text-xs text-muted-foreground">to <%= row.check_out.strftime("%d %b %Y") %></span>
   </td>
+<% when "stay_type" %>
+  <td class="whitespace-nowrap"><%= row.stay_type_label %></td>
 <% when "check_in" %>
   <td class="whitespace-nowrap text-muted-foreground"><%= row.check_in.strftime("%d %b %Y") %></td>
 <% when "check_out" %>
   <td class="whitespace-nowrap text-muted-foreground"><%= row.check_out.strftime("%d %b %Y") %></td>
 <% when "source" %>
   <td class="whitespace-nowrap"><%= row.source_label %></td>
+<% when "rate_plan" %>
+  <td><%= row.rate_plan_label %></td>
+<% when "room_nights" %>
+  <td class="whitespace-nowrap text-right tabular-nums"><%= row.room_nights %></td>
 <% when "fund_collector" %>
   <td class="whitespace-nowrap"><%= row.fund_collector_label %></td>
 <% when "status" %>

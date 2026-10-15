@@ -3,7 +3,7 @@
 <% account = @accounts.find { |candidate| candidate.id.to_s == @billing_party_attributes[:hotel_corporate_account_id].to_s } %>
 <% footer = capture do %>
   <div class="flex w-full justify-end gap-2">
-    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) { "Cancel" } %>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) { "Cancel" } %>
     <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Adding…" }) { "Add to group" } %>
   </div>
 <% end %>

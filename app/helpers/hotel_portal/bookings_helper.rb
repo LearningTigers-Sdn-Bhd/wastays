@@ -1,4 +1,11 @@
 module HotelPortal::BookingsHelper
+  # Auto-apply extra charges the booking sheet adds to its billing summary.
+  def auto_charge_options(hotel)
+    hotel.hotel_extra_charges.auto_applied.active.ordered.includes(:transaction_code).map do |charge|
+      { name: charge.name, rate: charge.rate_value.to_d.to_s("F"), unit: charge.charging_unit, children: charge.charge_children? }
+    end
+  end
+
   STATUS_ICONS = {
     "pending" => "clock",
     "confirmed" => "circle-check",
@@ -62,10 +69,12 @@ module HotelPortal::BookingsHelper
   def booking_boat_time(booking, kind, hotel)
     primary = booking.booking_guests.find(&:primary?) || booking.booking_guests.first
     time = kind == :in ? primary&.boat_in_at : primary&.boat_out_at
-    return if time.blank?
+    type = kind == :in ? primary&.boat_in_type : primary&.boat_out_type
+    return if time.blank? && type.blank?
 
-    local = time.in_time_zone(hotel.hotel_time_zone)
-    { time: local.strftime("%H:%M"), date: local.strftime("%d %b") }
+    local = time&.in_time_zone(hotel.hotel_time_zone)
+    { time: Boats::Schedule.display(timestamp: time, type: type, zone: hotel.hotel_time_zone, format: "%H:%M"),
+      date: local&.strftime("%d %b") }
   end
 
   def show_boat_times?(hotel)

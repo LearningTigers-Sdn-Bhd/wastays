@@ -1,145 +1,62 @@
 <% content_for :title, "Guest Login | WAStays" %>
-<% content_for :hide_chrome, true %>
+<%# One panel for each step, picked by the server: the choice, WhatsApp, email,
+    and "check your inbox". Each step past the choice goes back to it from
+    the Navbar. %>
+<% content_for :back_path, guest_login_path unless login_panel == "choice" %>
 
-<div class="relative min-h-screen flex items-center justify-center bg-landing-bg overflow-hidden py-12 px-4"
-     data-controller="guest-login"
-     data-guest-login-is-error-value="<%= flash[:alert].present? %>">
-  <!-- Decorative glows -->
-  <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-primary/5 rounded-full blur-[100px]"></div>
+<div class="mx-auto w-full max-w-md space-y-8 md:pt-6">
+  <div class="space-y-2 text-center">
+    <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Guest Access</p>
+    <h1 class="font-guest-display text-3xl font-semibold text-foreground md:text-4xl">
+      View your <span class="italic">guest account</span>
+    </h1>
+    <p class="text-sm text-muted-foreground">Choose how you want to sign in.</p>
   </div>
 
-  <div class="relative w-full max-w-[440px] z-10">
-    <!-- Header -->
-    <div class="text-center mb-10">
-      <div class="inline-flex items-center gap-x-2 bg-brand-accent/50 px-3 py-1 rounded-full mb-6">
-        <span class="text-[10px] font-bold uppercase tracking-[0.15em] text-brand-accent-text">Guest Access</span>
-      </div>
-      <h1 class="text-4xl font-serif text-brand-primary leading-tight mb-3">
-        View your <span class="italic">bookings</span>
-      </h1>
-      <p class="text-muted-foreground max-w-[280px] mx-auto text-sm leading-relaxed">
-        Choose how you'd like to access your bookings.
+  <% case login_panel %>
+  <% when "whatsapp" %>
+    <%= render GuestUI::Card.new(title: "WhatsApp Login") do %>
+      <p class="text-sm text-muted-foreground">
+        Tap the button to message us on WhatsApp. We send you a secure sign-in link at once.
       </p>
-    </div>
+      <%= render GuestUI::Button.new(label: "Open WhatsApp", icon: "message-circle", size: :lg, block: true, class: "mt-6",
+                                     href: "https://wa.me/601162023996?text=%2Flogin", target: "_blank", rel: "noopener noreferrer") %>
+      <p class="mt-4 text-center text-xs text-muted-foreground">After you message us, look in WhatsApp for your sign-in link.</p>
+    <% end %>
 
-    <!-- Choice Panel -->
-    <div data-guest-login-target="choice" class="bg-card rounded-[2rem] border border-border/40 p-8 shadow-2xl shadow-brand-primary/5 space-y-3">
-      <button data-action="click->guest-login#showWhatsapp"
-        class="w-full flex items-center gap-x-4 p-4 rounded-xl border border-border hover:border-brand-primary/40 hover:bg-brand-primary/5 transition-all group">
-        <div class="shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-          <svg class="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-        </div>
-        <div class="text-left">
-          <p class="text-sm font-semibold text-foreground">Continue with WhatsApp</p>
-          <p class="text-xs text-muted-foreground mt-0.5">Enter the code sent to your WhatsApp</p>
-        </div>
-        <svg class="w-4 h-4 text-muted-foreground ml-auto group-hover:text-brand-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-      </button>
+  <% when "email" %>
+    <%= render GuestUI::Card.new(title: "Email Login") do %>
+      <p class="text-sm text-muted-foreground">We send a sign-in link to your inbox.</p>
 
-      <button data-action="click->guest-login#showEmail"
-        class="w-full flex items-center gap-x-4 p-4 rounded-xl border border-border hover:border-brand-primary/40 hover:bg-brand-primary/5 transition-all group">
-        <div class="shrink-0 w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-          <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        </div>
-        <div class="text-left">
-          <p class="text-sm font-semibold text-foreground">Continue with Email</p>
-          <p class="text-xs text-muted-foreground mt-0.5">We'll send a magic link to your inbox</p>
-        </div>
-        <svg class="w-4 h-4 text-muted-foreground ml-auto group-hover:text-brand-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-      </button>
-    </div>
-
-    <!-- WhatsApp Panel -->
-    <div data-guest-login-target="whatsapp" class="hidden bg-card rounded-[2rem] border border-border/40 p-8 shadow-2xl shadow-brand-primary/5">
-      <button data-action="click->guest-login#back" class="flex items-center gap-x-1.5 text-xs text-muted-foreground hover:text-brand-primary transition-colors mb-6">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-        Back
-      </button>
-
-      <div class="flex items-center gap-x-3 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-          <svg class="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-        </div>
-        <div>
-          <p class="text-sm font-semibold text-foreground">WhatsApp Login</p>
-          <p class="text-xs text-muted-foreground">We'll send a magic link to your WhatsApp</p>
-        </div>
-      </div>
-
-      <p class="text-sm text-muted-foreground leading-relaxed mb-6">
-        Tap the button below to message us on WhatsApp. We'll send you a secure login link instantly.
-      </p>
-
-      <a href="https://wa.me/601162023996?text=%2Flogin" target="_blank" rel="noopener noreferrer"
-        class="w-full flex items-center justify-center gap-x-2.5 rounded-xl bg-[#25D366] text-primary-foreground text-sm font-bold py-3.5 hover:bg-[#22c55e] shadow-lg shadow-green-500/20 transition-all">
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-        Open WhatsApp
-      </a>
-
-      <p class="mt-4 text-center text-xs text-muted-foreground">
-        After messaging us, check WhatsApp for your login link.
-      </p>
-    </div>
-
-    <!-- Email Panel -->
-    <div data-guest-login-target="email" class="hidden bg-card rounded-[2rem] border border-border/40 p-8 shadow-2xl shadow-brand-primary/5">
-      <button data-action="click->guest-login#back" class="flex items-center gap-x-1.5 text-xs text-muted-foreground hover:text-brand-primary transition-colors mb-6">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-        Back
-      </button>
-
-      <div class="flex items-center gap-x-3 mb-6">
-        <div class="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-          <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        </div>
-        <div>
-          <p class="text-sm font-semibold text-foreground">Email Login</p>
-          <p class="text-xs text-muted-foreground">We'll send a magic link to your inbox</p>
-        </div>
-      </div>
-
-      <%= form_with url: guest_request_magic_link_path, method: :post, class: "space-y-4" do |f| %>
-        <div>
-          <%= f.label :email, "Email Address", class: "block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 ml-1" %>
-          <div class="relative">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground/50">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            </div>
-            <%= f.email_field :email,
-                placeholder: "you@example.com",
-                class: "block w-full pl-11 pr-4 py-3.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:ring-4 focus:ring-brand-primary/5 focus:border-brand-primary/40 transition-all",
-                required: true, autocomplete: "email", autofocus: true %>
-          </div>
-        </div>
-
-        <%= f.submit "Send Magic Link", class: "w-full rounded-xl bg-brand-primary text-primary-foreground text-sm font-bold py-3.5 hover:bg-brand-primary/90 shadow-lg shadow-brand-primary/10 transition-all cursor-pointer" %>
+      <%= form_with url: guest_request_magic_link_path, method: :post, class: "mt-6 space-y-5" do |form| %>
+        <%= render GuestUI::FormField.new(form:, attribute: :email, label: "Email address", required: true) do |field| %>
+          <% field.with_input(type: :email, placeholder: "you@example.com", autocomplete: "email", value: params[:email]) %>
+        <% end %>
+        <%= render GuestUI::Button.new(label: "Send Magic Link", size: :lg, block: true, type: "submit",
+                                       data: { turbo_submits_with: "Sending…" }) %>
       <% end %>
 
-      <p class="mt-4 text-center text-xs text-muted-foreground">
-        Link expires in 24 hours. Check your spam folder if not received.
-      </p>
-    </div>
+      <p class="mt-4 text-center text-xs text-muted-foreground">The link expires in 24 hours. If it does not arrive, look in your spam folder.</p>
+    <% end %>
 
-    <!-- Email Success Panel -->
-    <div data-guest-login-target="emailSuccess" class="hidden bg-card rounded-[2rem] border border-border/40 p-8 shadow-2xl shadow-brand-primary/5 text-center">
-      <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-5">
-        <svg class="w-7 h-7 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l7-11 7 11"/></svg>
-      </div>
-      <h2 class="text-lg font-semibold text-foreground mb-2">Check your inbox</h2>
-      <p class="text-sm text-muted-foreground leading-relaxed mb-6">
-        We've sent a magic login link to your email. Click the link to access your bookings.<br>
-        <span class="text-xs mt-1 block">Link expires in 24 hours. Check your spam folder if not received.</span>
+  <% when "email_sent" %>
+    <%= render GuestUI::Card.new(class: "text-center") do %>
+      <%= app_icon "mail-check", class: "mx-auto size-10 text-primary", aria: { hidden: "true" } %>
+      <h2 class="mt-4 font-guest-display text-2xl font-semibold text-foreground">Check your inbox</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        We sent a sign-in link to your email. Open the link to see your bookings.
       </p>
-      <div class="flex items-center justify-center gap-x-3">
-        <button data-action="click->guest-login#back" class="flex-1 rounded-xl border border-brand-primary text-brand-primary text-xs font-semibold py-3 hover:bg-brand-primary/5 transition-all">
-          ← Try a different method
-        </button>
-        <a href="<%= root_path %>" class="flex-1 rounded-xl border border-border text-muted-foreground text-xs font-semibold py-3 hover:bg-muted hover:border-border-interactive transition-all text-center">
-          Back to WAStays Home
-        </a>
-      </div>
-    </div>
-  </div>
+      <p class="mt-1 text-xs text-muted-foreground">The link expires in 24 hours. If it does not arrive, look in your spam folder.</p>
+      <%= render GuestUI::Button.new(label: "Try a different method", variant: :secondary, block: true, class: "mt-6",
+                                     href: guest_login_path) %>
+    <% end %>
+
+  <% else %>
+    <%= render GuestUI::Card.new(padding: :tight, class: "py-0") do |card| %>
+      <% card.with_row(label: "Continue with WhatsApp", hint: "Get a sign-in link on WhatsApp",
+                       icon: "message-circle", href: guest_login_path(via: "whatsapp")) %>
+      <% card.with_row(label: "Continue with Email", hint: "Get a sign-in link in your inbox",
+                       icon: "mail", href: guest_login_path(via: "email")) %>
+    <% end %>
+  <% end %>
 </div>

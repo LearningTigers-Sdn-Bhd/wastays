@@ -1,0 +1,12 @@
+<%= render "admin/logs/detail_sheet",
+      title: @event.subject.presence || "Email",
+      description: "#{@event.mailer.delete_suffix('Mailer').titleize} email",
+      fields: [
+        [ "Sent", l(@event.sent_at, format: "%d %b %Y, %H:%M") ],
+        [ "Recipients", @event.recipients ],
+        [ "Status", @event.status.titleize ],
+        [ "Error", @event.error_message ]
+      ],
+      text_label: "Email text",
+      text: @event.body,
+      empty_text: "The platform did not keep the text of this email." %>

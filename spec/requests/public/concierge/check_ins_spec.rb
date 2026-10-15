@@ -26,10 +26,34 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
   end
 
   describe "GET /concierge/:hotel_slug/check-in" do
-    it "renders the chooser page" do
-      get concierge_check_in_path(hotel)
+    it "renders the code form with its back link on every width" do
+      get concierge_check_in_path(hotel.unique_id, hotel.public_id)
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("I have a booking")
+
+      page = Nokogiri::HTML(response.body)
+      back = page.at_css(".guest-form-page__header a[href='#{concierge_home_path(hotel.unique_id, hotel.public_id)}']")
+
+      expect(page.at_css(".guest-form-page[data-columns='1']")).to be_present
+      expect(page.at_css(".guest-form-page__compact")).to be_nil
+      expect(back["class"]).to include("inline-flex")
+      expect(back["class"]).not_to include("hidden")
+      expect(page.at_css("label[for='confirmation_token']").text).to include("Confirmation code")
+      expect(page.at_css("input#confirmation_token[required]")).to be_present
+    end
+
+    # One responsive template now serves both. The concierge is reached by
+    # scanning a QR code in the room, so a page that depends on how a user
+    # agent string is read is a page most guests see the wrong half of.
+    it "serves the same page to phones and desktops" do
+      bodies = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].map do |user_agent|
+        get concierge_check_in_path(hotel.unique_id, hotel.public_id), headers: { "HTTP_USER_AGENT" => user_agent }
+        response.body
+      end
+
+      expect(bodies.first).to eq(bodies.last)
     end
   end
 
@@ -43,9 +67,9 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
 
       it "redirects to check-in now page" do
         with_frozen_time kl_zone.parse("#{Date.today} 09:00") do
-          post concierge_check_in_lookup_path(hotel),
+          post concierge_check_in_lookup_path(hotel.unique_id, hotel.public_id),
                params: { confirmation_token: booking.confirmation_token }
-          expect(response).to redirect_to(concierge_check_in_now_path(hotel))
+          expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
         end
       end
     end
@@ -57,16 +81,18 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
 
       it "redirects to check-in now page" do
-        post concierge_check_in_lookup_path(hotel),
+        post concierge_check_in_lookup_path(hotel.unique_id, hotel.public_id),
              params: { confirmation_token: booking.confirmation_token }
-        expect(response).to redirect_to(concierge_check_in_now_path(hotel))
+        expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
       end
     end
 
     it "re-renders with error on unknown token" do
-      post concierge_check_in_lookup_path(hotel),
+      post concierge_check_in_lookup_path(hotel.unique_id, hotel.public_id),
            params: { confirmation_token: "WS-XXXXXXXX" }
       expect(response).to have_http_status(:unprocessable_content)
+      expect(Nokogiri::HTML(response.body).at_css(".guest-notice[role='alert']")).to be_present
+      expect(response.body).to include("WS-XXXXXXXX")
     end
   end
 
@@ -74,8 +100,24 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     before do
       booking.create_pre_checkin!(status: "completed", document_status: "verified",
                                   signature_status: "signed", completed_at: Time.current)
-      post concierge_check_in_lookup_path(hotel),
+      post concierge_check_in_lookup_path(hotel.unique_id, hotel.public_id),
            params: { confirmation_token: booking.confirmation_token }
+    end
+
+    # The registration form and the confirmation both used to have a second,
+    # phone-only template. They no longer do, so neither can drift from the
+    # other and leave a field on one device and not the other.
+    it "serves the same registration form to phones and desktops" do
+      bodies = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+      ].map do |user_agent|
+        get concierge_check_in_now_path(hotel.unique_id, hotel.public_id),
+            headers: { "HTTP_USER_AGENT" => user_agent }
+        response.body
+      end
+
+      expect(bodies.first).to eq(bodies.last)
     end
 
     context "room available", frozen_time: -> { Time.find_zone("Kuala Lumpur").parse("#{Date.today} 15:00") } do
@@ -85,12 +127,24 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
 
       it "checks in the booking and redirects to success" do
-        post concierge_submit_check_in_path(hotel)
-        expect(response).to redirect_to(concierge_check_in_success_path(hotel))
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
+        expect(response).to redirect_to(concierge_check_in_success_path(hotel.unique_id, hotel.public_id))
         expect(booking.reload.status).to eq("checked_in")
         expect(booking.booking_rooms.first.reload.room_number).to eq("101")
         expect(booking.booking_folio).to be_present
         expect(BookingAuditLog.find_by!(auditable: booking, action_type: "check_in").source).to eq("concierge_page")
+      end
+
+      it "welcomes the guest with the room and a way back to the concierge" do
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
+        follow_redirect!
+
+        page = Nokogiri::HTML(response.body)
+
+        expect(response).to have_http_status(:ok)
+        expect(page.at_css(".guest-check-in-success h2").text.squish).to eq("Welcome, Ahmad")
+        expect(page.at_css(".guest-stay-summary__room").text.strip).to eq("101")
+        expect(page.at_css("a.guest-button[href='#{concierge_home_path(hotel.unique_id, hotel.public_id)}']").text).to include("Back to Concierge")
       end
     end
 
@@ -101,7 +155,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
 
       it "re-renders check_in_now with 422" do
-        post concierge_submit_check_in_path(hotel)
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("front desk")
       end
@@ -115,7 +169,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
 
       it "shows guest-facing front desk guidance" do
-        post concierge_submit_check_in_path(hotel)
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include(
@@ -129,7 +183,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       before { booking.update!(check_in: Date.tomorrow, check_out: Date.tomorrow + 1) }
 
       it "re-renders with wrong date message" do
-        post concierge_submit_check_in_path(hotel)
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include(Date.tomorrow.strftime("%d %b %Y"))
       end
@@ -148,8 +202,8 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
 
       it "checks in the booking at 14:25 successfully because of the 14:00 policy" do
-        post concierge_submit_check_in_path(hotel)
-        expect(response).to redirect_to(concierge_check_in_success_path(hotel))
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
+        expect(response).to redirect_to(concierge_check_in_success_path(hotel.unique_id, hotel.public_id))
         expect(booking.reload.status).to eq("checked_in")
       end
     end
@@ -163,20 +217,20 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
       end
 
       it "fails with :missing_location when no coordinates are submitted" do
-        post concierge_submit_check_in_path(hotel)
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.body).to include("Location access is required")
       end
 
       it "fails with :too_far_away when coordinates are outside radius" do
-        post concierge_submit_check_in_path(hotel), params: { latitude: 3.1390, longitude: 101.6869 }
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id), params: { latitude: 3.1390, longitude: 101.6869 }
         expect(response).to have_http_status(:unprocessable_content)
-        expect(response.body).to include("too far from the hotel")
+        expect(response.body).to include("too far from the property")
       end
 
       it "succeeds when coordinates are within the radius" do
-        post concierge_submit_check_in_path(hotel), params: { latitude: 5.9772, longitude: 116.0623 }
-        expect(response).to redirect_to(concierge_check_in_success_path(hotel))
+        post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id), params: { latitude: 5.9772, longitude: 116.0623 }
+        expect(response).to redirect_to(concierge_check_in_success_path(hotel.unique_id, hotel.public_id))
         expect(booking.reload.status).to eq("checked_in")
       end
     end
@@ -189,17 +243,54 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
 
     before do
       policy.save!
-      post concierge_check_in_lookup_path(hotel),
+      post concierge_check_in_lookup_path(hotel.unique_id, hotel.public_id),
            params: { confirmation_token: booking.confirmation_token }
     end
 
     it "redirects to check_in_now when past check-in time and no pre-checkin" do
-      expect(response).to redirect_to(concierge_check_in_now_path(hotel))
+      expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
+    end
+
+    it "draws the registration form without cards and keeps its controllers wired" do
+      get concierge_check_in_now_path(hotel.unique_id, hotel.public_id)
+
+      page = Nokogiri::HTML(response.body)
+      body = page.at_css(".guest-form-page__body")
+
+      expect(body.css(".card, .guest-card")).to be_empty
+      expect(body.css("fieldset.guest-fieldset legend").map { |legend| legend.text.strip })
+        .to eq([ "Guest details", "Home address", "Identity document", "Signature" ])
+      expect(body.at_css(".guest-select select#booking_guest_document_type[data-pre-checkin-document-target='select'][data-guest-identity-target='documentType']")).to be_present
+      expect(body.at_css(".guest-select select#booking_guest_country[data-guest-dob-target='country']")).to be_present
+      expect(body.at_css("fieldset[data-controller='address-state'] [data-address-state-target='country'] select#booking_guest_address_country")).to be_present
+      expect(body.at_css("[data-guest-identity-target='numberLabel'] label [data-guest-identity-label-text]")).to be_present
+      expect(body.css("select").map { |select| select.ancestors(".guest-select").any? }).to all(be(true))
+      expect(body.css(".guest-image-upload input[type='file']").map { |input| input["name"] }).to eq(%w[booking[id_front] booking[id_back]])
+      expect(body.css("input[capture]")).to be_empty
+      expect(page.at_css("[data-controller~='scanner'], [data-scanner-target]")).to be_nil
+    end
+
+    it "leads the registration page with the compact booking card as the way back" do
+      get concierge_check_in_now_path(hotel.unique_id, hotel.public_id)
+
+      page = Nokogiri::HTML(response.body)
+      compact = page.at_css(".guest-form-page__compact a.guest-summary-compact")
+      blocks = page.css(".guest-form-page > *").map { |block| block["class"] }
+
+      expect(blocks).to match([
+        include("guest-form-page__compact"),
+        include("guest-form-page__header"),
+        include("guest-form-page__summary"),
+        include("guest-form-page__body")
+      ])
+      expect(compact["href"]).to eq(concierge_check_in_path(hotel.unique_id, hotel.public_id))
+      expect(compact.text.squish).to include("Back to Check In.", booking.guest_name)
+      expect(page.at_css(".guest-form-page__summary .guest-stay-summary").text).to include("Your Booking", booking.guest_name)
     end
 
     it "check_in_now renders inline registration form" do
-      get concierge_check_in_now_path(hotel)
-      expect(response.body).to include("Guest Registration")
+      get concierge_check_in_now_path(hotel.unique_id, hotel.public_id)
+      expect(response.body).to include("Guest details")
       expect(response.body).to include("guest_home_address")
       expect(response.body).to include("guest_date_of_birth")
     end
@@ -209,7 +300,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
              quantity: 1, status: "open", available_room_numbers: [ "101" ])
 
       # Step 1: Submit registration details
-      post concierge_submit_check_in_path(hotel), params: {
+      post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",
           guest_email: "ahmad@example.com",
@@ -226,12 +317,12 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         }
       }
 
-      expect(response).to redirect_to(concierge_check_in_now_path(hotel))
+      expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
       expect(booking.reload.pre_checkin_status).to eq("completed")
 
       # Step 2: Confirm check-in
-      post concierge_submit_check_in_path(hotel)
-      expect(response).to redirect_to(concierge_check_in_success_path(hotel))
+      post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id)
+      expect(response).to redirect_to(concierge_check_in_success_path(hotel.unique_id, hotel.public_id))
       expect(booking.reload.status).to eq("checked_in")
       expect(booking.reload).to have_attributes(
         guest_home_address: "No. 12, Jalan Ampang",
@@ -245,7 +336,7 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
     end
 
     it "persists passport guest date of birth during registration" do
-      post concierge_submit_check_in_path(hotel), params: {
+      post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",
           guest_email: "ahmad@example.com",
@@ -261,12 +352,12 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         }
       }
 
-      expect(response).to redirect_to(concierge_check_in_now_path(hotel))
+      expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
       expect(booking.reload.primary_guest.date_of_birth).to eq(Date.new(1994, 8, 21))
     end
 
-    it "fails cleanly when passport date of birth is missing" do
-      post concierge_submit_check_in_path(hotel), params: {
+    it "completes registration when passport date of birth is missing" do
+      post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",
           guest_email: "ahmad@example.com",
@@ -282,13 +373,14 @@ RSpec.describe "Public::Concierge::CheckIns", type: :request do
         }
       }
 
-      expect(response).to have_http_status(:unprocessable_content)
-      expect(response.body).to include("Date of birth is required for passport guests")
+      expect(response).to redirect_to(concierge_check_in_now_path(hotel.unique_id, hotel.public_id))
+      expect(booking.reload.pre_checkin_status).to eq("completed")
+      expect(booking.reload.primary_guest.date_of_birth).to be_nil
     end
 
     it "submit_check_in re-renders with error when guest fields missing" do
       allow_any_instance_of(Booking).to receive(:guest_email).and_return(nil)
-      post concierge_submit_check_in_path(hotel), params: {
+      post concierge_submit_check_in_path(hotel.unique_id, hotel.public_id), params: {
         booking: {
           guest_name: "Ahmad Zulkifli",
           guest_email: "",

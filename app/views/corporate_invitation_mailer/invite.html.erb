@@ -1,6 +1,7 @@
-<h1><%= @hotel.name %> invited you to connect a Corporate Account</h1>
+<% claimed = @invitation.hotel_corporate_account&.corporate_account&.name %>
+<h1><%= @hotel.name %> invited you to <%= claimed ? "manage #{claimed}" : "connect a Corporate Account" %></h1>
 
-<p><%= @inviter.name %> invited you to connect a Corporate Account with <strong><%= @hotel.name %></strong> for direct or account billing.</p>
+<p><%= @inviter.name %> invited you to <%= claimed ? "sign in to" : "connect a Corporate Account with" %> <strong><%= claimed || @hotel.name %></strong><%= " at #{@hotel.name}" if claimed %> for direct or account billing.</p>
 
 <p><a href="<%= @accept_url %>">Accept corporate invitation</a></p>
 

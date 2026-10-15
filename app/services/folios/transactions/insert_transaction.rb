@@ -23,6 +23,13 @@ module Folios
         @booking_folio.with_lock do
           @booking_folio.reload
 
+          if @booking_folio.receivable_history.exists?
+            return failure("Reopen the AR folio for correction before changing its charges.") unless @booking_folio.ar_invoice_corrections.editing.exists?
+            if @transaction_type == "payment" || @options[:reversal_of_transaction]&.payment?
+              return failure("Record company payments through Accounts Receivable. Existing folio payments cannot change during AR correction.")
+            end
+          end
+
           override_error = validate_override_context
           return failure(override_error) if override_error.present?
 
@@ -37,6 +44,7 @@ module Folios
           return failure(guard_error) if guard_error.present?
 
           transaction = @booking_folio.folio_transactions.build(
+            source_booking: source_booking,
             amount: @amount,
             transaction_type: @transaction_type,
             category: @category,
@@ -56,11 +64,15 @@ module Folios
             transfer_group_id: @options[:transfer_group_id],
             operation_key: @options[:operation_key],
             transaction_code: @transaction_code,
+            transaction_code_code_snapshot: @options[:transaction_code_code_snapshot],
+            transaction_code_name_snapshot: @options[:transaction_code_name_snapshot],
+            gl_code: @options[:gl_code],
             metadata: transaction_metadata
           )
 
           if transaction.save
             record_financial_audit_event!(transaction)
+            sync_agent_payment_schedule(transaction)
             success(transaction)
           else
             failure(transaction.errors.full_messages.to_sentence)
@@ -71,6 +83,27 @@ module Folios
       end
 
       private
+
+      # An agent booking's payment stages follow the folio, whoever posted the
+      # money: a receptionist taking the deposit at the desk settles it just as an
+      # approved slip does. Only bookings with a schedule are touched, so every
+      # other booking's payment status is left to the paths that already own it.
+      def source_booking
+        return @options[:source_booking] if @options[:source_booking]
+
+        booking_id = @options.dig(:metadata, :booking_id) || @options.dig(:metadata, "booking_id")
+        booking_id.present? ? @booking_folio.hotel.bookings.find(booking_id) : @booking_folio.booking
+      end
+
+      def sync_agent_payment_schedule(transaction)
+        return unless transaction.transaction_type == "payment"
+        return if transaction.metadata["internal_folio_movement"]
+
+        booking = transaction.source_booking
+        return unless booking&.payment_instalments&.exists?
+
+        Deposits::SyncBookingPaymentStatus.call(booking, folio_transaction: transaction, user: @user)
+      end
 
       def validate_override_context
         return unless override_requested?

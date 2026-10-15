@@ -3,7 +3,7 @@
 <% submit_label = @mode == "add" ? "Add note" : "Save note" %>
 <% footer = capture do %>
   <div class="flex w-full items-center justify-end gap-2">
-    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
     <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Saving…" }) do %><%= submit_label %><% end %>
   </div>
 <% end %>

@@ -52,8 +52,10 @@ RSpec.describe ChannelManagers::IngestRevisionJob, type: :job do
     )
     expect(client_double).to receive(:post).with('/booking_revisions/rev_100/ack').and_return({ 'meta' => { 'message' => 'Success' } })
 
-    described_class.perform_now(hotel.id, 'rev_100')
+    outcome = described_class.perform_now(hotel.id, 'rev_100')
 
+    # RecoverBookingsService counts a replay as done only on :acked.
+    expect(outcome).to eq(:acked)
     booking = Booking.find_by(channel_manager_reference: 'ch_booking_1')
     expect(booking).to be_present
     expect(booking.external_reference).to eq('OTA-555')

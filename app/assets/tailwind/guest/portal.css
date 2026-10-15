@@ -1,0 +1,249 @@
+@layer components {
+  /* The guest portal frame (layouts/guest_portal): the Navbar on top, one
+     centred column, and the BottomNav on a phone. Mobile first: the base
+     rules are the phone, and md adds the desktop. */
+  .guest-portal {
+    @apply flex min-h-screen flex-col overflow-x-clip bg-background font-guest-interface text-foreground antialiased;
+  }
+
+  /* The bottom padding clears the fixed BottomNav and the home indicator
+     under it. From md there is no bottom bar to clear. */
+  .guest-portal__main {
+    @apply mx-auto w-full max-w-5xl flex-1 space-y-6 px-4 pt-5 md:px-10 md:pb-20 md:pt-10;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  @media (width >= 48rem) {
+    .guest-portal__main {
+      padding-bottom: 5rem;
+    }
+  }
+
+  .guest-navbar {
+    @apply sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .guest-navbar__inner {
+    @apply mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 md:h-16 md:gap-8 md:px-10;
+  }
+
+  .guest-navbar__heading {
+    @apply flex min-w-0 flex-1 items-center gap-1;
+  }
+
+  .guest-navbar__back {
+    @apply -ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-navbar__title {
+    @apply truncate font-guest-display text-lg font-semibold;
+  }
+
+  .guest-navbar__nav {
+    @apply hidden h-full items-stretch gap-6 md:flex;
+  }
+
+  /* The active link carries a bar along the bottom edge of the navbar and
+     the full foreground colour, so the state does not rest on colour alone. */
+  .guest-navbar__link {
+    @apply relative inline-flex items-center text-sm font-bold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-navbar__link[aria-current="page"] {
+    @apply text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary;
+  }
+
+  .guest-navbar__actions {
+    @apply ml-auto flex shrink-0 items-center gap-3;
+  }
+
+  .guest-navbar__name {
+    @apply hidden text-sm font-bold md:inline;
+  }
+
+  .guest-bottom-nav {
+    @apply fixed inset-x-0 bottom-0 z-20 grid auto-cols-fr grid-flow-col border-t border-border bg-card/95 backdrop-blur md:hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .guest-bottom-nav__link {
+    @apply flex h-16 flex-col items-center justify-center gap-1 text-xs font-bold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
+  }
+
+  .guest-bottom-nav__link[aria-current="page"] {
+    @apply text-primary;
+  }
+
+  /* ─── Filter chips ───
+     One row that scrolls sideways on a phone rather than wrapping into a
+     block of buttons above the list. */
+  .guest-chips {
+    @apply -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0;
+    scrollbar-width: none;
+  }
+
+  .guest-chip {
+    @apply inline-flex h-9 shrink-0 items-center rounded-full border border-border bg-card px-4 text-sm font-bold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-chip[aria-current="page"] {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+
+  /* ─── Pagination ─── */
+  .guest-pagination {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .guest-pagination__status {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  .guest-pagination__control {
+    @apply inline-flex h-10 items-center gap-1 rounded-full border border-border bg-card px-4 text-sm font-bold text-foreground transition-colors hover:bg-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-pagination__control[aria-disabled="true"] {
+    @apply pointer-events-none opacity-40;
+  }
+
+  /* ─── Status badge ───
+     The tint is the token at a tenth, the text the token's dark pair. Info
+     has no dark pair (its foreground is white, for text on solid info), so
+     its text is the token itself, which clears 4.5:1 on its own tint. */
+  .guest-status-badge {
+    @apply inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap;
+  }
+
+  .guest-status-badge[data-tone="success"] {
+    @apply bg-success/10 text-success-foreground;
+  }
+
+  .guest-status-badge[data-tone="info"] {
+    @apply bg-info/10 text-info;
+  }
+
+  .guest-status-badge[data-tone="warning"] {
+    @apply bg-warning/10 text-warning-foreground;
+  }
+
+  .guest-status-badge[data-tone="destructive"] {
+    background: color-mix(in oklab, var(--destructive) 10%, transparent);
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-status-badge[data-tone="muted"] {
+    @apply bg-foreground/5;
+    color: var(--muted-foreground-strong);
+  }
+
+  /* ─── Stay summary (portal) ───
+     The card itself is the concierge's .guest-stay-summary. */
+  .guest-stay-summary__eyebrow {
+    @apply text-xs font-bold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .guest-stay-summary__property {
+    @apply mt-3 font-guest-display text-2xl font-semibold leading-tight text-foreground;
+  }
+
+  .guest-stay-summary__actions {
+    @apply mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap;
+  }
+
+  /* ─── Booking card ───
+     One column on a phone, two from md. */
+  .guest-booking-grid {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+
+  /* No padding on the card itself: the body and the footer pad themselves, so
+     the footer's divider and tint reach both edges. overflow-hidden keeps
+     the tint inside the rounded corners. */
+  .guest-booking-card {
+    @apply flex flex-col overflow-hidden rounded-2xl border border-border/40 bg-card shadow-xs transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .guest-booking-card__body {
+    @apply block flex-1 p-5;
+  }
+
+  .guest-booking-card__footer {
+    @apply space-y-1.5 border-t border-border/60 bg-foreground/[0.02] px-5 py-3.5;
+  }
+
+  .guest-booking-card__amount {
+    @apply flex items-baseline justify-between gap-3 text-sm;
+  }
+
+  .guest-booking-card__amount dt {
+    @apply text-muted-foreground;
+  }
+
+  .guest-booking-card__amount dd {
+    @apply font-semibold tabular-nums text-foreground;
+  }
+
+  .guest-booking-card__amount[data-owing="true"] dd {
+    color: var(--destructive-on-surface);
+  }
+
+  .guest-booking-card__property {
+    @apply min-w-0 font-guest-display text-lg font-semibold leading-snug text-foreground;
+  }
+
+  /* ─── Stat card ───
+     Two a row on a phone, four from md. Each tone tints the card faintly and its
+     icon chip more strongly, from the same tokens as the status badge. */
+  .guest-stat-grid {
+    @apply grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4;
+  }
+
+  .guest-stat-card {
+    --stat-tone: var(--muted-foreground);
+    @apply rounded-2xl border p-4 shadow-xs md:p-5;
+    border-color: color-mix(in oklab, var(--stat-tone) 20%, transparent);
+    background: color-mix(in oklab, var(--stat-tone) 6%, var(--card));
+  }
+
+  .guest-stat-card[data-tone="info"] { --stat-tone: var(--info); }
+  .guest-stat-card[data-tone="success"] { --stat-tone: var(--success); }
+  .guest-stat-card[data-tone="warning"] { --stat-tone: var(--warning); }
+  .guest-stat-card[data-tone="destructive"] { --stat-tone: var(--destructive); }
+
+  .guest-stat-card__icon {
+    @apply inline-flex size-8 items-center justify-center rounded-full;
+    background: color-mix(in oklab, var(--stat-tone) 15%, transparent);
+    color: color-mix(in oklab, var(--stat-tone) 80%, var(--foreground));
+  }
+
+  .guest-stat-card__value {
+    @apply mt-3 font-guest-display text-3xl font-semibold leading-none tabular-nums text-foreground;
+  }
+
+  .guest-stat-card__label {
+    @apply mt-1.5 truncate text-xs font-bold text-muted-foreground;
+  }
+
+  /* ─── Empty state ─── */
+  .guest-empty-state {
+    @apply flex flex-col items-center rounded-2xl border border-dashed border-border px-6 py-12 text-center;
+  }
+
+  .guest-empty-state__icon {
+    @apply inline-flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary;
+  }
+
+  .guest-empty-state__title {
+    @apply mt-4 font-guest-display text-xl font-semibold text-foreground;
+  }
+
+  .guest-empty-state__description {
+    @apply mt-1.5 max-w-sm text-sm text-muted-foreground;
+  }
+
+  .guest-empty-state__action {
+    @apply mt-6;
+  }
+}

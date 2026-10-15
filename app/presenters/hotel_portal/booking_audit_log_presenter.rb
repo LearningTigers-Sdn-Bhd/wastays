@@ -161,6 +161,7 @@ module HotelPortal
         "guest" => "Guest",
         "night_audit" => "Night Audit",
         "channel_manager" => channel_source,
+        "corporate_portal" => "Travel agent portal",
         "system" => "System",
         "legacy" => "Legacy record"
       }.fetch(source.to_s, source.to_s.humanize.presence || "System")

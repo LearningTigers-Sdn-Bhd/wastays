@@ -8,7 +8,7 @@
 # two copies of it drift the first time one side gains a sender role the other
 # has not heard of.
 #
-# Lives beside TailwindVariants rather than in either library: PublicUI must not
+# Lives beside TailwindVariants rather than in either library: GuestUI must not
 # reach into PanelsUI for it, nor the reverse.
 module ChatMessageRuns
   extend ActiveSupport::Concern

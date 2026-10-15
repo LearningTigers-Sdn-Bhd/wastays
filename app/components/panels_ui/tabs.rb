@@ -72,10 +72,10 @@ module PanelsUI
           aria: { selected: @active.to_s, controls: @panel_id }.merge(@aria),
           data: {
             slot: "tabs-trigger",
-            panels_ui__tabs_target: "tab",
+            ui__tabs_target: "tab",
             tab_name: @name,
             tab_label: @label,
-            action: "click->panels-ui--tabs#select"
+            action: "click->ui--tabs#select"
           }.merge(@data)
         )
       end
@@ -138,7 +138,7 @@ module PanelsUI
           hidden: !@active,
           class: tw_merge("tabs-panel", @class),
           aria: { labelledby: @tab_id }.merge(@aria),
-          data: { slot: "tabs-panel", panels_ui__tabs_target: "panel", tab_panel: @name }.merge(@data)
+          data: { slot: "tabs-panel", ui__tabs_target: "panel", tab_panel: @name }.merge(@data)
         )
       end
     end

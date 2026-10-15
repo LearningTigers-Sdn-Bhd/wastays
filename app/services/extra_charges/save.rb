@@ -53,6 +53,8 @@ module ExtraCharges
         charging_unit: @attributes[:charging_unit].presence || "per_item",
         percentage_basis: (@attributes[:percentage_basis] if @attributes[:pricing_type] == "percentage"),
         allow_amount_override: allow_amount_override,
+        auto_apply: ActiveModel::Type::Boolean.new.cast(@attributes[:auto_apply]) || false,
+        charge_children: ActiveModel::Type::Boolean.new.cast(@attributes.fetch(:charge_children, true)),
         position: @attributes[:position].presence || @extra_charge.position || 0
       )
       @transaction_code.is_taxable = @tax_rule_keys.any?

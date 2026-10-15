@@ -1,4 +1,4 @@
-<div data-controller="panels-ui--sheet-frame">
+<div data-controller="ui--sheet-frame">
   <%= render PanelsUI::Sheet.new(
         id: "housekeeping-room-remarks-sheet",
         side: :right,
@@ -46,7 +46,7 @@
                 as: :button,
                 type: :button,
                 variant: :ghost,
-                data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+                data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
           <%= render PanelsUI::Button.new(
                 as: :button,
                 type: :submit,

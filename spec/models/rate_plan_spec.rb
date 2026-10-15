@@ -24,6 +24,12 @@ RSpec.describe RatePlan, type: :model do
       expect(plan).not_to be_valid
       expect(plan.errors[:channex_infant_fee]).to be_present
     end
+
+    it 'defaults infant fee to 0 when child fee is provided and infant fee is blank' do
+      plan = build(:rate_plan, hotel: create(:hotel), channex_children_fee: 300, channex_infant_fee: nil)
+      plan.valid?
+      expect(plan.channex_infant_fee).to eq(0)
+    end
     it { should validate_inclusion_of(:sell_mode).in_array(%w[per_room per_person]) }
     it { should validate_presence_of(:currency) }
     it { should validate_inclusion_of(:kind).in_array(RatePlan::KINDS) }
@@ -61,6 +67,14 @@ RSpec.describe RatePlan, type: :model do
       expect(plan).not_to be_anchored
       expect(plan.archivable?).to be true
       expect(plan.bookable_by?(:public)).to be true
+    end
+
+    it 'keeps a hidden plan bookable by staff and corporate, but not the public' do
+      plan = create(:rate_plan, hotel: hotel, hidden_from_public: true)
+
+      expect(plan.bookable_by?(:public)).to be false
+      expect(plan.bookable_by?(:staff)).to be true
+      expect(plan.bookable_by?(:corporate)).to be true
     end
   end
 
@@ -158,15 +172,16 @@ RSpec.describe RatePlan, type: :model do
       expect(plan.channex_capability(room_type: room_type).status).to eq(:full)
     end
 
-    it 'requires explicit child and infant fees for age-banded plans and accepts zero' do
+    it 'supports age-banded plans as flattened and normalizes unset infant fee to zero' do
       hotel = create(:hotel, :per_person)
       room_type = create(:room_type, hotel: hotel, max_adults: 2)
       plan = create(:rate_plan, :age_banded, hotel: hotel, room_type: room_type)
       add_occupancy_ladder(plan.room_type_rate_plans.find_by!(room_type: room_type))
 
-      expect(plan.channex_capability(room_type: room_type).status).to eq(:unsupported)
+      expect(plan.channex_capability(room_type: room_type).status).to eq(:flattened)
 
-      plan.update!(channex_children_fee: 0, channex_infant_fee: 0)
+      plan.update!(channex_children_fee: 50, channex_infant_fee: nil)
+      expect(plan.reload.channex_infant_fee).to eq(0)
       expect(plan.channex_capability(room_type: room_type).status).to eq(:flattened)
     end
 
@@ -208,6 +223,14 @@ RSpec.describe RatePlan, type: :model do
 
     it 'adds walk-in for the front desk' do
       expect(hotel.rate_plans.for_audience(:staff)).to match_array([ standard, custom, walk_in, corporate ])
+    end
+
+    it 'drops a plan hidden from the public booking site, but keeps it for staff and corporate' do
+      standard.update!(hidden_from_public: true)
+
+      expect(hotel.rate_plans.for_audience(:public)).to match_array([ custom ])
+      expect(hotel.rate_plans.for_audience(:staff)).to match_array([ standard, custom, walk_in, corporate ])
+      expect(hotel.rate_plans.for_audience(:corporate)).to match_array([ standard, custom, corporate ])
     end
 
     # ota is distribution-only — it is carried to the channel manager but is not

@@ -1,17 +1,15 @@
 # frozen_string_literal: true
 
-# An OTA extranet login the owner hands over during setup, so the WAStays team
+# An OTA extranet login the owner provides, so the WAStays team
 # can connect that channel to the property's channel manager after approval.
 #
-# Onboarding only collects these. Nothing here talks to Channex or to the OTA —
+# These records only store credentials. Nothing here talks to Channex or to the OTA —
 # connecting is admin work that happens later, against records that outlive the
 # onboarding run, which is why these hang off the hotel rather than living in an
 # onboarding-only drafts table like OnboardingCorporateDraft.
 #
-# The credentials belong to the hotel but are not readable back in the hotel
-# portal: the owner types a password once and can replace it, never retrieve it.
-# The onboarding section never renders the stored value into a field, which is
-# what makes that true — there is no other portal path to these rows yet.
+# The hotel portal can add credentials during onboarding or from settings.
+# Saved passwords are never rendered back into a portal form or table.
 class HotelOtaCredential < ApplicationRecord
   include HotelScopable
 

@@ -118,32 +118,41 @@ module HotelPortal
       end
 
       def build_revenue_workbook
-        daily = add_sheet("Daily Breakdown", 8, widths: [ 14, 11, 18, 18, 15, 18, 17, 18 ])
-        add_report_header(daily, "Revenue - Daily Breakdown", 8)
+        columns = @revenue_report.headers("Date").size
+        widths = [ 14, 11, 18, 15, 18, *Array.new(@revenue_report.tax_names.size, 15), 18, 17, 18 ]
+        money_columns = (2...columns).to_a
+
+        daily = add_sheet("Daily Breakdown", columns, widths: widths)
+        add_report_header(daily, "Revenue - Daily Breakdown", columns)
         add_metric_section(daily, "Revenue Summary", revenue_metrics)
         daily.add_row([])
         add_table(
           daily,
-          headers: [ "Date", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Adjustments", "Net Revenue" ],
+          headers: @revenue_report.headers("Date"),
           rows: @revenue_report.rows.map { |row| revenue_row(row, :date) },
-          date_columns: [ 0 ], integer_columns: [ 1 ], money_columns: (2..7).to_a,
-          total_row: [ "Total", @revenue_report.totals[:booking_count], decimal(@revenue_report.totals[:accommodation]),
-            decimal(@revenue_report.totals[:other_charges]), decimal(@revenue_report.totals[:tax]),
-            decimal(@revenue_report.totals[:total_charges]), decimal(@revenue_report.totals[:adjustments]),
-            decimal(@revenue_report.totals[:net_revenue]) ]
+          date_columns: [ 0 ], integer_columns: [ 1 ], money_columns: money_columns,
+          total_row: [ "Total", *revenue_values(@revenue_report.totals) ]
         )
 
-        source = add_sheet("Revenue by Source", 8, widths: [ 24, 11, 18, 18, 15, 18, 17, 18 ])
-        add_report_header(source, "Revenue by Source", 8)
+        source = add_sheet("Revenue by Source", columns, widths: [ 24, *widths.drop(1) ])
+        add_report_header(source, "Revenue by Source", columns)
         add_table(
           source,
-          headers: [ "Source", "Bookings", "Accommodation", "Other Charges", "Tax", "Total Charges", "Adjustments", "Net Revenue" ],
+          headers: @revenue_report.headers("Source"),
           rows: @revenue_report.source_rows.map { |row| revenue_row(row, :source) },
-          integer_columns: [ 1 ], money_columns: (2..7).to_a,
-          total_row: [ "Total", @revenue_report.totals[:booking_count], decimal(@revenue_report.totals[:accommodation]),
-            decimal(@revenue_report.totals[:other_charges]), decimal(@revenue_report.totals[:tax]),
-            decimal(@revenue_report.totals[:total_charges]), decimal(@revenue_report.totals[:adjustments]),
-            decimal(@revenue_report.totals[:net_revenue]) ]
+          integer_columns: [ 1 ], money_columns: money_columns,
+          total_row: [ "Total", *revenue_values(@revenue_report.totals) ]
+        )
+
+        extra_columns = @revenue_report.extra_headers.size
+        extra = add_sheet("Revenue by Extra Charge", extra_columns, widths: [ 28, 11, 18, *Array.new(extra_columns - 3, 15) ])
+        add_report_header(extra, "Revenue by Extra Charge", extra_columns)
+        add_table(
+          extra,
+          headers: @revenue_report.extra_headers,
+          rows: @revenue_report.extra_rows.map { |row| [ row[:item], *extra_values(row) ] },
+          integer_columns: [ 1 ], money_columns: (2...extra_columns).to_a,
+          total_row: [ "Total", *extra_values(@revenue_report.extra_totals) ]
         )
 
         register = add_sheet("Revenue Register", 14, widths: charge_register_widths)
@@ -327,10 +336,15 @@ module HotelPortal
       end
 
       def revenue_row(row, label_key)
-        [
-          row[label_key], row[:booking_count], decimal(row[:accommodation]), decimal(row[:other_charges]),
-          decimal(row[:tax]), decimal(row[:total_charges]), decimal(row[:adjustments]), decimal(row[:net_revenue])
-        ]
+        [ row[label_key], *revenue_values(row) ]
+      end
+
+      def revenue_values(row)
+        @revenue_report.values(row).map { |value| value.is_a?(BigDecimal) ? decimal(value) : value }
+      end
+
+      def extra_values(row)
+        @revenue_report.extra_values(row).map { |value| value.is_a?(BigDecimal) ? decimal(value) : value }
       end
 
       def charge_register_row(row)

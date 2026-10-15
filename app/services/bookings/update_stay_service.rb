@@ -4,7 +4,7 @@ require "ostruct"
 
 module Bookings
   class UpdateStayService
-    def initialize(booking:, params:, user: nil, override: false, override_reason: nil)
+    def initialize(booking:, params:, user: nil, override: false, override_reason: nil, correction_context: nil)
       @booking = booking
       @hotel = booking.hotel
       @params = params.dup
@@ -17,6 +17,7 @@ module Bookings
       @user = user
       @override = override
       @override_reason = override_reason
+      @correction_context = correction_context
     end
 
     def call
@@ -30,11 +31,20 @@ module Bookings
       result = nil
 
       result = ActiveRecord::Base.transaction do
+        lock_current_business_date! if financially_relevant_change_requested?
+        @booking.lock!
+        prepare_rate_selection!
+        guard_financially_relevant_change!
         old_audit_values = audit_values
         # 1. Store old state for inventory management and change detection
         old_check_in = @booking.check_in
         old_check_out = @booking.check_out
         current_room = @booking.booking_rooms.first
+        # The room the guest already holds, sent back with new dates, is not a
+        # reassignment.
+        same_room_type = @room_type_id.blank? || @room_type_id.to_i == current_room&.room_type_id
+        assigned_room_number = nil if same_room_type && assigned_room_number.present? &&
+          assigned_room_number.to_s == current_room&.room_number.to_s
         old_room_type_id = current_room&.room_type_id
         old_rate_plan_id = current_room&.rate_plan_id
         old_manual_rate_override = @booking.manual_rate_override
@@ -74,8 +84,18 @@ module Bookings
             new_rate_plan ||= new_room_type.standard_rate_plan
             raise "Selected rate is no longer available." if new_rate_plan.blank? || new_rate_plan.archived?
 
+            # A date-only change keeps a hand-set or OTA price; anything else
+            # (or a stay priced from room rates) reprices from scratch.
+            carried_snapshot = if dates_changing && !room_type_changing && !rate_plan_changing && !override_changing
+              CarryStayRates.call(
+                booking: @booking, booking_room: current_room, rate_plan: new_rate_plan,
+                previous_check_in: old_check_in, previous_check_out: old_check_out,
+                check_in: new_check_in, check_out: new_check_out
+              )
+            end
+
             # Recalculate Price using BuildFinancialSnapshot (includes taxes)
-            financial_snapshot = BuildFinancialSnapshot.new(
+            financial_snapshot = carried_snapshot || BuildFinancialSnapshot.new(
               hotel: @hotel,
               booking: @booking,
               check_in: new_check_in,
@@ -85,7 +105,8 @@ module Bookings
               rate_plan: new_rate_plan,
               manual_total_amount: @booking.manual_rate_override,
               adults: @booking.adults,
-              children: @booking.children
+              children: @booking.children,
+              child_ages: @booking.child_ages
             ).call
 
             # Update the booking room
@@ -100,13 +121,16 @@ module Bookings
             end
 
             # Update booking totals (including taxes)
-            @booking.update!(
+            totals = {
               total_amount: financial_snapshot.room_total + Booking.non_tourism_tax_total_for(financial_snapshot.tax_lines),
               tax_lines: financial_snapshot.tax_lines,
               tax_posting_snapshot: financial_snapshot.tax_posting_snapshot,
               tourism_tax_amount: financial_snapshot.tax_lines.find { |t| t["type"] == "tourism_tax" }&.fetch("amount", 0).to_d,
               tourism_tax_applied: financial_snapshot.tax_lines.any? { |t| t["type"] == "tourism_tax" }
-            )
+            }
+            # The override is the stay's room total, so it follows the carried nights.
+            totals[:manual_rate_override] = carried_snapshot.room_total if carried_snapshot && @booking.manual_rate_override.present?
+            @booking.update!(totals)
 
             # Deduct new inventory
             InventoryManager.new(@booking).deduct
@@ -128,15 +152,21 @@ module Bookings
               end
             end
 
-            # Verify availability for target room
+            # Verify availability for target room. A guest keeping the room
+            # they hold is not blocked by its housekeeping status: an in-house
+            # guest's room is dirty most days, and that says nothing about the
+            # extra nights.
             active_room_type = room_type_changing ? new_room_type : current_room&.room_type
+            keeping_current_room = !room_type_changing && current_room&.room_number.present? &&
+              target_room_number.to_s == current_room.room_number.to_s
             if active_room_type
               available_service = Bookings::AvailableRoomNumbers.new(
                 hotel: @hotel,
                 room_type: active_room_type,
                 check_in: new_check_in,
                 check_out: new_check_out,
-                exclude_booking_id: @booking.id
+                exclude_booking_id: @booking.id,
+                ignore_room_status: keeping_current_room
               )
 
               unless available_service.call.include?(target_room_number.to_s)
@@ -168,6 +198,18 @@ module Bookings
             end
           end
 
+          if dates_changing || room_type_changing || rate_plan_changing || override_changing || @correction_context
+            PostClosedStayCharges.call(
+              booking: @booking,
+              previous_check_in: old_check_in,
+              previous_check_out: old_check_out,
+              user: @user,
+              correction_context: @correction_context
+            )
+          end
+
+          next OpenStruct.new(success?: true, booking: @booking) if @correction_context&.preview?
+
           # Record Audit Log
           Bookings::RecordAuditLog.call!(
             auditable: @booking,
@@ -175,11 +217,15 @@ module Bookings
             action_type: "update",
             old_value: old_audit_values,
             new_value: audit_values,
-            reason: @override_reason.presence
+            reason: @correction_context&.reason.presence || @override_reason.presence
           )
 
           sync_guest(@booking)
-          Notifications::Dispatcher.new(event: :booking_updated, booking: @booking).call if dates_changing
+          if dates_changing
+            ActiveRecord.after_all_transactions_commit do
+              notify_stay_updated
+            end
+          end
           OpenStruct.new(success?: true, booking: @booking)
         else
           OpenStruct.new(success?: false, errors: @booking.errors.full_messages)
@@ -187,12 +233,28 @@ module Bookings
       end
       return OpenStruct.new(success?: false, errors: [ failure_error ]) if failure_error.present?
       result
+    rescue UpdateStayDates::StaleReview
+      raise
     rescue => e
       OpenStruct.new(success?: false, errors: [ e.message ])
     end
 
 
     private
+
+    def lock_current_business_date!
+      record = @hotel.hotel_business_dates.current.lock.first
+      raise "Hotel has no current accounting business date." unless record
+      return if @hotel.current_business_date_record&.id == record.id
+
+      raise "Accounting business date changed. Reload the booking and try again."
+    end
+
+    def notify_stay_updated
+      Notifications::Dispatcher.new(event: :booking_updated, booking: @booking).call
+    rescue StandardError => e
+      Rails.logger.error("Failed to dispatch stay update for booking #{@booking.id}: #{e.message}")
+    end
 
     FINANCIALLY_RELEVANT_FIELDS = %w[
       check_in check_out total_amount manual_rate_override tax_lines tax_posting_snapshot

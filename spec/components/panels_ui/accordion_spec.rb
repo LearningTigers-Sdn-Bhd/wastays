@@ -20,7 +20,7 @@ RSpec.describe PanelsUI::Accordion, type: :component do
   it "renders accessible headings, triggers, panels, and an ornamental indicator" do
     render_accordion(default_open: [ "cancellation" ])
 
-    expect(page).to have_css("#policies.panel-accordion--default[data-controller='panels-ui--accordion']")
+    expect(page).to have_css("#policies.panel-accordion--default[data-controller='ui--accordion']")
     expect(page).to have_css("h3.panel-collapsible__heading > button#policies-item-1-trigger[aria-expanded='true'][aria-controls='policies-item-1-content']", text: "Cancellation policy")
     expect(page).to have_css("#policies-item-1-content[role='region'][aria-labelledby='policies-item-1-trigger']:not([hidden]):not([inert])")
     expect(page).to have_css("#policies-item-1-trigger .panel-accordion__indicator[aria-hidden='true']")
@@ -44,7 +44,7 @@ RSpec.describe PanelsUI::Accordion, type: :component do
     )
 
     expect(page).to have_css("#policies.panel-accordion--bordered.mt-4[aria-label='Booking policies'][data-testid='policies']")
-    expect(page.find("#policies")["data-controller"]).to eq("analytics panels-ui--accordion")
+    expect(page.find("#policies")["data-controller"]).to eq("analytics ui--accordion")
   end
 
   it "supports multiple initially open items" do

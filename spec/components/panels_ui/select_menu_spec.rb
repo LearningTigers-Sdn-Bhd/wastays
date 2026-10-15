@@ -25,12 +25,12 @@ RSpec.describe PanelsUI::SelectMenu, type: :component do
 
     # Native control still present and submittable.
     expect(page).to have_css("select#profile_board.panel-native-select.panel-select-menu__native")
-    expect(page).to have_css("select#profile_board[data-panels-ui--select-menu-target='native']")
+    expect(page).to have_css("select#profile_board[data-ui--select-menu-target='native']")
 
     # Enhancement controller wired on the root.
     root = page.find(".panel-select-menu")
-    expect(root["data-controller"]).to include("panels-ui--select-menu")
-    expect(root["data-panels-ui--select-menu-placeholder-value"]).to eq("Pick one")
+    expect(root["data-controller"]).to include("ui--select-menu")
+    expect(root["data-ui--select-menu-placeholder-value"]).to eq("Pick one")
 
     # Trigger exposes listbox combobox semantics and shows the placeholder.
     trigger = page.find("button#profile_board-trigger")
@@ -100,10 +100,10 @@ RSpec.describe PanelsUI::SelectMenu, type: :component do
     )
 
     root = page.find(".panel-select-menu")
-    expect(root["data-controller"].split).to contain_exactly("analytics", "panels-ui--select-menu")
+    expect(root["data-controller"].split).to contain_exactly("analytics", "ui--select-menu")
     expect(root["data-action"].split).to contain_exactly(
       "focusin->analytics#track",
-      "pointerdown@window->panels-ui--select-menu#onWindowPointerDown"
+      "pointerdown@window->ui--select-menu#onWindowPointerDown"
     )
   end
 

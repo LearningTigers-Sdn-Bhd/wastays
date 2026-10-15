@@ -12,7 +12,7 @@
 <% can_reindex = current_hotel.ai_concierge_enabled? && %w[pending failed].include?(@document.embedding_status) %>
 
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= turbo_stream_from @document %>
 
     <%= render PanelsUI::Sheet.new(
@@ -73,7 +73,7 @@
 
       <% sheet.with_footer do %>
         <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm,
-              data: { action: "click->panels-ui--sheet#close" }) do %>
+              data: { action: "click->ui--sheet#close" }) do %>
           Close
         <% end %>
         <% if can_reindex && @document.embedding_status != "failed" %>

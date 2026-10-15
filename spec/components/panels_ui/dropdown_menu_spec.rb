@@ -26,7 +26,7 @@ RSpec.describe PanelsUI::DropdownMenu, type: :component do
   it "wires the trigger and menu accessibility contract" do
     render_menu
 
-    expect(page).to have_css("#actions[data-controller='panels-ui--dropdown-menu']")
+    expect(page).to have_css("#actions[data-controller='ui--dropdown-menu']")
     expect(page).to have_button("Actions")
     expect(page).to have_css("button#actions-trigger.panel-button[aria-haspopup='menu'][aria-expanded='false'][aria-controls='actions-menu'][data-variant='secondary'][data-size='sm']")
     expect(page).to have_css("#actions-menu[role='menu'][popover='manual'][aria-labelledby='actions-trigger']")
@@ -115,7 +115,7 @@ RSpec.describe PanelsUI::DropdownMenu, type: :component do
   it "normalizes placement for Floating UI and merges menu classes" do
     render_menu(placement: :top_end, class_name: "w-72")
 
-    expect(page).to have_css("#actions[data-panels-ui--dropdown-menu-placement-value='top-end']")
+    expect(page).to have_css("#actions[data-ui--dropdown-menu-placement-value='top-end']")
     expect(page.find("#actions-menu", visible: :all)[:class]).to include("w-72")
   end
 
@@ -125,7 +125,7 @@ RSpec.describe PanelsUI::DropdownMenu, type: :component do
       menu.with_item(variant: :unknown) { "Item" }
     end
 
-    expect(page).to have_css("#fallback[data-panels-ui--dropdown-menu-placement-value='bottom-start']")
+    expect(page).to have_css("#fallback[data-ui--dropdown-menu-placement-value='bottom-start']")
     expect(page).to have_css("#fallback-trigger[data-variant='primary'][data-size='md']", text: "Open")
     expect(page).to have_css("[role='menuitem'][data-variant='default']", text: "Item", visible: :all)
   end

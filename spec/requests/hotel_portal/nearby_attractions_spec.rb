@@ -142,6 +142,63 @@ RSpec.describe "HotelPortal::NearbyAttractions", type: :request do
       expect(response.body).to include("This place is ready to add to your hotel.", "Add to hotel")
     end
 
+    it "shows the existing name when the pasted URL has a different place name" do
+      create(:attraction, name: "Imago Mall", latitude: 5.985,
+        longitude: 116.075, google_maps_url: attraction_maps_url)
+
+      post preview_hotel_nearby_attractions_path(hotel), params: {
+        attraction: { google_maps_url: attraction_maps_url }
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Imago Mall", "Add to hotel")
+      expect(response.body).not_to include("Create and add")
+    end
+
+    it "shows only Close when the matched attraction is already linked to the hotel" do
+      attraction = create(:attraction, name: "Imago Mall", latitude: 5.985,
+        longitude: 116.075, google_maps_url: attraction_maps_url)
+      create(:hotel_nearby_attraction, hotel: hotel, attraction: attraction)
+
+      post preview_hotel_nearby_attractions_path(hotel), params: {
+        attraction: { google_maps_url: attraction_maps_url }
+      }
+
+      document = response.parsed_body
+      expect(response).to have_http_status(:ok)
+      expect(document.text).to include("Imago Mall", "This attraction is already linked to your hotel.")
+      expect(document.at_css("#nearby-attraction-create-form")).to be_nil
+      expect(document.at_css("button[data-action='click->ui--sheet#close']").text.squish).to eq("Close")
+      expect(document.at_css('button[form="nearby-attraction-create-form"]')).to be_nil
+    end
+
+    it "shows the kept attraction when the pasted URL belongs to a merged record" do
+      kept = create(:attraction, name: "Maybank Gaya Street")
+      create(:attraction, :archived, name: "Batu Caves", latitude: 5.985,
+        longitude: 116.075, merged_into: kept)
+
+      post preview_hotel_nearby_attractions_path(hotel), params: {
+        attraction: { google_maps_url: attraction_maps_url }
+      }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.at_css(".text-base.font-semibold.text-foreground").text).to include("Maybank Gaya Street")
+      expect(response.body).to include("This place is ready to add to your hotel.")
+    end
+
+    it "disables Add when the kept attraction is unavailable" do
+      kept = create(:attraction, :archived, name: "Maybank Gaya Street")
+      create(:attraction, :archived, name: "Batu Caves", latitude: 5.985,
+        longitude: 116.075, merged_into: kept)
+
+      post preview_hotel_nearby_attractions_path(hotel), params: {
+        attraction: { google_maps_url: attraction_maps_url }
+      }
+
+      expect(response.body).to include("Maybank Gaya Street", "This attraction is not available.")
+      expect(response.parsed_body.at_css('button[form="nearby-attraction-create-form"]')["disabled"]).to be_present
+    end
+
     it "retains an invalid URL and shows a field error" do
       post preview_hotel_nearby_attractions_path(hotel), params: {
         attraction: { google_maps_url: "https://maps.app.goo.gl/example" }
@@ -154,6 +211,37 @@ RSpec.describe "HotelPortal::NearbyAttractions", type: :request do
   end
 
   describe "POST /hotel/:hotel_id/settings/property/nearby-attractions" do
+    it "links the suggested record instead of reparsing its saved URL" do
+      suggested = create(:attraction, name: "Maybank Gaya Street", latitude: 5.985,
+        longitude: 116.075, google_maps_url: attraction_maps_url)
+
+      get hotel_nearby_attractions_path(hotel)
+      suggestion_form = response.parsed_body.at_css("#nearby_attraction_suggestions form")
+      expect(suggestion_form.at_css('input[name="attraction[id]"]')["value"]).to eq(suggested.id.to_s)
+      expect(suggestion_form.at_css('input[name="attraction[google_maps_url]"]')).to be_nil
+
+      expect {
+        post hotel_nearby_attractions_path(hotel), params: { attraction: { id: suggested.id } }
+      }.to change(HotelNearbyAttraction, :count).by(1).and change(Attraction, :count).by(0)
+
+      expect(hotel.hotel_nearby_attractions.last.attraction).to eq(suggested)
+    end
+
+    it "reports an existing link if an old Add form is submitted again" do
+      attraction = create(:attraction, name: "Imago Mall", latitude: 5.985,
+        longitude: 116.075, google_maps_url: attraction_maps_url)
+      create(:hotel_nearby_attraction, hotel: hotel, attraction: attraction)
+
+      expect {
+        post hotel_nearby_attractions_path(hotel), params: {
+          attraction: { google_maps_url: attraction_maps_url }
+        }
+      }.not_to change(HotelNearbyAttraction, :count)
+
+      expect(response).to redirect_to(hotel_nearby_attractions_path(hotel))
+      expect(flash[:notice]).to eq("This attraction is already linked to your hotel.")
+    end
+
     it "creates a pending attraction and links it to the hotel" do
       expect {
         post hotel_nearby_attractions_path(hotel), params: {

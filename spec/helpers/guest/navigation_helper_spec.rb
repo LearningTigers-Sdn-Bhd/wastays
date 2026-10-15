@@ -8,48 +8,33 @@ RSpec.describe Guest::NavigationHelper, type: :helper do
 
   let(:controller_name) { "dashboard" }
 
-  it "defines the guest navigation and marks the current destination active" do
-    section = helper.guest_sidebar_sections.first
+  it "defines the guest destinations and marks the current one active" do
+    items = helper.guest_nav_items
 
-    expect(section.label).to eq("My Account")
-    expect(section.items.map(&:label)).to eq([ "Dashboard", "My Bookings", "Refunds" ])
-    expect(section.items.select(&:active).map(&:label)).to eq([ "Dashboard" ])
+    expect(items.map(&:label)).to eq([ "Home", "Bookings", "Refunds" ])
+    expect(items.select(&:active).map(&:label)).to eq([ "Home" ])
   end
 
-  it "builds breadcrumbs from the active sidebar destination" do
-    allow(helper).to receive(:controller_name).and_return("bookings")
-
-    expect(helper.guest_breadcrumb_parts).to eq(
-      [
-        { type: :section, label: "My Account" },
-        {
-          type: :menu,
-          label: "My Bookings",
-          path: helper.guest_bookings_path,
-          siblings: [
-            { label: "Dashboard", path: helper.guest_dashboard_path },
-            { label: "My Bookings", path: helper.guest_bookings_path },
-            { label: "Refunds", path: helper.guest_refund_requests_path }
-          ]
-        }
-      ]
-    )
+  it "titles a top-level page after its destination, with no way back" do
+    expect(helper.guest_page_title).to eq("Home")
+    expect(helper.guest_back_path).to be_nil
   end
 
-  it "appends controller-provided detail breadcrumbs" do
-    allow(helper).to receive(:controller_name).and_return("refund_requests")
-    helper.define_singleton_method(:breadcrumb_appends) do
-      [
-        { label: "WS-123", path: "/guest/bookings/123" },
-        { label: "Refund Details", path: nil, siblings: nil }
-      ]
+  context "on a page the controller appended to" do
+    let(:controller_name) { "refund_requests" }
+
+    before do
+      helper.define_singleton_method(:breadcrumb_appends) do
+        [
+          { label: "WS-123", path: "/guest/bookings/123" },
+          { label: "Request Refund", path: nil, siblings: nil }
+        ]
+      end
     end
 
-    expect(helper.guest_breadcrumb_parts.last(2)).to eq(
-      [
-        { label: "WS-123", path: "/guest/bookings/123" },
-        { label: "Refund Details", path: nil, siblings: nil }
-      ]
-    )
+    it "titles the page after the last step and goes back to the step before" do
+      expect(helper.guest_page_title).to eq("Request Refund")
+      expect(helper.guest_back_path).to eq("/guest/bookings/123")
+    end
   end
 end

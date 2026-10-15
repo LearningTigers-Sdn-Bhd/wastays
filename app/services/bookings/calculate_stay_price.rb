@@ -23,7 +23,7 @@ module Bookings
     def call
       return 0 if @room_type.nil? || @check_in.nil? || @check_out.nil?
 
-      nightly = (@check_in..(@check_out - 1.day)).map do |date|
+      nightly = ScheduledStay.billable_dates(@check_in, @check_out).map do |date|
         Rates::ResolveEffectiveNightlyPrice.call(
           room_type: @room_type,
           rate_plan: @rate_plan,
@@ -37,7 +37,10 @@ module Bookings
 
       return nil if nightly.any?(&:nil?)
 
-      nightly.sum(0.to_d)
+      Rates::ApplyStayDiscount.amounts(
+        rate_plan: @rate_plan, amounts: nightly,
+        guests: Rates::ApplyStayDiscount.guests_for(@rate_plan, adults: @adults, children: @children)
+      ).sum(0.to_d)
     end
 
     private

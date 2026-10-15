@@ -43,7 +43,7 @@ RSpec.describe "HotelPortal::Folios::Actions transaction splits", type: :request
 
       expect(response).to have_http_status(:success)
       document = Nokogiri::HTML(response.body)
-      expect(document.at_css("turbo-frame#folio_action_sheet dialog#folio-split-transaction-sheet[data-controller='panels-ui--sheet']")).to be_present
+      expect(document.at_css("turbo-frame#folio_action_sheet dialog#folio-split-transaction-sheet[data-controller='ui--sheet']")).to be_present
       expect(response.body).to include("Split transaction")
       expect(response.body).to include("Company Folio")
       expect(response.body).not_to include("offcanvas")
@@ -120,7 +120,7 @@ RSpec.describe "HotelPortal::Folios::Actions transaction splits", type: :request
       expect(response.body).to include('target="folio_action_sheet_secondary"')
     end
 
-    it "closes the sheet with a flash alert when the split fails" do
+    it "keeps the sheet and selections when the split fails" do
       allow(::Folios::Transactions::SplitTransaction).to receive(:call)
         .and_return(double(success?: false, error: "Transaction cannot be split."))
 
@@ -128,8 +128,8 @@ RSpec.describe "HotelPortal::Folios::Actions transaction splits", type: :request
         params: { folio_operation: { target_folio_id: target_folio.id, amount: "40.00", reason: "Company covers part" } },
         headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "folio_action_sheet" }
 
-      expect(response.body).to include('action="complete_sheet"')
-      expect(flash[:alert]).to eq("Transaction cannot be split.")
+      expect(response.body).to include("Transaction cannot be split.")
+      expect(flash.now[:alert]).to eq("Transaction cannot be split.")
     end
   end
 

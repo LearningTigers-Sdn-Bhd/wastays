@@ -36,8 +36,12 @@ module Folios
           @booking_folio.with_lock do
             @booking_folio.reload
             return failure("Folio is already open.") if @booking_folio.open?
+            if @booking_folio.ar_invoice_corrections.unresolved.exists?
+              return failure("The previous invoice correction must finish before reopening.")
+            end
             if @booking_folio.ar_invoice.present?
-              return failure("A folio with an AR invoice must be corrected through Accounts Receivable.")
+              ArInvoices::StartCorrection.call!(folio: @booking_folio, user: @user,
+                reason: "#{@correction_reason}: #{@correction_note}")
             end
 
             invoice_number = @booking_folio.invoice_number

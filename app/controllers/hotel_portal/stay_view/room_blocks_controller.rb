@@ -42,21 +42,37 @@ module HotelPortal
 
       def destroy
         result = Rooms::ManageBlock.new(hotel: current_hotel, user: current_user, block: @room_block).destroy
-        return respond_with_board("Room block removed.") if result.success?
+        return respond_with_board("Room block deleted.") if result.success?
 
         add_error(@room_block, result.error)
         render_sheet_error("hotel_portal/stay_view/room_blocks/form")
       end
 
+      # "Return to service" in the sheet. The block ends either way; the status
+      # staff picked is what the room is worth once it does.
       def finish
-        result = Rooms::ManageBlock.new(hotel: current_hotel, user: current_user, block: @room_block).finish
-        return respond_with_board("Room block finished.") if result.success?
+        target_status = params[:room_status].to_s
+        was_active_today = @room_block.active_on?(current_hotel.business_date_for)
+        result = Rooms::ManageBlock.new(hotel: current_hotel, user: current_user, block: @room_block).finish(target_status: target_status)
+        return respond_with_board(returned_to_service_notice(target_status, was_active_today)) if result.success?
 
         add_error(@room_block, result.error)
         render_sheet_error("hotel_portal/stay_view/room_blocks/form")
       end
 
       private
+
+      # Staff are told what the room now needs, not that a record changed state.
+      def returned_to_service_notice(target_status, was_active_today)
+        room = "Room #{@room_block.room_number}"
+        return "#{room} is back in service." unless was_active_today
+
+        if target_status == "ready"
+          "#{room} is back in service and ready to sell."
+        else
+          "#{room} is back in service and sent to housekeeping."
+        end
+      end
 
       def set_room_block
         @room_block = current_hotel.room_blocks.includes(:room_type).find(params[:id])

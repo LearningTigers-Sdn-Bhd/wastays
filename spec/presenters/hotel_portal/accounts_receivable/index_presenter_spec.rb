@@ -94,6 +94,18 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
 
       expect(presenter.paginated_rows.size).to eq(25)
       expect(presenter.pagination.pages).to eq(2)
+      presenter.paginated_rows.each do |row|
+        expect(row.invoice.association(:booking_folio)).to be_loaded
+        expect(row.booking_folio.association(:booking)).to be_loaded
+      end
+
+      second_page = presenter_for(page: 2)
+      expect(second_page.paginated_rows.size).to eq(1)
+      second_page.paginated_rows.each do |row|
+        expect(row.invoice.association(:booking_folio)).to be_loaded
+        expect(row.booking_folio.association(:booking)).to be_loaded
+        expect(presenter.paginated_rows.map { |first_page_row| first_page_row.invoice.id }).not_to include(row.invoice.id)
+      end
     end
   end
 
@@ -140,10 +152,12 @@ RSpec.describe HotelPortal::AccountsReceivable::IndexPresenter do
         due_on: Date.new(2026, 6, 30)
       )
 
+      invoice.booking.update!(guest_name: "Alex Taylor")
       row = described_class::Row.new(invoice)
 
       expect(row.invoice_label).to eq(invoice.formatted_invoice_number)
       expect(row.corporate_account_name).to eq("Northstar Travel")
+      expect(row.guest_name).to eq("Alex Taylor")
       expect(row.booking_reference).to eq("BK-NORTH")
       expect(row.folio_reference).to include("744")
       expect(row.source_label).to eq("Booking BK-NORTH · Folio #{row.folio_reference}")

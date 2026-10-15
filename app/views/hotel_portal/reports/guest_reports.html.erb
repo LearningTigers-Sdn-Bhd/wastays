@@ -139,7 +139,7 @@
           <% ([ HotelPortal::ReportsController::MEAL_PREP_ALL ] + HotelPortal::Reports::MealPrepReport::MEALS).each do |m_type| %>
             <% tabs.with_tab(
                  name: m_type,
-                 label: m_type.titleize,
+                 label: m_type == HotelPortal::ReportsController::MEAL_PREP_ALL ? m_type.titleize : HotelBoatSetting.meal_label(m_type),
                  count: @meal_prep_counts[m_type],
                  href: guest_reports_hotel_reports_path(current_hotel, start_date: @report.start_date, end_date: @report.end_date, date_preset: @date_preset, tab: "meal_prep", meal_type: m_type)
                ) %>

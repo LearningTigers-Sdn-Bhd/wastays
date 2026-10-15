@@ -13,12 +13,12 @@ RSpec.describe PanelsUI::ScrollArea, type: :component do
     render_scroll_area
 
     expect(page).to have_css(
-      ".panel-scroll-area[data-controller='panels-ui--scroll-area']" \
+      ".panel-scroll-area[data-controller='ui--scroll-area']" \
       "[data-orientation='vertical'][data-scroll-fade='none']" \
-      "[data-panels-ui--scroll-area-target='root']"
+      "[data-ui--scroll-area-target='root']"
     )
     expect(page).to have_css(
-      ".panel-scroll-area__viewport[data-panels-ui--scroll-area-target='viewport'][tabindex='0']",
+      ".panel-scroll-area__viewport[data-ui--scroll-area-target='viewport'][tabindex='0']",
       text: "Scrollable content"
     )
     expect(page).to have_css(
@@ -32,13 +32,13 @@ RSpec.describe PanelsUI::ScrollArea, type: :component do
   it "defaults the hide delay and exposes it as a Stimulus value" do
     render_scroll_area
 
-    expect(page).to have_css(".panel-scroll-area[data-panels-ui--scroll-area-hide-delay-value='600']")
+    expect(page).to have_css(".panel-scroll-area[data-ui--scroll-area-hide-delay-value='600']")
   end
 
   it "accepts a custom hide delay" do
     render_scroll_area(hide_delay: 250)
 
-    expect(page).to have_css(".panel-scroll-area[data-panels-ui--scroll-area-hide-delay-value='250']")
+    expect(page).to have_css(".panel-scroll-area[data-ui--scroll-area-hide-delay-value='250']")
   end
 
   it "renders only the horizontal scrollbar for horizontal orientation" do
@@ -80,7 +80,7 @@ RSpec.describe PanelsUI::ScrollArea, type: :component do
     end
 
     root = page.find(".panel-scroll-area")
-    expect(root["data-controller"]).to eq("analytics panels-ui--scroll-area")
+    expect(root["data-controller"]).to eq("analytics ui--scroll-area")
     expect(root["data-testid"]).to eq("list")
   end
 

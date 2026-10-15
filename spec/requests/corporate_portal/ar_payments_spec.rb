@@ -162,6 +162,53 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(response.body).to include("Finance Admin")
   end
 
+  it "shows the guest name on the legacy allocation ledger and pay invoices" do
+    rel = create(:hotel_corporate_account, corporate_account: user.account, status: "active")
+    payment = create(:ar_payment, hotel_corporate_account: rel, hotel: rel.hotel, amount: 100, currency: rel.hotel.default_currency)
+    invoice = create_invoice(rel)
+    invoice.booking.update!(guest_name: "Yang Chun Yan")
+    create(:ar_payment_allocation, ar_payment: payment, ar_invoice: invoice, amount: 100)
+
+    get corporate_ar_payment_path(payment, legacy: true)
+    expect(response.body).to include("Yang Chun Yan")
+
+    get pay_invoices_corporate_ar_payments_path(hotel_corporate_account_id: rel.id)
+    expect(response.body).to include("Yang Chun Yan")
+  end
+
+  it "shows the guest name beside each remittance suggestion on review" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account)
+    create(:payment_setting, settable: relationship.hotel, gateway: "razorpay", api_key: "key", secret_key: "secret", status: "active")
+    invoice = create_invoice(relationship)
+    invoice.booking.update!(guest_name: "Yang Chun Yan")
+
+    post review_corporate_ar_payments_path, params: {
+      corporate_ar_payment: {
+        hotel_corporate_account_id: relationship.id, invoice_ids: [ invoice.id ],
+        amount: "100.00", currency: invoice.currency, gateway: "razorpay"
+      }
+    }
+
+    expect(response).to have_http_status(:success)
+    table = Nokogiri::HTML(response.body).css("table").find { |t| t.text.include?("Suggested") }
+    expect(table.css("tbody tr").first.css("td")[1].text).to eq("Yang Chun Yan")
+  end
+
+  it "shows the guest name beside each remittance suggestion on the attempt page" do
+    rel = create(:hotel_corporate_account, corporate_account: user.account)
+    invoice = create_invoice(rel)
+    invoice.booking.update!(guest_name: "Yang Chun Yan")
+    intent = create(:corporate_ar_payment_intent, hotel_corporate_account: rel, user: user,
+                    remittance_suggestions: [ { "ar_invoice_id" => invoice.id, "invoice_label" => invoice.formatted_invoice_number,
+                                                "due_on" => invoice.due_on.iso8601, "outstanding_amount" => "100.0", "suggested_amount" => "100.0" } ])
+
+    get corporate_ar_payment_path(intent)
+
+    expect(response).to have_http_status(:success)
+    table = Nokogiri::HTML(response.body).css("table").find { |t| t.text.include?("Outstanding snapshot") }
+    expect(table.css("tbody tr").first.css("td")[1].text).to eq("Yang Chun Yan")
+  end
+
   it "shows only active relationships on pay invoices" do
     active_hotel = create(:hotel, name: "Active Billing Corporate Hotel")
     suspended_hotel = create(:hotel, name: "Suspended Billing Corporate Hotel")
@@ -205,6 +252,41 @@ RSpec.describe "CorporatePortal::ArPayments", type: :request do
     expect(response.body).to include("Bank Transfer")
     expect(response.body).to include(review_corporate_ar_payments_path)
     expect(response.body).to include(new_corporate_ar_payment_submission_path)
+  end
+
+  # Travel agents settle by bank transfer only, so the card tile is not offered
+  # and the gateway route refuses them even when posted to directly.
+  it "offers a travel agent bank transfer only on choose method" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active", account_type: "travel_agent")
+    invoice = create_invoice(relationship)
+
+    get choose_method_corporate_ar_payments_path(hotel_corporate_account_id: relationship.id, invoice_ids: [ invoice.id ])
+
+    expect(response).to have_http_status(:success)
+    expect(response.body).to include("Bank Transfer")
+    expect(response.body).to include(new_corporate_ar_payment_submission_path)
+    expect(response.body).not_to include("Pay Online")
+    expect(response.body).not_to include(review_corporate_ar_payments_path)
+  end
+
+  it "refuses a gateway payment posted directly by a travel agent" do
+    relationship = create(:hotel_corporate_account, corporate_account: user.account, status: "active", account_type: "travel_agent")
+    invoice = create_invoice(relationship)
+
+    expect {
+      post review_corporate_ar_payments_path, params: {
+        corporate_ar_payment: {
+          hotel_corporate_account_id: relationship.id,
+          currency: invoice.currency,
+          gateway: "razorpay",
+          amount: invoice.outstanding_amount,
+          invoice_ids: [ invoice.id ]
+        }
+      }
+    }.not_to change(CorporateArPaymentIntent, :count)
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.body).to include("settle by bank transfer")
   end
 
   it "redirects back to pay invoices when choose method has no invoices selected" do

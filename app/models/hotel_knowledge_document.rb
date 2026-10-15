@@ -19,6 +19,7 @@ class HotelKnowledgeDocument < ApplicationRecord
   # a free one the hotel wrote itself. The card it belongs to is the only thing
   # that separates them, so it lives in metadata and needs no column.
   POLICY_KEYS = %w[room_terms payment_and_deposits house_rules].freeze
+  INDEXING_RECOVERY_METADATA_KEYS = %w[indexing_recovery_attempts indexing_recovered_at].freeze
 
   validates :title, :source_type, :category, presence: true
   validates :source_type, inclusion: { in: %w[text pdf] }
@@ -32,16 +33,16 @@ class HotelKnowledgeDocument < ApplicationRecord
   after_commit :enqueue_embedding_generation, on: [ :create, :update ]
   after_update_commit :broadcast_embedding_state, if: :embedding_state_changed?
 
-  def enqueue_embedding_generation!
+  def enqueue_embedding_generation!(recovery: false)
     return false unless hotel.ai_concierge_enabled?
 
-    mark_embedding_indexing!
+    mark_embedding_indexing!(reset_recovery: !recovery)
     HotelKnowledges::GenerateEmbeddingsJob.perform_later(id)
     true
   end
 
-  def mark_embedding_indexing!
-    update_embedding_state!("indexing")
+  def mark_embedding_indexing!(reset_recovery: false)
+    update_embedding_state!("indexing", reset_recovery: reset_recovery)
   end
 
   # An FAQ posts its pairs from indexed form fields, which Rails hands back as a
@@ -57,13 +58,15 @@ class HotelKnowledgeDocument < ApplicationRecord
 
   private
 
-  def update_embedding_state!(status)
+  def update_embedding_state!(status, reset_recovery: false)
     previous_value = Thread.current[:skip_hotel_knowledge_embedding_enqueue]
     Thread.current[:skip_hotel_knowledge_embedding_enqueue] = true
+    next_metadata = metadata.except("last_error")
+    next_metadata = next_metadata.except(*INDEXING_RECOVERY_METADATA_KEYS) if reset_recovery
 
     update!(
       embedding_status: status,
-      metadata: metadata.except("last_error")
+      metadata: next_metadata
     )
   ensure
     Thread.current[:skip_hotel_knowledge_embedding_enqueue] = previous_value

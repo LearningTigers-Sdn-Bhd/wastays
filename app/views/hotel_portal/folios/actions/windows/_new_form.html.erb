@@ -67,7 +67,7 @@
   </div>
 
   <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
-    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
     <%= render PanelsUI::Button.new(as: :button, type: :submit, variant: :primary, disabled: !has_any_party, data: { turbo_submits_with: "Creating…" }) do %>Create folio<% end %>
   </div>
 <% end %>

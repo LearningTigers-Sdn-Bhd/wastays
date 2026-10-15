@@ -22,10 +22,37 @@ module Rooms
       late_checkout_detected: :warning
     }.freeze
 
+    # Seven room statuses plus "occupied" cannot be told apart by hue alone --
+    # three pairs above share a badge variant, and colour on its own is no use
+    # to a colourblind user. Each status therefore carries a shape as well, and
+    # the two travel together wherever a status is shown.
+    ICONS = {
+      ready: "circle-check",
+      dirty: "spray-can",
+      cleaning: "brush-cleaning",
+      occupied: "bed",
+      awaiting_inspection: "search-check",
+      inspection_failed: "shield-x",
+      out_of_service: "construction",
+      late_checkout_detected: "clock"
+    }.freeze
+
+    UNKNOWN_ICON = "circle-question-mark"
+
     RESOLVED_STATUSES = BADGE_VARIANTS.keys.map(&:to_s).freeze
 
     def self.badge_variant(status)
       BADGE_VARIANTS.fetch(status.to_s.to_sym, :neutral)
+    end
+
+    def self.icon(status)
+      ICONS.fetch(status.to_s.to_sym, UNKNOWN_ICON)
+    end
+
+    # Only a ready room can be assigned to an arriving guest; the board says so
+    # rather than leaving staff to remember which of the seven counts as clean.
+    def self.assignable?(status)
+      RoomStatus::ASSIGNABLE_STATUSES.include?(status.to_s)
     end
 
     # Titleizing capitalises every word, which is wrong for the small ones.

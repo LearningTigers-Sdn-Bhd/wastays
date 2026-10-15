@@ -1,0 +1,26 @@
+<%= tag.div(**root_attributes) do %>
+  <%# The source of truth. Visible and used until the controller enhances it. %>
+  <%= native_tag %>
+
+  <%= tag.button(**trigger_attributes) do %>
+    <span id="<%= value_id %>" class="guest-select__value"
+          data-ui--select-menu-target="label"
+          data-placeholder="<%= selected_label.blank?.to_s %>"><%= selected_label || @prompt %></span>
+    <%= helpers.app_icon "chevron-down", class: "guest-select__chevron", aria: { hidden: "true" } %>
+  <% end %>
+
+  <%= tag.div(id: listbox_id, role: "listbox", tabindex: "-1", popover: "manual",
+              class: "guest-select__listbox",
+              aria: { labelledby: @labelled_by }.compact,
+              data: {
+                ui__select_menu_target: "listbox",
+                action: "keydown->ui--select-menu#onListboxKeydown click->ui--select-menu#onOptionClick toggle->ui--select-menu#onPopoverToggle"
+              }) do %>
+    <% choices.each_with_index do |choice, index| %>
+      <%= tag.div(**option_attributes(choice, index)) do %>
+        <span class="guest-select__option-label" data-select-menu-label><%= choice[:label] %></span>
+        <%= helpers.app_icon "check", class: "guest-select__check", aria: { hidden: "true" } %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

@@ -44,6 +44,9 @@ module Onboarding
       when "owner_approved"
         OnboardingMailer.approved(delivery).deliver_now
         delivery.complete!
+      when "agent_approved"
+        SuperAgentMailer.hotel_live(delivery).deliver_now
+        delivery.complete!
       else
         raise ArgumentError, "Unsupported onboarding delivery: #{delivery.delivery_type}"
       end

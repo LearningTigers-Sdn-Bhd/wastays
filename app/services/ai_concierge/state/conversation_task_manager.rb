@@ -1,7 +1,7 @@
 module AiConcierge
   module State
     class ConversationTaskManager
-    STATE_VERSION = 3
+    STATE_VERSION = 4
     SUSPENDED_BOOKING_TTL = ProspectConversationState::PAUSED_FLOW_TTL
     SUGGESTION_GROUPS = %w[
       greeting portal_offer post_link_support magic_link_failure staff_wait unsupported_change
@@ -217,7 +217,9 @@ module AiConcierge
       end
     end
 
-    def update_information_task(intent:, topic:, question: nil, pending_question: nil, context: nil)
+    def update_information_task(intent:, topic:, question: nil, pending_question: nil, context: nil,
+                                outcome: nil, failure_topics: [])
+      failure_count, failure_at, topics = information_failure_state(outcome, failure_topics)
       task = default_information_task.merge(
         "status" => pending_question.present? ? "waiting_for_guest" : "completed",
         "intent" => intent,
@@ -225,10 +227,13 @@ module AiConcierge
         "last_question" => question,
         "pending_question" => pending_question,
         "context" => context,
-        "answered_at" => now.iso8601
+        "answered_at" => now.iso8601,
+        "consecutive_failure_count" => failure_count,
+        "last_failure_at" => failure_at,
+        "last_failure_topics" => topics
       )
 
-      without_legacy(payload.merge("information_task" => compact_blank_values(task)))
+      without_legacy(payload.merge("information_task" => task))
     end
 
     def record_optional_sales_offer(action)
@@ -330,6 +335,8 @@ module AiConcierge
     end
 
     def migrate_legacy(source)
+      return source if source["state_version"].to_i >= 3
+
       active = source["active"] if source["active"].is_a?(Hash)
       paused = Array(source["paused_flows"]).select { |flow| flow.is_a?(Hash) && flow["topic"] == "booking_search" }.last
 
@@ -488,10 +495,6 @@ module AiConcierge
       hash.except("active", "paused_flows")
     end
 
-    def compact_blank_values(hash)
-      hash.reject { |_key, value| value.nil? }
-    end
-
     def default_booking_task
       {
         "purpose" => "booking",
@@ -520,8 +523,30 @@ module AiConcierge
         "last_question" => nil,
         "pending_question" => nil,
         "context" => nil,
-        "answered_at" => nil
+        "answered_at" => nil,
+        "consecutive_failure_count" => 0,
+        "last_failure_at" => nil,
+        "last_failure_topics" => []
       }
+    end
+
+    def information_failure_state(outcome, failure_topics)
+      case outcome.to_s
+      when "partial", "unavailable"
+        [
+          information_task["consecutive_failure_count"].to_i + 1,
+          now.iso8601,
+          Array(failure_topics).map(&:to_s).compact_blank.uniq
+        ]
+      when "answered"
+        [ 0, nil, [] ]
+      else
+        [
+          information_task["consecutive_failure_count"].to_i,
+          information_task["last_failure_at"],
+          Array(information_task["last_failure_topics"])
+        ]
+      end
     end
 
     def default_sales_task

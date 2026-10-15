@@ -1,0 +1,62 @@
+<% frame_id = turbo_frame_request_id.presence || "admin_super_agent_action_sheet" %>
+<% form_id = "create-super-agent-form" %>
+
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(
+          id: "create-super-agent-sheet",
+          side: :right,
+          title: "Add super agent",
+          description: "Set a password or let the system make one. You get the sign-in details to give to the agent.") do |sheet| %>
+      <% sheet.with_body do %>
+        <%= form_with model: @agent, url: admin_super_agents_path, id: form_id, class: "space-y-4 py-2" do |builder| %>
+          <% if @agent.errors.any? %>
+            <div class="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert" tabindex="-1">
+              <h3 class="font-semibold"><%= pluralize(@agent.errors.count, "issue") %> prevented this super agent from being created.</h3>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <% @agent.errors.full_messages.each do |message| %>
+                  <li><%= message %></li>
+                <% end %>
+              </ul>
+            </div>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form: builder, attribute: :name, label: "Name", required: true) do |field| %>
+            <% field.with_input(autocomplete: "name") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(form: builder, attribute: :email, label: "Email", hint: "The agent signs in with this email.", required: true) do |field| %>
+            <% field.with_input(type: :email, autocomplete: "email") %>
+          <% end %>
+
+          <%= render PanelsUI::FormField.new(
+                form: builder,
+                attribute: :password,
+                label: "Password",
+                hint: "Optional. At least 8 characters. Leave it empty and the system makes one. The agent can sign in straight away.") do |field| %>
+            <% field.with_input(type: :password, minlength: 8, autocomplete: "new-password", value: "") %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :button,
+              variant: :secondary,
+              size: :sm,
+              data: { action: "click->ui--sheet#close" }) do %>
+          Cancel
+        <% end %>
+        <%= render PanelsUI::Button.new(
+              as: :button,
+              type: :submit,
+              form: form_id,
+              size: :sm,
+              data: { turbo_submits_with: "Creating…" }) do %>
+          Create super agent
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,58 @@
+<div class="space-y-8 py-4">
+  <section aria-label="Monthly performance" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <%= render PanelsUI::MetricCard.new(label: "Gross revenue this month", value: number_to_currency(@hotel.gross_revenue_mtd, unit: "RM ")) %>
+    <%= render PanelsUI::MetricCard.new(label: "WAStays earned margin this month", value: number_to_currency(@hotel.wastays_margin_mtd, unit: "RM ")) %>
+    <%= render PanelsUI::MetricCard.new(label: "Hotel net earnings this month", value: number_to_currency(@hotel.hotel_net_earnings_mtd, unit: "RM ")) %>
+    <%= render PanelsUI::MetricCard.new(label: "Bookings this month", value: format_number(@hotel.booking_count_mtd)) %>
+  </section>
+  <%= form_with model: @hotel, url: admin_hotel_path(@hotel), method: :patch, class: "space-y-8" do |form| %>
+    <% if @hotel.errors.any? %><p role="alert" class="text-sm text-destructive"><%= @hotel.errors.full_messages.to_sentence %></p><% end %>
+    <div class="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <%= render PanelsUI::FieldSet.new(legend: "Property profile", description: "The hotel's identity and location.") do %>
+        <%= render PanelsUI::FieldGroup.new do %>
+          <%= render PanelsUI::FormField.new(form:, attribute: :name, label: "Hotel name", required: true) do |field| %>
+            <% field.with_input %>
+          <% end %>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <%= render PanelsUI::FormField.new(form:, attribute: :star_rating, label: "Star rating") do |field| %>
+              <% field.with_select_menu((1..5).map { |rating| { label: "#{rating} stars", value: rating } }, prompt: "Select rating") %>
+            <% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :hotel_prefix, label: "Hotel prefix", hint: "3–6 uppercase letters or numbers. Must be unique.") do |field| %>
+              <% field.with_input(maxlength: 6, minlength: 3) %>
+            <% end %>
+          </div>
+          <%= render PanelsUI::FormField.new(form:, attribute: :address, label: "Address") do |field| %>
+            <% field.with_text_area(rows: 3) %>
+          <% end %>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <%= render PanelsUI::FormField.new(form:, attribute: :city, label: "City") do |field| %><% field.with_input %><% end %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :country, label: "Country") do |field| %><% field.with_input %><% end %>
+          </div>
+          <%= render PanelsUI::FormField.new(form:, attribute: :amenities, label: "Property amenities") do |field| %>
+            <% field.with_multi_select(Hotel::HOTEL_AMENITIES.map { |amenity| { label: amenity[:name], value: amenity[:id] } }, selected: @hotel.amenities, prompt: "Search amenities") %>
+          <% end %>
+        <% end %>
+      <% end %>
+      <div class="space-y-8">
+        <%= render PanelsUI::FieldSet.new(legend: "Commercial setup") do %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :plan_id, label: "Subscription plan") do |field| %>
+              <% field.with_select_menu([{ label: "No plan", value: "" }] + @plans.map { |plan| { label: plan.name, value: plan.id } }) %>
+            <% end %>
+            <p class="text-sm"><span class="font-medium">How the property charges:</span> <%= @hotel.sell_mode_label %></p>
+            <p class="text-xs text-muted-foreground">The charging model cannot change after creation.</p>
+            <%= render PanelsUI::MetricCard.new(label: "Configured margin rate", value: "#{format_number(@configured_margin_rate, precision: 2)}%") %>
+          <% end %>
+        <% end %>
+        <%= render PanelsUI::FieldSet.new(legend: "Property features") do %>
+          <%= render PanelsUI::FieldGroup.new do %>
+            <%= render PanelsUI::Switch.new(form:, attribute: :allow_boat_information, variant: :card, label: "Boat features") %>
+            <%= render PanelsUI::Switch.new(form:, attribute: :grc_tablet_signing_enabled, variant: :card, label: "Registration card tablet signing") %>
+            <%= render PanelsUI::Switch.new(form:, attribute: :hide_payout_reports, variant: :card, label: "Hide payout reports") %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+    <%= render PanelsUI::Button.new(as: :button, type: :submit) do %>Save hotel details<% end %>
+  <% end %>
+</div>

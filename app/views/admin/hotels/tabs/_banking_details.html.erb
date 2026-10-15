@@ -1,0 +1,10 @@
+<section class="space-y-5 py-4">
+  <div><h2 class="text-base font-semibold">Banking details</h2><p class="text-sm text-muted-foreground">Submitted payout account information.</p></div>
+  <% if @banking_detail %>
+    <dl class="grid gap-5 sm:grid-cols-2">
+      <div><dt class="text-sm font-medium">Account holder name</dt><dd class="mt-1 text-sm"><%= @banking_detail.account_holder_name %></dd></div>
+      <div><dt class="text-sm font-medium">Bank name</dt><dd class="mt-1 text-sm"><%= @banking_detail.bank_name %></dd></div>
+      <div><dt class="text-sm font-medium">Account number</dt><dd class="mt-1 text-sm"><%= @banking_detail.account_number %></dd></div>
+    </dl>
+  <% else %><p class="text-sm text-muted-foreground">No banking details have been submitted yet.</p><% end %>
+</section>

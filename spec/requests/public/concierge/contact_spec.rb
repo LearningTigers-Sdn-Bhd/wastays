@@ -14,17 +14,59 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
   describe "GET /concierge/:hotel_slug/contact" do
     it "returns http success and shows contact links" do
-      get "/concierge/#{hotel.slug}/contact"
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("wa.me/60123456789")
       expect(response.body).to include("google.com/maps")
     end
 
+    it "puts the chatbot first in the contact methods" do
+      get concierge_contact_path(hotel.unique_id, hotel.public_id)
+
+      rows = response.parsed_body.css(".guest-card__row")
+      chat_path = concierge_chat_path(
+        hotel.unique_id,
+        hotel.public_id,
+        return_to: concierge_contact_path(hotel.unique_id, hotel.public_id)
+      )
+
+      expect(rows.first["href"]).to eq(chat_path)
+      expect(rows.first.text.squish).to include("Interact with Chatbot", "Instant answers, any time")
+    end
+
+    it "hides the chatbot when guest chat is off" do
+      hotel.update!(guest_chat_enabled: false)
+
+      get concierge_contact_path(hotel.unique_id, hotel.public_id)
+
+      rows = response.parsed_body.css(".guest-card__row")
+      expect(rows.map { |row| row.text.squish }).not_to include(a_string_including("Interact with Chatbot"))
+      expect(rows.map { |row| row["href"] }).not_to include(a_string_starting_with(concierge_chat_path(hotel.unique_id, hotel.public_id)))
+    end
+
+    it "keeps the back link in the heading, as on the check-in code page" do
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
+
+      page = Nokogiri::HTML(response.body)
+      back = page.at_css(".guest-form-page__header a")
+
+      expect(back["href"]).to eq(concierge_home_path(hotel.unique_id, hotel.public_id))
+      expect(back.text).to include("Back to Concierge")
+      expect(page.at_css(".guest-summary-compact")).to be_nil
+      expect(page.at_css("h2").text).to include("Get in touch")
+    end
+
     it "shows no front desk badge for a hotel that never filled the page" do
-      get "/concierge/#{hotel.slug}/contact"
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
 
       expect(response.body).not_to include("Front desk is")
+    end
+
+    it "ends with the concierge footer" do
+      get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
+
+      expect(response.body).to include('<footer class="guest-footer">', "Concierge by WAStays")
     end
   end
 
@@ -43,7 +85,7 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
     it "says the desk is open and hides the duty manager during the day" do
       travel_to Time.find_zone("Kuala Lumpur").parse("2026-09-08 10:00") do
-        get "/concierge/#{hotel.slug}/contact"
+        get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
       end
 
       expect(response.body).to include("Front desk is open until 11:00 PM")
@@ -52,7 +94,7 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
     it "says the desk is closed and offers the duty manager at night" do
       travel_to Time.find_zone("Kuala Lumpur").parse("2026-09-08 03:00") do
-        get "/concierge/#{hotel.slug}/contact"
+        get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
       end
 
       expect(response.body).to include("Front desk is closed")
@@ -62,7 +104,7 @@ RSpec.describe "Public::Concierge::Contact", type: :request do
 
     it "shows the emergency card at any hour" do
       travel_to Time.find_zone("Kuala Lumpur").parse("2026-09-08 10:00") do
-        get "/concierge/#{hotel.slug}/contact"
+        get "/concierge/#{hotel.unique_id}/#{hotel.public_id}/contact"
       end
 
       expect(response.body).to include("Police, fire, ambulance")

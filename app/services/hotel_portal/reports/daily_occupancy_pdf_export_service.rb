@@ -18,9 +18,9 @@ module HotelPortal
         ])
         builder.add_table(
           section_title: "Daily Occupancy", headers: DailyOccupancyExcelExportService::HEADERS,
-          rows: @report.rows.map { |row| [ date(row[:date]), row[:rooms_sold].to_s, row[:rooms_available].to_s, percentage(row[:occupancy_rate]), money(row[:room_revenue]), money(row[:adr]), money(row[:revpar]), money(row[:tax_amount]), money(row[:total_revenue]) ] },
-          numeric_columns: (1..8).to_a,
-          total_row: [ "TOTAL", @report.totals[:rooms_sold].to_s, @report.totals[:rooms_available].to_s, percentage(@report.totals[:occupancy_rate]), money(@report.totals[:room_revenue]), money(@report.totals[:adr]), money(@report.totals[:revpar]), money(@report.totals[:tax_amount]), money(@report.totals[:total_revenue]) ],
+          rows: @report.rows.map { |row| [ date(row[:date]), row[:rooms_sold].to_s, row[:rooms_available].to_s, percentage(row[:occupancy_rate]), money(row[:room_revenue]), money(row[:adr]), money(row[:revpar]), row[:day_use_sold].to_s, money(row[:day_use_revenue]), money(row[:tax_amount]), money(row[:total_revenue]) ] },
+          numeric_columns: (1..10).to_a,
+          total_row: [ "TOTAL", @report.totals[:rooms_sold].to_s, @report.totals[:rooms_available].to_s, percentage(@report.totals[:occupancy_rate]), money(@report.totals[:room_revenue]), money(@report.totals[:adr]), money(@report.totals[:revpar]), @report.totals[:day_use_sold].to_s, money(@report.totals[:day_use_revenue]), money(@report.totals[:tax_amount]), money(@report.totals[:total_revenue]) ],
           empty_message: "No occupancy data for the selected period."
         )
         builder.render

@@ -1,0 +1,14 @@
+Noto Sans SC, SIL Open Font License 1.1 (see NotoSansSC-OFL.txt).
+
+Source: https://github.com/notofonts/noto-cjk
+Commit: f8d157532fbfaeda587e826d4cd5b21a49186f7c
+Input: Sans/Variable/TTF/Subset/NotoSansSC-VF.ttf
+License: Sans/LICENSE
+
+Regular (400) and Bold (700) are complete static TrueType instances,
+created with fontTools 4.66.1 (updateFontNames=True). No character subset
+was applied. Prawn/TTFunk requires static fonts for reliable embedding.
+
+Reproduction (fontTools installed in a temporary environment):
+fonttools varLib.instancer NotoSansSC-VF.ttf wght=400 --update-name-table -o NotoSansSC-Regular.ttf
+fonttools varLib.instancer NotoSansSC-VF.ttf wght=700 --update-name-table -o NotoSansSC-Bold.ttf

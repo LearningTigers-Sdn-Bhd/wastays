@@ -31,7 +31,7 @@ RSpec.describe "PanelsUI toggle controls", type: :system do
       window.toggleProbe = { input: 0, change: 0, custom: [] }
       arguments[0].addEventListener("input", () => window.toggleProbe.input += 1)
       arguments[0].addEventListener("change", () => window.toggleProbe.change += 1)
-      document.addEventListener("panels-ui--toggle:change", (event) => {
+      document.addEventListener("ui--toggle:change", (event) => {
         window.toggleProbe.custom.push({ pressed: event.detail.pressed, value: event.detail.value })
       })
     JS
@@ -144,7 +144,7 @@ RSpec.describe "PanelsUI toggle controls", type: :system do
       window.groupProbe = { input: 0, change: 0, custom: [] }
       arguments[0].addEventListener("input", () => window.groupProbe.input += 1)
       arguments[0].addEventListener("change", () => window.groupProbe.change += 1)
-      document.addEventListener("panels-ui--toggle-group:change", (event) => {
+      document.addEventListener("ui--toggle-group:change", (event) => {
         window.groupProbe.custom.push({ type: event.detail.type, value: event.detail.value })
       })
     JS

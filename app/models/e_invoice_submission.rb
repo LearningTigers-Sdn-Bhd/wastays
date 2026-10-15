@@ -4,6 +4,8 @@ class EInvoiceSubmission < ApplicationRecord
   belongs_to :hotel
   belongs_to :booking, optional: true
   belongs_to :payout_batch, optional: true
+  belongs_to :invoice, optional: true
+  belongs_to :ar_invoice_correction, optional: true
 
   STATUSES = %w[pending submitted valid invalid cancelled].freeze
   SUBMISSION_MODES = %w[taxpayer intermediary].freeze
@@ -16,7 +18,8 @@ class EInvoiceSubmission < ApplicationRecord
     "ota_commission_self_billed" => "OTA commission (self-billed)",
     "payout_self_billed_invoice" => "Hotel payout record",
     "commission_invoice" => "WAStays service fee invoice",
-    "subscription_invoice" => "WAStays subscription invoice"
+    "subscription_invoice" => "WAStays subscription invoice",
+    "company_invoice_correction" => "Company invoice correction"
   }.freeze
   DOCUMENT_TYPES = {
     "01" => "Standard invoice",
@@ -24,6 +27,8 @@ class EInvoiceSubmission < ApplicationRecord
     "03" => "Debit Note",
     "11" => "Self-billed invoice"
   }.freeze
+
+  validate :invoice_references_match
 
   validates :status, inclusion: { in: STATUSES }
   validates :document_scenario, inclusion: { in: DOCUMENT_SCENARIOS.keys }
@@ -40,7 +45,7 @@ class EInvoiceSubmission < ApplicationRecord
     scope: [ :document_scenario, :document_type ],
     conditions: -> { where.not(status: "cancelled") },
     message: "already has an active submission for this document scenario and type"
-  }, if: -> { booking_id.present? }
+  }, if: -> { booking_id.present? && ar_invoice_correction_id.blank? }
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :valid, -> { where(status: "valid") }
@@ -108,6 +113,8 @@ class EInvoiceSubmission < ApplicationRecord
   CANCELLATION_WINDOW = 72.hours
 
   def cancellable?
+    return false if ar_invoice_correction_id.present?
+    return false if invoice&.under_correction? || invoice&.voided?
     return false unless validated? && cancelled_at.nil?
     # Validated without a timestamp is a data anomaly, not a closed window; we
     # cannot tell whether LHDN would still accept it, so we do not offer it.
@@ -213,5 +220,18 @@ class EInvoiceSubmission < ApplicationRecord
 
   def ota_commission_self_billed?
     document_scenario == "ota_commission_self_billed"
+  end
+  private
+
+  def invoice_references_match
+    if invoice
+      errors.add(:invoice, "must belong to the same hotel and booking") unless invoice.hotel_id == hotel_id && invoice.booking_folio.booking_id == booking_id
+    end
+    if ar_invoice_correction
+      correction = ar_invoice_correction
+      unless correction.hotel_id == hotel_id && correction.booking_folio.booking_id == booking_id && invoice&.booking_folio_id == correction.booking_folio_id
+        errors.add(:ar_invoice_correction, "must match the invoice hotel and folio")
+      end
+    end
   end
 end

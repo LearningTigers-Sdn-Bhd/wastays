@@ -37,6 +37,38 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
       expect(response.body).not_to include(hidden.formatted_invoice_number)
     end
 
+    it "shows each invoice's guest name and source references in desktop rows and mobile cards" do
+      invoices = [
+        create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-GUEST-1", folio_number: 511, amount: 300),
+        create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-GUEST-2", folio_number: 512, amount: 400)
+      ]
+      invoices.first.booking.update!(guest_name: "Alex & <Taylor>")
+      invoices.last.booking.update!(guest_name: "Jordan Lee")
+      hidden = create_ar_invoice_for(hotel: other_hotel, confirmation_token: "BK-GUEST-HIDDEN", folio_number: 911, amount: 500)
+      hidden.booking.update!(guest_name: "Hidden Guest")
+
+      get hotel_ar_invoices_path(hotel)
+
+      expect(response).to have_http_status(:success)
+      doc = Nokogiri::HTML(response.body)
+      invoices.each do |invoice|
+        row = doc.at_css("[data-testid='ar-invoice-row-#{invoice.id}']")
+        card = doc.at_css("[data-testid='ar-invoice-card-#{invoice.id}']")
+        source_label = "Booking #{invoice.booking.confirmation_token} · Folio #{invoice.booking_folio.folio_reference_display}"
+        expect(row.css("td")[3].css("p").map(&:text)).to eq([ invoice.booking.guest_name, source_label ])
+        guest = card.css("p").find { |element| element.text == invoice.booking.guest_name }
+        expect(guest.previous_element.text).to eq(invoice.corporate_account.name)
+        expect(guest.next_element.text).to eq(source_label)
+        [ row, card ].each do |element|
+          expect(element["data-clickable-row-url-value"]).to eq(hotel_ar_invoice_path(hotel, invoice))
+        end
+      end
+      expect(doc.at_css("[data-testid='ar-invoice-row-#{hidden.id}']")).to be_nil
+      expect(doc.at_css("[data-testid='ar-invoice-card-#{hidden.id}']")).to be_nil
+      expect(response.body).not_to include("Hidden Guest")
+      expect(response.body).to include("Alex &amp; &lt;Taylor&gt;")
+    end
+
     it "paginates invoices at 25 and preserves the active filter" do
       invoices = Array.new(26) do |index|
         create_ar_invoice_for(
@@ -352,12 +384,14 @@ RSpec.describe "HotelPortal::ArInvoices", type: :request do
   describe "GET /hotel/:hotel_id/ar-invoices/:id" do
     it "renders source booking, folio, corporate account, due date, and outstanding balance" do
       invoice = create_ar_invoice_for(hotel: hotel, confirmation_token: "BK-AR-SHOW", folio_number: 701, amount: 450)
+      invoice.booking.update!(guest_name: "Yang Chun Yan")
 
       get hotel_ar_invoice_path(hotel, invoice)
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include(invoice.formatted_invoice_number)
       expect(response.body).to include("BK-AR-SHOW")
+      expect(response.body).to include("Yang Chun Yan")
       expect(response.body).to include(invoice.booking_folio.folio_reference_display)
       expect(response.body).to include(invoice.corporate_account.name)
       expect(response.body).to include(invoice.due_on.strftime("%d %b %Y"))

@@ -13,7 +13,7 @@ RSpec.describe "PanelsUI::Checkbox", type: :system do
   end
 
   it "initializes and clears an indeterminate checkbox after user interaction" do
-    checkbox = page.find("[data-theme='panel-light'] input[data-panels-ui--checkbox-indeterminate-value='true']")
+    checkbox = page.find("[data-theme='panel-light'] input[data-ui--checkbox-indeterminate-value='true']")
 
     expect(page.evaluate_script("arguments[0].indeterminate", checkbox)).to be(true)
 

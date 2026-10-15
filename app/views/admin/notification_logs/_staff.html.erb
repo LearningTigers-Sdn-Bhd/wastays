@@ -1,0 +1,49 @@
+<% severities = { "info" => :info, "warning" => :warning, "critical" => :destructive } %>
+<%= render PanelsUI::Table.new(
+      caption: "Staff alerts matching the current filters",
+      density: :compact,
+      header_style: :sentence,
+      hoverable: notifications.any?,
+      wrapper_class: "rounded-md border border-border bg-card") do |table| %>
+  <% table.with_header do %>
+    <tr>
+      <th scope="col">Time</th>
+      <th scope="col">Alert</th>
+      <th scope="col" class="hidden md:table-cell">Hotel</th>
+      <th scope="col" class="hidden md:table-cell">Staff</th>
+      <th scope="col">Severity</th>
+      <th scope="col">Status</th>
+      <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
+    </tr>
+  <% end %>
+
+  <% table.with_body do %>
+    <% if notifications.empty? %>
+      <tr>
+        <td colspan="7">
+          <%= render PanelsUI::EmptyState.new(
+                icon: "bell",
+                title: "No staff alerts found",
+                description: "Change the filters, or wait for the platform to raise an alert.") %>
+        </td>
+      </tr>
+    <% end %>
+    <% notifications.each do |alert| %>
+      <% status_label, status_variant = alert.resolved? ? [ "Resolved", :success ] : (alert.read? ? [ "Read", :neutral ] : [ "Unread", :info ]) %>
+      <tr>
+        <td class="whitespace-nowrap text-muted-foreground"><%= l(alert.created_at, format: "%d %b %Y, %H:%M") %></td>
+        <td class="font-medium text-foreground">
+          <%= alert.title %>
+          <span class="mt-0.5 block text-xs font-normal text-muted-foreground"><%= alert.message.truncate(120) %></span>
+        </td>
+        <td class="hidden text-muted-foreground md:table-cell"><%= alert.hotel.name %></td>
+        <td class="hidden text-muted-foreground md:table-cell"><%= alert.recipient.name %></td>
+        <td><%= render PanelsUI::Badge.new(label: alert.severity.titleize, variant: severities.fetch(alert.severity, :neutral), size: :sm) %></td>
+        <td><%= render PanelsUI::Badge.new(label: status_label, variant: status_variant, size: :sm, indicator: true) %></td>
+        <td class="text-right">
+          <%= render PanelsUI::Button.new(as: :a, href: admin_notification_log_path(alert, tab: "staff"), variant: :ghost, size: :sm, aria: { label: "View staff alert" }, data: { turbo_frame: "log_detail_sheet" }) do %>View<% end %>
+        </td>
+      </tr>
+    <% end %>
+  <% end %>
+<% end %>

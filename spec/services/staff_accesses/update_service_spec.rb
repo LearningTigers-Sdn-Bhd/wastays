@@ -19,6 +19,22 @@ RSpec.describe StaffAccesses::UpdateService do
     create(:user_hotel_access, user: create(:user, account: account, name: name), hotel: hotel, role: manager_role)
   end
 
+  [ { role: true }, { active: false }, { active: true } ].each do |change|
+    it "refuses partner access changes with #{change.keys.first}" do
+      partner = create(:user, :super_agent)
+      partner_access = create(:user_hotel_access, user: partner, hotel: hotel, role: plain_role,
+                                                deactivated_at: change[:active] == true ? 1.day.ago : nil)
+      attributes = partner_access.attributes
+      params = change.key?(:role) ? { role: manager_role } : change
+
+      result = described_class.new(access: partner_access, current_user: current_user, **params).call
+
+      expect(result.success?).to be(false)
+      expect(result.error).to eq("Partner access cannot be changed through Staff Management.")
+      expect(partner_access.reload.attributes).to eq(attributes)
+    end
+  end
+
   it "assigns the given role" do
     result = described_class.new(access: access, current_user: current_user, role: manager_role).call
 

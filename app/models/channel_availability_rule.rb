@@ -16,14 +16,14 @@ class ChannelAvailabilityRule < ApplicationRecord
 
   def trigger_creation_or_update
     return if Thread.current[:skip_ari_sync]
-    return if hotel.preferred_channel_manager.blank?
+    return unless hotel.channel_manager_enabled?
 
     ChannelManagers::SyncAvailabilityRuleJob.perform_now(id, "sync")
   end
 
   def trigger_deletion
     return if Thread.current[:skip_ari_sync]
-    return if hotel.preferred_channel_manager.blank?
+    return unless hotel.channel_manager_enabled?
     return if external_id.blank?
 
     ChannelManagers::SyncAvailabilityRuleJob.perform_now(nil, "delete", hotel_id: hotel_id, external_id: external_id)

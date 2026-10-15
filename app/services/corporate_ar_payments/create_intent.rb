@@ -52,6 +52,7 @@ module CorporateArPayments
       return "Select at least one unpaid invoice." if @invoice_ids.empty? && !@lump_sum
       return "Only Razorpay is available for corporate AR payments." unless @gateway == "razorpay"
       return "Corporate relationship is not available for payment." if relationship.blank? || !relationship.active?
+      return "Travel agent accounts settle by bank transfer. Upload your transfer slip instead." unless relationship.gateway_payments_allowed?
       return "Currency is not available for this payment." if @currency.blank?
       return nil if @lump_sum
 

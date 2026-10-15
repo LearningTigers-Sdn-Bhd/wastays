@@ -27,14 +27,14 @@ RSpec.describe PanelsUI::Dialog, type: :component do
     end
 
     it "carries the controller directly on the <dialog> (no wrapper, no trigger)" do
-      expect(page).to have_css("dialog[data-controller='panels-ui--dialog']")
-      expect(page).to have_no_css("[data-panels-ui--dialog-target='dialog']")
+      expect(page).to have_css("dialog[data-controller='ui--dialog']")
+      expect(page).to have_no_css("[data-ui--dialog-target='dialog']")
       expect(page).to have_no_css("button", text: "Open") # component renders no trigger
     end
 
     it "renders the string title and wires aria-labelledby to it" do
       expect(page).to have_css("dialog[aria-labelledby='d1-title']")
-      expect(page).to have_css("h2#d1-title[tabindex='-1'][data-panels-ui--dialog-target='initialFocus']", text: "Title here")
+      expect(page).to have_css("h2#d1-title[tabindex='-1'][data-ui--dialog-target='initialFocus']", text: "Title here")
     end
 
     it "renders the string description and wires aria-describedby to it" do
@@ -49,7 +49,7 @@ RSpec.describe PanelsUI::Dialog, type: :component do
     end
 
     it "exposes a labelled close affordance with its Stimulus action" do
-      expect(page).to have_css("button[aria-label='Close'][data-action='panels-ui--dialog#close']")
+      expect(page).to have_css("button[aria-label='Close'][data-action='ui--dialog#close']")
     end
   end
 
@@ -83,7 +83,7 @@ RSpec.describe PanelsUI::Dialog, type: :component do
     it "does not render the close button" do
       render_dialog(dismissible: false, title: "T") { |dialog| dialog.with_body { "x" } }
       expect(page).to have_no_css("button[aria-label='Close']")
-      expect(page).to have_css("dialog[data-panels-ui--dialog-dismissible-value='false']")
+      expect(page).to have_css("dialog[data-ui--dialog-dismissible-value='false']")
     end
   end
 

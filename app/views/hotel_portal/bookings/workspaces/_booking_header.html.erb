@@ -11,6 +11,7 @@
         <% if presenter.group_context_enabled? %>
           <%= render PanelsUI::Badge.new(label: "Group", variant: :info, size: :sm) %>
         <% end %>
+        <%= render "hotel_portal/bookings/agent_badge", presenter: presenter, dom_id: "booking-header" %>
         <% if (status_badge = presenter.header_status_badge) %>
           <% status_rows = presenter.header_status_rows %>
           <% if status_rows.any? %>

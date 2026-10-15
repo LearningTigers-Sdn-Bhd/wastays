@@ -479,6 +479,38 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
   end
 
   describe "reference rows" do
+    %w[travel_agent internal corporate].each do |source|
+      it "identifies the linked agency for #{source} bookings without portal attribution" do
+        account = create(:hotel_corporate_account, hotel: hotel,
+          corporate_account: create(:account, :corporate, name: "Sand Bay Travel"))
+        booking.update!(source: source, hotel_corporate_account: account, corporate_booked_at: nil)
+
+        row = presenter.booking_reference_rows.first
+
+        expect(row[:source]).to eq(source.tr("_", " ").titleize)
+        expect(row[:source_account_name]).to eq("Sand Bay Travel")
+      end
+    end
+
+    it "keeps agency names on their own child rows and leaves the group summary unchanged" do
+      group = create(:group_booking, hotel: hotel)
+      account = create(:hotel_corporate_account, hotel: hotel,
+        corporate_account: create(:account, :corporate, name: "Sand Bay Travel"))
+      booking.update!(group_booking: group, group_position: 1, hotel_corporate_account: account)
+      create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+
+      rows = described_class.new(booking.reload, params: { scope: "group" }, hotel: hotel).booking_reference_rows
+
+      expect(rows.first[:source_account_name]).to be_nil
+      expect(rows.drop(1).map { |row| row[:source_account_name] }).to eq([ "Sand Bay Travel", nil ])
+    end
+
+    it "does not invent an agency name for an unlinked travel agent booking" do
+      booking.update!(source: "travel_agent")
+
+      expect(presenter.booking_reference_rows.first).to include(source: "Travel Agent", source_account_name: nil)
+    end
+
     def format_source_for(value)
       value.to_s.presence&.tr("_", " ")&.titleize || "—"
     end
@@ -894,6 +926,26 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(documents_presenter.instance_variable_defined?(:@documents)).to be(false)
     end
 
+    it "retains the canceled AR invoice beside its replacement after a folio correction" do
+      user = create(:user, :superadmin)
+      account = create(:hotel_corporate_account, :direct_bill, hotel:)
+      folio = create(:booking_folio, :secondary, booking:, hotel:, hotel_corporate_account: account, status: "open")
+      create(:folio_transaction, booking_folio: folio, amount: 2000)
+      expect(Folios::Lifecycle::CloseFolio.call(folio:, user:, settlement_method: "direct_bill")).to be_success
+      original = folio.reload.ar_invoice
+      expect(Folios::Lifecycle::ReopenFolio.call(folio:, user:, reason: "Wrong charge")).to be_success
+      create(:folio_transaction, :adjustment, category: "correction", booking_folio: folio, amount: -200)
+      expect(Folios::Lifecycle::CloseFolio.call(folio: folio.reload, user:)).to be_success
+      replacement = folio.reload.ar_invoice
+
+      rows = described_class.new(booking, params: { tab: "documents" }, hotel:, user:).documents
+        .select { |row| row.type == "AR invoice" }
+
+      expect(rows.map(&:number)).to contain_exactly(original.formatted_invoice_number, replacement.formatted_invoice_number)
+      expect(rows.find { |row| row.number == original.formatted_invoice_number }).to have_attributes(status: "Void", amount: 2000)
+      expect(rows.find { |row| row.number == replacement.formatted_invoice_number }).to have_attributes(status: "Open", amount: 1800)
+    end
+
     it "keeps document composition queries bounded for a large group" do
       group = create(:group_booking, hotel:)
       booking.update!(group_booking: group, group_position: 1)
@@ -1245,5 +1297,107 @@ RSpec.describe HotelPortal::Bookings::WorkspacePresenter do
       expect(folio_rows.find { |row| row.id == folio.id }.href).not_to include("folio_tab")
       expect(room_rows.find { |row| row.id == folio.id }).to have_attributes(active: false)
     end
+  end
+
+  # The agency is already on the booking; the person who made it is not
+  # recoverable from anywhere else, so the header states both.
+  describe "agent attribution" do
+    let(:corporate_user) { create(:user, :corporate) }
+    let(:relationship) do
+      create(:hotel_corporate_account, hotel: hotel, corporate_account: corporate_user.account, account_type: "travel_agent")
+    end
+
+    it "names the agency, the person and the time, in the hotel's zone" do
+      booked_at = Time.current
+      booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                      corporate_booked_at: booked_at)
+
+      expect(presenter).to be_agent_booking
+      expect(presenter.agent_attribution).to include(
+        agency: relationship.corporate_account.name,
+        person: corporate_user.name,
+        booked_at: booked_at.in_time_zone(hotel.hotel_time_zone).strftime("%d %b %Y %H:%M")
+      )
+    end
+
+    # The desk is asked "have they paid?" on the phone, so the badge answers it
+    # rather than only saying an agent sold the room.
+    it "carries the payment state, and turns the badge red once the deadline has passed" do
+      booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                      corporate_booked_at: Time.current, payment_status: "pending",
+                      status: "confirmed", payment_due_at: 1.hour.ago)
+
+      expect(presenter.agent_attribution).to include(
+        payment_state: :overdue,
+        payment_label: "Payment past due",
+        badge_variant: :destructive
+      )
+      expect(presenter.agent_attribution[:payment_due_label]).to be_present
+    end
+
+    it "reads as paid, in the ordinary badge colour, once there is no deadline left" do
+      booking.update!(hotel_corporate_account: relationship, corporate_booked_by: corporate_user,
+                      corporate_booked_at: Time.current, payment_due_at: nil, payment_status: "captured")
+
+      expect(presenter.agent_attribution).to include(
+        payment_state: :paid, payment_label: "Paid", badge_variant: :accent
+      )
+    end
+
+    it "says nothing for a booking keyed at the desk" do
+      expect(presenter).not_to be_agent_booking
+      expect(presenter.agent_attribution).to be_nil
+    end
+
+    it "names the agency, and claims no author, for a travel agent's booking nobody attributed" do
+      booking.update!(hotel_corporate_account: relationship)
+
+      expect(presenter).to be_agent_booking
+      expect(presenter.agent_attribution).to include(agency: relationship.corporate_account.name, person: nil, booked_at: nil)
+    end
+
+    it "says nothing for a company's booking made before attribution was recorded" do
+      relationship.update!(account_type: "company")
+      booking.update!(hotel_corporate_account: relationship)
+
+      expect(presenter).not_to be_agent_booking
+    end
+
+    it "lists the travel agent among the reservation's references" do
+      booking.update!(hotel_corporate_account: relationship)
+
+      expect(presenter.reservation_reference_pairs.first).to eq([ "Travel Agent", relationship.corporate_account.name ])
+    end
+
+    it "lists no travel agent row for a reservation that was not booked under one" do
+      expect(presenter.reservation_reference_pairs.map(&:first)).not_to include("Travel Agent", "Corporate Account")
+    end
+  end
+  describe "boat types" do
+    it "shows untimed Own Boat and groups mixed summary types separately" do
+      group = create(:group_booking, hotel: hotel)
+      booking.update!(group_booking: group, group_position: 1)
+      second = create(:booking, hotel: hotel, group_booking: group, group_position: 2)
+      create(:booking_guest, booking: booking, is_primary: true, boat_in_type: "charter", boat_in_at: booking.check_in)
+      create(:booking_guest, booking: second, is_primary: true, boat_in_type: "own")
+      summary = described_class.new(booking, params: { scope: "group" }).summary_boat_in
+      expect(summary).to include("Charter Boat", " / Own Boat")
+      rows = described_class.new(booking, params: { scope: "group" }).boat_transfer_rows
+      expect(rows.map { |row| row[:boat_in] }).to include("Own Boat")
+    end
+  end
+
+  it "keeps earliest boat-in and latest boat-out summaries for uniform types" do
+    group = create(:group_booking, hotel: hotel)
+    booking.update!(group_booking: group, group_position: 1)
+    later = create(:booking, hotel: hotel, group_booking: group, group_position: 2,
+      check_in: booking.check_in + 2.days, check_out: booking.check_out + 2.days)
+    create(:booking_guest, booking: booking, is_primary: true, boat_in_type: "charter", boat_in_at: booking.check_in,
+      boat_out_type: "own", boat_out_at: booking.check_out)
+    create(:booking_guest, booking: later, is_primary: true, boat_in_type: "charter", boat_in_at: later.check_in,
+      boat_out_type: "own", boat_out_at: later.check_out)
+    summary = described_class.new(booking, params: { scope: "group" })
+    expect(summary.summary_boat_in).to eq("#{booking.check_in.in_time_zone(hotel.hotel_time_zone).strftime('%Y/%m/%d %H:%M')} · Charter Boat")
+    expect(summary.summary_boat_out).to eq("#{later.check_out.in_time_zone(hotel.hotel_time_zone).strftime('%Y/%m/%d %H:%M')} · Own Boat")
   end
 end

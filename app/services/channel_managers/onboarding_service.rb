@@ -9,7 +9,7 @@ module ChannelManagers
     end
 
     def call
-      return failure("Channel manager not selected for this hotel") if @hotel.preferred_channel_manager.blank?
+      return failure("Channel manager not selected for this hotel") unless @hotel.channel_manager_enabled?
 
       adapter = ChannelManagers::SyncOrchestrator.adapter_for(@hotel)
       result = adapter.onboard_hotel

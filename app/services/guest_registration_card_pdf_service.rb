@@ -43,7 +43,7 @@ class GuestRegistrationCardPdfService
     pdf.move_up 10
     draw_bordered_section(pdf, bottom_margin: 2) { draw_guest_section(pdf) }
     draw_bordered_section(pdf, bottom_margin: 2) { draw_stay_section(pdf) }
-    draw_bordered_section(pdf, bottom_margin: @presenter.boat_transfer? ? 2 : 5) { draw_payment_section(pdf) }
+    draw_bordered_section(pdf, bottom_margin: @presenter.boat_transfer? ? 2 : 5) { draw_payment_section(pdf) } if @presenter.show_pricing?
     draw_bordered_section(pdf) { draw_boat_transfer_section(pdf) } if @presenter.boat_transfer?
     draw_policy_section(pdf)
     draw_bordered_section(pdf) { draw_notes_section(pdf, "Remark", @booking.special_requests) } if @booking.special_requests.present?
@@ -190,8 +190,9 @@ class GuestRegistrationCardPdfService
   def draw_signature_section(pdf)
     box_width = pdf.bounds.width / 2.0
     box_left = pdf.bounds.width - box_width
-    top = pdf.cursor
     height = 90
+    pdf.start_new_page if pdf.cursor < height + THEME::SPACE[:lg]
+    top = pdf.cursor
 
     pdf.stroke_color BORDER
     pdf.line_width 0.5

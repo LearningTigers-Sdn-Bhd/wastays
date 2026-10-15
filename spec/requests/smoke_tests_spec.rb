@@ -50,7 +50,7 @@ RSpec.describe "Platform Smoke Tests", type: :request do
       "/admin/margin_rules",
       "/admin/setup_fee_rules",
       "/admin/reconciliations",
-      "/admin/audit_logs",
+      "/admin/activity_logs",
       "/admin/api_keys"
     ].each do |path|
       it "renders #{path} successfully" do

@@ -29,17 +29,17 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(document.at_css("input[name='guest[tin]'][data-tin-validation-target='tin']")).to be_present
     # The name, email and phone search the guest directory, and the linked
     # record row carries the switch that writes the sheet back to the profile.
-    expect(document.css("[data-controller~='panels-ui--autocomplete'] input").map { |input| input["name"] })
+    expect(document.css("[data-controller~='ui--autocomplete'] input").map { |input| input["name"] })
       .to eq([ "guest[name]", "guest[email]", "guest[phone]" ])
     expect(document.at_css("input[name='guest[existing_guest_id]']")).to be_present
     expect(document.at_css("[data-booking-guest-autofill-target='profileRow'][hidden]")).to be_present
     expect(document.at_css("input[name='guest[update_profile]']")).to be_present
     # Nationality and address country are comboboxes; gender, document type,
     # apply-to and the Malaysian state code list are select menus.
-    expect(document.css("[data-controller~='panels-ui--combobox']").size).to eq(2)
-    expect(document.css("[data-controller~='panels-ui--select-menu']").size).to eq(4)
+    expect(document.css("[data-controller~='ui--combobox']").size).to eq(2)
+    expect(document.css("[data-controller~='ui--select-menu']").size).to eq(4)
     expect(document.at_css("#guest_apply_to-select-menu[data-disabled='true']")).to be_present
-    expect(document.at_css("[data-controller~='panels-ui--date-picker'] input[name='guest[date_of_birth]']")).to be_present
+    expect(document.at_css("[data-controller~='ui--date-picker'] input[name='guest[date_of_birth]']")).to be_present
     country_options = document.css("select[name='guest[country]'] option").map { |option| [ option.text, option["value"] ] }
     expect(country_options).to include([ "Malaysia", "Malaysia" ], [ "Singapore", "Singapore" ])
     expect(document.at_css("input[name='guest[date_of_birth]'][type='date']")).to be_nil
@@ -54,6 +54,30 @@ RSpec.describe "HotelPortal::Bookings::Actions guests", type: :request do
     expect(response).to have_http_status(:success)
     expect(response.body).to include('action="complete_sheet"', 'target="booking_action_sheet_secondary"')
     expect(booking.booking_guests.find_by!(is_primary: false).guest.name).to eq("Added Guest")
+  end
+
+  it "adds a guest to a checked-out booking" do
+    booking.update_columns(status: "completed")
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
+      params: { guest: { name: "Late Registration", country: "Malaysia", document_type: "passport", date_of_birth: "1993-04-05" } },
+      headers: { "Accept" => "text/vnd.turbo-stream.html", "Turbo-Frame" => "booking_action_sheet" }
+
+    expect(response).to have_http_status(:success)
+    expect(booking.booking_guests.find_by!(is_primary: false).guest.name).to eq("Late Registration")
+  end
+
+  it "refuses to add a guest to a cancelled booking" do
+    booking.update_columns(status: "cancelled")
+
+    get hotel_booking_action_manage_guest_path(hotel, booking, mode: "add")
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
+    expect(flash[:alert]).to eq("Guests cannot be added to a cancelled booking.")
+
+    post hotel_booking_action_manage_guest_path(hotel, booking, mode: "add"),
+      params: { guest: { name: "Too Late", country: "Malaysia", document_type: "passport", date_of_birth: "1993-04-05" } }
+    expect(response).to redirect_to(hotel_booking_workspace_path(hotel, booking, tab: "guest_details"))
+    expect(booking.booking_guests.where(is_primary: false)).not_to exist
   end
 
   it "saves the tax number on a new guest record" do

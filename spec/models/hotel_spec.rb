@@ -1,6 +1,21 @@
 require 'rails_helper'
 
 RSpec.describe Hotel, type: :model do
+  describe "#ready_for_review?" do
+    it "accepts a property with rooms and complete inventory without photos" do
+      hotel = create(:hotel, address: "12 Beach Road")
+      create(:room_type, hotel: hotel, quantity: 1)
+      allow(hotel).to receive(:setup_coverage).and_return(instance_double(Rates::SetupCoverage::Result, complete?: true))
+
+      expect(hotel.photos).not_to be_attached
+      expect(hotel).not_to be_property_photos_ready
+      expect(hotel).to be_ready_for_review
+
+      hotel.address = nil
+      expect(hotel).not_to be_ready_for_review
+    end
+  end
+
   describe 'associations' do
     it { should belong_to(:account) }
     it { should have_many(:user_hotel_accesses).dependent(:destroy) }
@@ -61,6 +76,25 @@ RSpec.describe Hotel, type: :model do
       expect(hotel.reload.icon.filename.to_s).to eq("second.webp")
       expect(ActiveStorage::Attachment.where(record: hotel, name: "icon").count).to eq(1)
     end
+  end
+
+  describe "concierge menu style" do
+    it "defaults to interactive and accepts only the two menu styles" do
+      hotel = create(:hotel)
+
+      expect(hotel).to be_concierge_menu_style_interactive
+
+      hotel.concierge_menu_style = "fancy"
+      expect(hotel).to be_valid
+
+      hotel.concierge_menu_style = "plain"
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:concierge_menu_style]).to be_present
+    end
+  end
+
+  it "hides Concierge refund requests by default" do
+    expect(Hotel.new.concierge_refund_requests_enabled).to be(false)
   end
 
   describe "prefix history" do
@@ -407,6 +441,41 @@ RSpec.describe Hotel, type: :model do
     end
   end
 
+  describe 'public_id' do
+    it 'assigns a UUIDv4 on create' do
+      hotel = create(:hotel)
+
+      expect(hotel.public_id).to match(Hotel::PUBLIC_ID_FORMAT)
+    end
+
+    it 'assigns a different public ID to each hotel' do
+      expect(create(:hotel).public_id).not_to eq(create(:hotel).public_id)
+    end
+
+    it 'cannot be changed once the hotel exists' do
+      hotel = create(:hotel)
+      hotel.public_id = SecureRandom.uuid
+
+      expect(hotel).not_to be_valid
+      expect(hotel.errors[:public_id]).to include('cannot be changed after the hotel is created')
+    end
+
+    it 'rejects a public ID already taken by another hotel' do
+      taken = create(:hotel).public_id
+
+      expect(build(:hotel, public_id: taken)).not_to be_valid
+    end
+
+    it 'has database null and uniqueness constraints' do
+      column = Hotel.columns_hash.fetch('public_id')
+      index = Hotel.connection.indexes(:hotels).find { |candidate| candidate.columns == [ 'public_id' ] }
+
+      expect(column.null).to be false
+      expect(column.default_function).to eq('gen_random_uuid()')
+      expect(index.unique).to be true
+    end
+  end
+
   describe 'slug' do
     it 'survives a rename so links issued before it keep resolving' do
       hotel = create(:hotel)
@@ -450,6 +519,38 @@ RSpec.describe Hotel, type: :model do
 
     it 'raises from locate! when nothing matches' do
       expect { Hotel.locate!('90909') }.to raise_error(ActiveRecord::RecordNotFound)
+    end
+  end
+
+  describe '.locate_public' do
+    let!(:hotel) { create(:hotel) }
+
+    it 'finds a hotel when its code and public ID match' do
+      expect(Hotel.locate_public(code: hotel.unique_id, public_id: hotel.public_id)).to eq(hotel)
+    end
+
+    it 'does not find a hotel when the code belongs to another hotel' do
+      other = create(:hotel)
+
+      expect(Hotel.locate_public(code: other.unique_id, public_id: hotel.public_id)).to be_nil
+    end
+
+    it 'does not find invalid or unknown public identities' do
+      expect(Hotel.locate_public(code: hotel.unique_id, public_id: 'not-a-uuid')).to be_nil
+      expect(Hotel.locate_public(code: hotel.unique_id, public_id: SecureRandom.uuid)).to be_nil
+      expect(Hotel.locate_public(code: 'not-a-code', public_id: hotel.public_id)).to be_nil
+    end
+
+    it 'honours the given scope' do
+      expect(
+        Hotel.locate_public(code: hotel.unique_id, public_id: hotel.public_id, scope: Hotel.none)
+      ).to be_nil
+    end
+
+    it 'raises when the public identity does not match' do
+      expect {
+        Hotel.locate_public!(code: hotel.unique_id, public_id: SecureRandom.uuid)
+      }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
 

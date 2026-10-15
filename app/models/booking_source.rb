@@ -29,6 +29,11 @@ class BookingSource < ApplicationRecord
     { key: "phone", label: "Phone", kind: "manual", icon: "phone", position: 2 },
     { key: "email", label: "Email", kind: "manual", icon: "mail", position: 3 },
     { key: "whatsapp", label: "WhatsApp", kind: "manual", icon: "message-circle", position: 4 },
+    # Set by the corporate portal on every agent booking, and offered to staff
+    # so an agent booking taken by phone or email can be tagged the same way.
+    # Without it an agent booking is "internal", indistinguishable from one
+    # keyed at the desk, and invisible in any source-grouped report.
+    { key: "travel_agent", label: "Travel Agent", kind: "manual", icon: "briefcase", position: 5 },
 
     { key: "booking_com", label: "Booking.com", kind: "ota", icon: "globe", badge_color: "#003580", badge_text_color: "#FFFFFF", badge_initial: "B", position: 0, legal_name: "Booking.com B.V.", tax_country_code: "NLD", self_bill_commission: true },
     { key: "agoda", label: "Agoda", kind: "ota", icon: "globe", badge_color: "#5392F9", badge_text_color: "#FFFFFF", badge_initial: "A", position: 1, legal_name: "Agoda Company Pte. Ltd.", tax_country_code: "SGP", self_bill_commission: true },

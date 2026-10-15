@@ -21,13 +21,17 @@ RSpec.describe Bookings::UpdateStayService do
     expect(room_type.room_inventories.find_by(date: Date.current + 1.day).quantity).to eq(9)
   end
 
-  it "dispatches booking_updated when stay dates are changed" do
+  it "dispatches booking_updated after the stay transaction commits" do
     dispatcher = instance_double(Notifications::Dispatcher, call: [])
     allow(Notifications::Dispatcher).to receive(:new).and_return(dispatcher)
 
+    callback = nil
+    allow(ActiveRecord).to receive(:after_all_transactions_commit) { |&block| callback = block }
     params = { check_in: Date.current + 1.day, check_out: Date.current + 2.days }
     described_class.new(booking: booking, params: params).call
 
+    expect(Notifications::Dispatcher).not_to have_received(:new)
+    callback.call
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_updated, booking: booking)
     expect(dispatcher).to have_received(:call)
   end
@@ -123,7 +127,8 @@ RSpec.describe Bookings::UpdateStayService do
       params: { check_out: Date.current + 2.days, rate_selection: current_rate_selection }
     ).call
     expect(date_result.success?).to be(true)
-    expect(booking.reload.manual_rate_override).to eq(175)
+    # The hand-set price carries into the added night rather than being spread.
+    expect(booking.reload.manual_rate_override).to eq(350)
 
     rate_result = described_class.new(
       booking:,
@@ -203,6 +208,67 @@ RSpec.describe Bookings::UpdateStayService do
       result = described_class.new(booking:, params: { rate_selection: "" }).call
 
       expect(result.success?).to be(true)
+    end
+  end
+  describe "long-stay discounts" do
+    it "re-prices the whole stay when an extension reaches a discount" do
+      room_type.update!(base_price: 100)
+      rate_plan = room_type.standard_rate_plan
+      rate_plan.rate_plan_stay_discounts.create!(min_nights: 3, discount_type: "percent", value: 20)
+      booking.update!(check_in: Date.current + 5.days, check_out: Date.current + 7.days)
+      booking_room.update!(rate_plan: rate_plan)
+
+      result = described_class.new(booking: booking, params: { check_out: Date.current + 8.days }).call
+
+      expect(result.success?).to be true
+      prices = booking_room.reload.nightly_rate_snapshot.values.map { |night| night["price"].to_d }
+      expect(prices).to eq([ 80, 80, 80 ].map(&:to_d))
+      expect(booking_room.subtotal).to eq(240.to_d)
+    end
+  end
+
+  describe "extending a stay in a room that is not ready" do
+    let(:numbered_type) { create(:room_type, hotel: hotel, quantity: 2, room_numbers: [ "101", "102" ]) }
+    let(:guest) do
+      create(:booking, hotel: hotel, status: "checked_in", check_in: Date.current, check_out: Date.current + 1.day,
+                       hotel_snapshot: { "room_number" => "101" })
+    end
+
+    before do
+      create(:booking_room, booking: guest, room_type: numbered_type, room_number: "101")
+      Bookings::InventoryManager.new(guest).deduct
+      create(:room_status, hotel: hotel, room_type: numbered_type, room_number: "101", status: "dirty")
+    end
+
+    it "keeps the guest's own dirty room for the extra nights" do
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days }).call
+
+      expect(result.success?).to be(true)
+      expect(guest.reload.check_out.to_date).to eq(Date.current + 2.days)
+    end
+
+    it "keeps the guest's own dirty room when the room is sent back with the dates" do
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days, room_number: "101" }).call
+
+      expect(result.success?).to be(true)
+    end
+
+    it "still refuses the extension when another booking holds the room" do
+      other = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current + 1.day, check_out: Date.current + 2.days)
+      create(:booking_room, booking: other, room_type: numbered_type, room_number: "101")
+
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days }).call
+
+      expect(result.success?).to be(false)
+      expect(guest.reload.check_out.to_date).to eq(Date.current + 1.day)
+    end
+
+    it "still refuses a move into a different dirty room" do
+      create(:room_status, hotel: hotel, room_type: numbered_type, room_number: "102", status: "dirty")
+
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days, room_number: "102" }).call
+
+      expect(result.success?).to be(false)
     end
   end
 end

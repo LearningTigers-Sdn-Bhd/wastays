@@ -1,8 +1,11 @@
 class Hotel < ApplicationRecord
   include AccountScopable
+  include AgentPaymentHoldUnit
   include PhotoAlbum
   extend FriendlyId
   friendly_id :name, use: :slugged
+
+  PUBLIC_ID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
 
   encrypts :ai_provider_key
 
@@ -18,6 +21,11 @@ class Hotel < ApplicationRecord
     cheerful: "cheerful"
   }, prefix: true, validate: true
 
+  enum :concierge_menu_style, {
+    interactive: "interactive",
+    fancy: "fancy"
+  }, prefix: true, validate: true
+
   AI_CONCIERGE_MODEL_NAMES = {
     "openai" => "gpt-4.1-mini",
     "claude" => "claude-haiku-4-5",
@@ -25,6 +33,14 @@ class Hotel < ApplicationRecord
   }.freeze
 
   validates :ai_provider_name, presence: true, if: :ai_provider_enabled?
+  # The property default for how long an agent booking is held before payment.
+  # See Bookings::PaymentHold.
+  validates :agent_payment_hold_hours, numericality: { only_integer: true, greater_than: 0 }
+  # The two-stage terms a standard agent's booking is scheduled against: this
+  # share of the total within the hold above, and everything paid this many days
+  # before arrival. See Bookings::PaymentSchedule.
+  validates :agent_deposit_percentage, numericality: { only_integer: true, in: 1..100 }
+  validates :agent_full_payment_days_before_arrival, numericality: { only_integer: true, greater_than: 0 }
   validates :ai_provider_key, presence: true, if: :ai_provider_enabled?
 
   has_one_attached :icon, dependent: :purge_later do |attachable|
@@ -40,6 +56,7 @@ class Hotel < ApplicationRecord
   has_many :corporate_accounts, through: :hotel_corporate_accounts
   has_many :introduced_hotels, class_name: "Hotel", foreign_key: "salesperson_id", dependent: :nullify
   belongs_to :salesperson, class_name: "User", optional: true
+  belongs_to :created_by_user, class_name: "User", optional: true, inverse_of: :created_hotels
   belongs_to :training_completed_by, class_name: "User", optional: true
   belongs_to :plan, optional: true
   has_one :property_policy, dependent: :destroy
@@ -70,6 +87,9 @@ class Hotel < ApplicationRecord
   has_many :ota_financial_component_mappings, dependent: :restrict_with_error
   has_one :ota_rate_variance_policy, dependent: :restrict_with_error
   has_many :guest_registration_cards, dependent: :restrict_with_error
+  has_many :reservation_imports, dependent: :destroy
+  has_many :signing_devices, dependent: :destroy
+  has_many :signing_device_pairings, dependent: :destroy
   has_many :guest_registration_note_templates, dependent: :destroy
   has_many :group_bookings, dependent: :restrict_with_error
   has_many :booking_folios, dependent: :restrict_with_error
@@ -125,6 +145,9 @@ class Hotel < ApplicationRecord
   validates :unique_id, presence: true, uniqueness: { case_sensitive: false }
   validate :unique_id_is_immutable, on: :update, if: :will_save_change_to_unique_id?
   before_validation :assign_unique_id, on: :create
+  validates :public_id, presence: true, uniqueness: true, format: { with: PUBLIC_ID_FORMAT }
+  validate :public_id_is_immutable, on: :update, if: :will_save_change_to_public_id?
+  before_validation :assign_public_id, on: :create
   validates :hotel_prefix, uniqueness: { case_sensitive: false }, allow_blank: true,
                            length: { in: 3..6 },
                            format: { with: /\A[A-Z0-9]+\z/, message: "must be uppercase letters and numbers only" },
@@ -260,6 +283,19 @@ class Hotel < ApplicationRecord
     locate(key, scope: scope) || raise(ActiveRecord::RecordNotFound, "Couldn't find Hotel with identifier #{key.inspect}")
   end
 
+  def self.locate_public(code:, public_id:, scope: all)
+    code = code.to_s.strip
+    public_id = public_id.to_s.strip
+    return nil unless code.match?(/\A\d+\z/) && public_id.match?(PUBLIC_ID_FORMAT)
+
+    scope.find_by(unique_id: code, public_id: public_id)
+  end
+
+  def self.locate_public!(code:, public_id:, scope: all)
+    locate_public(code:, public_id:, scope:) ||
+      raise(ActiveRecord::RecordNotFound, "Couldn't find Hotel with the supplied public identity")
+  end
+
   # Codes are issued in order, so the next one is the highest already issued plus one.
   # The advisory lock is what makes that safe when two hotels are created at once —
   # without it both reads see the same maximum and the unique index rejects the loser.
@@ -307,6 +343,12 @@ class Hotel < ApplicationRecord
 
   def training_reset_in_progress?
     training_reset_state.in?(%w[queued processing])
+  end
+
+  # True only for providers we have an adapter for. "undecided" and "none" are
+  # stored values, so a plain presence check on the column lets them through.
+  def channel_manager_enabled?
+    ChannelManagers::SyncOrchestrator::ADAPTERS.key?(preferred_channel_manager)
   end
 
   def publicly_bookable?
@@ -546,7 +588,7 @@ class Hotel < ApplicationRecord
   end
 
   def ready_for_review?
-    property_profile_ready? && property_photos_ready? && rooms_ready? && inventory_ready?
+    property_profile_ready? && rooms_ready? && inventory_ready?
   end
 
   def property_profile_ready?
@@ -728,8 +770,16 @@ class Hotel < ApplicationRecord
     self.unique_id = self.class.next_unique_id
   end
 
+  def assign_public_id
+    self.public_id ||= SecureRandom.uuid
+  end
+
   def unique_id_is_immutable
     errors.add(:unique_id, "cannot be changed after the hotel is created")
+  end
+
+  def public_id_is_immutable
+    errors.add(:public_id, "cannot be changed after the hotel is created")
   end
 
   def hotel_prefix_has_not_been_used_by_another_hotel

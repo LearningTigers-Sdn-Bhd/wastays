@@ -18,12 +18,24 @@ module HotelPortal
       @hotel.bookings.active.checking_out_on(Date.current, @hotel.hotel_time_zone)
     end
 
+    # .active deliberately excludes "completed" (and "no_show") -- right for
+    # the operational views below, where a stay already checked out is not an
+    # upcoming arrival or action, but wrong here: a guest who checked out
+    # earlier this month still generated real revenue, and .active silently
+    # dropped it from the month's own total the moment they left.
+    # .revenue_generating is the scope built for exactly this -- everything
+    # that produced revenue, cancelled and voided excepted.
+    #
+    # "This month" is the month the stay starts, not the month the row was
+    # created. created_at is when the booking was entered, which for a migrated
+    # property (an eZee import) is the day of the import: every reservation then
+    # counted as this month's, whenever the guest actually arrives.
     def bookings_this_month_count
-      @hotel.bookings.active.where(created_at: Time.current.all_month).count
+      stays_starting_this_month.count
     end
 
     def revenue_this_month
-      @hotel.bookings.active.where(created_at: Time.current.all_month).sum(:total_amount)
+      stays_starting_this_month.sum(:total_amount)
     end
 
     def pending_actions_count
@@ -41,16 +53,24 @@ module HotelPortal
         inventory = room_type.room_inventories.find_by(date: date)
 
         total_capacity = room_type.quantity
+        # Already net of every sale: Bookings::InventoryManager decrements this
+        # by one for each booking taken and puts it back on release, so it is
+        # "what's left to sell", not "total capacity" -- subtracting `sold`
+        # from it again double-counted every sale, which is why remaining +
+        # sold stopped adding up to total the moment a room type sold anything
+        # today (a quiet day, sold == 0, hid it completely).
         available_capacity = inventory&.quantity || total_capacity
 
-        # Count actual sold rooms from bookings
+        # Its own count, not derived from available_capacity: shown as its own
+        # figure, and a real discrepancy between the two is worth being able to
+        # see rather than papering over by deriving one from the other.
         sold = @hotel.bookings.revenue_generating
                      .joins(:booking_rooms)
                      .where(booking_rooms: { room_type_id: room_type.id })
                      .where(":date >= check_in::date AND :date < check_out::date", date: date)
                      .count
 
-        remaining = inventory&.status == "closed" ? 0 : [ available_capacity - sold, 0 ].max
+        remaining = inventory&.status == "closed" ? 0 : [ available_capacity, 0 ].max
 
         percentage = total_capacity > 0 ? (sold.to_f / total_capacity * 100).round : 0
 
@@ -66,13 +86,17 @@ module HotelPortal
         end
         end
     def occupancy_snapshot(days: 7)
-      (Date.current..(Date.current + (days - 1).days)).map do |date|
-        # Correctly sum the quantity column from room_inventories
-        total_inventory = @hotel.room_types.joins(:room_inventories)
-                                .where(room_inventories: { date: date })
-                                .sum("room_inventories.quantity")
+      # The hotel's physical rooms, not room_inventories.quantity: that is
+      # what is left to sell, already net of every booking, so dividing sales
+      # by it ran past 100% (4/1) as soon as a day started selling.
+      total_inventory = @hotel.room_types.sum(:quantity)
+      zone = @hotel.hotel_time_zone
+      today = zone.today
 
-        rooms_sold = @hotel.bookings.revenue_generating.where(":date >= check_in::date AND :date < check_out::date", date: date).count
+      (today..(today + (days - 1).days)).map do |date|
+        # The hotel's dates, not UTC's: Date.current started the week on
+        # yesterday until 08:00 in Kuala Lumpur.
+        rooms_sold = @hotel.bookings.revenue_generating.occupying_night_on(date, zone).count
         {
           date: date,
           total: total_inventory,
@@ -80,6 +104,12 @@ module HotelPortal
           percent: total_inventory > 0 ? (rooms_sold.to_f / total_inventory * 100).round : 0
         }
       end
+    end
+
+    private
+
+    def stays_starting_this_month
+      @hotel.bookings.revenue_generating.where(check_in: @hotel.hotel_time_zone.now.all_month)
     end
   end
 end

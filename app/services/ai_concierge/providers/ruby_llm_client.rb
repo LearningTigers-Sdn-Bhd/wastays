@@ -28,12 +28,12 @@ module AiConcierge
       # this block, so everything before it -- the tool schemas included -- is
       # what gets read back next turn.
       #
-      # Returns the text untouched for the other two, so the caller does not
-      # have to know which provider it is talking to.
-      def cacheable(text)
-        return text unless hotel.ai_provider_name == "claude"
+      # Adds a plain instruction for the other two, so the caller does not have
+      # to know which provider it is talking to.
+      def add_cacheable_instructions(chat, text)
+        return chat.with_instructions(text) unless hotel.ai_provider_name == "claude"
 
-        RubyLLM::Providers::Anthropic::Content.new(text, cache: true)
+        chat.with_instructions(text, cache_until_here: true)
       end
 
       private

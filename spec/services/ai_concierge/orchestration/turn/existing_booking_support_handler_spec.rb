@@ -61,6 +61,34 @@ RSpec.describe AiConcierge::Orchestration::Turn::ExistingBookingSupportHandler d
     expect(result.slots_payload.dig("ui_task", "suggestion_group")).to eq("unsupported_change")
   end
 
+  it "requests staff immediately when booking-change escalation is enabled" do
+    create(:hotel_guest_contact, hotel: hotel, escalation_triggers: [ "booking_change" ])
+
+    result = described_class.new(
+      message: "Change my booking check-in date",
+      conversation: conversation
+    ).call(conversation_state: state)
+
+    expect(result.reply_type).to be_nil
+    expect(result.needs_human_support).to be(true)
+    expect(result.extra_context).to include(
+      escalation_trigger: "booking_change",
+      message: include("asked a team member")
+    )
+  end
+
+  it "requests staff immediately for an enabled guest-specific payment issue" do
+    create(:hotel_guest_contact, hotel: hotel, escalation_triggers: [ "payment_question" ])
+
+    result = described_class.new(
+      message: "Dispute the wrong charge on my booking",
+      conversation: conversation
+    ).call(conversation_state: state)
+
+    expect(result.needs_human_support).to be(true)
+    expect(result.extra_context[:escalation_trigger]).to eq("payment_question")
+  end
+
   it "leaves a date revision in an active new-booking search" do
     active = AiConcierge::State::ConversationTaskManager.new(slots_payload: {}).activate_booking(
       { "check_in" => "2026-09-10" },

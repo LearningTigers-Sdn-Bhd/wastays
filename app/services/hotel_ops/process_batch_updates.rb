@@ -71,7 +71,7 @@ module HotelOps
         end
 
         # 4. Trigger a single background sync job covering the entire updated range
-        if @hotel.preferred_channel_manager.present? && min_date && max_date
+        if @hotel.channel_manager_enabled? && min_date && max_date
           ChannelManagers::SyncJob.perform_later(
             @hotel.id,
             min_date,

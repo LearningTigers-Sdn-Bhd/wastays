@@ -1,7 +1,7 @@
 class Guest::BaseController < ApplicationController
   include Breadcrumbable
 
-  layout "guest"
+  layout "guest_portal"
 
   skip_before_action :redirect_legacy_hotel_portal_path
 
@@ -16,6 +16,13 @@ class Guest::BaseController < ApplicationController
 
   def guest_logged_in?
     current_guest.present?
+  end
+
+  # A booking goes by its reference number, the one on its documents. A
+  # booking made before references were issued falls back to its code.
+  def append_booking_breadcrumb(booking)
+    label = booking.formatted_reservation_number.presence || booking.confirmation_token.to_s.upcase
+    append_breadcrumb label, guest_booking_path(booking)
   end
 
   def authenticate_guest!

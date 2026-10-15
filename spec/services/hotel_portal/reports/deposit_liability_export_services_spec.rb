@@ -37,7 +37,7 @@ RSpec.describe "Deposit liability export services", type: :service do
   it "generates CSV with detail and total rows" do
     csv = HotelPortal::Reports::DepositLiabilityCsvExportService.new(report: report).generate
 
-    expect(csv).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Deposit Received,Earned,Refunds,Remaining Liability,Latest Deposit Date")
+    expect(csv).to include("Guest Name,Booking Ref,Stay,Status,Rooms,Folio,Payment Reference,Deposit Received,Earned,Refunds,Remaining Liability,Latest Deposit Date")
     expect(csv).to include("Export Guest")
     expect(csv).to include("TOTAL")
     expect(csv).to include(HotelPortal::Reports::DepositLiabilityReport::SCOPE_NOTE)

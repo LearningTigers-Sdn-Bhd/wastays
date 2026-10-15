@@ -1,0 +1,21 @@
+<% content_for :title, "Request check-out | #{@hotel.name}" %>
+
+<%= render layout: "public/concierge/stays/shared/form_page",
+           locals: {
+             presenter: @presenter,
+             error: @error,
+             title: "Request check-out",
+             subtitle: "The front desk will get your request and prepare your folio."
+           } do %>
+  <%= form_with url: concierge_stay_check_outs_path(*stay_route_args), method: :post, local: true do |form| %>
+    <%= render GuestUI::FormField.new(form: form, attribute: :guest_notes,
+                                      label: "Anything we should know? (optional)") do |field| %>
+      <% field.with_text_area(rows: 4, value: params[:guest_notes],
+                              placeholder: "For example: we leave at 10 am and need a taxi") %>
+    <% end %>
+
+    <%= render GuestUI::Button.new(label: "Ask to check out", size: :lg, block: true,
+                                   class: "mt-5", type: "submit",
+                                   data: { turbo_submits_with: "Sending…" }) %>
+  <% end %>
+<% end %>

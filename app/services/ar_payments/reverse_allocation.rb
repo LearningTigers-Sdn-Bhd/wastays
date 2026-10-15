@@ -8,10 +8,11 @@ module ArPayments
       new(**kwargs).call
     end
 
-    def initialize(allocation:, user:, reason:)
+    def initialize(allocation:, user:, reason:, correction: nil)
       @allocation = allocation
       @user = user
       @reason = reason.to_s.strip
+      @correction = correction
     end
 
     def call
@@ -19,9 +20,13 @@ module ArPayments
 
       reversal = nil
       ActiveRecord::Base.transaction do
-        @allocation.lock!
+        @allocation.ar_invoice.booking_folio.lock!
         @allocation.ar_payment.lock!
         @allocation.ar_invoice.lock!
+        if @allocation.ar_invoice.invoice&.reload&.under_correction? && @correction&.original_receivable_id != @allocation.ar_invoice_id
+          raise ActiveRecord::Rollback, "Invoice is under correction. Its allocations are locked."
+        end
+        @allocation.lock!
         raise ActiveRecord::Rollback, "This allocation has already been reversed." if @allocation.reload.reversed?
 
         reversal = @allocation.create_reversal!(

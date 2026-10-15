@@ -251,8 +251,18 @@ module HotelPortal
           relationship.contact_phone
         end
 
+        def direct_bill? = relationship.relationship_type_direct_bill?
+
+        # Payment terms describe when an invoice falls due, and a standard
+        # account is never invoiced -- it settles at checkout. Appending
+        # "No terms" to it answers a question nobody asked, and appending a
+        # figure left behind by an earlier direct-bill spell is worse: it reads
+        # as terms that are in force.
         def terms_label
-          "#{relationship.relationship_type.humanize} · #{relationship.payment_terms_days.present? ? "#{relationship.payment_terms_days} days" : 'No terms'}"
+          return relationship.relationship_type.humanize unless direct_bill?
+
+          days = relationship.payment_terms_days
+          "Direct bill · #{days.present? ? "#{days} days" : 'No terms'}"
         end
 
         def status_label
@@ -305,8 +315,13 @@ module HotelPortal
           invitation.email
         end
 
+        def direct_bill? = invitation.relationship_type.to_s == "direct_bill"
+
         def terms_label
-          "#{invitation.relationship_type.to_s.humanize} · #{invitation.payment_terms_days.present? ? "#{invitation.payment_terms_days} days" : 'No terms'}"
+          return invitation.relationship_type.to_s.humanize unless direct_bill?
+
+          days = invitation.payment_terms_days
+          "Direct bill · #{days.present? ? "#{days} days" : 'No terms'}"
         end
 
         def proposed_credit_limit

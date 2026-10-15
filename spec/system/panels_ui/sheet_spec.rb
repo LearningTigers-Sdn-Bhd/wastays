@@ -17,7 +17,7 @@ RSpec.describe "PanelsUI::Sheet", type: :system do
 
     still_open = page.evaluate_script(<<~JS)
       (() => {
-        document.querySelector("#sd-sheet-right [data-action='panels-ui--sheet#close']").click()
+        document.querySelector("#sd-sheet-right [data-action='ui--sheet#close']").click()
         return document.getElementById("sd-sheet-right").open
       })()
     JS
@@ -97,7 +97,7 @@ RSpec.describe "PanelsUI::Sheet", type: :system do
 
     still_open = page.evaluate_script(<<~JS)
       (() => {
-        document.querySelector("#sd-sheet-top [data-action='panels-ui--sheet#close']").click()
+        document.querySelector("#sd-sheet-top [data-action='ui--sheet#close']").click()
         return document.getElementById("sd-sheet-top").open
       })()
     JS
@@ -117,7 +117,7 @@ RSpec.describe "PanelsUI::Sheet", type: :system do
 
     page.execute_script(<<~JS)
       document.getElementById("sd-sheet-right").dispatchEvent(new MouseEvent("click", { bubbles: true }))
-      document.querySelector("#sd-sheet-right [data-action='panels-ui--sheet#close']").click()
+      document.querySelector("#sd-sheet-right [data-action='ui--sheet#close']").click()
     JS
 
     expect(page).to have_css("dialog#sd-sheet-right[open]")

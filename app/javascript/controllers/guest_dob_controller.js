@@ -48,9 +48,9 @@ export default class extends Controller {
     if (!input) return
 
     input.value = value
-    const picker = input.closest("[data-controller~='panels-ui--date-picker']")
+    const picker = input.closest("[data-controller~='ui--date-picker']")
     if (picker) {
-      this.application.getControllerForElementAndIdentifier(picker, "panels-ui--date-picker")?.resetFromInput()
+      this.application.getControllerForElementAndIdentifier(picker, "ui--date-picker")?.resetFromInput()
     }
     input.dispatchEvent(new Event("input", { bubbles: true }))
     input.dispatchEvent(new Event("change", { bubbles: true }))

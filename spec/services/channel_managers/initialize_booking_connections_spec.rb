@@ -41,9 +41,9 @@ RSpec.describe ChannelManagers::InitializeBookingConnections do
       expect(@result[:booking_guest]).to have_attributes(guest: government_id_guest, role: "primary", is_primary: true)
     end
 
-    it "falls back to normalized email and then phone when looking up a guest" do
-      email_guest = create(:guest, government_id: nil, email: "returning@example.com", phone: "+60111111111")
-      phone_guest = create(:guest, government_id: nil, email: "phone@example.com", phone: "+60222222222")
+    it "falls back to normalized email and then phone when the name agrees" do
+      email_guest = create(:guest, name: "Email Guest", government_id: nil, email: "returning@example.com", phone: "+60111111111")
+      phone_guest = create(:guest, name: "Phone Guest", government_id: nil, email: "phone@example.com", phone: "+60222222222")
 
       email_result = described_class.call!(
         booking:,

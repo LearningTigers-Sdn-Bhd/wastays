@@ -87,13 +87,13 @@ RSpec.describe "HotelPortal::GuestContent::AiConcierge", type: :request do
       end
 
       expect(document.css("[data-testid='guest-content-body'] section h3").map { |heading| heading.text.squish })
-        .to eq([ "Settings", "AI Tone", "Advanced Settings" ])
+        .to eq([ "Automatic Replies", "AI Tone", "Advanced Settings" ])
 
       settings = document.at_css("section#settings")
       switches = settings.css(".panel-switch")
-      expect(switches.map { |node| node["data-variant"] }).to eq([ "default", "default" ])
-      expect(switches[0].at_css("input[name='hotel[guest_chat_enabled]']")).to be_present
-      expect(switches[1].at_css("input[name='hotel[ai_provider_enabled]']")).to be_present
+      expect(switches.map { |node| node["data-variant"] }).to eq([ "default" ])
+      expect(settings.at_css("input[name='hotel[guest_chat_enabled]']")).to be_nil
+      expect(switches[0].at_css("input[name='hotel[ai_provider_enabled]']")).to be_present
 
       tone = document.at_css("section#tone")
       group = tone.at_css(".panel-radio-group")
@@ -138,7 +138,7 @@ RSpec.describe "HotelPortal::GuestContent::AiConcierge", type: :request do
       expect(hotel.ai_provider_name).to eq("openai")
     end
 
-    it "closes the guest chat without touching the ai provider" do
+    it "does not accept the Concierge guest-chat setting" do
       hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "test-api-key")
 
       patch hotel_ai_concierge_settings_path(hotel), params: {
@@ -152,7 +152,7 @@ RSpec.describe "HotelPortal::GuestContent::AiConcierge", type: :request do
       }
 
       hotel.reload
-      expect(hotel.guest_chat_enabled).to be(false)
+      expect(hotel.guest_chat_enabled).to be(true)
       expect(hotel.ai_provider_enabled).to be(true)
     end
 

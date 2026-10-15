@@ -29,77 +29,87 @@ module Bookings
       NightAudits::OperationalChangeGuard.call!(hotel: @booking.hotel, action: :process_late_checkout)
       result = nil
 
-      Booking.transaction do
-        @booking.with_lock do
-          @booking.reload
+      @booking.with_lock(requires_new: true) do
+        @booking.reload
 
-          unless @booking.status == "due_out_detected"
-            result = failure("Booking does not have a detected due-out.")
-            raise ActiveRecord::Rollback
-          end
+        unless @booking.status == "due_out_detected"
+          result = failure("Booking does not have a detected due-out.")
+          raise ActiveRecord::Rollback
+        end
 
-          unless RESOLUTIONS.include?(@params[:resolution])
-            result = failure("Choose how to resolve this late checkout.")
-            raise ActiveRecord::Rollback
-          end
+        unless RESOLUTIONS.include?(@params[:resolution])
+          result = failure("Choose how to resolve this late checkout.")
+          raise ActiveRecord::Rollback
+        end
 
-          if reject_late_checkout?
-            transition_result = Bookings::TransitionStatus.new(
-              booking: @booking,
-              status: "checkout_required",
-              user: @user,
-              options: {
-                event: "reject_late_checkout",
-                reason: "Late checkout rejected"
-              }.merge(@options.fetch(:transition_options, {}))
-            ).call
-
-            if transition_result.success?
-              @rejected = true
-              result = success
-            else
-              result = transition_result
-              raise ActiveRecord::Rollback
-            end
-
-            next
-          end
-
-          stay_result = update_checkout_period
-          unless stay_result.success?
-            result = failure(stay_result.errors.to_sentence)
-            raise ActiveRecord::Rollback
-          end
-
-          charge_result = post_charge_if_requested
-          unless charge_result.success?
-            result = charge_result
-            raise ActiveRecord::Rollback
-          end
-
+        if reject_late_checkout?
           transition_result = Bookings::TransitionStatus.new(
             booking: @booking,
-            status: "checked_in",
+            status: "checkout_required",
             user: @user,
-            options: { event: "resolve_late_checkout" }.merge(@options.fetch(:transition_options, {}))
+            options: {
+              event: "reject_late_checkout",
+              reason: "Late checkout rejected"
+            }.merge(@options.fetch(:transition_options, {}))
           ).call
 
           if transition_result.success?
-            restore_result = HousekeepingTasks::RestoreLateCheckoutRoomStatuses.new(
-              booking: @booking,
-              user: @user
-            ).call
-
-            if restore_result.success?
-              result = success
-            else
-              result = failure(restore_result.error)
-              raise ActiveRecord::Rollback
-            end
+            @rejected = true
+            result = success
           else
             result = transition_result
             raise ActiveRecord::Rollback
           end
+
+          next
+        end
+
+        business_date = @booking.hotel.current_business_date
+        if business_date.blank?
+          result = failure("Hotel business date is unavailable.")
+          raise ActiveRecord::Rollback
+        end
+
+        stay_result = update_checkout_period
+        unless stay_result.success?
+          result = failure(stay_result.errors.to_sentence)
+          raise ActiveRecord::Rollback
+        end
+
+        charge_result = post_charge_if_requested
+        unless charge_result.success?
+          result = charge_result
+          raise ActiveRecord::Rollback
+        end
+
+        checkout_required = Bookings::ScheduledStay.local_date(hotel: @booking.hotel, value: @booking.check_out) <= business_date
+        transition_result = Bookings::TransitionStatus.new(
+          booking: @booking,
+          status: checkout_required ? "checkout_required" : "checked_in",
+          user: @user,
+          options: {
+            event: checkout_required ? "reject_late_checkout" : "resolve_late_checkout",
+            reason: ("Checkout remains overdue after late checkout #{@params[:resolution]}." if checkout_required)
+          }.merge(@options.fetch(:transition_options, {}))
+        ).call
+
+        if transition_result.success? && checkout_required
+          result = success
+        elsif transition_result.success?
+          restore_result = HousekeepingTasks::RestoreLateCheckoutRoomStatuses.new(
+            booking: @booking,
+            user: @user
+          ).call
+
+          if restore_result.success?
+            result = success
+          else
+            result = failure(restore_result.error)
+            raise ActiveRecord::Rollback
+          end
+        else
+          result = transition_result
+          raise ActiveRecord::Rollback
         end
       end
 

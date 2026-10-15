@@ -43,6 +43,6 @@ export default class extends Controller {
   }
 
   get rangeInput() {
-    return this.pickerTarget.querySelector("[data-panels-ui--date-picker-target='input']")
+    return this.pickerTarget.querySelector("[data-ui--date-picker-target='input']")
   }
 }

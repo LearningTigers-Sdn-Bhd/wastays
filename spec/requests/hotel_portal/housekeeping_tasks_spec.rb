@@ -77,10 +77,11 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       expect(headers[2]).to include("Room type", "All room types")
       expect(headers[3]).to include("Room group", "All room groups", "Ungrouped")
       expect(headers[5]).to include("Room status", "All room statuses")
-      expect(headers[6]).to include("Assigned to", "All staff")
-      expect(headers[7]).to include("Booking status", "All booking statuses")
-      expect(headers[8]).to include("Arrival")
-      expect(headers[9]).to include("Departure")
+      expect(headers[6]).to include("Booking status", "All booking statuses")
+      expect(headers[7]).to include("Assigned to", "All staff")
+      expect(headers[8]).to eq("Guest name")
+      expect(headers[9]).to include("Arrival")
+      expect(headers[10]).to include("Departure")
       expect(response.body).to include("2/1", "Guest requested extra towels", "Pending checkout")
       expect(response.body).to include("Clear remarks for #{room_type.name} 101")
       expect(response.body).not_to include("Task status", "Add task", "No task")
@@ -99,6 +100,19 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       badge = document.at_css("#hk-room-status-filter-cell .panel-badge")
       expect(badge.text).to eq("All")
       expect(badge["data-variant"]).to eq("primary")
+    end
+
+    it "shows the selected booking's primary guest and a dash for a vacant room" do
+      booking = stay(number: "101", status: "checked_in", check_in: business_date - 1.day,
+        check_out: business_date + 1.day, guest_name: "Booking Name")
+      create(:booking_guest, booking:, guest: create(:guest, name: "Profile Name"),
+        is_primary: true, name_snapshot: "Stay Guest")
+
+      get hotel_housekeeping_tasks_path(hotel)
+
+      document = Nokogiri::HTML(response.body)
+      expect(document.at_css("#hk-room-#{room_type.id}-101 [data-column-key='guest_name']").text).to eq("Stay Guest")
+      expect(document.at_css("#hk-room-#{room_type.id}-202 [data-column-key='guest_name']").text).to eq("—")
     end
 
     it "uses styled selection controls and exact room-keyed mutation routes" do
@@ -262,7 +276,7 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
 
       expect(response.body).to include('id="hk-room-type-filter"', 'id="hk-room-status-filter"',
                                        'id="hk-room-group-filter"', "No rooms found")
-      empty_state = Nokogiri::HTML(response.body).at_css("tbody td[colspan='12']")
+      empty_state = Nokogiri::HTML(response.body).at_css("tbody td[colspan='13']")
       expect(empty_state.text.squish).to eq("No rooms found Change the filters to show rooms.")
     end
 
@@ -304,11 +318,11 @@ RSpec.describe "Hotel portal housekeeping room board", type: :request do
       get hotel_housekeeping_tasks_path(hotel)
       header = Nokogiri::HTML(response.body).at_css("thead").text.squish
       expect(header).to include("Room", "Remarks")
-      expect(header).not_to include("Room type", "Booking status", "Arrival")
+      expect(header).not_to include("Room type", "Booking status", "Guest name", "Arrival")
 
       get hotel_housekeeping_tasks_path(hotel, format: :csv)
       expect(response.body.lines.first).to include("Room Number,Remarks")
-      expect(response.body.lines.first).not_to include("Room Type")
+      expect(response.body.lines.first).not_to include("Room Type", "Guest Name")
     end
 
     it "exports only selected composite room identities" do

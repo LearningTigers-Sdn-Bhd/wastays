@@ -12,14 +12,20 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     create(:plan_feature, plan: plan, feature: ai_concierge_page_feature, enabled: true)
   end
 
-  def chat_path = "/concierge/#{hotel.slug}/chat"
+  def chat_path = "/concierge/#{hotel.unique_id}/#{hotel.public_id}/chat"
 
   describe "GET chat" do
     it "opens for a visitor who has never written before" do
       get chat_path
 
       expect(response).to have_http_status(:success)
-      expect(response.body).to include("public-chat__bar")
+      expect(response.body).to include("guest-chat__bar")
+    end
+
+    it "fills the screen without the footer" do
+      get chat_path
+
+      expect(response.body).not_to include("guest-footer")
     end
 
     it "creates nothing until the visitor actually says something" do
@@ -31,7 +37,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
 
       get chat_path
 
-      expect(response).to redirect_to(concierge_home_path(hotel))
+      expect(response).to redirect_to(concierge_home_path(hotel.unique_id, hotel.public_id))
     end
 
     it "refuses to record a message posted to a chat that is switched off" do
@@ -41,7 +47,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
         post chat_path, params: { message: "Do you have parking?" }
       }.not_to change(Conversation, :count)
 
-      expect(response).to redirect_to(concierge_home_path(hotel))
+      expect(response).to redirect_to(concierge_home_path(hotel.unique_id, hotel.public_id))
     end
   end
 
@@ -173,7 +179,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "hands the chat the doodle as a mask" do
       get chat_path
 
-      expect(response.body).to include("--public-chat-doodle: url(")
+      expect(response.body).to include("--guest-chat-doodle: url(")
       expect(response.body).to include("data-doodle=\"true\"")
     end
 
@@ -187,7 +193,49 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
 
       expect(response).to have_http_status(:success)
       expect(response.body).to include("data-doodle=\"false\"")
-      expect(response.body).not_to include("--public-chat-doodle:")
+      expect(response.body).not_to include("--guest-chat-doodle:")
+    end
+  end
+
+  # The back button returns to the page that opened the chat, even after the
+  # guest has sent a message and the page has reloaded.
+  describe "the way back" do
+    let(:home) { "/concierge/#{hotel.unique_id}/#{hotel.public_id}" }
+
+    def back_link = Nokogiri::HTML(response.body).at_css("a.guest-chat__bar-back")
+
+    it "goes to the concierge home when no page is given" do
+      get chat_path
+
+      expect(back_link["href"]).to eq(home)
+    end
+
+    it "goes back to the public page that opened the chat" do
+      get chat_path, params: { return_to: "#{home}/info/faqs" }
+
+      expect(back_link["href"]).to eq("#{home}/info/faqs")
+      expect(back_link["aria-label"]).to eq("Back")
+    end
+
+    it "goes back to the stay page that opened the chat" do
+      get chat_path, params: { return_to: "#{home}/stay/abc123" }
+
+      expect(back_link["href"]).to eq("#{home}/stay/abc123")
+      expect(back_link["aria-label"]).to eq("Back to your stay")
+    end
+
+    it "keeps the page after a message is sent" do
+      get chat_path, params: { return_to: "#{home}/stay/abc123" }
+      post chat_path, params: { message: "Do you have parking?" }
+      follow_redirect!
+
+      expect(back_link["href"]).to eq("#{home}/stay/abc123")
+    end
+
+    it "refuses a page outside this hotel's concierge" do
+      get chat_path, params: { return_to: "https://evil.example/phish" }
+
+      expect(back_link["href"]).to eq(home)
     end
   end
 
@@ -197,8 +245,8 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "keeps the hotel's name above the thread" do
       get chat_path
 
-      expect(response.body).to include(hotel.name)
-      expect(response.body).to include("public-chat__bar-title")
+      expect(response.body).to include(ERB::Util.html_escape(hotel.name))
+      expect(response.body).to include("guest-chat__bar-title")
     end
 
     it "says the front desk answers when the hotel has no assistant" do
@@ -234,8 +282,8 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "adds the message to the thread instead of rebuilding the chat" do
       post chat_path, params: { message: "Do you have parking?" }, as: :turbo_stream
 
-      expect(response.body).to include(%(action="append" target="#{PublicUI::Chat::Log::DEFAULT_ID}"))
-      expect(response.body).not_to include("public-chat__bar")
+      expect(response.body).to include(%(action="append" target="#{GuestUI::Chat::Log::DEFAULT_ID}"))
+      expect(response.body).not_to include("guest-chat__bar")
     end
 
     # The case the subscription element exists for: before the first message
@@ -267,12 +315,12 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
 
       # Redirects address the hotel by its canonical unique_id, not the slug the
       # QR code happens to carry.
-      expect(response).to redirect_to(concierge_chat_path(hotel))
+      expect(response).to redirect_to(concierge_chat_path(hotel.unique_id, hotel.public_id))
     end
   end
 
   describe "DELETE chat" do
-    def clear_path = "/concierge/#{hotel.slug}/chat"
+    def clear_path = "/concierge/#{hotel.unique_id}/#{hotel.public_id}/chat"
 
     it "puts the guest's thread away and gives them an empty chat" do
       post chat_path, params: { message: "Do you have parking?" }
@@ -322,7 +370,7 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
     it "is harmless for a visitor who has never written" do
       delete clear_path
 
-      expect(response).to redirect_to(concierge_chat_path(hotel))
+      expect(response).to redirect_to(concierge_chat_path(hotel.unique_id, hotel.public_id))
     end
 
     # The menu is the only way to reach it, so it has to be on the page.
@@ -330,12 +378,12 @@ RSpec.describe "Public::Concierge::Chats", type: :request do
       get chat_path
 
       expect(response.body).to include("Clear conversation")
-      expect(response.body).to include("public-menu__trigger")
+      expect(response.body).to include("guest-menu__trigger")
     end
   end
 
   describe "asking for a person" do
-    def agent_path = "/concierge/#{hotel.slug}/chat/agent"
+    def agent_path = "/concierge/#{hotel.unique_id}/#{hotel.public_id}/chat/agent"
 
     before { hotel.update!(ai_provider_enabled: true, ai_provider_name: "openai", ai_provider_key: "k") }
 

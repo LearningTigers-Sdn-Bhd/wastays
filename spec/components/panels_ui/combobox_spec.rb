@@ -42,13 +42,13 @@ RSpec.describe PanelsUI::Combobox, type: :component do
     ))
 
     root = page.find(".panel-combobox")
-    expect(root["data-controller"]).to include("panels-ui--combobox")
-    expect(root["data-panels-ui--combobox-placeholder-value"]).to eq("Search destinations")
+    expect(root["data-controller"]).to include("ui--combobox")
+    expect(root["data-ui--combobox-placeholder-value"]).to eq("Search destinations")
     expect(root["data-size"]).to eq("md")
 
     expect(page).to have_css("select#profile_destination.panel-native-select.panel-combobox__native")
-    expect(page).to have_css("select[data-panels-ui--combobox-target='native']")
-    expect(page.find("select")["data-action"]).to include("change->panels-ui--combobox#syncFromNative")
+    expect(page).to have_css("select[data-ui--combobox-target='native']")
+    expect(page.find("select")["data-action"]).to include("change->ui--combobox#syncFromNative")
   end
 
   it "preserves selection and disabled choices in the native select" do
@@ -91,7 +91,7 @@ RSpec.describe PanelsUI::Combobox, type: :component do
       attribute: :destination,
       choices: [ [ "Anywhere", "" ] ] + choices
     ))
-    expect(page.find(".panel-combobox")["data-panels-ui--combobox-allow-empty-option-value"]).to be_nil
+    expect(page.find(".panel-combobox")["data-ui--combobox-allow-empty-option-value"]).to be_nil
 
     render_inline(described_class.new(
       form: form_for,
@@ -99,7 +99,7 @@ RSpec.describe PanelsUI::Combobox, type: :component do
       choices: [ [ "Anywhere", "" ] ] + choices,
       allow_empty_option: true
     ))
-    expect(page.find(".panel-combobox")["data-panels-ui--combobox-allow-empty-option-value"]).to eq("true")
+    expect(page.find(".panel-combobox")["data-ui--combobox-allow-empty-option-value"]).to eq("true")
   end
 
   it "is available through FormField#with_combobox" do

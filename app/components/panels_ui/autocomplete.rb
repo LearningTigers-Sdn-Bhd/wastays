@@ -3,7 +3,7 @@
 module PanelsUI
   # A free-form text input with remote suggestions. The input remains the form
   # source of truth; choosing a suggestion emits a bubbling
-  # `panels-ui:autocomplete-select` event with the selected result payload.
+  # `ui:autocomplete-select` event with the selected result payload.
   class Autocomplete < PanelsUI::BaseComponent
     SIZES = FormField::SIZES
 
@@ -53,8 +53,8 @@ module PanelsUI
         autocomplete: "off",
         role: "combobox",
         data: {
-          panels_ui__autocomplete_target: "input",
-          action: "input->panels-ui--autocomplete#search focus->panels-ui--autocomplete#open keydown->panels-ui--autocomplete#onKeydown"
+          ui__autocomplete_target: "input",
+          action: "input->ui--autocomplete#search focus->ui--autocomplete#open keydown->ui--autocomplete#onKeydown"
         },
         aria: {
           autocomplete: "list",
@@ -73,12 +73,12 @@ module PanelsUI
         id: root_id,
         class: tw_merge("panel-autocomplete", @class),
         data: data.merge(
-          controller: [ data.delete(:controller), "panels-ui--autocomplete" ].compact.join(" "),
-          panels_ui__autocomplete_endpoint_value: @endpoint,
-          panels_ui__autocomplete_min_length_value: @min_length,
-          panels_ui__autocomplete_debounce_value: @debounce,
-          panels_ui__autocomplete_empty_text_value: @empty_text,
-          action: [ data.delete(:action), "pointerdown@window->panels-ui--autocomplete#onWindowPointerDown" ].compact.join(" "),
+          controller: [ data.delete(:controller), "ui--autocomplete" ].compact.join(" "),
+          ui__autocomplete_endpoint_value: @endpoint,
+          ui__autocomplete_min_length_value: @min_length,
+          ui__autocomplete_debounce_value: @debounce,
+          ui__autocomplete_empty_text_value: @empty_text,
+          action: [ data.delete(:action), "pointerdown@window->ui--autocomplete#onWindowPointerDown" ].compact.join(" "),
           size: @size,
           invalid: @invalid.to_s,
           disabled: @disabled.to_s,

@@ -37,6 +37,8 @@ module AiConcierge
           request_kind = matcher.request_kind
           return unless request_kind
           return if active_new_booking?(manager) && request_kind == :unsupported_date_change && !matcher.strong_booking_reference?
+          decision = handoff_decision(request_kind)
+          return request_staff(manager, decision:) if decision&.handoff?
 
           if request_kind.to_s.start_with?("unsupported_")
             handoff_offer(manager, request_kind)
@@ -79,11 +81,15 @@ module AiConcierge
           )
         end
 
-        def request_staff(manager)
+        def request_staff(manager, decision: nil)
           domain_response(
             slots_payload: manager.record_booking_support_requested,
-            reply_type: :booking_support_requested,
-            needs_human_support: true
+            reply_type: decision ? nil : :booking_support_requested,
+            needs_human_support: true,
+            extra_context: {
+              message: decision&.message,
+              escalation_trigger: decision&.trigger
+            }.compact
           )
         end
 
@@ -128,6 +134,25 @@ module AiConcierge
 
         def active_new_booking?(manager)
           !manager.booking_task["status"].in?(%w[idle expired suspended])
+        end
+
+        def handoff_decision(request_kind)
+          trigger = if request_kind == :portal_cancellation || request_kind.in?(%i[
+            unsupported_date_change unsupported_room_change unsupported_guest_change
+          ])
+            "booking_change"
+          elsif request_kind.in?(%i[unsupported_payment_change unsupported_exception]) &&
+              message.downcase.match?(/\b(?:payment|bill|billing|card|charge|chargeback|refund|folio)\b/)
+            "payment_question"
+          end
+
+          return unless trigger
+
+          Escalation::Policy.new(
+            hotel: conversation.hotel,
+            conversation: conversation,
+            trigger: trigger
+          ).call
         end
 
         def domain_response(**attributes)

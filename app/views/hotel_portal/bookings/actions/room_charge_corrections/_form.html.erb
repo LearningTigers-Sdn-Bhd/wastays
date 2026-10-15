@@ -1,0 +1,136 @@
+<% input_class = "w-28 rounded-md border border-border bg-background px-2 py-1 text-right text-sm tabular-nums text-foreground focus:border-border-interactive focus:outline-none focus:ring-0" %>
+<% day = ->(iso) { Date.iso8601(iso).strftime("%d %b %Y") } %>
+<% signed = ->(value) { format("%+.2f", value.to_d) } %>
+<% needs_folio_correction = @errors.to_a.any? { |error| error.include?("separate folio correction") } %>
+<div data-controller="ui--sheet-frame">
+  <%= render PanelsUI::Sheet.new(
+        id: "booking-room-charge-correction-sheet", side: :right, size: :lg,
+        title: @review ? "Review room-charge correction" : "Correct room charges",
+        description: "#{@booking.reservation_reference.presence || @booking.confirmation_token} · #{@room&.room_number.presence || 'Unassigned room'} · Checked out",
+        body_class: "p-0") do |sheet| %>
+    <% sheet.with_body do %>
+      <% target = @review ? hotel_booking_action_confirm_room_charge_correction_path(current_hotel, @booking) : hotel_booking_action_review_room_charge_correction_path(current_hotel, @booking) %>
+      <%= form_with scope: :room_charge_correction, url: target, method: :post, class: "flex h-full min-h-0 flex-col",
+            data: { controller: "booking-actions--room-charge-fill" } do |form| %>
+        <%= hidden_field_tag :return_to, @return_to %>
+        <div class="min-h-0 flex-1 overflow-y-auto space-y-6 p-6">
+          <% if @errors.present? %>
+            <div class="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive" role="alert" tabindex="-1">
+              <p class="font-semibold"><%= needs_folio_correction ? "This booking needs a separate folio correction." : "The correction could not be applied." %></p>
+              <ul class="mt-2 list-disc space-y-1 pl-5"><% @errors.each do |error| %><li><%= error %></li><% end %></ul>
+              <% if needs_folio_correction %>
+                <p class="mt-3"><%= link_to "Open the booking folios", hotel_booking_workspace_path(current_hotel, @booking, tab: "folio_operations"), class: "font-medium underline", data: { turbo_frame: "_top" } %></p>
+              <% end %>
+            </div>
+          <% end %>
+          <% if @review_message.present? %>
+            <p class="rounded-md border border-border bg-muted p-4 text-sm" role="status"><%= @review_message %></p>
+          <% end %>
+
+          <% if @review %>
+            <%= form.hidden_field :correction_reason, value: @correction_reason %>
+            <%= form.hidden_field :correction_review_token, value: @review_token %>
+            <% @nightly_amounts.each do |date, amount| %>
+              <%= hidden_field_tag "room_charge_correction[nightly_amounts][#{date}]", amount %>
+            <% end %>
+            <section aria-labelledby="room-correction-review-heading" class="space-y-3">
+              <h3 id="room-correction-review-heading" class="text-base font-semibold"><%= @currency %> · tax included</h3>
+              <%= render PanelsUI::Table.new(caption: "Room-charge correction", density: :compact, bordered: false,
+                    wrapper_class: "overflow-hidden rounded-md border border-border bg-card") do |table| %>
+                <% table.with_header do %><tr><th scope="col">Stay date</th><th scope="col" class="text-right">Current</th><th scope="col" class="text-right">New</th><th scope="col" class="text-right">Difference</th><th scope="col" class="text-right">Tax change</th></tr><% end %>
+                <% table.with_body do %>
+                  <% tax_change = ->(night) { night[:taxes].sum { |tax| tax[:corrected_amount].to_d - tax[:current_amount].to_d } } %>
+                  <% @review[:nights].each do |night| %>
+                    <tr>
+                      <td><%= day.call(night[:date]) %></td>
+                      <td class="text-right tabular-nums"><%= number_with_precision(night[:current_amount], precision: 2) %></td>
+                      <td class="text-right tabular-nums"><%= number_with_precision(night[:corrected_amount], precision: 2) %></td>
+                      <td class="text-right tabular-nums"><%= signed.call(night[:difference]) %></td>
+                      <td class="text-right tabular-nums"><%= signed.call(tax_change.call(night)) %></td>
+                    </tr>
+                  <% end %>
+                  <tr class="font-semibold">
+                    <td>Total</td>
+                    <% [ :current_amount, :corrected_amount ].each do |key| %><td class="text-right tabular-nums"><%= number_with_precision(@review[:nights].sum { |night| night[key].to_d }, precision: 2) %></td><% end %>
+                    <td class="text-right tabular-nums"><%= signed.call(@review[:nights].sum { |night| night[:difference].to_d }) %></td>
+                    <td class="text-right tabular-nums"><%= signed.call(@review[:nights].sum { |night| tax_change.call(night) }) %></td>
+                  </tr>
+                <% end %>
+              <% end %>
+              <p class="text-xs text-muted-foreground">Only the nights listed change. Tourism Tax is unchanged. Corrections post on the original stay dates. The booking remains checked out.</p>
+            </section>
+            <section aria-labelledby="room-correction-folios-heading" class="space-y-3">
+              <h3 id="room-correction-folios-heading" class="text-base font-semibold">Affected folios</h3>
+              <% @review[:folios].each do |folio| %>
+                <div class="rounded-md border border-border p-4 text-sm space-y-2">
+                  <p class="font-medium"><%= folio[:reference] %></p>
+                  <p>Balance: <%= @currency %> <%= number_with_precision(folio[:current_balance], precision: 2) %> → <%= number_with_precision(folio[:corrected_balance], precision: 2) %></p>
+                  <% if folio[:reopen] %><p>This closed folio will reopen.</p><% end %>
+                  <% if folio[:invoice] %><p>Invoice <%= folio[:invoice] %> will remain under correction until the folio closes.</p><% end %>
+                </div>
+              <% end %>
+              <p class="text-sm text-muted-foreground">Settle and close affected folios afterward to finalize any revised invoices. Original charges and invoice history remain available.</p>
+            </section>
+            <section aria-labelledby="room-correction-reason-heading" class="space-y-3">
+              <h3 id="room-correction-reason-heading" class="text-base font-semibold">Correction reason</h3>
+              <p class="whitespace-pre-wrap text-sm"><%= @correction_reason %></p>
+            </section>
+          <% else %>
+            <div class="rounded-md border border-border bg-muted p-4 text-sm" role="note">
+              <p class="font-medium text-foreground">What happens when you confirm</p>
+              <p class="mt-1 text-muted-foreground">Closed folios reopen and their invoices go back under correction. You then settle and close the folios again.</p>
+            </div>
+            <section aria-labelledby="room-correction-stay-heading" class="space-y-3">
+              <h3 id="room-correction-stay-heading" class="text-base font-semibold">Stay</h3>
+              <p class="text-sm text-muted-foreground"><%= @room&.room_type&.name %> · <%= @booking.check_in.in_time_zone(current_hotel.hotel_time_zone).strftime('%d %b %Y') %> → <%= @booking.check_out.in_time_zone(current_hotel.hotel_time_zone).strftime('%d %b %Y') %></p>
+            </section>
+            <section aria-labelledby="room-correction-rates-heading" class="space-y-3">
+              <div>
+                <h3 id="room-correction-rates-heading" class="text-base font-semibold">Nightly rate (<%= @currency %>, tax included)</h3>
+                <p class="mt-1 text-xs text-muted-foreground">Includes applicable room taxes. Tourism Tax is handled separately. Nights you leave unchanged are not touched.</p>
+              </div>
+              <label class="flex items-center justify-between gap-3 text-sm">
+                <span class="font-medium">Set all nights</span>
+                <input type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" class="<%= input_class %>"
+                       data-booking-actions--room-charge-fill-target="all" data-action="input->booking-actions--room-charge-fill#fill">
+              </label>
+              <%= render PanelsUI::Table.new(caption: "Nightly room charges", density: :compact, bordered: false,
+                    wrapper_class: "overflow-hidden rounded-md border border-border bg-card") do |table| %>
+                <% table.with_header do %><tr><th scope="col">Stay date</th><th scope="col" class="text-right">Current</th><th scope="col" class="text-right">Corrected</th></tr><% end %>
+                <% table.with_body do %>
+                  <% @nights.each do |night| %>
+                    <tr>
+                      <td><%= day.call(night[:date]) %></td>
+                      <td class="text-right tabular-nums"><%= number_with_precision(night[:current_amount], precision: 2) %></td>
+                      <td class="text-right">
+                        <input type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" class="<%= input_class %>"
+                               name="room_charge_correction[nightly_amounts][<%= night[:date] %>]"
+                               value="<%= @nightly_amounts[night[:date]].presence || number_with_precision(night[:current_amount], precision: 2) %>"
+                               aria-label="Corrected amount for <%= day.call(night[:date]) %>"
+                               data-booking-actions--room-charge-fill-target="night">
+                      </td>
+                    </tr>
+                  <% end %>
+                <% end %>
+              <% end %>
+            </section>
+            <%= render PanelsUI::FormField.new(form: form, attribute: :correction_reason, label: "Correction reason", required: true) do |field| %>
+              <% field.with_text_area(value: @correction_reason, rows: 3, placeholder: "Explain why the recorded room charges are incorrect.") %>
+            <% end %>
+          <% end %>
+        </div>
+        <div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
+          <% if @review %>
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, name: :back, value: "1", variant: :secondary,
+                  formaction: hotel_booking_action_review_room_charge_correction_path(current_hotel, @booking)) do %>Back<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, data: { turbo_submits_with: "Correcting…" }) do %>Confirm correction<% end %>
+          <% else %>
+            <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(as: :button, type: :submit, disabled: @nights.empty?, data: { turbo_submits_with: "Reviewing…" }) do %>Review correction<% end %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

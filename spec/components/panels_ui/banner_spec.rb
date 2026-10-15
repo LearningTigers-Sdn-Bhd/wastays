@@ -25,7 +25,7 @@ RSpec.describe PanelsUI::Banner, type: :component do
 
     expect(page).to have_css(".panel-banner[data-tone='warning'][data-appearance='floating']" \
                              "[data-strategy='fixed'][data-position='bottom']" \
-                             "[data-controller='panels-ui--dismissible']")
+                             "[data-controller='ui--dismissible']")
     expect(page).to have_button("Act")
     expect(page).to have_css("button[aria-label='Dismiss banner']")
   end

@@ -37,7 +37,7 @@ module Bookings
 
       transitioned.each { |booking| dispatch_checked_in(booking) }
       success
-    rescue CheckInError, ArgumentError, Date::Error => e
+    rescue CheckInError, ArgumentError, Date::Error, ActiveRecord::RecordInvalid => e
       failure(e.message)
     ensure
       release_room_locks if committed
@@ -237,6 +237,9 @@ module Bookings
       end
       dispatch_nonfatal(booking, "notification") do
         Notifications::Dispatcher.new(event: :booking_checked_in, booking: booking).call
+      end
+      dispatch_nonfatal(booking, "stay link") do
+        ::Concierge::StayAccess::SendLink.new(booking: booking).call
       end
     end
 

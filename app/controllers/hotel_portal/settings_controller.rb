@@ -2,7 +2,7 @@
 
 module HotelPortal
   class SettingsController < HotelPortal::SettingsBaseController
-    SETTINGS_PAGES = %w[general boat notifications banking e_invoice].freeze
+    SETTINGS_PAGES = %w[general ota_logins boat notifications corporate_ta_portal banking e_invoice].freeze
 
     before_action :set_account
     before_action :set_hotel
@@ -42,7 +42,7 @@ module HotelPortal
     end
 
     def set_account
-      @account = current_user.account
+      @account = current_hotel.account
     end
 
     def set_hotel
@@ -124,6 +124,7 @@ module HotelPortal
 
     def prepare_settings_page
       @presenter = settings_presenter
+      @ota_credentials = current_hotel.hotel_ota_credentials.ordered if active_settings_page == "ota_logins"
       @account.build_banking_detail unless @account.banking_detail
       @e_invoice_setting = @hotel.e_invoice_setting || @hotel.build_e_invoice_setting
     end
@@ -148,6 +149,7 @@ module HotelPortal
       when "hotel_settings" then "general"
       when "boat_settings" then "boat"
       when "notification_settings" then "notifications"
+      when "corporate_ta_portal_settings" then "corporate_ta_portal"
       when "e_invoice_settings" then "e_invoice"
       else "general"
       end
@@ -155,11 +157,13 @@ module HotelPortal
 
     def settings_page_path(page)
       case page
+      when "ota_logins" then hotel_ota_logins_settings_path(@hotel)
       when "boat" then hotel_boat_settings_path(@hotel)
       # AI Concierge lives under Guest Content now. Old ?tab=ai links still land
       # on it.
       when "ai" then hotel_ai_concierge_settings_path(@hotel)
       when "notifications" then hotel_notification_settings_path(@hotel)
+      when "corporate_ta_portal" then hotel_corporate_ta_portal_settings_path(@hotel)
       when "banking" then hotel_banking_details_settings_path(@hotel)
       when "e_invoice" then hotel_e_invoice_settings_path(@hotel)
       else hotel_general_settings_path(@hotel)

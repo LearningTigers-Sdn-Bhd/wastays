@@ -7,6 +7,23 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
   let(:start_date) { Date.new(2026, 5, 6) }
   let(:end_date) { Date.new(2026, 5, 7) }
 
+  it "reports room revenue from a day-use booking in its own column, keeping Accommodation overnight-only" do
+    room_type = create(:room_type, hotel: hotel)
+    day_use_plan = create(:rate_plan, :custom, hotel: hotel, room_type: room_type, day_use_hours: 6)
+    day_booking = create(:booking, hotel: hotel)
+    create(:booking_room, booking: day_booking, room_type: room_type, rate_plan: day_use_plan)
+    day_folio = create(:booking_folio, booking: day_booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: day_folio, category: "accommodation", amount: 90, posting_date: start_date)
+    night_booking = create(:booking, hotel: hotel)
+    night_folio = create(:booking_folio, booking: night_booking, hotel: hotel)
+    create(:folio_transaction, booking_folio: night_folio, category: "accommodation", amount: 200, posting_date: start_date)
+
+    report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
+
+    expect(report.totals).to include(accommodation: 200.to_d, day_use: 90.to_d, total_charges: 290.to_d)
+    expect(report.headers("Date")).to include("Day Use")
+  end
+
   it "aggregates daily rows and source rows from charge/adjustment transactions only" do
     booking1 = create(:booking, hotel: hotel, source: "walk_in")
     folio1 = create(:booking_folio, booking: booking1, hotel: hotel)
@@ -25,8 +42,11 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     expect(report.totals).to eq(
       booking_count: 2,
       accommodation: 300.to_d,
+      day_use: 0.to_d,
+      room_fees: 0.to_d,
       other_charges: 0.to_d,
       tax: 10.to_d,
+      taxes: { "Tax" => 10.to_d },
       total_charges: 310.to_d,
       adjustments: 0.to_d,
       net_revenue: 310.to_d
@@ -38,6 +58,78 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     expect(row1[:booking_count]).to eq(1)
     expect(row1).not_to have_key(:gateway_payment)
     expect(row1).not_to have_key(:discount)
+  end
+
+  describe "tax columns and extra charge rows" do
+    let(:booking) { create(:booking, hotel: hotel, source: "walk_in") }
+    let(:folio) { create(:booking_folio, booking: booking, hotel: hotel) }
+
+    def post(category, amount, name: nil, parent: nil, **attrs)
+      create(:folio_transaction, booking_folio: folio, category: category, amount: amount, posting_date: start_date,
+        transaction_code_name_snapshot: name, metadata: parent ? { parent_folio_transaction_id: parent.id } : {}, **attrs)
+    end
+
+    before do
+      room = post("accommodation", 100, name: "Room")
+      post("tax", 8, name: "SST", parent: room)
+      bed = post("other", 40, name: "Extra bed")
+      post("tax", 3.20, name: "SST", parent: bed)
+      post("tax", 1.50, name: "Tourism Tax", parent: bed)
+      post("other", 10, name: "Extra towel")
+      post("tax", 5, name: "Service Charge")
+    end
+
+    let(:report) { described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call }
+
+    it "splits the tax into one value per tax name and keeps the tax total" do
+      row = report.rows.first
+
+      expect(report.tax_names).to eq([ "SST", "Service Charge", "Tourism Tax" ])
+      expect(row[:taxes]).to eq("SST" => 11.2.to_d, "Tourism Tax" => 1.5.to_d, "Service Charge" => 5.to_d)
+      expect(row[:taxes].values.sum).to eq(row[:tax])
+      expect(report.totals[:taxes]).to eq(row[:taxes])
+      expect(report.source_rows.first[:taxes]).to eq(row[:taxes])
+      expect(report.values(row)).to eq([ 1, 100.to_d, 0.to_d, 0.to_d, 50.to_d, 11.2.to_d, 5.to_d, 1.5.to_d, row[:total_charges], 0.to_d, row[:net_revenue] ])
+    end
+
+    it "lists each extra charge with the tax on that charge only" do
+      expect(report.extra_rows).to eq([
+        { item: "Extra bed", count: 1, amount: 40.to_d, taxes: { "SST" => 3.2.to_d, "Tourism Tax" => 1.5.to_d }, total: 44.7.to_d },
+        { item: "Extra towel", count: 1, amount: 10.to_d, taxes: {}, total: 10.to_d }
+      ])
+      expect(report.extra_tax_names).to eq([ "SST", "Tourism Tax" ])
+      expect(report.extra_totals[:amount]).to eq(report.totals[:other_charges])
+      expect(report.extra_values(report.extra_rows.first)).to eq([ 1, 40.to_d, 3.2.to_d, 1.5.to_d, 44.7.to_d ])
+    end
+
+    it "sums the tax columns in a monthly report" do
+      monthly = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date, date_preset: "this_year").call
+
+      expect(monthly.rows.size).to eq(1)
+      expect(monthly.rows.first[:taxes]).to eq(report.rows.first[:taxes])
+    end
+  end
+
+  describe "enabled tax columns" do
+    let(:report) { described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call }
+
+    before do
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+      hotel.update!(sst_enabled: true, tourism_tax_enabled: true)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+    end
+
+    it "keeps a column for each enabled tax when the period has no charge" do
+      expect(report.tax_names).to eq([ "SST", "Tourism Tax" ])
+      expect(report.totals[:taxes]).to eq("SST" => 0.to_d, "Tourism Tax" => 0.to_d)
+    end
+
+    it "drops the column of a tax that is turned off" do
+      hotel.update!(tourism_tax_enabled: false)
+      Financials::EnsureDefaultTransactionCodes.call(hotel)
+
+      expect(report.tax_names).to eq([ "SST" ])
+    end
   end
 
   it "includes adjustments/reversals in the totals" do
@@ -144,8 +236,10 @@ RSpec.describe HotelPortal::Reports::DailyRevenueReport do
     report = described_class.new(hotel: hotel, start_date: start_date, end_date: end_date).call
 
     expect(report.totals[:accommodation]).to eq(0)
-    expect(report.totals[:other_charges]).to eq(125.to_d)
+    expect(report.totals[:other_charges]).to eq(50.to_d)
+    expect(report.totals[:room_fees]).to eq(75.to_d)
     expect(report.totals[:total_charges]).to eq(125.to_d)
+    expect(report.extra_rows.map { |row| row[:item] }).to eq([ "Food & Beverage" ])
     expect(report.totals[:booking_count]).to eq(1)
   end
 end

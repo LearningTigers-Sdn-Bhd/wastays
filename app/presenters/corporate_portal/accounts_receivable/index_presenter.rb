@@ -232,6 +232,10 @@ module CorporatePortal
           invoice.booking.confirmation_token
         end
 
+        def guest_name
+          invoice.booking.guest_name
+        end
+
         def folio_reference
           booking_folio.folio_reference_display
         end

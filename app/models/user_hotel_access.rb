@@ -9,6 +9,7 @@ class UserHotelAccess < ApplicationRecord
 
   scope :active, -> { where(deactivated_at: nil) }
   scope :deactivated, -> { where.not(deactivated_at: nil) }
+  scope :excluding_partners, -> { joins(:user).where.not(users: { role: "super_agent" }) }
   scope :managing_account, -> {
     joins(role: :permissions).where(permissions: { slug: ACCOUNT_MANAGEMENT_PERMISSION })
   }

@@ -20,6 +20,8 @@ module HotelPortal
         sold_sum = rows.sum { |row| row[:rooms_sold] }
         available_sum = rows.sum { |row| row[:rooms_available] }
         revenue_sum = rows.sum { |row| row[:room_revenue] }
+        day_use_sold_sum = rows.sum { |row| row[:day_use_sold] }
+        day_use_revenue_sum = rows.sum { |row| row[:day_use_revenue] }
         tax_sum = rows.sum { |row| row[:tax_amount] }
 
         Result.new(
@@ -30,8 +32,10 @@ module HotelPortal
             rooms_sold: sold_sum,
             rooms_available: available_sum,
             room_revenue: revenue_sum,
+            day_use_sold: day_use_sold_sum,
+            day_use_revenue: day_use_revenue_sum,
             tax_amount: tax_sum,
-            total_revenue: revenue_sum + tax_sum,
+            total_revenue: revenue_sum + day_use_revenue_sum + tax_sum,
             occupancy_rate: ratio(sold_sum, available_sum),
             adr: ratio(revenue_sum, sold_sum),
             revpar: ratio(revenue_sum, available_sum)
@@ -51,6 +55,8 @@ module HotelPortal
           sold = month_rows.sum { |row| row[:rooms_sold].to_i }
           available = month_rows.sum { |row| row[:rooms_available].to_i }
           revenue = month_rows.sum { |row| row[:room_revenue].to_d }
+          day_use_sold = month_rows.sum { |row| row[:day_use_sold].to_i }
+          day_use_revenue = month_rows.sum { |row| row[:day_use_revenue].to_d }
           tax = month_rows.sum { |row| row[:tax_amount].to_d }
 
           {
@@ -58,8 +64,10 @@ module HotelPortal
             rooms_sold: sold,
             rooms_available: available,
             room_revenue: revenue.round(2),
+            day_use_sold: day_use_sold,
+            day_use_revenue: day_use_revenue.round(2),
             tax_amount: tax.round(2),
-            total_revenue: (revenue + tax).round(2),
+            total_revenue: (revenue + day_use_revenue + tax).round(2),
             occupancy_rate: ratio(sold, available),
             adr: ratio(revenue, sold),
             revpar: ratio(revenue, available)
@@ -80,18 +88,49 @@ module HotelPortal
 
         available = available_rooms_for(date)
         tax = tax_by_posting_date[date] || 0.to_d
+        day_use = day_use_by_date[date] || { sold: 0, revenue: 0.to_d }
 
         {
           date: date,
           rooms_sold: sold,
           rooms_available: available,
           room_revenue: revenue,
+          day_use_sold: day_use[:sold],
+          day_use_revenue: day_use[:revenue],
           tax_amount: tax,
-          total_revenue: revenue + tax,
+          total_revenue: revenue + day_use[:revenue] + tax,
           occupancy_rate: ratio(sold, available),
           adr: ratio(revenue, sold),
           revpar: ratio(revenue, available)
         }
+      end
+
+      # Day use sits beside the overnight figures, never inside them: a room
+      # sold for a few hours would inflate occupancy and drag ADR down. The
+      # revenue still joins Total revenue so this report ties to Daily Revenue.
+      def day_use_by_date
+        @day_use_by_date ||= day_use_bookings.each_with_object({}) do |booking, by_date|
+          date = booking.check_in.in_time_zone(@hotel.hotel_time_zone).to_date
+          next unless (@start_date..@end_date).cover?(date)
+
+          entry = by_date[date] ||= { sold: 0, revenue: 0.to_d }
+          entry[:sold] += booked_room_quantity(booking)
+          entry[:revenue] += booking_room_revenue(booking)
+        end
+      end
+
+      def day_use_bookings
+        zone = @hotel.hotel_time_zone
+        window = @start_date.in_time_zone(zone).beginning_of_day..@end_date.in_time_zone(zone).end_of_day
+        @hotel.bookings
+              .where(status: SOLD_STATUSES, check_in: window)
+              .where(id: BookingRoom.joins(:rate_plan).where.not(rate_plans: { day_use_hours: nil }).select(:booking_id))
+              .includes(:booking_rooms)
+      end
+
+      def booking_room_revenue(booking)
+        subtotal_sum = booking.booking_rooms.sum { |room| room.subtotal.to_d }
+        subtotal_sum.positive? ? subtotal_sum : booking.total_amount.to_d
       end
 
       def tax_by_posting_date

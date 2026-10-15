@@ -93,8 +93,8 @@ export default class extends Controller {
   }
 
   replaceMethodOptions(choices, selected) {
-    const host = this.methodTarget.querySelector('[data-controller~="panels-ui--select-menu"]')
-    const controller = host && this.application.getControllerForElementAndIdentifier(host, "panels-ui--select-menu")
+    const host = this.methodTarget.querySelector('[data-controller~="ui--select-menu"]')
+    const controller = host && this.application.getControllerForElementAndIdentifier(host, "ui--select-menu")
     if (controller) {
       controller.replaceOptions(choices, selected)
       return

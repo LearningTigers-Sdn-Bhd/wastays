@@ -1,0 +1,127 @@
+<%# Seeded (mock-fixture) reviews and whatever this guest has submitted this
+    session render side by side -- see Concierge::ReviewBook. Reviews live
+    outside wastays entirely once the real backend exists; this whole section
+    is a stand-in for that, the same way the rest of Recommendations is. %>
+<section id="reviews" class="mt-6 scroll-mt-6">
+  <div class="mb-2.5 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-1.5">
+      <%= cached_icon "message-square", class: "h-3.5 w-3.5 text-primary" %>
+      <h3 class="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Guest Reviews</h3>
+    </div>
+
+    <% if vendor.average_rating.present? %>
+      <span class="flex items-center gap-1 text-[12px] font-black text-foreground">
+        <%= cached_icon "star", library: "phosphor", variant: "fill", class: "h-3.5 w-3.5 text-accent-foreground" %>
+        <%= vendor.average_rating %>
+        <span class="font-medium text-muted-foreground">(<%= pluralize(reviews.size, "review") %>)</span>
+      </span>
+    <% end %>
+  </div>
+
+  <div class="space-y-2.5">
+    <% reviews.each do |review| %>
+      <div class="rounded-xl border border-border/60 bg-white p-3 shadow-sm">
+        <div class="flex items-start justify-between gap-2">
+          <p class="text-[12.5px] font-black text-foreground"><%= review.guest_name %></p>
+          <p class="flex-shrink-0 text-[10px] font-bold text-muted-foreground"><%= review_posted_label(review) %></p>
+        </div>
+        <div class="mt-0.5 flex items-center gap-0.5">
+          <% 5.times do |i| %>
+            <%= cached_icon "star", library: "phosphor", variant: "fill",
+                  class: "h-3 w-3 #{i < review.rating_i ? 'text-accent-foreground' : 'text-muted-foreground/25'}" %>
+          <% end %>
+        </div>
+        <% if review.comment.present? %>
+          <p class="mt-1.5 font-guest-editorial text-sm leading-relaxed text-muted-foreground"><%= review.comment %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if reviews.empty? %>
+      <div class="rounded-xl border border-dashed border-border bg-white/60 p-6 text-center">
+        <p class="text-sm font-bold text-foreground">No reviews yet</p>
+        <p class="mt-1.5 text-[13px] font-medium leading-relaxed text-muted-foreground">
+          Be the first to tell other guests what <%= vendor.name %> is like.
+        </p>
+      </div>
+    <% end %>
+  </div>
+
+  <%# A modal, not an inline form permanently on the page -- most visitors are
+      here to read, not write, and the form only costs a tap for the guest
+      who does want to leave one. %>
+  <div class="mt-3" data-controller="concierge-modal">
+    <button type="button" data-action="concierge-modal#open"
+            class="w-full rounded-xl border border-dashed border-primary/40 bg-primary/5 px-4 py-3 text-[12px] font-black uppercase tracking-wider text-primary transition-colors hover:bg-primary/10">
+      Write a review
+    </button>
+
+    <dialog data-concierge-modal-target="dialog"
+            data-action="click->concierge-modal#backdropClose close->concierge-modal#onClose"
+            aria-label="Write a review"
+            class="fixed inset-x-4 bottom-4 top-auto m-0 hidden max-h-[85dvh] w-auto max-w-none flex-col overflow-y-auto overscroll-contain rounded-2xl border-0 bg-background p-0 shadow-2xl transition-transform duration-300 ease-out open:flex translate-y-full data-open:translate-y-0 backdrop:bg-black/50 motion-reduce:transition-none [-webkit-overflow-scrolling:touch] sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2 sm:rounded-3xl">
+      <div class="p-5">
+        <h2 tabindex="-1" autofocus class="text-base font-black text-foreground focus:outline-none">Review <%= vendor.name %></h2>
+
+        <% if review_form.errors.any? %>
+          <div class="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-[12px] font-bold text-destructive">
+            <%= review_form.errors.full_messages.to_sentence %>
+          </div>
+        <% end %>
+
+        <%= form_with model: review_form, url: concierge_recommendation_vendor_reviews_path(@hotel.unique_id, @hotel.public_id, vendor),
+              method: :post, local: true, class: "mt-3.5 space-y-3.5" do |form| %>
+          <div>
+            <%= form.label :guest_name, "Your name",
+                  class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground" %>
+            <%= form.text_field :guest_name,
+                  class: "mt-1.5 w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-[13px] font-medium text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20",
+                  placeholder: "e.g. Alex" %>
+          </div>
+
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Rating</p>
+            <%# Rendered highest-value-first and laid out row-reverse so the
+                usual "checked star, and everything before it, fills in"
+                behaviour works from a plain CSS general-sibling selector --
+                see the scoped style block below -- with no JS needed. %>
+            <div class="concierge-star-rating mt-1.5 flex flex-row-reverse justify-end gap-1">
+              <% (1..5).to_a.reverse_each do |value| %>
+                <%= form.radio_button :rating, value, class: "sr-only", checked: value == 5 %>
+                <%= form.label :rating, value: value, class: "cursor-pointer p-0.5" do %>
+                  <%= cached_icon "star", library: "phosphor", variant: "fill",
+                        class: "star-icon h-6 w-6 text-muted-foreground/25" %>
+                <% end %>
+              <% end %>
+            </div>
+            <style>
+              .concierge-star-rating input:checked ~ label .star-icon,
+              .concierge-star-rating input:checked ~ label ~ label .star-icon,
+              .concierge-star-rating label:hover .star-icon,
+              .concierge-star-rating label:hover ~ label .star-icon {
+                color: var(--accent-foreground);
+              }
+            </style>
+          </div>
+
+          <div>
+            <%= form.label :comment, "Your review (optional)",
+                  class: "block text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground" %>
+            <%= form.text_area :comment, rows: 3,
+                  class: "mt-1.5 w-full resize-none rounded-xl border border-border bg-white px-3.5 py-2.5 text-[13px] font-medium text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20",
+                  placeholder: "What stood out?" %>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button type="button" data-action="concierge-modal#close"
+                    class="rounded-xl border border-border/60 bg-white px-4 py-3 text-[12px] font-black uppercase tracking-wider text-foreground transition-colors active:bg-muted">
+              Cancel
+            </button>
+            <%= form.submit "Post review",
+                  class: "cursor-pointer rounded-xl bg-primary px-4 py-3 text-[12px] font-black uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary-hover" %>
+          </div>
+        <% end %>
+      </div>
+    </dialog>
+  </div>
+</section>

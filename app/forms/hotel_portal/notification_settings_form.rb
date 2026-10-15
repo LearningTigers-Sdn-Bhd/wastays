@@ -42,9 +42,25 @@ module HotelPortal
         build_pre_arrival_settings
       when "in_stay_guest_messaging"
         build_in_stay_settings
+      when "agent_payment_reminder"
+        build_agent_payment_reminder_settings
       else
         {}
       end
+    end
+
+    # Hours before the deadline, as a comma-separated list. Anything that is not
+    # a positive whole number is dropped rather than rejected: a stray comma
+    # should not cost the hotel its reminders, and an empty list falls back to
+    # the default.
+    def build_agent_payment_reminder_settings
+      raw = params.require(:notification_config).permit(settings: [ :offsets_hours ]).dig(:settings, :offsets_hours)
+      offsets = raw.to_s.split(",").filter_map do |part|
+        value = part.strip.to_i
+        value if value.positive?
+      end
+
+      { "offsets_hours" => (offsets.presence || NotificationConfig::DEFAULT_AGENT_REMINDER_OFFSETS).uniq.sort.reverse }
     end
 
     def build_review_settings

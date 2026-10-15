@@ -52,6 +52,14 @@ RSpec.describe Bookings::CreateManualBooking do
     expect(Notifications::Dispatcher).to have_received(:new).with(event: :booking_confirmed, booking: kind_of(Booking))
   end
 
+  it "takes a desk booking with no phone or email, so the guest can add them at check-in" do
+    result = described_class.new(hotel: hotel, params: params.merge(guest_phone: "", guest_email: "")).call
+
+    expect(result.success?).to be true
+    expect(result.booking.guest_phone).to be_blank
+    expect(result.booking.primary_guest.name).to eq("Test Guest")
+  end
+
   describe "a reservation taken without a room" do
     let(:deferred_params) { params.except(:room_number).merge(require_room_number: false) }
 

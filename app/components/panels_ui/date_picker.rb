@@ -56,7 +56,7 @@ module PanelsUI
     end
 
     def native_id = @id || @form.field_id(@attribute)
-    def stimulus_identifier = "panels-ui--date-picker"
+    def stimulus_identifier = "ui--date-picker"
     def root_id = "#{native_id}-date-picker"
     def root_class = "panel-date-picker"
     def popover_id = "#{native_id}-calendar"
@@ -99,7 +99,7 @@ module PanelsUI
           {
             controller: [ data.delete(:controller), stimulus_identifier ].compact.join(" "),
             # The nested Popover controller this one drives (close on selection).
-            "#{stimulus_identifier}-panels-ui--popover-outlet" => ".#{popover_root_class}",
+            "#{stimulus_identifier}-ui--popover-outlet" => ".#{popover_root_class}",
             "#{stimulus_identifier}-mode-value" => mode,
             # Opt-in overrides; omitted via compact so the controller falls back to
             # sensible per-type defaults.

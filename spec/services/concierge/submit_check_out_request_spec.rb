@@ -11,7 +11,16 @@ RSpec.describe Concierge::SubmitCheckOutRequest do
     expect(result.check_out_request.status).to eq("new")
   end
 
-  it "fails for a non-checked-in booking" do
+  it "creates a CheckOutRequest for every in-house status" do
+    Booking::IN_HOUSE_STATUSES.each do |status|
+      in_house = create(:booking, hotel: hotel, status: status, checked_in_at: Time.current)
+      result = described_class.new(booking: in_house).call
+
+      expect(result.success?).to be(true), "expected #{status} to be able to ask for checkout"
+    end
+  end
+
+  it "fails for a booking that is not in house" do
     confirmed = create(:booking, hotel: hotel, status: "confirmed")
     result = described_class.new(booking: confirmed).call
     expect(result.success?).to be false

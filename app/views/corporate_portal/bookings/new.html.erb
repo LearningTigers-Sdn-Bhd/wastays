@@ -1,0 +1,32 @@
+<div class="mx-auto w-full max-w-4xl space-y-6">
+  <%= render PanelsUI::PageHeader.new(
+        title: "Book a stay",
+        description: "Reserve rooms for your guests at a hotel your account is linked to.") %>
+
+  <% if @relationships.empty? %>
+    <%= render PanelsUI::Alert.new(tone: :warning, title: "No linked hotels") do |alert| %>
+      <% alert.with_description do %>
+        Your account is not linked to any hotel yet.
+      <% end %>
+    <% end %>
+  <% else %>
+    <%= render "corporate_portal/bookings/wizard_progress", step: @step %>
+
+    <%# A date the search refused (past, or departure before arrival) is said on the
+        step that asks for it. %>
+    <% if @step == :stay && @base&.error.present? %>
+      <%= render PanelsUI::Alert.new(tone: :warning, title: "Check the dates") do |alert| %>
+        <% alert.with_description do %><%= @base.error %><% end %>
+      <% end %>
+    <% end %>
+
+    <% case @step %>
+    <% when :stay %>
+      <%= render "corporate_portal/bookings/stay_step" %>
+    <% when :rooms %>
+      <%= render "corporate_portal/bookings/rooms_step" %>
+    <% when :guests %>
+      <%= render "corporate_portal/bookings/guests_step" %>
+    <% end %>
+  <% end %>
+</div>

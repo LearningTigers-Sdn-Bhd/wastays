@@ -12,21 +12,21 @@ RSpec.describe PanelsUI::CommandPalette, type: :component do
 
     it "renders the palette root with the Stimulus controller and endpoint value" do
       expect(page).to have_css(
-        ".panel-command-palette[data-controller='panels-ui--command-palette']" \
-        "[data-panels-ui--command-palette-endpoint-value='/hotel/1/global_search']"
+        ".panel-command-palette[data-controller='ui--command-palette']" \
+        "[data-ui--command-palette-endpoint-value='/hotel/1/global_search']"
       )
     end
 
     it "nests the dialog controller on the native <dialog>, distinct from the palette root" do
-      expect(page).to have_css("dialog[data-controller='panels-ui--dialog'][data-panels-ui--command-palette-target='dialog']")
+      expect(page).to have_css("dialog[data-controller='ui--dialog'][data-ui--command-palette-target='dialog']")
     end
 
     it "wires both controllers to the dialog's native close event and reuses the dialog dismissal actions" do
       action = page.find("dialog")["data-action"]
-      expect(action).to include("close->panels-ui--dialog#onClose")
-      expect(action).to include("close->panels-ui--command-palette#reset")
-      expect(action).to include("cancel->panels-ui--dialog#onCancel")
-      expect(action).to include("click->panels-ui--dialog#backdropClose")
+      expect(action).to include("close->ui--dialog#onClose")
+      expect(action).to include("close->ui--command-palette#reset")
+      expect(action).to include("cancel->ui--dialog#onCancel")
+      expect(action).to include("click->ui--dialog#backdropClose")
     end
   end
 
@@ -35,7 +35,7 @@ RSpec.describe PanelsUI::CommandPalette, type: :component do
 
     it "renders the wide pill trigger that opens the palette" do
       expect(page).to have_css(
-        "button.panel-command-palette__trigger[data-action='click->panels-ui--command-palette#open']" \
+        "button.panel-command-palette__trigger[data-action='click->ui--command-palette#open']" \
         "[aria-haspopup='dialog']"
       )
     end
@@ -43,7 +43,7 @@ RSpec.describe PanelsUI::CommandPalette, type: :component do
     it "shows the placeholder text and the Command+K shortcut hint on the pill" do
       expect(page).to have_css(".panel-command-palette__trigger-label", text: "Search dashboard pages...")
 
-      hint = "span[role='group'][aria-label='Command+K'][data-panels-ui--command-palette-target='shortcut']"
+      hint = "span[role='group'][aria-label='Command+K'][data-ui--command-palette-target='shortcut']"
       expect(page).to have_css("#{hint} kbd.panel-kbd[data-size='sm']", count: 2)
       # The modifier is drawn, not typed, so the controller has an <svg> to swap
       # for the word "Ctrl" off Apple.
@@ -55,7 +55,7 @@ RSpec.describe PanelsUI::CommandPalette, type: :component do
     it "also renders a labelled icon-only trigger for mobile" do
       expect(page).to have_css(
         "button.panel-command-palette__trigger-icon[aria-label='Open global search']" \
-        "[data-action='click->panels-ui--command-palette#open']"
+        "[data-action='click->ui--command-palette#open']"
       )
     end
   end
@@ -65,10 +65,10 @@ RSpec.describe PanelsUI::CommandPalette, type: :component do
 
     it "renders a hidden skeleton target with placeholder rows inside the busy-tracked scroll region" do
       expect(page).to have_css(
-        "[data-panels-ui--command-palette-target='scroll'][aria-busy='false']", visible: :all
+        "[data-ui--command-palette-target='scroll'][aria-busy='false']", visible: :all
       )
       expect(page).to have_css(
-        ".panel-command-palette__skeleton[hidden][data-panels-ui--command-palette-target='loading']",
+        ".panel-command-palette__skeleton[hidden][data-ui--command-palette-target='loading']",
         visible: :all
       )
       expect(page).to have_css(".panel-command-palette__skeleton .panel-skeleton", minimum: 2, visible: :all)
@@ -87,14 +87,14 @@ RSpec.describe PanelsUI::CommandPalette, type: :component do
 
     it "wires the search + keyboard actions and the input target" do
       action = page.find("input.panel-command-palette__input")["data-action"]
-      expect(action).to include("input->panels-ui--command-palette#search")
-      expect(action).to include("keydown->panels-ui--command-palette#onKeydown")
-      expect(page).to have_css("input[data-panels-ui--command-palette-target='input']")
+      expect(action).to include("input->ui--command-palette#search")
+      expect(action).to include("keydown->ui--command-palette#onKeydown")
+      expect(page).to have_css("input[data-ui--command-palette-target='input']")
     end
 
     it "renders an empty listbox and a hidden empty-state, both targeted" do
-      expect(page).to have_css("ul[role='listbox'][data-panels-ui--command-palette-target='results']")
-      expect(page).to have_css("[role='status'][hidden][data-panels-ui--command-palette-target='empty']", visible: :all)
+      expect(page).to have_css("ul[role='listbox'][data-ui--command-palette-target='results']")
+      expect(page).to have_css("[role='status'][hidden][data-ui--command-palette-target='empty']", visible: :all)
     end
 
     it "connects the input's aria-controls to the listbox id" do

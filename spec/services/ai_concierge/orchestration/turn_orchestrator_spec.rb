@@ -20,6 +20,52 @@ RSpec.describe AiConcierge::Orchestration::TurnOrchestrator do
     stub_concierge_stylist
   end
 
+  it "puts an explicit web request for a person in the staff inbox while the bot stays active" do
+    prospect = create(:prospect, hotel: hotel, phone_number: nil)
+    create(:prospect_conversation_state, prospect: prospect)
+    expect_any_instance_of(AiConcierge::Providers::RubyLlmClient).not_to receive(:chat)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "I need to speak to a person",
+      prospect_public_id: prospect.public_id,
+      channel: "web"
+    ).call
+    conversation = prospect.conversations.find_by!(channel: "web", status: "open")
+
+    expect(result).to be_success
+    expect(result.payload[:needs_human_support]).to be(true)
+    expect(conversation.human_requested_at).to be_present
+    expect(conversation.mode).to eq("bot")
+    expect(Conversation.awaiting_staff).to include(conversation)
+  end
+
+  it "puts a WhatsApp emergency in the staff inbox and leads with emergency instructions" do
+    create(
+      :hotel_guest_contact,
+      hotel: hotel,
+      emergency_instructions: "Leave by the nearest marked exit.",
+      emergency_phone: "+60 3 1111 2222"
+    )
+    expect_any_instance_of(AiConcierge::Providers::RubyLlmClient).not_to receive(:chat)
+
+    result = described_class.new(
+      hotel: hotel,
+      message: "There is a fire in the corridor",
+      phone: "+60128887777",
+      channel: "whatsapp"
+    ).call
+    prospect = hotel.prospects.lookup_by_phone("+60128887777").first
+    conversation = prospect.conversations.find_by!(channel: "whatsapp", status: "open")
+
+    expect(result).to be_success
+    expect(result.payload[:reply_message]).to start_with("Leave by the nearest marked exit.")
+    expect(result.payload[:needs_human_support]).to be(true)
+    expect(conversation.human_requested_at).to be_present
+    expect(conversation.mode).to eq("bot")
+    expect(Conversation.awaiting_staff).to include(conversation)
+  end
+
   it "serializes a prospect turn with a row lock" do
     prospect = create(:prospect, hotel: hotel, phone_number: "+60123456789")
     create(:prospect_conversation_state, prospect: prospect)

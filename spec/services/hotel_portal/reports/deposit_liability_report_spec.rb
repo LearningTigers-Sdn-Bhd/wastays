@@ -27,6 +27,19 @@ RSpec.describe HotelPortal::Reports::DepositLiabilityReport, type: :service do
       expect(result.totals[:remaining_liability]).to eq(300.to_d)
     end
 
+    it "lists the references recorded on the folio's deposits" do
+      booking = create(:booking, hotel: hotel, status: "confirmed", check_in: as_of_date + 3.days, check_out: as_of_date + 5.days)
+      folio = create(:booking_folio, booking: booking, hotel: hotel)
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 100,
+        posting_date: as_of_date - 2.days, metadata: { reference: "TT-1" })
+      create(:folio_transaction, booking_folio: folio, transaction_type: :payment, category: "booking_payment", amount: 100,
+        posting_date: as_of_date - 1.day, metadata: { payment_source: "card", card_reference: "APPR-2" })
+
+      row = described_class.new(hotel: hotel, as_of_date: as_of_date).call.rows.first
+
+      expect(row[:payment_reference]).to eq("TT-1, APPR-2")
+    end
+
     it "reduces liability by earned charges and refunds" do
       booking = create(:booking, hotel: hotel, status: "checked_in", check_in: as_of_date - 1.day, check_out: as_of_date + 1.day)
       folio = create(:booking_folio, booking: booking, hotel: hotel)

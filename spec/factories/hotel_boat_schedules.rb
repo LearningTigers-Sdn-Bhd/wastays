@@ -7,6 +7,7 @@ FactoryBot.define do
     time { "08:00" }
     has_breakfast { false }
     has_lunch { false }
+    has_hi_tea { false }
     has_dinner { false }
 
     trait :archived do

@@ -15,7 +15,7 @@ RSpec.describe PanelsUI::Tabs, type: :component do
   it "renders line-style panel tabs with accessible relationships by default" do
     render_panel_tabs
 
-    expect(page).to have_css("#t.tabs-root--line[data-slot='tabs-root'][data-controller='panels-ui--tabs']")
+    expect(page).to have_css("#t.tabs-root--line[data-slot='tabs-root'][data-controller='ui--tabs']")
     expect(page).to have_css(".tabs-list--line[role='tablist'][aria-label='Example sections'][data-slot='tabs-list']")
     expect(page).to have_css(
       "button#t-tab-one.tabs-tab--line[role='tab'][aria-controls='t-panel-one']" \
@@ -47,13 +47,13 @@ RSpec.describe PanelsUI::Tabs, type: :component do
   it "opts into URL state with a single param value" do
     render_panel_tabs(url: { param: "section" })
 
-    expect(page.find("#t")["data-panels-ui--tabs-param-value"]).to eq("section")
+    expect(page.find("#t")["data-ui--tabs-param-value"]).to eq("section")
   end
 
   it "does not configure URL state by default" do
     render_panel_tabs
 
-    expect(page.find("#t")["data-panels-ui--tabs-param-value"]).to be_nil
+    expect(page.find("#t")["data-ui--tabs-param-value"]).to be_nil
   end
 
   it "infers ordinary link navigation without tab roles or JavaScript" do
@@ -95,7 +95,7 @@ RSpec.describe PanelsUI::Tabs, type: :component do
 
     expect(page).to have_css("button#t-tab-one[role='tab']")
     expect(page).to have_css("span#t-tab-two[aria-disabled='true']")
-    expect(page).to have_no_css("#t-tab-two[data-panels-ui--tabs-target='tab']")
+    expect(page).to have_no_css("#t-tab-two[data-ui--tabs-target='tab']")
   end
 
   it "falls back to the first enabled tab when active does not match" do

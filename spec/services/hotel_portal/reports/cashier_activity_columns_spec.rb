@@ -6,7 +6,7 @@ RSpec.describe HotelPortal::Reports::CashierActivityColumns do
   it "normalizes columns in canonical order and exposes the compact defaults" do
     expect(described_class.normalize(%w[amount stale date_time])).to eq(%w[date_time amount])
     expect(described_class::DEFAULT_KEYS).to eq(
-      %w[date_time booking_number guest_details handling payment_mode stage received_by currency amount]
+      %w[date_time booking_number guest_details handling payment_mode payment_reference stage received_by currency amount]
     )
     expect(described_class.selected(%w[guest_details]).first.export_labels).to eq([ "Guest", "Room" ])
   end

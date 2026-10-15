@@ -1,0 +1,39 @@
+<% content_for :title, "Pair this tablet" %>
+
+<%# The property is named before anything is created, so a tablet that scanned
+    the wrong screen finds out here rather than after it is enrolled. %>
+<div class="flex min-h-dvh flex-col items-center justify-center gap-8 bg-muted px-6 text-center">
+  <div>
+    <p class="text-xs font-black uppercase tracking-widest text-primary">Guest registration</p>
+    <h1 class="mt-3 text-4xl font-black text-foreground"><%= @hotel.name %></h1>
+  </div>
+
+  <div class="card w-full max-w-sm space-y-5 p-8">
+    <p class="text-sm text-muted-foreground">
+      This tablet will be used to collect guest signatures for this property.
+    </p>
+
+    <%= form_with url: claim_pair_token_path(@pairing.token), method: :post, class: "space-y-4" do %>
+      <div class="text-left">
+        <label class="mb-1.5 block text-sm font-medium text-foreground" for="tablet-label">Name this tablet</label>
+        <%= text_field_tag :label, @device_label,
+              id: "tablet-label",
+              class: "form-input w-full",
+              placeholder: SigningDevice::DEFAULT_LABEL,
+              autocomplete: "off" %>
+        <p class="mt-1.5 text-xs text-muted-foreground">Shown to staff when they choose where to send a card.</p>
+      </div>
+
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, size: :lg, class: "w-full") do %>
+        Use this tablet
+      <% end %>
+    <% end %>
+
+    <%# Said plainly: staff hand this to a guest, and what the device can reach
+        is the whole reason the pairing flow exists. %>
+    <p class="text-xs text-muted-foreground">
+      The tablet keeps a signing link and nothing else. It cannot reach bookings,
+      folios or guest records.
+    </p>
+  </div>
+</div>

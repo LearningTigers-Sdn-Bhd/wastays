@@ -10,7 +10,7 @@
       <h2 class="text-2xl font-extrabold text-foreground mb-2">Select Your Stay Dates</h2>
       <p class="text-sm text-muted-foreground mb-6">Choose your check-in and check-out dates to see accurate room availability and price.</p>
 
-      <%= form_with url: hotel_path(hotel),
+      <%= form_with url: hotel_path(hotel.unique_id, hotel.public_id),
                     method: :get,
                     local: true,
                     class: "space-y-4",

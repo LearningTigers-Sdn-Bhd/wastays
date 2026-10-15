@@ -7,6 +7,15 @@ RSpec.describe HotelExtraCharge do
     expect(extra_charge).to be_valid
   end
 
+  it "allows auto apply only for fixed prices" do
+    extra_charge.auto_apply = true
+    expect(extra_charge).not_to be_valid
+    expect(extra_charge.errors[:auto_apply]).to include("needs a fixed price")
+
+    extra_charge.assign_attributes(pricing_type: "fixed", rate_value: 10)
+    expect(extra_charge).to be_valid
+  end
+
   it "requires the transaction code to belong to the same hotel" do
     extra_charge.transaction_code = build(:transaction_code, hotel: create(:hotel))
 

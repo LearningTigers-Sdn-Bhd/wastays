@@ -186,7 +186,7 @@
                         <% end %>
                       </div>
                       
-                      <%= link_to hotel_path(hotel, request.query_parameters.merge(
+                      <%= link_to hotel_path(hotel.unique_id, hotel.public_id, request.query_parameters.merge(
                                               check_in: Date.current.to_s,
                                               check_out: Date.tomorrow.to_s,
                                               adults: params[:adults].presence || 2,

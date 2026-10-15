@@ -1,7 +1,7 @@
 <% kind = @timestamp_kind.to_s == "check_out" ? "checkout" : "check-in" %>
 <% frame_id = turbo_frame_request_id.presence || "booking_action_sheet_secondary" %>
 <%= turbo_frame_tag frame_id do %>
-  <div data-controller="panels-ui--sheet-frame">
+  <div data-controller="ui--sheet-frame">
     <%= render PanelsUI::Sheet.new(
           id: "add-booking-time-sheet",
           side: :right,
@@ -26,7 +26,7 @@
             <% end %>
           </div>
           <div class="flex items-center justify-end gap-2 border-t border-border px-4 py-3 sm:px-6">
-            <%= render PanelsUI::Button.new(type: :button, variant: :secondary, data: { action: "panels-ui--sheet#close" }) do %>Cancel<% end %>
+            <%= render PanelsUI::Button.new(type: :button, variant: :secondary, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
             <%= render PanelsUI::Button.new(type: :submit, data: { turbo_submits_with: "Saving…" }) do %>Save time<% end %>
           </div>
         <% end %>

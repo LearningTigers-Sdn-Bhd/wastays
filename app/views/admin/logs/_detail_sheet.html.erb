@@ -1,0 +1,28 @@
+<%# Read-only sheet for one log row. fields: [[label, value]]. text: plain text shown in a block. %>
+<% frame_id = turbo_frame_request_id.presence || "log_detail_sheet" %>
+<%= turbo_frame_tag frame_id do %>
+  <div data-controller="ui--sheet-frame">
+    <%= render PanelsUI::Sheet.new(id: "log-detail-sheet", side: :right, size: :lg, title: title, description: description) do |sheet| %>
+      <% sheet.with_body do %>
+        <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 py-2 text-sm">
+          <% fields.each do |label, value| %>
+            <% next if value.blank? %>
+            <dt class="font-medium text-muted-foreground"><%= label %></dt>
+            <dd class="break-words text-foreground"><%= value %></dd>
+          <% end %>
+        </dl>
+        <section class="mt-4 space-y-2" aria-labelledby="log-detail-text-heading">
+          <h3 id="log-detail-text-heading" class="text-sm font-medium"><%= text_label %></h3>
+          <% if text.present? %>
+            <pre class="max-h-[60dvh] overflow-auto whitespace-pre-wrap break-words rounded-md border border-border bg-muted p-3 font-mono text-xs text-foreground"><%= text %></pre>
+          <% else %>
+            <p class="text-sm text-muted-foreground"><%= empty_text %></p>
+          <% end %>
+        </section>
+      <% end %>
+      <% sheet.with_footer do %>
+        <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :secondary, size: :sm, data: { action: "click->ui--sheet#close" }) do %>Close<% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

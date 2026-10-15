@@ -11,7 +11,40 @@ module HotelPortal
         "internal" => "Direct"
       }.freeze
 
-      Result = Struct.new(:start_date, :end_date, :totals, :rows, :source_rows, keyword_init: true)
+      # True when the booking's room is on a day-use rate plan.
+      DAY_USE_BOOKING_SQL = <<~SQL.squish
+        EXISTS (
+          SELECT 1 FROM booking_rooms
+          INNER JOIN rate_plans ON rate_plans.id = booking_rooms.rate_plan_id
+          WHERE booking_rooms.booking_id = bookings.id AND rate_plans.day_use_hours IS NOT NULL
+        ) AS booking_day_use
+      SQL
+
+      Result = Struct.new(
+        :start_date, :end_date, :totals, :rows, :source_rows, :tax_names,
+        :extra_rows, :extra_totals, :extra_tax_names, keyword_init: true
+      ) do
+        # One column per tax, so every table and export reads its columns from here.
+        def headers(label)
+          [ label, "Bookings", "Accommodation", "Day Use", "Room Fees", "Extra Charges", *tax_names, "Total Charges", "Adjustments", "Net Revenue" ]
+        end
+
+        def values(row)
+          [
+            row[:booking_count], row[:accommodation], row[:day_use], row[:room_fees], row[:other_charges],
+            *tax_names.map { |name| row[:taxes].fetch(name, 0.to_d) },
+            row[:total_charges], row[:adjustments], row[:net_revenue]
+          ]
+        end
+
+        def extra_headers
+          [ "Item", "Count", "Amount", *extra_tax_names, "Total Incl. Tax" ]
+        end
+
+        def extra_values(row)
+          [ row[:count], row[:amount], *extra_tax_names.map { |name| row[:taxes].fetch(name, 0.to_d) }, row[:total] ]
+        end
+      end
 
       def initialize(hotel:, start_date:, end_date:, date_preset: nil)
         @hotel = hotel
@@ -21,20 +54,22 @@ module HotelPortal
       end
 
       def call
-        transactions = FolioTransaction.joins(booking_folio: :booking)
+        transactions = FolioTransaction.joins(:source_booking)
                          .where(bookings: { hotel_id: @hotel.id })
                          .where(posting_date: @start_date..@end_date)
+          .where("COALESCE(folio_transactions.metadata->>'internal_folio_movement', 'false') != 'true'")
                          .where(transaction_type: %w[charge adjustment])
                          .select(
                            "folio_transactions.*",
                            "bookings.source as booking_source",
-                           "bookings.id as booking_id"
+                           "bookings.id as booking_id",
+                           DAY_USE_BOOKING_SQL
                          )
 
         accounting = DailyRevenueAccounting.new(transactions)
 
-        daily_stats = Hash.new { |h, k| h[k] = { booking_ids: Set.new }.merge(DailyRevenueAccounting::ZERO_BUCKET) }
-        source_stats = Hash.new { |h, k| h[k] = { booking_ids: Set.new }.merge(DailyRevenueAccounting::ZERO_BUCKET) }
+        daily_stats = Hash.new { |h, k| h[k] = new_stats }
+        source_stats = Hash.new { |h, k| h[k] = new_stats }
 
         transactions.each do |tx|
           date = tx.posting_date
@@ -48,7 +83,15 @@ module HotelPortal
             daily_stats[date][key] += amount
             source_stats[source][key] += amount
           end
+
+          next unless accounting.tax_charge?(tx)
+
+          tax_name = accounting.tax_name_for(tx)
+          daily_stats[date][:taxes][tax_name] += tx.amount
+          source_stats[source][:taxes][tax_name] += tx.amount
         end
+
+        tax_names = (daily_stats.values.flat_map { |stats| stats[:taxes].keys } + enabled_tax_names).uniq.sort
 
         rows = if monthly?
           aggregate_monthly(accounting, daily_stats)
@@ -62,17 +105,70 @@ module HotelPortal
         totals = {
           booking_count: transactions.map(&:booking_id).uniq.size,
           accommodation: rows.sum { |r| r[:accommodation] },
+          day_use: rows.sum { |r| r[:day_use] },
+          room_fees: rows.sum { |r| r[:room_fees] },
           other_charges: rows.sum { |r| r[:other_charges] },
           tax: rows.sum { |r| r[:tax] },
+          taxes: tax_names.index_with { |name| rows.sum { |r| r[:taxes].fetch(name, 0.to_d) } },
           total_charges: rows.sum { |r| r[:total_charges] },
           adjustments: rows.sum { |r| r[:adjustments] },
           net_revenue: rows.sum { |r| r[:net_revenue] }
         }
 
-        Result.new(start_date: @start_date, end_date: @end_date, totals: totals, rows: rows, source_rows: source_rows)
+        extra_rows = extra_charge_rows(accounting, transactions)
+
+        Result.new(
+          start_date: @start_date, end_date: @end_date, totals: totals, rows: rows, source_rows: source_rows,
+          tax_names: tax_names, extra_rows: extra_rows, extra_totals: extra_totals_for(extra_rows),
+          extra_tax_names: extra_rows.flat_map { |row| row[:taxes].keys }.uniq.sort
+        )
       end
 
       private
+
+      # An enabled tax keeps its column when the period has no charge for it, so a zero reads as "none charged".
+      def enabled_tax_names
+        @hotel.transaction_codes.active.where(system_key: %w[sst_tax tourism_tax]).pluck(:name)
+      end
+
+      def new_stats
+        { booking_ids: Set.new, taxes: Hash.new(0.to_d) }.merge(DailyRevenueAccounting::ZERO_BUCKET)
+      end
+
+      # One row per extra charge item. A tax line joins the item that its parent charge belongs to.
+      def extra_charge_rows(accounting, transactions)
+        items = Hash.new { |h, k| h[k] = { count: 0, amount: 0.to_d, taxes: Hash.new(0.to_d) } }
+        item_by_charge_id = {}
+
+        transactions.select { |tx| accounting.extra_charge?(tx) }.each do |tx|
+          name = item_by_charge_id[tx.id] = accounting.item_name_for(tx)
+          items[name][:count] += 1
+          items[name][:amount] += tx.amount
+        end
+
+        transactions.select { |tx| accounting.tax_charge?(tx) }.each do |tx|
+          name = item_by_charge_id[accounting.parent_id_for(tx)]
+          items[name][:taxes][accounting.tax_name_for(tx)] += tx.amount if name
+        end
+
+        items.map { |name, stats| extra_row_for(name, stats) }.sort_by { |row| [ -row[:amount], row[:item] ] }
+      end
+
+      def extra_row_for(name, stats)
+        taxes = stats[:taxes].transform_values { |amount| amount.round(2) }
+        { item: name, count: stats[:count], amount: stats[:amount].round(2), taxes: taxes,
+          total: (stats[:amount] + taxes.values.sum).round(2) }
+      end
+
+      def extra_totals_for(extra_rows)
+        taxes = extra_rows.flat_map { |row| row[:taxes].keys }.uniq.sort
+        {
+          count: extra_rows.sum { |row| row[:count] },
+          amount: extra_rows.sum { |row| row[:amount] },
+          taxes: taxes.index_with { |name| extra_rows.sum { |row| row[:taxes].fetch(name, 0.to_d) } },
+          total: extra_rows.sum { |row| row[:total] }
+        }
+      end
 
       def row_for(accounting, date, raw_stats)
         stats = accounting.with_derived_fields(raw_stats)
@@ -80,8 +176,11 @@ module HotelPortal
           date: date,
           booking_count: stats[:booking_ids].size,
           accommodation: stats[:accommodation].round(2),
+          day_use: stats[:day_use].round(2),
+          room_fees: stats[:room_fees].round(2),
           other_charges: stats[:other_charges].round(2),
           tax: stats[:tax].round(2),
+          taxes: stats[:taxes].transform_values { |amount| amount.round(2) },
           total_charges: stats[:total_charges].round(2),
           adjustments: stats[:adjustments].round(2),
           net_revenue: stats[:net_revenue].round(2)
@@ -110,11 +209,12 @@ module HotelPortal
         each_month_in_range { |month| months << month }
 
         months.map do |month|
-          month_stats = { booking_ids: Set.new }.merge(DailyRevenueAccounting::ZERO_BUCKET)
+          month_stats = new_stats
           daily_stats.each do |date, stats|
             next unless date.beginning_of_month == month
 
             month_stats[:booking_ids].merge(stats[:booking_ids])
+            stats[:taxes].each { |name, amount| month_stats[:taxes][name] += amount }
             DailyRevenueAccounting::ZERO_BUCKET.each_key { |key| month_stats[key] += stats[key] }
           end
           row_for(accounting, month, month_stats)

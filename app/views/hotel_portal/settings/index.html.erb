@@ -9,10 +9,14 @@
     <% case @presenter.active_page %>
     <% when "general" %>
       <%= render "hotel_portal/settings/general_section" %>
+    <% when "ota_logins" %>
+      <%= render "hotel_portal/settings/ota_logins_section" %>
     <% when "boat" %>
       <%= render "hotel_portal/settings/boat_section" %>
     <% when "notifications" %>
       <%= render "hotel_portal/settings/notifications_section" %>
+    <% when "corporate_ta_portal" %>
+      <%= render "hotel_portal/settings/corporate_ta_portal_section" %>
     <% when "banking" %>
       <%= render "hotel_portal/settings/banking_section" %>
     <% when "e_invoice" %>

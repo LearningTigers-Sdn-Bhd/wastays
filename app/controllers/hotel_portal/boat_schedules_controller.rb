@@ -27,6 +27,18 @@ module HotelPortal
       end
     end
 
+    def bulk_update
+      result = BoatSchedules::BulkUpdate.call(hotel: current_hotel, attributes: bulk_slot_params)
+
+      if result.success?
+        count = result.updated_count
+        redirect_to hotel_boat_settings_path(current_hotel),
+          notice: "#{count} boat #{count == 1 ? "slot" : "slots"} updated."
+      else
+        redirect_to hotel_boat_settings_path(current_hotel), alert: result.error
+      end
+    end
+
     def destroy
       @slot.archive!
       redirect_to hotel_boat_settings_path(current_hotel), notice: "Boat slot retired. Existing bookings keep it."
@@ -44,7 +56,15 @@ module HotelPortal
     end
 
     def slot_params
-      params.require(:hotel_boat_schedule).permit(:time, :kind, :has_breakfast, :has_lunch, :has_dinner)
+      params.require(:hotel_boat_schedule).permit(:time, :kind, *HotelBoatSchedule::MEALS.map { |meal| :"has_#{meal}" })
+    end
+
+    # Keyed by slot id, so it can't use `permit` the normal way (the keys
+    # aren't known attribute names). Each row is sliced to the same allowlist
+    # as a single-slot update instead.
+    def bulk_slot_params
+      allowed = HotelBoatSchedule::MEALS.map { |meal| "has_#{meal}" } + [ "time" ]
+      params.fetch(:hotel_boat_schedules, {}).to_unsafe_h.transform_values { |attrs| attrs.slice(*allowed) }
     end
 
     # A new slot starts from the property's meal times, so staff are correcting

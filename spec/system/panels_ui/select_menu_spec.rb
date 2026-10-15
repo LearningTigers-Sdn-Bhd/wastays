@@ -97,7 +97,7 @@ RSpec.describe "PanelsUI::SelectMenu", type: :system do
   it "replaces dynamic choices in both the native select and styled listbox" do
     page.execute_script(<<~JS)
       const root = document.getElementById('#{NATIVE}-select-menu')
-      const controller = window.Stimulus.getControllerForElementAndIdentifier(root, 'panels-ui--select-menu')
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(root, 'ui--select-menu')
       controller.replaceOptions([
         { label: 'Advance purchase', value: 'advance' },
         { label: 'Corporate (unavailable)', value: 'corporate', disabled: true }

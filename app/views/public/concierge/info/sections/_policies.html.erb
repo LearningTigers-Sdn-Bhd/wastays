@@ -1,0 +1,18 @@
+<%# The glance, the cost of a change, then each policy document, house rules
+    first. The stay page puts the glance under its stay card on a wide
+    screen, so here it shows only on a phone (glance_in_summary). %>
+<% guide = @info.policy_guide %>
+<% in_summary = local_assigns[:glance_in_summary] %>
+<div class="guest-aside-layout" data-aside="<%= !in_summary && guide.glance.any? %>">
+  <%= render "public/concierge/info/policy_glance", guide: guide,
+             class: (in_summary ? "md:hidden" : "guest-aside-layout__aside") %>
+
+  <div class="space-y-6">
+    <% guide.documents.each do |document| %>
+      <%= render GuestUI::PolicyCard.new(title: document.title, icon: guide.document_icon(document),
+                                         body: document.content) %>
+    <% end %>
+    <%= render GuestUI::PolicyCard.new(title: guide.changes_title, icon: "calendar-clock",
+                                       terms: guide.changes.map { |change| [ change.label, change.charge, change.note ] }) %>
+  </div>
+</div>

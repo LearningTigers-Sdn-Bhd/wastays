@@ -99,7 +99,20 @@ module HotelPortal
       end
 
       def operational_metadata
-        tag.p(context_label, class: "text-xs text-muted-foreground tabular-nums")
+        tag.p(class: "flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground tabular-nums") do
+          safe_join([ day_use_badge, context_label ].compact)
+        end
+      end
+
+      def day_use_badge
+        return unless @segment.day_use?
+
+        render PanelsUI::Badge.new(
+          label: "Day use · #{@segment.day_use_hours}h",
+          variant: :info,
+          size: :sm,
+          data: { slot: "stay-view-day-use" }
+        )
       end
 
       def heading_indicators
@@ -205,10 +218,12 @@ module HotelPortal
 
       def boat_metadata
         time = @context == :arrival ? @segment.boat_in_at : @segment.boat_out_at
-        return unless time
+        type = @context == :arrival ? @segment.boat_in_type : @segment.boat_out_type
+        return if time.blank? && type.blank?
 
         label = @context == :arrival ? "Boat-in" : "Boat-out"
-        tag.p("#{label} #{format_time(time)}", class: "text-xs text-muted-foreground tabular-nums")
+        display = Boats::Schedule.display(timestamp: time, type: type, zone: time&.time_zone || Time.zone, format: "%H:%M")
+        tag.p("#{label} #{display}", class: "text-xs text-muted-foreground tabular-nums")
       end
 
       def with_time(label, time)

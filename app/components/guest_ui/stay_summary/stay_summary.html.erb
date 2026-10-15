@@ -1,0 +1,22 @@
+<%= render GuestUI::Card.new(class: card_class) do %>
+  <div class="flex items-center justify-between gap-3">
+    <p class="guest-stay-summary__eyebrow"><%= eyebrow %></p>
+    <%= render badge %>
+  </div>
+
+  <%= content_tag heading_tag, property, class: "guest-stay-summary__property" %>
+  <% if location.present? %>
+    <p class="mt-1 text-sm text-muted-foreground"><%= location %></p>
+  <% end %>
+
+  <p class="mt-4 text-sm font-semibold text-foreground"><%= dates %></p>
+  <% if detail.present? %>
+    <p class="mt-1 text-xs font-medium text-muted-foreground"><%= detail %></p>
+  <% end %>
+
+  <%= render GuestUI::BookingRefs.new(reference:, code:) %>
+
+  <% if actions? %>
+    <div class="guest-stay-summary__actions"><%= actions %></div>
+  <% end %>
+<% end %>

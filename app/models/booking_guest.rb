@@ -2,6 +2,9 @@
 
 class BookingGuest < ApplicationRecord
   ROLES = %w[primary additional].freeze
+  BOAT_TYPES = %w[provided charter own].freeze
+  CUSTOM_BOAT_TYPES = %w[charter own].freeze
+  TIMED_BOAT_TYPES = %w[provided charter].freeze
 
   belongs_to :booking
   belongs_to :guest
@@ -21,6 +24,9 @@ class BookingGuest < ApplicationRecord
     conditions: -> { where(role: "primary") }
   }, if: :primary?
   validate :boat_out_after_boat_in
+  validates :boat_in_type, :boat_out_type, inclusion: { in: BOAT_TYPES }, allow_nil: true
+  validates :boat_in_at, presence: true, if: -> { boat_in_type.in?(TIMED_BOAT_TYPES) }
+  validates :boat_out_at, presence: true, if: -> { boat_out_type.in?(TIMED_BOAT_TYPES) }
 
   before_validation :synchronize_role
   before_validation :capture_guest_snapshot, on: :create
@@ -32,11 +38,11 @@ class BookingGuest < ApplicationRecord
   end
 
   def boat_in?
-    boat_in_at.present?
+    boat_in_type.present? || boat_in_at.present?
   end
 
   def boat_out?
-    boat_out_at.present?
+    boat_out_type.present? || boat_out_at.present?
   end
 
   def safely_read_encrypted(attribute)
