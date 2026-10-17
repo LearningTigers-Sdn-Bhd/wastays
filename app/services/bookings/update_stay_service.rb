@@ -142,7 +142,10 @@ module Bookings
           end
 
           # 4. Handle Room Assignment if room number changed or dates changed
-          target_room_number = assigned_room_number.presence || @booking.hotel_snapshot&.dig("room_number")
+          # The booking room is the source of truth. The snapshot copy can lag
+          # behind after a room move and would check the wrong room.
+          target_room_number = assigned_room_number.presence || current_room&.room_number.presence ||
+            @booking.hotel_snapshot&.dig("room_number")
           if target_room_number.present? && (assigned_room_number.present? || dates_changing)
             # Check for locks by others if assigning a NEW room
             if assigned_room_number.present?

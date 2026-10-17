@@ -20,6 +20,7 @@ module Bookings
       BookingRoom.transaction do
         previous_room_number = booking_room.room_number
         booking_room.update!(room_number: @room_number)
+        sync_snapshot_room_number
         ::Bookings::RecordAuditLog.call!(
           auditable: booking_room,
           user: @user,
@@ -39,6 +40,13 @@ module Bookings
     end
 
     private
+
+    # Readers still show the room from the booking snapshot, so keep it equal
+    # to the booking room.
+    def sync_snapshot_room_number
+      snapshot = @booking.hotel_snapshot.is_a?(Hash) ? @booking.hotel_snapshot : {}
+      @booking.update_columns(hotel_snapshot: snapshot.merge("room_number" => @room_number))
+    end
 
     def booking_room
       @booking_room ||= @booking.booking_rooms.first || @booking.booking_rooms.build(

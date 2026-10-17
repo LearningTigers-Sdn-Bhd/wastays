@@ -263,6 +263,18 @@ RSpec.describe Bookings::UpdateStayService do
       expect(guest.reload.check_out.to_date).to eq(Date.current + 1.day)
     end
 
+    it "checks the room the guest holds, not a stale snapshot room, when dates change" do
+      create(:room_status, hotel: hotel, room_type: numbered_type, room_number: "102", status: "ready")
+      guest.update!(hotel_snapshot: { "room_number" => "102" })
+      other = create(:booking, hotel: hotel, status: "confirmed", check_in: Date.current + 1.day, check_out: Date.current + 2.days)
+      create(:booking_room, booking: other, room_type: numbered_type, room_number: "102")
+
+      result = described_class.new(booking: guest, params: { check_out: Date.current + 2.days }).call
+
+      expect(result.success?).to be(true)
+      expect(guest.reload.check_out.to_date).to eq(Date.current + 2.days)
+    end
+
     it "still refuses a move into a different dirty room" do
       create(:room_status, hotel: hotel, room_type: numbered_type, room_number: "102", status: "dirty")
 
