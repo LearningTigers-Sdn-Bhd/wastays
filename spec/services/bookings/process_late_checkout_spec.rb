@@ -8,7 +8,7 @@ RSpec.describe Bookings::ProcessLateCheckout do
   let(:hotel) { create(:hotel) }
   let(:today) { hotel_today(hotel) }
   let(:user) { create(:user, :superadmin) }
-  let(:room_type) { create(:room_type, hotel: hotel, quantity: 10) }
+  let(:room_type) { create(:room_type, hotel: hotel, quantity: 10, room_numbers: (101..110).map(&:to_s)) }
   let(:booking) { create(:booking, hotel: hotel, status: "checked_in", check_in: today, check_out: today + 1.day) }
   let!(:booking_room) { create(:booking_room, booking: booking, room_type: room_type, room_number: "101") }
   let!(:folio) { Folios::Lifecycle::InitializeForBooking.call(booking: booking, user: user) }
