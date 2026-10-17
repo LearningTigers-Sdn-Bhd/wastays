@@ -27,6 +27,15 @@ RSpec.describe Bookings::AssignRoom do
     expect(log.auditable).to eq(booking.booking_rooms.first)
   end
 
+  it "keeps the booking snapshot room number in step with the assigned room" do
+    booking.update!(hotel_snapshot: { "room_number" => "102", "name" => "Hotel" })
+    create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "ready")
+
+    described_class.new(booking: booking, room_number: "101", user: user).call
+
+    expect(booking.reload.hotel_snapshot).to include("room_number" => "101", "name" => "Hotel")
+  end
+
   it "blocks dirty rooms for normal users" do
     create(:room_status, hotel: hotel, room_type: room_type, room_number: "101", status: "dirty")
 
