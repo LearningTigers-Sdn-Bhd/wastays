@@ -1113,6 +1113,8 @@ module HotelPortal
           receipt_number: child.formatted_receipt_number.presence || "—",
           source: format_source(child.source),
           source_account_name: child.hotel_corporate_account&.corporate_account&.name.presence,
+          # A channel manager owns its bookings' source; other locks are explained in the sheet.
+          source_changeable: child.channel_manager_reference.blank?,
           invoice_number: child.formatted_invoice_number.presence || "—",
           folio_account: child.folio_account_reference_display.presence || "—",
           guest_registration: child.formatted_guest_registration_number.presence || "—"

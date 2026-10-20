@@ -1,4 +1,5 @@
 <% rows = presenter.booking_reference_rows %>
+<% can_change_source = current_user.has_permission?("manage_bookings", hotel: current_hotel) %>
 <div>
   <h3 class="text-base font-semibold text-foreground">References</h3>
 
@@ -45,6 +46,13 @@
               <%= row[:source] %>
               <% if row[:source_account_name].present? %>
                 <span class="block text-xs text-muted-foreground"><%= row[:source_account_name] %></span>
+              <% end %>
+              <% if can_change_source && row[:source_changeable] %>
+                <%= link_to "Change",
+                      hotel_booking_action_change_source_path(current_hotel, row[:booking], return_to: hotel_booking_workspace_path(current_hotel, row[:booking], tab: "booking_details", scope: ("booking" if row[:booking].group_booking_id?))),
+                      class: "block text-xs font-medium text-primary hover:underline",
+                      aria: { label: "Change source of booking #{row[:booking_number]}" },
+                      data: { turbo_frame: "booking_action_sheet" } %>
               <% end %>
             </td>
             <td class="tabular-nums"><%= row[:invoice_number] %></td>

@@ -624,6 +624,7 @@ Rails.application.routes.draw do
       match "manage-billing-party/:booking_id", to: "billing_parties#show", via: [ :get, :post, :patch, :delete ], as: :manage_billing_party
       match "remove-guest/:booking_id/:booking_guest_id", to: "guests#remove", via: [ :get, :delete ], as: :remove_guest
       patch "set-primary-guest/:booking_id/:booking_guest_id", to: "guests#set_primary", as: :set_primary_guest
+      match "change-source/:booking_id", to: "sources#show", via: [ :get, :patch ], as: :change_source
       match "internal-notes/:booking_id", to: "internal_notes#show", via: [ :get, :post, :patch ], as: :internal_notes
       match "internal-notes/:booking_id/:note_id/delete", to: "internal_notes#delete", via: [ :get, :delete ], as: :delete_internal_note
     end
