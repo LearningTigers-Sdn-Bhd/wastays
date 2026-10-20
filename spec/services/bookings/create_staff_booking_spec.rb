@@ -130,6 +130,67 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
     expect(booking.reload.hotel_corporate_account_id).to be_nil
   end
 
+  describe "a travel agent reservation" do
+    let(:agent) { create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent") }
+    let(:agent_params) { common_params.merge(source: "travel_agent", travel_agent_account_id: agent.id) }
+
+    it "books under the agent and bills the room charges to them" do
+      result = described_class.new(hotel: hotel, common_params: agent_params, room_rows: room_rows, user: nil).call
+
+      expect(result.errors).to be_empty
+      booking = result.booking.reload
+      expect(booking).to have_attributes(source: "travel_agent", hotel_corporate_account_id: agent.id)
+      agent_folio = booking.booking_folios.find_by!(hotel_corporate_account_id: agent.id)
+      room_code = hotel.transaction_codes.find_by!(system_key: "room_revenue")
+      expect(booking.folio_routing_rules.active.find_by(transaction_code: room_code).target_folio_id).to eq(agent_folio.id)
+    end
+
+    it "puts every room of a group under the agent" do
+      rows = [ { room_type_id: room_type.id, room_number: "" }, { room_type_id: room_type.id, room_number: "" } ]
+
+      result = described_class.new(hotel: hotel, common_params: agent_params, room_rows: rows, user: nil).call
+
+      expect(result.errors).to be_empty
+      expect(result.bookings.map { |booking| booking.reload.hotel_corporate_account_id }).to eq([ agent.id, agent.id ])
+    end
+
+    it "takes the agent over a company picked under Bill to" do
+      company = create(:hotel_corporate_account, hotel: hotel)
+      params = agent_params.merge(hotel_corporate_account_id: company.id)
+
+      booking = described_class.new(hotel: hotel, common_params: params, room_rows: room_rows, user: nil).call.booking
+
+      expect(booking.reload.hotel_corporate_account_id).to eq(agent.id)
+    end
+
+    it "requires an agent" do
+      result = described_class.new(hotel: hotel, common_params: agent_params.except(:travel_agent_account_id), room_rows: room_rows, user: nil).call
+
+      expect(result.errors).to contain_exactly("Choose the travel agent this booking is under.")
+      expect(Booking.where(hotel: hotel)).to be_empty
+    end
+
+    it "refuses an account that is not one of this hotel's active travel agents" do
+      company = create(:hotel_corporate_account, hotel: hotel)
+      suspended = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent", status: "suspended")
+      elsewhere = create(:hotel_corporate_account, account_type: "travel_agent")
+
+      [ company, suspended, elsewhere ].each do |account|
+        result = described_class.new(hotel: hotel, common_params: agent_params.merge(travel_agent_account_id: account.id), room_rows: room_rows, user: nil).call
+        expect(result.errors).to contain_exactly("Choose the travel agent this booking is under.")
+      end
+    end
+
+    it "ignores the agent on a walk-in, which is always recorded as walk_in" do
+      rows = [ { room_type_id: room_type.id, room_number: "101" } ]
+
+      result = described_class.new(hotel: hotel, common_params: agent_params, room_rows: rows, user: nil, booking_type: "walk_in").call
+
+      expect(result.errors).to be_empty
+      expect(result.booking.reload).to have_attributes(source: "walk_in", hotel_corporate_account_id: nil)
+    end
+  end
+
   it "rolls back all rooms when cumulative unassigned reservations exceed inventory" do
     room_type.update!(quantity: 1, room_numbers: %w[101])
     create(:room_inventory, room_type: room_type, date: Date.current, quantity: 1, status: "open")
