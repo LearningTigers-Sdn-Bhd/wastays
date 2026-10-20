@@ -28,7 +28,8 @@ module Bookings
       "pre_checkin_updated" => "stay",
       "guest_added" => "stay",
       "guest_updated" => "stay",
-      "guest_removed" => "stay"
+      "guest_removed" => "stay",
+      "source_changed" => "stay"
     }.freeze
 
     def self.call(**kwargs)
