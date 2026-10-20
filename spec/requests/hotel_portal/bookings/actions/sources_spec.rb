@@ -63,6 +63,64 @@ RSpec.describe "HotelPortal::Bookings::Actions change source", type: :request do
       expect(Nokogiri::HTML(response.body).at_css("select[name='booking[source]']")).to be_nil
     end
 
+    it "offers the hotel's travel agents behind the Travel Agent source" do
+      agent = create(:hotel_corporate_account, hotel:, account_type: "travel_agent")
+      company = create(:hotel_corporate_account, hotel:)
+
+      get hotel_booking_action_change_source_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      panel = Nokogiri::HTML(response.body).at_css("[data-reveal-values='travel_agent']")
+      expect(panel["hidden"]).not_to be_nil
+      values = panel.css("select[name='booking[travel_agent_account_id]'] option").map { |option| option["value"] }
+      expect(values).to include(agent.id.to_s)
+      expect(values).not_to include(company.id.to_s)
+    end
+
+    it "puts the booking under the chosen agent" do
+      agent = create(:hotel_corporate_account, hotel:, account_type: "travel_agent")
+
+      patch hotel_booking_action_change_source_path(hotel, booking),
+        params: { booking: { source: "travel_agent", travel_agent_account_id: agent.id } }, headers: turbo_headers
+
+      expect(response.body).to include('action="complete_sheet"')
+      expect(booking.reload).to have_attributes(source: "travel_agent", hotel_corporate_account_id: agent.id)
+    end
+
+    it "keeps the agent picker open when no agent was chosen" do
+      create(:hotel_corporate_account, hotel:, account_type: "travel_agent")
+
+      patch hotel_booking_action_change_source_path(hotel, booking),
+        params: { booking: { source: "travel_agent" } }, headers: turbo_headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Choose the travel agent this booking is under.")
+      expect(Nokogiri::HTML(response.body).at_css("[data-reveal-values='travel_agent']")["hidden"]).to be_nil
+    end
+
+    it "offers to change the whole group, on by default, from a group room" do
+      group = create(:group_booking, hotel:)
+      booking.update!(group_booking: group, group_position: 1)
+      sibling = create(:booking, hotel:, group_booking: group, group_position: 2, source: "phone")
+
+      get hotel_booking_action_change_source_path(hotel, booking), headers: { "Turbo-Frame" => "booking_action_sheet" }
+      expect(Nokogiri::HTML(response.body).at_css("input[type='checkbox'][name='booking[apply_to_group]'][checked]")).to be_present
+
+      patch hotel_booking_action_change_source_path(hotel, booking),
+        params: { booking: { source: "email", apply_to_group: "1" } }, headers: turbo_headers
+
+      expect([ booking.reload.source, sibling.reload.source ]).to eq(%w[email email])
+    end
+
+    it "names the agent in the audit trail" do
+      agent = create(:hotel_corporate_account, hotel:, account_type: "travel_agent")
+
+      patch hotel_booking_action_change_source_path(hotel, booking),
+        params: { booking: { source: "travel_agent", travel_agent_account_id: agent.id } }
+
+      presenter = HotelPortal::BookingAuditLogPresenter.new(BookingAuditLog.find_by!(action_type: "source_changed"), hotel:)
+      expect(presenter.summary).to eq("#{user.name} changed the booking source from Phone to Travel Agent (#{agent.corporate_account.name}).")
+    end
+
     it "offers the action from the booking overview" do
       get hotel_booking_workspace_path(hotel, booking, tab: "booking_details")
 
