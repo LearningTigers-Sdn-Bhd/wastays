@@ -99,5 +99,18 @@ RSpec.describe HotelPortal::Reports::DailyOccupancyReport, type: :service do
       expect(result.totals[:tax_amount]).to eq(6.to_d)
       expect(result.totals[:total_revenue]).to eq(106.to_d)
     end
+
+    it "includes in-house stays in due_out_detected and checkout_required status in sold metrics" do
+      room_type = create(:room_type, hotel: hotel, quantity: 5)
+      due_out_booking = create(:booking, hotel: hotel, status: "due_out_detected", check_in: start_date, check_out: start_date + 1.day, total_amount: 120)
+      create(:booking_room, booking: due_out_booking, room_type: room_type, subtotal: 120)
+      checkout_required_booking = create(:booking, hotel: hotel, status: "checkout_required", check_in: start_date, check_out: start_date + 1.day, total_amount: 150)
+      create(:booking_room, booking: checkout_required_booking, room_type: room_type, subtotal: 150)
+
+      result = described_class.new(hotel: hotel, start_date: start_date, end_date: start_date).call
+
+      expect(result.rows.first[:rooms_sold]).to eq(2)
+      expect(result.rows.first[:room_revenue]).to eq(270.to_d)
+    end
   end
 end

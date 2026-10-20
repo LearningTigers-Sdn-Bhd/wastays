@@ -143,6 +143,20 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       end
     end
 
+    it "offers only the hotel's active travel agents, hidden until Travel Agent is the source" do
+      agent = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+      company = create(:hotel_corporate_account, hotel: hotel)
+
+      get hotel_booking_action_new_booking_path(hotel), headers: { "Turbo-Frame" => "booking_action_sheet" }
+
+      document = Nokogiri::HTML(response.body)
+      wrapper = document.at_css("[data-booking-room-rows-target='travelAgent']")
+      expect(wrapper["class"]).to include("hidden")
+      values = wrapper.css("select[name='booking[travel_agent_account_id]'] option").map { |option| option["value"] }
+      expect(values).to include(agent.id.to_s)
+      expect(values).not_to include(company.id.to_s)
+    end
+
     it "renders the Quick Booking sheet on the right" do
       return_to = hotel_stay_view_path(hotel, view: "timeline")
       get hotel_booking_action_quick_booking_path(hotel),
@@ -400,6 +414,29 @@ RSpec.describe "HotelPortal::Bookings::Actions booking creation", frozen_time: :
       expect(response).to redirect_to(hotel_booking_workspace_path(hotel, Booking.last))
       expect(flash[:notice]).to eq("Booking created successfully.")
       expect(Booking.last.guest_gender).to eq("female")
+    end
+
+    it "books under the travel agent picked beside the source and bills them" do
+      agent = create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+
+      post hotel_booking_action_new_booking_path(hotel),
+        params: { booking: booking_params.merge(source: "travel_agent", travel_agent_account_id: agent.id) }
+
+      expect(Booking.last).to have_attributes(source: "travel_agent", hotel_corporate_account_id: agent.id)
+    end
+
+    it "keeps the sheet open when a travel agent booking has no agent" do
+      create(:hotel_corporate_account, hotel: hotel, account_type: "travel_agent")
+
+      expect {
+        post hotel_booking_action_new_booking_path(hotel),
+          params: { booking: booking_params.merge(source: "travel_agent") },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      }.not_to change(Booking, :count)
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include("Choose the travel agent this booking is under.")
+      expect(Nokogiri::HTML(response.body).at_css("[data-booking-room-rows-target='travelAgent']")["class"]).not_to include("hidden")
     end
 
     it "takes a booking from a phone number alone" do

@@ -30,16 +30,42 @@
       <%= form_with model: @booking, scope: :booking,
             url: hotel_booking_action_change_source_path(current_hotel, @booking),
             method: :patch,
-            id: form_id do |form| %>
+            id: form_id,
+            class: "space-y-5",
+            data: { controller: "value-reveal" } do |form| %>
         <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
-        <%= render PanelsUI::FormField.new(form:, attribute: :source, label: "Booking source", hint: "Currently recorded as #{HotelPortal::BookingSourcePresenter.new(@booking.source).label}.", required: true) do |field| %>
-          <% field.with_select_menu(booking_source_choices, selected: params.dig(:booking, :source) || @booking.source) %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :source, label: "Booking source", hint: "Currently recorded as #{current_source_label}.", required: true) do |field| %>
+          <% field.with_select_menu(booking_source_choices,
+               selected: selected_source,
+               data: { value_reveal_target: "source", action: "change->value-reveal#update" }) %>
+        <% end %>
+
+        <div class="space-y-2" data-value-reveal-target="panel" data-reveal-values="travel_agent" <%= "hidden" unless selected_source == ::Bookings::ChangeSource::TRAVEL_AGENT %>>
+          <% if @travel_agent_accounts.any? %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :travel_agent_account_id, label: "Travel agent", hint: "The booking goes under this agent, and the room and the package extras bill to them.", required: true) do |field| %>
+              <% field.with_combobox(
+                   @travel_agent_accounts.map { |relationship| [ relationship.corporate_account.name, relationship.id ] },
+                   prompt: "Select agent",
+                   selected: params.dig(:booking, :travel_agent_account_id) || @booking.hotel_corporate_account_id) %>
+            <% end %>
+          <% else %>
+            <p class="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">No active travel agents yet. Add one under Corporate Accounts in settings to put a booking under an agent.</p>
+          <% end %>
+        </div>
+
+        <% if @booking.group_booking_id? %>
+          <%= render PanelsUI::Switch.new(
+                form: form,
+                attribute: :apply_to_group,
+                checked: apply_to_group?,
+                label: "Apply to every room in this group",
+                description: "Off: only this room booking changes.") %>
         <% end %>
       <% end %>
 
       <%= render PanelsUI::Alert.new(tone: :info, title: "Reports and OTA handling follow the new source") do |alert| %>
         <% alert.with_description do %>
-          Moving a booking to or from an online travel agency changes how its commission is reported and keeps its agreed price when the stay dates change. Folios, charges and payments are not changed.
+          Moving a booking to or from an online travel agency changes how its commission is reported and keeps its agreed price when the stay dates change. Folios and payments are not changed, and moving off Travel Agent leaves the agent's billing as it is; change that from the Billing tab.
         <% end %>
       <% end %>
     <% end %>

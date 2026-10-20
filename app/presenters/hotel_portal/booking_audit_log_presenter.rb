@@ -142,7 +142,7 @@ module HotelPortal
       when "guest_removed"
         "#{actor_name} removed a guest from the booking."
       when "source_changed"
-        "#{actor_name} changed the booking source from #{booking_source_label(old_values['source'])} to #{booking_source_label(new_values['source'])}."
+        "#{actor_name} changed the booking source from #{booking_source_label(old_values)} to #{booking_source_label(new_values)}."
       when "refund_completed"
         "#{actor_name} completed the booking refund."
       when "payout_processing"
@@ -277,8 +277,9 @@ module HotelPortal
       log.new_value.is_a?(Hash) ? log.new_value : {}
     end
 
-    def booking_source_label(key)
-      HotelPortal::BookingSourcePresenter.new(key).label
+    def booking_source_label(values)
+      label = HotelPortal::BookingSourcePresenter.new(values["source"]).label
+      values["travel_agent"].present? ? "#{label} (#{values['travel_agent']})" : label
     end
 
     def format_value(field, value)
