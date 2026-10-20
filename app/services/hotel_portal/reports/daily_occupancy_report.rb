@@ -5,7 +5,7 @@ module HotelPortal
     class DailyOccupancyReport
       Result = Struct.new(:start_date, :end_date, :rows, :totals, keyword_init: true)
 
-      SOLD_STATUSES = %w[confirmed checked_in completed].freeze
+      SOLD_STATUSES = %w[confirmed checked_in due_out_detected checkout_required completed].freeze
 
       def initialize(hotel:, start_date:, end_date:, date_preset: nil)
         @hotel = hotel
