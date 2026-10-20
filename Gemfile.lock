@@ -317,7 +317,7 @@ GEM
       racc (~> 1.4)
     openssl (4.0.2)
     ostruct (0.6.3)
-    pagy (43.7.0)
+    pagy (43.8.0)
       json
       uri
       yaml
@@ -577,7 +577,7 @@ GEM
       unicode-emoji (~> 4.1)
     unicode-emoji (4.2.0)
     uniform_notifier (1.18.0)
-    uri (1.1.1)
+    uri (1.1.2)
     useragent (0.16.11)
     view_component (4.15.0)
       actionview (>= 7.1.0)
@@ -640,7 +640,7 @@ DEPENDENCIES
   neighbor (~> 1.2)
   nokogiri (>= 1.19.3)
   openssl (~> 4.0)
-  pagy (~> 43.7.0)
+  pagy (~> 43.8.0)
   parallel_tests
   pdf-reader (~> 2.12)
   pg (~> 1.7)
