@@ -93,6 +93,7 @@ module HotelPortal
         "guest_added" => "Guest added",
         "guest_updated" => "Guest details updated",
         "guest_removed" => "Guest removed",
+        "source_changed" => "Booking source changed",
         "convert" => "Quote converted into booking",
         "expire" => "Quote expired"
       }.fetch(action_type, action_type.to_s.humanize)
@@ -140,6 +141,8 @@ module HotelPortal
         "#{actor_name} updated guest details."
       when "guest_removed"
         "#{actor_name} removed a guest from the booking."
+      when "source_changed"
+        "#{actor_name} changed the booking source from #{booking_source_label(old_values['source'])} to #{booking_source_label(new_values['source'])}."
       when "refund_completed"
         "#{actor_name} completed the booking refund."
       when "payout_processing"
@@ -272,6 +275,10 @@ module HotelPortal
 
     def new_values
       log.new_value.is_a?(Hash) ? log.new_value : {}
+    end
+
+    def booking_source_label(key)
+      HotelPortal::BookingSourcePresenter.new(key).label
     end
 
     def format_value(field, value)

@@ -53,7 +53,9 @@ RSpec.describe "Agent payment hold lifecycle", type: :integration do
     )
   end
 
-  let(:booked_at) { Time.zone.parse("2026-10-01 09:00") }
+  # Relative to today: the hotel's business date is opened at the real clock, so
+  # a fixed date eventually puts the arrival in the past and every booking fails.
+  let(:booked_at) { 1.day.from_now.change(hour: 9) }
   let(:check_in) { booked_at.to_date + 14 }
   let(:check_out) { check_in + 2 }
 
