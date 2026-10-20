@@ -70,6 +70,27 @@ RSpec.describe Bookings::ChangeSource do
       expect(log.new_value).to eq("source" => "travel_agent", "travel_agent" => agent.corporate_account.name)
     end
 
+    it "bills the package extras to the agent too" do
+      jetty_fee = create(:hotel_extra_charge, hotel:, bill_to_travel_agent: true)
+      cake = create(:hotel_extra_charge, hotel:)
+
+      described_class.call(booking:, actor:, source: "travel_agent", travel_agent_account_id: agent.id)
+
+      routed = booking.folio_routing_rules.active.to_h { |rule| [ rule.transaction_code_id, rule.target_folio.hotel_corporate_account_id ] }
+      expect(routed).to include(jetty_fee.transaction_code_id => agent.id)
+      expect(routed).not_to have_key(cake.transaction_code_id)
+    end
+
+    it "leaves a posted package extra for the Billing tab" do
+      jetty_fee = create(:hotel_extra_charge, hotel:, bill_to_travel_agent: true)
+      folio = create(:booking_folio, booking:, hotel:)
+      create(:folio_transaction, booking_folio: folio, transaction_code: jetty_fee.transaction_code)
+
+      result = described_class.call(booking:, actor:, source: "travel_agent", travel_agent_account_id: agent.id)
+
+      expect(result.errors).to contain_exactly("Charges the agent pays for have already been posted. Move them to the agent from the Billing tab.")
+    end
+
     it "requires an active travel agent of this hotel" do
       company = create(:hotel_corporate_account, hotel:)
 
@@ -105,7 +126,7 @@ RSpec.describe Bookings::ChangeSource do
 
       result = described_class.call(booking:, actor:, source: "travel_agent", travel_agent_account_id: agent.id)
 
-      expect(result.errors).to contain_exactly("Its room charges have already been posted. Move them to the agent from the Billing tab.")
+      expect(result.errors).to contain_exactly("Charges the agent pays for have already been posted. Move them to the agent from the Billing tab.")
       expect(booking.reload).to have_attributes(source: "phone", hotel_corporate_account_id: nil)
     end
 

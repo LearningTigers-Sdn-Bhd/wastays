@@ -71,6 +71,9 @@
                   <% if extra_charge.transaction_code.system_required? %>
                     <span class="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">System</span>
                   <% end %>
+                  <% if extra_charge.bill_to_travel_agent? %>
+                    <%= render PanelsUI::Badge.new(label: "Agent package", variant: :info, size: :sm) %>
+                  <% end %>
                 </div>
                 <p class="mt-0.5 max-w-xs truncate text-xs text-muted-foreground"><%= extra_charge.description.presence || "No description" %></p>
               </td>

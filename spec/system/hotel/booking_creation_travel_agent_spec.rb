@@ -52,7 +52,7 @@ RSpec.describe "Choosing a travel agent on the New Booking sheet", type: :system
     set_native_value("select[name='booking[source]']", "travel_agent")
 
     expect(page).to have_css("[data-booking-room-rows-target='travelAgent']", visible: :visible)
-    expect(page).to have_content("Room charges bill to the travel agent chosen under Booking source.")
+    expect(page).to have_content("The room and the package extras bill to the travel agent chosen under Booking source.")
     expect(page).to have_no_css("[data-booking-room-rows-target='billTo']", visible: :visible)
 
     set_native_value("select[name='booking[booking_type]']", "walk_in")

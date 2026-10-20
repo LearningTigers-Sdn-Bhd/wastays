@@ -13,7 +13,7 @@
     <p class="mt-1 text-sm text-muted-foreground">Who the charges bill to, and how the money is taken.</p>
   </div>
 
-  <p class="hidden rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground" data-booking-room-rows-target="travelAgentBilling">Room charges bill to the travel agent chosen under Booking source. The guest remains a billing party for incidentals.</p>
+  <p class="hidden rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground" data-booking-room-rows-target="travelAgentBilling">The room and the package extras bill to the travel agent chosen under Booking source. The guest pays for everything else.</p>
 
   <div class="space-y-4" data-booking-room-rows-target="billTo">
   <%= render PanelsUI::FormField.new(form: f, attribute: :bill_to, label: "Bill to", class: "w-full min-w-0 max-w-full") do |field| %>

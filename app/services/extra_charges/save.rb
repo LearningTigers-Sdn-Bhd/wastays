@@ -54,6 +54,7 @@ module ExtraCharges
         percentage_basis: (@attributes[:percentage_basis] if @attributes[:pricing_type] == "percentage"),
         allow_amount_override: allow_amount_override,
         auto_apply: ActiveModel::Type::Boolean.new.cast(@attributes[:auto_apply]) || false,
+        bill_to_travel_agent: ActiveModel::Type::Boolean.new.cast(@attributes[:bill_to_travel_agent]) || false,
         charge_children: ActiveModel::Type::Boolean.new.cast(@attributes.fetch(:charge_children, true)),
         position: @attributes[:position].presence || @extra_charge.position || 0
       )

@@ -145,6 +145,33 @@ RSpec.describe Bookings::CreateStaffBooking, frozen_time: :business_day do
       expect(booking.folio_routing_rules.active.find_by(transaction_code: room_code).target_folio_id).to eq(agent_folio.id)
     end
 
+    it "bills the package extras to the agent and leaves the rest with the guest" do
+      jetty_fee = create(:hotel_extra_charge, hotel: hotel, pricing_type: "fixed", rate_value: 10, charging_unit: "per_person",
+        allow_amount_override: false, auto_apply: true, bill_to_travel_agent: true)
+      cake = create(:hotel_extra_charge, hotel: hotel, transaction_code: create(:transaction_code, hotel: hotel, kind: "charge", category: "fb"))
+      rows = [ { room_type_id: room_type.id, room_number: "", adults: 2 } ]
+
+      result = described_class.new(hotel: hotel, common_params: agent_params, room_rows: rows, user: nil).call
+
+      expect(result.errors).to be_empty
+      booking = result.booking.reload
+      agent_folio = booking.booking_folios.find_by!(hotel_corporate_account_id: agent.id)
+      routed = booking.folio_routing_rules.active.to_h { |rule| [ rule.transaction_code_id, rule.target_folio_id ] }
+      expect(routed).to include(jetty_fee.transaction_code_id => agent_folio.id)
+      expect(routed).not_to have_key(cake.transaction_code_id)
+      expect(agent_folio.folio_forecasted_charges.forecast.scheduled_extra_charges.sole.metadata).to include("extra_charge_id" => jetty_fee.id)
+      expect(booking.booking_folio.folio_forecasted_charges.forecast.scheduled_extra_charges).to be_empty
+    end
+
+    it "does not bill package extras to a company picked under Bill to" do
+      jetty_fee = create(:hotel_extra_charge, hotel: hotel, bill_to_travel_agent: true)
+      company = create(:hotel_corporate_account, hotel: hotel)
+
+      booking = described_class.new(hotel: hotel, common_params: common_params.merge(hotel_corporate_account_id: company.id), room_rows: room_rows, user: nil).call.booking
+
+      expect(booking.folio_routing_rules.active.where(transaction_code_id: jetty_fee.transaction_code_id)).to be_empty
+    end
+
     it "puts every room of a group under the agent" do
       rows = [ { room_type_id: room_type.id, room_number: "" }, { room_type_id: room_type.id, room_number: "" } ]
 

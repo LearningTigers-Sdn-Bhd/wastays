@@ -50,6 +50,23 @@ RSpec.describe "HotelPortal::ExtraCharges", type: :request do
     expect(extra_charge).to have_attributes(pricing_type: "fixed", rate_value: 80.to_d)
   end
 
+  it "includes a charge in travel agent packages and marks it in the registry" do
+    post hotel_extra_charges_path(hotel), params: {
+      hotel_extra_charge: {
+        name: "Jetty Fee", code: "jetty", category: "other", pricing_type: "fixed", rate_value: "15",
+        charging_unit: "per_person", allow_amount_override: "0", bill_to_travel_agent: "1", active: "1", tax_rule_keys: []
+      }
+    }
+
+    expect(hotel.hotel_extra_charges.order(:id).last).to be_bill_to_travel_agent
+
+    get hotel_extra_charges_path(hotel)
+    expect(response.body).to include("Agent package")
+
+    get new_hotel_extra_charge_path(hotel), headers: { "Turbo-Frame" => "settings_action_sheet" }
+    expect(response.body).to include("Include in travel agent packages")
+  end
+
   it "rejects codes longer than ten characters without truncating them" do
     expect {
       post hotel_extra_charges_path(hotel), params: {

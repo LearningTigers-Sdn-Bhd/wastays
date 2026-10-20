@@ -11,9 +11,10 @@ module Bookings
   # issued e-invoices were all made against it. Those bookings are refused.
   #
   # A Travel Agent source names the agent, the same as on the New Booking sheet:
-  # the booking is put under that agent and its room charges bill to them. Only
-  # charges still to come can be routed, so a booking whose room charges have
-  # already posted is left for the Billing tab. Moving off Travel Agent leaves
+  # the booking is put under that agent and its package (the room and the
+  # hotel's package extras) bills to them. Only charges still to come can be
+  # routed, so a booking whose package charges have already posted is left for
+  # the Billing tab. Moving off Travel Agent leaves
   # the agent's billing alone; that is a Billing tab decision too.
   #
   # From a group room, `apply_to_group` corrects every room of the group at once.
@@ -88,9 +89,9 @@ module Bookings
     end
 
     def bill_agent!(booking)
-      refuse!(booking, "Its room charges have already been posted. Move them to the agent from the Billing tab.") if room_charges_posted?(booking)
+      refuse!(booking, "Charges the agent pays for have already been posted. Move them to the agent from the Billing tab.") if package_charges_posted?(booking)
 
-      result = Folios::Routing::BillRoomChargesToCompany.call(booking:, actor: @actor, hotel_corporate_account_id: agent.id)
+      result = Folios::Routing::BillTravelAgentPackage.call(booking:, actor: @actor, hotel_corporate_account_id: agent.id)
       refuse!(booking, result.error) unless result.success?
 
       # The corporate portal lists a booking by this column, not by the billing party.
@@ -126,9 +127,9 @@ module Bookings
         .includes(:corporate_account).find_by(id: @travel_agent_account_id)
     end
 
-    def room_charges_posted?(booking)
-      room_code = TransactionCodes::Resolver.for(booking.hotel).room_revenue
-      room_code.present? && FolioTransaction.where(booking_folio: booking.booking_folios, transaction_code: room_code).exists?
+    def package_charges_posted?(booking)
+      @package_codes ||= Folios::Routing::BillTravelAgentPackage.codes_for(booking.hotel)
+      FolioTransaction.where(booking_folio: booking.booking_folios, transaction_code: @package_codes).exists?
     end
 
     def audit_values(booking)

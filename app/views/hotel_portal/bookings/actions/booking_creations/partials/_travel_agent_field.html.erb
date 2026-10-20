@@ -6,7 +6,7 @@
 
 <div class="col-span-full <%= "hidden" unless local_assigns.fetch(:visible) %>" data-booking-room-rows-target="travelAgent">
   <% if travel_agent_accounts.any? %>
-    <%= render PanelsUI::FormField.new(form: f, attribute: :travel_agent_account_id, label: "Travel agent", hint: "Room charges bill to this agent.", class: "w-full min-w-0 max-w-full") do |field| %>
+    <%= render PanelsUI::FormField.new(form: f, attribute: :travel_agent_account_id, label: "Travel agent", hint: "The room and the package extras bill to this agent.", class: "w-full min-w-0 max-w-full") do |field| %>
       <% field.with_combobox(
            travel_agent_accounts.map { |relationship| [relationship.corporate_account.name, relationship.id] },
            prompt: "Select agent",

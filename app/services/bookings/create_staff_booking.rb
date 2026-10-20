@@ -259,16 +259,22 @@ module Bookings
 
     # Bill room charges to the selected billing party. Room revenue is
     # *routed* to the party's folio; the guest's primary folio is never
-    # reassigned, so it keeps incidentals and tourism tax.
+    # reassigned, so it keeps incidentals and tourism tax. A travel agent is
+    # billed its package instead: the room and the hotel's package extras.
     def bill_room_charges_to_company!(bookings)
       account_id = @hotel_corporate_account_id
       return if account_id.blank?
 
       bookings.each do |booking|
-        result = Folios::Routing::BillRoomChargesToCompany.call(
-          booking: booking, actor: @user, hotel_corporate_account_id: account_id,
-          bill_tourism_tax_to_company: @bill_tourism_tax_to_company
-        )
+        result =
+          if travel_agent_booking?
+            Folios::Routing::BillTravelAgentPackage.call(booking: booking, actor: @user, hotel_corporate_account_id: account_id)
+          else
+            Folios::Routing::BillRoomChargesToCompany.call(
+              booking: booking, actor: @user, hotel_corporate_account_id: account_id,
+              bill_tourism_tax_to_company: @bill_tourism_tax_to_company
+            )
+          end
         raise CreationFailed, result.error unless result.success?
 
         # The corporate portal lists a booking by this column, not by the billing party.

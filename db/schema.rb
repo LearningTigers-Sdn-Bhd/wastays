@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_13_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "vector"
@@ -1679,6 +1679,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_13_100000) do
   create_table "hotel_extra_charges", force: :cascade do |t|
     t.boolean "allow_amount_override", default: true, null: false
     t.boolean "auto_apply", default: false, null: false
+    t.boolean "bill_to_travel_agent", default: false, null: false
     t.boolean "charge_children", default: true, null: false
     t.string "charging_unit", default: "per_item", null: false
     t.datetime "created_at", null: false

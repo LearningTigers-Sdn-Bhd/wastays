@@ -42,7 +42,7 @@
 
         <div class="space-y-2" data-value-reveal-target="panel" data-reveal-values="travel_agent" <%= "hidden" unless selected_source == ::Bookings::ChangeSource::TRAVEL_AGENT %>>
           <% if @travel_agent_accounts.any? %>
-            <%= render PanelsUI::FormField.new(form:, attribute: :travel_agent_account_id, label: "Travel agent", hint: "The booking goes under this agent and its room charges bill to them.", required: true) do |field| %>
+            <%= render PanelsUI::FormField.new(form:, attribute: :travel_agent_account_id, label: "Travel agent", hint: "The booking goes under this agent, and the room and the package extras bill to them.", required: true) do |field| %>
               <% field.with_combobox(
                    @travel_agent_accounts.map { |relationship| [ relationship.corporate_account.name, relationship.id ] },
                    prompt: "Select agent",
