@@ -72,6 +72,33 @@ RSpec.describe HotelPortal::Reports::DailyReportChargeRegister do
     expect(row).to have_attributes(tax_amount: 38.40.to_d, tax_transaction_ids: [ sst.id ])
   end
 
+  it "splits linked taxes by their recorded names and sums repeated tax types" do
+    charge = create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+      category: "accommodation", amount: 480, posting_date: date)
+    tourism_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
+    custom_tax = create(:hotel_tax, hotel: hotel, name: "Heritage Fee", code: "HERITAGE", enabled: true)
+    tax_transactions = [ [ sst_code, 20 ], [ sst_code, 18.40 ], [ tourism_code, 10 ], [ custom_tax.transaction_code, 2 ] ].map do |code, amount|
+      create(:folio_transaction, booking_folio: folio, transaction_code: code,
+        category: "tax", amount: amount, posting_date: date,
+        metadata: { parent_folio_transaction_id: charge.id })
+    end
+
+    row = described_class.new(transactions: [ charge, *tax_transactions ]).call.rows.sole
+
+    expect(row.taxes).to eq(sst_code.name => 38.40.to_d, tourism_code.name => 10.to_d, "Heritage Fee" => 2.to_d)
+    expect(row.taxes.values.sum).to eq(row.tax_amount)
+    expect(row.total_amount).to eq(530.40.to_d)
+  end
+
+  it "returns an empty tax split for an untaxed charge" do
+    charge = create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
+      category: "accommodation", amount: 480, posting_date: date)
+
+    row = described_class.new(transactions: [ charge ]).call.rows.sole
+
+    expect(row.taxes).to eq({})
+  end
+
   it "matches nightly tax by booking, stay date, and source transaction code" do
     charge = create(:folio_transaction, booking_folio: folio, transaction_code: room_code,
       category: "accommodation", amount: 480, posting_date: date,

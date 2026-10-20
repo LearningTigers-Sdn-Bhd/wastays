@@ -22,6 +22,14 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     create(:folio_transaction, booking_folio: folio, transaction_code: sst_code,
       category: "tax", amount: 38.40, posting_date: start_date,
       metadata: { parent_folio_transaction_id: room_charge.id, tax_line: { type: "sst" } })
+    tourism_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
+    create(:folio_transaction, booking_folio: folio, transaction_code: tourism_code,
+      category: "tax", amount: 10, posting_date: start_date,
+      metadata: { parent_folio_transaction_id: room_charge.id })
+    heritage_tax = create(:hotel_tax, hotel: hotel, name: "Heritage Fee", code: "HERITAGE", enabled: true)
+    create(:folio_transaction, booking_folio: folio, transaction_code: heritage_tax.transaction_code,
+      category: "tax", amount: 2, posting_date: start_date,
+      metadata: { parent_folio_transaction_id: room_charge.id })
     create(:folio_transaction, booking_folio: folio, transaction_type: "adjustment",
       category: "discount", amount: -20, posting_date: start_date)
     bank_code = hotel.transaction_codes.find_by!(system_key: "bank_payment")
@@ -113,19 +121,30 @@ RSpec.describe HotelPortal::Reports::DailyReportPdfExportService do
     expect(revenue).to include("BOOKINGS ENGAGED", "TOTAL CHARGES", "NET REVENUE")
     expect(revenue).not_to include("Activity By Payment Mode", "Cashier Activity")
     register_table = charge_register_tables.sole
+    tax_names = [ sst_code.name, tourism_code.name, heritage_tax.name ].sort
     expect(register_table).to include(
-      headers: [ "Date & Time", "Service / Code", "Booking / Folio", "Guest / Room Details", "Status", "Base Amount", "Tax", "Total Amount" ],
+      headers: [ "Date & Time", "Service / Code", "Booking / Folio", "Guest / Room Details", "Status", "Base Amount", *tax_names, "Total Amount" ],
       rows: a_kind_of(Array),
-      numeric_columns: [ 5, 6, 7 ],
+      numeric_columns: [ 5, 6, 7, 8, 9 ],
       total_row: 4,
-      column_widths: [ 65, 125, 125, 115, 60, 84, 86, 90 ]
+      overflow: :truncate
     )
+    margins = HotelPortal::Reports::Exports::PdfTheme::PAGE_MARGIN
+    page = Prawn::Document.new(page_size: "A4", page_layout: :landscape, margin: margins)
+    expect(register_table.fetch(:column_widths).sum).to be_within(0.01).of(page.bounds.width)
     register_rows = register_table.fetch(:rows)
     room_row = register_rows.find { |row| row[5] == "MYR 480.00" }
-    expect(room_row).to include("MYR 480.00", "MYR 38.40", "MYR 518.40")
+    tax_amounts = { sst_code.name => "MYR 38.40", tourism_code.name => "MYR 10.00", heritage_tax.name => "MYR 2.00" }
+    tax_names.each_with_index do |name, index|
+      expect(room_row[6 + index]).to eq(tax_amounts.fetch(name))
+    end
+    expect(room_row.last).to eq("MYR 530.40")
     negative_row_index = register_rows.index { |row| row[5] == "MYR -20.00" }
-    expect(register_table.fetch(:negative_cells)).to include([ negative_row_index, 5 ], [ negative_row_index, 7 ])
-    expect(register_rows.last).to eq([ "Total", nil, nil, nil, nil, "MYR 660.00", "MYR 38.40", "MYR 698.40" ])
+    expect(register_table.fetch(:negative_cells)).to include([ negative_row_index, 5 ], [ negative_row_index, 9 ])
+    expect(register_rows[negative_row_index][6, 3]).to eq([ "MYR 0.00" ] * 3)
+    expect(register_rows.last).to eq([ "Total", nil, nil, nil, nil, "MYR 660.00", *tax_names.map { |name| tax_amounts.fetch(name) }, "MYR 710.40" ])
+    register_text = revenue.split("Revenue Register", 2).last
+    expect(register_text).to include(*tax_names, "530.40", "710.40"), register_text
     expect(register_rows.flatten.compact.join(" ")).not_to include("TAX_SST")
     expect(register_rows.flatten.compact.join(" ")).to include("G01 · Deluxe King")
 

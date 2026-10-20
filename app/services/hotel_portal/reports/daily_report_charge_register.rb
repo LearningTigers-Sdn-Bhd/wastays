@@ -140,6 +140,13 @@ module HotelPortal
           tax_transactions.sum { |transaction| transaction.amount.to_d }
         end
 
+        def taxes
+          accounting = DailyRevenueAccounting.new(tax_transactions)
+          tax_transactions.each_with_object(Hash.new(0.to_d)) do |transaction, amounts|
+            amounts[accounting.tax_name_for(transaction)] += transaction.amount.to_d
+          end
+        end
+
         def total_amount
           signed_amount + tax_amount
         end

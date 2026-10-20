@@ -1624,6 +1624,11 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           category: "tax", amount: 38.40, posting_date: start_date,
           metadata: { parent_folio_transaction_id: charge.id, tax_line: { type: "sst" } })
 
+        tourism_code = hotel.transaction_codes.find_by!(system_key: "tourism_tax")
+        create(:folio_transaction, booking_folio: folio, transaction_code: tourism_code,
+          category: "tax", amount: 10, posting_date: start_date,
+          metadata: { parent_folio_transaction_id: charge.id, tax_line: { type: "tourism" } })
+
         get daily_report_hotel_reports_path(hotel, tab: "revenue",
           start_date: start_date.to_s, end_date: start_date.to_s)
 
@@ -1633,14 +1638,16 @@ RSpec.describe "HotelPortal::Reports", type: :request do
 
         expect(rows.size).to eq(1)
         expect(headers).to eq(
-          [ "Date", "Service", "Booking / folio", "Guest", "Status", "Base amount", "Tax", "Total amount" ]
+          [ "Date", "Service", "Booking / folio", "Guest", "Status", "Base amount",
+            *[ sst_code.name, tourism_code.name ].sort, "Total amount" ]
         )
         expect(rows.sole.css("td")[1].text.squish).to eq("Room Revenue ROOM")
         expect(rows.sole.css("td")[3].text.squish).to eq("#{booking.guest_name} G01 · Deluxe King")
         expect(rows.sole.css("td")[3].at_css("span")["class"].split).to include("whitespace-nowrap")
         expect(rows.sole.css("td")[5].text.squish).to eq("MYR 480.00")
-        expect(rows.sole.css("td")[6].text.squish).to eq("MYR 38.40")
-        expect(rows.sole.css("td")[7].text.squish).to eq("MYR 518.40")
+        expect(rows.sole.css("td")[headers.index(sst_code.name)].text.squish).to eq("MYR 38.40")
+        expect(rows.sole.css("td")[headers.index(tourism_code.name)].text.squish).to eq("MYR 10.00")
+        expect(rows.sole.css("td").last.text.squish).to eq("MYR 528.40")
         expect(rows.sole.text).not_to include("TAX_SST")
         expect(document.at_css("#revenue-register-heading").parent.text.squish).to include("Revenue register", "1 transaction")
       end
@@ -1687,11 +1694,11 @@ RSpec.describe "HotelPortal::Reports", type: :request do
           start_date: start_date.to_s, end_date: start_date.to_s)
 
         row = Nokogiri::HTML(response.body).at_css('[data-testid="charge-register-row"]')
-        amount_cells = row.css("td").to_a.last(3)
+        amount_cells = row.css("td").to_a.drop(5)
 
         expect(amount_cells[0]["class"]).to include("text-destructive")
-        expect(amount_cells[1]["class"]).not_to include("text-destructive")
-        expect(amount_cells[2]["class"]).to include("text-destructive")
+        expect(amount_cells[1...-1]).to all(satisfy { |cell| !cell["class"].include?("text-destructive") })
+        expect(amount_cells.last["class"]).to include("text-destructive")
       end
 
       it "keeps attached tax when filtering the Charge Register by category" do
