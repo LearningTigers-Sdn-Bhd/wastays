@@ -1,0 +1,47 @@
+<% form_id = "booking-source-form" %>
+<% footer = capture do %>
+  <div class="flex w-full items-center justify-end gap-2">
+    <%= render PanelsUI::Button.new(as: :button, type: :button, variant: :ghost, data: { action: "ui--sheet#close" }) do %>Cancel<% end %>
+    <% unless @locked_reason %>
+      <%= render PanelsUI::Button.new(as: :button, type: :submit, form: form_id, data: { turbo_submits_with: "Saving…" }) do %>Save source<% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<%= render "hotel_portal/bookings/actions/shared/sheet",
+      id: "booking-source-sheet",
+      title: "Change booking source",
+      description: @booking.guest_name,
+      side: :right,
+      size: :md,
+      footer: footer do %>
+  <div class="space-y-5">
+    <% if @errors.present? %>
+      <%= render PanelsUI::Alert.new(tone: :destructive, title: "Source could not be changed", role: :alert) do |alert| %>
+        <% alert.with_description { @errors.to_sentence } %>
+      <% end %>
+    <% end %>
+
+    <% if @locked_reason %>
+      <%= render PanelsUI::Alert.new(tone: :warning, title: "The source of this booking cannot be changed") do |alert| %>
+        <% alert.with_description { @locked_reason } %>
+      <% end %>
+    <% else %>
+      <%= form_with model: @booking, scope: :booking,
+            url: hotel_booking_action_change_source_path(current_hotel, @booking),
+            method: :patch,
+            id: form_id do |form| %>
+        <%= hidden_field_tag :return_to, @return_to if @return_to.present? %>
+        <%= render PanelsUI::FormField.new(form:, attribute: :source, label: "Booking source", hint: "Currently recorded as #{HotelPortal::BookingSourcePresenter.new(@booking.source).label}.", required: true) do |field| %>
+          <% field.with_select_menu(booking_source_choices, selected: params.dig(:booking, :source) || @booking.source) %>
+        <% end %>
+      <% end %>
+
+      <%= render PanelsUI::Alert.new(tone: :info, title: "Reports and OTA handling follow the new source") do |alert| %>
+        <% alert.with_description do %>
+          Moving a booking to or from an online travel agency changes how its commission is reported and keeps its agreed price when the stay dates change. Folios, charges and payments are not changed.
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
