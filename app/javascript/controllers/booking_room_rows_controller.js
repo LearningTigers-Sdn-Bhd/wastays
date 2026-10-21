@@ -3,6 +3,8 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   static targets = [
     "rows", "row", "checkIn", "checkOut", "nights", "bookingType", "backdateFields", "corporate", "guestCountry",
+    // Travel agent: picked under the source, and billed in place of Bill to.
+    "source", "travelAgent", "billTo", "travelAgentBilling",
     // Collection switches.
     "tourismTaxCollection", "depositCollection", "collectPayment", "tourismTaxCollected", "depositEnabled", "depositAmount",
     // Billing summary rows.
@@ -430,6 +432,7 @@ export default class extends Controller {
     const bookingType = this.bookingType()
     if (this.hasBackdateFieldsTarget) this.backdateFieldsTarget.classList.toggle("hidden", bookingType !== "backdated_check_in")
     this.toggleBookingModeSections(bookingType)
+    this.toggleTravelAgent()
     this.updateRoomRequirements()
   }
 
@@ -558,6 +561,14 @@ export default class extends Controller {
     if (!this.deferredRoomSelectionAllowed()) return "Select room"
 
     return this.autoAssignEnabledValue ? "Auto-assign" : "Select room later"
+  }
+
+  // Only a reservation keeps its source: walk-ins are always recorded as walk_in.
+  toggleTravelAgent() {
+    const agent = this.hasSourceTarget && this.readValue(this.sourceTarget) === "travel_agent" && this.bookingType() === "reservation"
+    if (this.hasTravelAgentTarget) this.travelAgentTarget.classList.toggle("hidden", !agent)
+    if (this.hasBillToTarget) this.billToTarget.classList.toggle("hidden", agent)
+    if (this.hasTravelAgentBillingTarget) this.travelAgentBillingTarget.classList.toggle("hidden", !agent)
   }
 
   toggleCorporate(event) {

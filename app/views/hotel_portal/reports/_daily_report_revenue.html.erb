@@ -139,6 +139,8 @@
 </section>
 
 <section class="space-y-3" aria-labelledby="revenue-register-heading">
+  <% register_tax_names = (tax_names + @charge_register_result.rows.flat_map { |row| row.taxes.keys }).uniq.sort %>
+  <% register_colspan = 7 + register_tax_names.size %>
   <div class="flex items-center justify-between gap-4">
     <h2 id="revenue-register-heading" class="text-base font-semibold text-foreground">Revenue register</h2>
     <p class="text-sm text-muted-foreground"><%= @charge_register_count %> transaction<%= "s" unless @charge_register_count == 1 %></p>
@@ -153,7 +155,7 @@
       ) do |table| %>
     <% table.with_header do %>
       <tr>
-        <% ["Date", "Service", "Booking / folio", "Guest", "Status", "Base amount", "Tax", "Total amount"].each_with_index do |heading, index| %>
+        <% ["Date", "Service", "Booking / folio", "Guest", "Status", "Base amount", *register_tax_names, "Total amount"].each_with_index do |heading, index| %>
           <th scope="col" class="<%= index >= 5 ? "text-right" : "text-left" %>"><%= heading %></th>
         <% end %>
       </tr>
@@ -163,7 +165,7 @@
         <% report_rows_grouped_by_month(@charge_register_rows, date_preset: @date_preset, &:posting_date).each do |month, rows| %>
           <% if month %>
             <tr class="bg-muted/55" data-slot="report-month-group">
-              <th scope="rowgroup" colspan="8" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
+              <th scope="rowgroup" colspan="<%= register_colspan %>" class="text-xs font-semibold text-muted-foreground"><%= month.strftime("%B %Y") %></th>
             </tr>
           <% end %>
           <% rows.each do |row| %>
@@ -192,9 +194,13 @@
               <td class="whitespace-nowrap text-right font-semibold <%= row.signed_amount.negative? ? "text-destructive" : "text-foreground" %>">
                 <%= row.currency %> <%= format_number(row.signed_amount, precision: 2) %>
               </td>
-              <td class="whitespace-nowrap text-right font-semibold <%= row.tax_amount.negative? ? "text-destructive" : "text-foreground" %>">
-                <%= row.currency %> <%= format_number(row.tax_amount, precision: 2) %>
-              </td>
+              <% row_taxes = row.taxes %>
+              <% register_tax_names.each do |tax_name| %>
+                <% tax_amount = row_taxes.fetch(tax_name, 0.to_d) %>
+                <td class="whitespace-nowrap text-right font-semibold <%= tax_amount.negative? ? "text-destructive" : "text-foreground" %>">
+                  <%= row.currency %> <%= format_number(tax_amount, precision: 2) %>
+                </td>
+              <% end %>
               <td class="whitespace-nowrap text-right font-semibold <%= row.total_amount.negative? ? "text-destructive" : "text-foreground" %>">
                 <%= row.currency %> <%= format_number(row.total_amount, precision: 2) %>
               </td>
@@ -202,7 +208,7 @@
           <% end %>
         <% end %>
       <% else %>
-        <%= render "table_empty_state", colspan: 8, message: "No revenue transactions found for this selected period." %>
+        <%= render "table_empty_state", colspan: register_colspan, message: "No revenue transactions found for this selected period." %>
       <% end %>
     <% end %>
   <% end %>

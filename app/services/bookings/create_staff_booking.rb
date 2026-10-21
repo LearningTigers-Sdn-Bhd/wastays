@@ -12,6 +12,7 @@ module Bookings
       @backdate_reason = @common_params.delete(:backdate_reason)
       @retroactive_reason = @common_params.delete(:retroactive_reason)
       @hotel_corporate_account_id = @common_params.delete(:hotel_corporate_account_id)
+      @travel_agent_account_id = @common_params.delete(:travel_agent_account_id)
       @bill_tourism_tax_to_company = @common_params.delete(:bill_tourism_tax_to_company)
       @room_rows = Array(room_rows).map { |row| row.to_h.symbolize_keys }
       @user = user
@@ -30,6 +31,14 @@ module Bookings
       end
       room_numbers = @room_rows.pluck(:room_number).compact_blank.map(&:to_s)
       return failure("The same room cannot be selected twice.") if room_numbers.uniq.size != room_numbers.size
+      if travel_agent_booking?
+        agent = travel_agent_account
+        return failure("Choose the travel agent this booking is under.") unless agent
+
+        # The agent is who the reservation is billed to, so it takes the place
+        # of any company picked under Bill to.
+        @hotel_corporate_account_id = agent.id
+      end
 
       bookings = []
       group_booking = nil
@@ -76,6 +85,16 @@ module Bookings
     end
 
     private
+
+    def travel_agent_booking?
+      @booking_type == "reservation" && @common_params[:source].to_s == "travel_agent"
+    end
+
+    def travel_agent_account
+      return if @travel_agent_account_id.blank?
+
+      @hotel.hotel_corporate_accounts.active.where(account_type: "travel_agent").find_by(id: @travel_agent_account_id)
+    end
 
     def apply_automatic_extra_charges!(booking)
       result = ExtraCharges::ApplyAutomatic.call(booking: booking, user: @user)
@@ -240,16 +259,22 @@ module Bookings
 
     # Bill room charges to the selected billing party. Room revenue is
     # *routed* to the party's folio; the guest's primary folio is never
-    # reassigned, so it keeps incidentals and tourism tax.
+    # reassigned, so it keeps incidentals and tourism tax. A travel agent is
+    # billed its package instead: the room and the hotel's package extras.
     def bill_room_charges_to_company!(bookings)
       account_id = @hotel_corporate_account_id
       return if account_id.blank?
 
       bookings.each do |booking|
-        result = Folios::Routing::BillRoomChargesToCompany.call(
-          booking: booking, actor: @user, hotel_corporate_account_id: account_id,
-          bill_tourism_tax_to_company: @bill_tourism_tax_to_company
-        )
+        result =
+          if travel_agent_booking?
+            Folios::Routing::BillTravelAgentPackage.call(booking: booking, actor: @user, hotel_corporate_account_id: account_id)
+          else
+            Folios::Routing::BillRoomChargesToCompany.call(
+              booking: booking, actor: @user, hotel_corporate_account_id: account_id,
+              bill_tourism_tax_to_company: @bill_tourism_tax_to_company
+            )
+          end
         raise CreationFailed, result.error unless result.success?
 
         # The corporate portal lists a booking by this column, not by the billing party.

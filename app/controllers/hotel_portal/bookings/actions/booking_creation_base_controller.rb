@@ -67,7 +67,7 @@ module HotelPortal
         def render_new_booking(transaction:, status: :ok)
           @transaction = transaction
           @room_types ||= current_hotel.room_types.order(:name)
-          @corporate_accounts ||= current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).to_a.sort_by { |relationship| relationship.corporate_account.name.to_s }
+          load_corporate_accounts
           @boat_schedule ||= ::Boats::Schedule.new(current_hotel)
           prepare_payment_methods unless transaction == :quick_booking
           render template: "hotel_portal/bookings/actions/booking_creations/show", layout: false, status: status
@@ -81,7 +81,7 @@ module HotelPortal
           @booking.errors.add(:base, alert)
           @transaction = transaction
           @room_types ||= current_hotel.room_types.order(:name)
-          @corporate_accounts ||= current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).to_a.sort_by { |relationship| relationship.corporate_account.name.to_s }
+          load_corporate_accounts
           @boat_schedule ||= ::Boats::Schedule.new(current_hotel)
           prepare_payment_methods unless transaction == :quick_booking
           flash.now[:alert] = alert
@@ -95,6 +95,11 @@ module HotelPortal
             end
             format.html { render template: "hotel_portal/bookings/actions/booking_creations/show", layout: false, status: :unprocessable_content }
           end
+        end
+
+        def load_corporate_accounts
+          @corporate_accounts ||= current_hotel.hotel_corporate_accounts.active.includes(:corporate_account).to_a.sort_by { |relationship| relationship.corporate_account.name.to_s }
+          @travel_agent_accounts ||= @corporate_accounts.select(&:travel_agent?)
         end
 
         def staff_room_rows
@@ -134,7 +139,7 @@ module HotelPortal
             :id_front, :id_back, :source, :internal_notes, :manual_rate_override, :existing_guest_id,
             :rate_plan_id, :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
             :guarantee_method, :booking_type, :backdate_reason,
-            :hotel_corporate_account_id, :bill_tourism_tax_to_company,
+            :hotel_corporate_account_id, :bill_tourism_tax_to_company, :travel_agent_account_id,
             rooms: [ :room_type_id, :room_number, :rate_plan_id, :adults, :children, :manual_rate_override, { child_ages: [] } ],
             booking_rooms_attributes: [ :id, :room_type_id, :room_number, :rate_plan_id ],
             security_deposit: [ :amount, :external_reference ]
@@ -147,7 +152,7 @@ module HotelPortal
             :tourism_tax_collected, :collect_security_deposit, :security_deposit,
             :existing_guest_id, :guest_update_intent, :rate_plan_id,
             :apply_stop_sell_restriction, :apply_arrival_departure_restrictions, :apply_stay_length_restrictions,
-            :rooms, :hotel_corporate_account_id, :bill_tourism_tax_to_company, :booking_type, :backdate_reason
+            :rooms, :hotel_corporate_account_id, :bill_tourism_tax_to_company, :travel_agent_account_id, :booking_type, :backdate_reason
           )
         end
 

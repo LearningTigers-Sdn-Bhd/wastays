@@ -137,8 +137,13 @@ end %>
                     <%= render PanelsUI::FormField.new(form: f, attribute: :source, label: "Booking source") do |field| %>
                       <% field.with_select_menu(
                            booking_source_choices,
-                           selected: @booking.source || "phone") %>
+                           selected: @booking.source || "phone",
+                           data: { booking_room_rows_target: "source", action: "change->booking-room-rows#toggleTravelAgent" }) %>
                     <% end %>
+                    <%= render "hotel_portal/bookings/actions/booking_creations/partials/travel_agent_field",
+                          f: f,
+                          visible: @booking.source == "travel_agent" && initial_type == "reservation",
+                          travel_agent_accounts: @travel_agent_accounts %>
                   </div>
                   <% unless quick %>
                     <div class="<%= initial_type == 'backdated_check_in' ? '' : 'hidden' %> rounded-md border-l-2 border-amber-400 bg-amber-50 p-4 md:col-span-2" data-booking-room-rows-target="backdateFields">
