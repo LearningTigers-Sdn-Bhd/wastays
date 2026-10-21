@@ -124,11 +124,15 @@ module HotelPortal
       end
 
       def draw_charge_register(pdf)
+        tax_names = (@revenue_report.tax_names + @charge_register.flat_map { |row| row.taxes.keys }).uniq.sort
+        headers = [ "Date & Time", "Service / Code", "Booking / Folio", "Guest / Room Details", "Status", "Base Amount", *tax_names, "Total Amount" ]
         negative_cells = []
         rows = @charge_register.each_with_index.map do |row, index|
-          negative_cells << [ index, 5 ] if row.signed_amount.negative?
-          negative_cells << [ index, 6 ] if row.tax_amount.negative?
-          negative_cells << [ index, 7 ] if row.total_amount.negative?
+          taxes = row.taxes
+          amounts = [ row.signed_amount, *tax_names.map { |name| taxes.fetch(name, 0.to_d) }, row.total_amount ]
+          amounts.each_with_index do |amount, offset|
+            negative_cells << [ index, 5 + offset ] if amount.negative?
+          end
 
           [
             date_time_label(row),
@@ -136,9 +140,7 @@ module HotelPortal
             "#{row.booking_reference}\nFolio #{row.folio_number}",
             [ row.guest_name, row.room_details ].compact.join("\n"),
             row.relationship_status,
-            "#{row.currency} #{money(row.signed_amount)}",
-            "#{row.currency} #{money(row.tax_amount)}",
-            "#{row.currency} #{money(row.total_amount)}"
+            *amounts.map { |amount| "#{row.currency} #{money(amount)}" }
           ]
         end
 
@@ -150,15 +152,16 @@ module HotelPortal
         amount_total = @charge_register.sum(&:signed_amount)
         tax_total = @charge_register.sum(&:tax_amount)
         total_amount = amount_total + tax_total
-        rows << [ "Total", nil, nil, nil, nil, "MYR #{money(amount_total)}", "MYR #{money(tax_total)}", "MYR #{money(total_amount)}" ]
+        tax_totals = tax_names.map { |name| @charge_register.sum { |row| row.taxes.fetch(name, 0.to_d) } }
+        rows << [ "Total", nil, nil, nil, nil, *[ amount_total, *tax_totals, total_amount ].map { |amount| "MYR #{money(amount)}" } ]
+        widths = [ 65, 110, 110, 100, 55, 84, *Array.new(tax_names.size, 86), 90 ]
+        scale = [ pdf.bounds.width / widths.sum.to_f, 1 ].min
         draw_data_table(
           pdf,
-          [ "Date & Time", "Service / Code", "Booking / Folio", "Guest / Room Details", "Status", "Base Amount", "Tax", "Total Amount" ],
+          headers,
           rows,
-          numeric_columns: [ 5, 6, 7 ], negative_cells: negative_cells, total_row: rows.size,
-          # Tax takes 8pt from the page's spare measure: grouped figures are wider, and at
-          # 78 a seven-figure tax total wrapped under its currency.
-          column_widths: [ 65, 125, 125, 115, 60, 84, 86, 90 ]
+          numeric_columns: (5...headers.size).to_a, negative_cells: negative_cells, total_row: rows.size,
+          column_widths: widths.map { |width| width * scale }, overflow: :truncate
         )
       end
 
@@ -283,7 +286,7 @@ module HotelPortal
         ]
       end
 
-      def draw_data_table(pdf, headers, rows, numeric_columns: [], negative_cells: [], total_row: nil, column_widths: nil)
+      def draw_data_table(pdf, headers, rows, numeric_columns: [], negative_cells: [], total_row: nil, column_widths: nil, overflow: :shrink_to_fit)
         options = {
           header: true,
           width: column_widths ? column_widths.sum : pdf.bounds.width,
@@ -293,7 +296,7 @@ module HotelPortal
             border_color: COLORS[:border],
             borders: [ :bottom ],
             text_color: COLORS[:ink],
-            overflow: :shrink_to_fit,
+            overflow: overflow,
             min_font_size: 6
           }
         }
