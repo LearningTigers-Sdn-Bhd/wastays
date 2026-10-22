@@ -109,6 +109,17 @@ RSpec.describe EstatellExports::ExportHotel do
     expect(uploads.fetch("#{result.key}.sha256").strip).to eq(result.sha256)
   end
 
+  it "saves the zip and its checksum to output_dir instead of R2" do
+    Dir.mktmpdir do |dir|
+      result = run_export(output_dir: dir)
+
+      expect(result.path).to eq(File.join(dir, "exports/grand-eastern-hotel/2026-10-22.zip"))
+      expect(Digest::SHA256.file(result.path).hexdigest).to eq(result.sha256)
+      expect(File.read("#{result.path}.sha256").strip).to eq(result.sha256)
+      expect(storage).not_to have_received(:upload)
+    end
+  end
+
   it "refuses to upload when R2 is not configured" do
     allow(storage).to receive(:r2_configured?).and_return(false)
 

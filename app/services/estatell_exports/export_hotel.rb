@@ -20,7 +20,7 @@ module EstatellExports
     FORMAT_VERSION = 1
     STORAGE_SERVICE = :r2
 
-    Result = Struct.new(:key, :sha256, :manifest, keyword_init: true)
+    Result = Struct.new(:key, :sha256, :manifest, :path, keyword_init: true)
 
     class Error < StandardError; end
 
@@ -98,9 +98,10 @@ module EstatellExports
       new(**kwargs).call
     end
 
-    def initialize(hotel:, storage: nil, today: nil)
+    def initialize(hotel:, storage: nil, today: nil, output_dir: nil)
       @hotel = hotel
       @storage = storage
+      @output_dir = output_dir.presence
       @zone = Time.find_zone(hotel.time_zone) || Time.zone
       @now = Time.current.in_time_zone(@zone)
       @today = today || @now.to_date
@@ -116,9 +117,9 @@ module EstatellExports
         zip_path = File.join(dir, "bundle.zip")
         write_zip(zip_path, dir, files.keys)
         sha256 = Digest::SHA256.file(zip_path).hexdigest
-        upload(zip_path, sha256)
+        path = @output_dir ? save_locally(zip_path, sha256) : upload(zip_path, sha256)
 
-        Result.new(key: key, sha256: sha256, manifest: manifest)
+        Result.new(key: key, sha256: sha256, manifest: manifest, path: path)
       end
     end
 
@@ -231,6 +232,15 @@ module EstatellExports
         storage.upload(key, io, content_type: "application/zip")
       end
       storage.upload("#{key}.sha256", StringIO.new("#{sha256}\n"), content_type: "text/plain")
+      nil
+    end
+
+    def save_locally(zip_path, sha256)
+      path = File.join(File.expand_path(@output_dir), key)
+      FileUtils.mkdir_p(File.dirname(path))
+      FileUtils.cp(zip_path, path)
+      File.write("#{path}.sha256", "#{sha256}\n")
+      path
     end
 
     def r2_ready?
