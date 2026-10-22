@@ -99,6 +99,25 @@ RSpec.describe EstatellExports::ExportHotel do
     end
   end
 
+  it "exports the booking audit rows the replay reads, without guest keys or guest edits" do
+    booking = create(:booking, hotel: hotel)
+    other = create(:booking, hotel: other_hotel)
+    base = { hotel: hotel, category: "status", source: "staff", occurred_at: Time.current }
+    create(:booking_audit_log, base.merge(auditable: booking, action_type: "update", new_value: { "check_out" => "2026-09-02", "guest_name" => "Invented Name", "guest_email" => "x@example.com" }, old_value: { "check_out" => "2026-09-01", "guest_phone" => "+601" }))
+    create(:booking_audit_log, base.merge(auditable: booking, action_type: "check_in", new_value: { "status" => "checked_in" }))
+    create(:booking_audit_log, base.merge(auditable: booking, action_type: "guest_updated", new_value: { "guest_name" => "Invented Name" }))
+    create(:booking_audit_log, base.merge(auditable: booking, action_type: "room_assignment", new_value: { "room_number" => "101" }))
+    create(:booking_audit_log, base.merge(auditable: other, hotel: other_hotel, action_type: "check_in"))
+
+    entries = zip_entries(run_export)
+    rows = csv_rows(entries, "booking_audit_logs.csv")
+
+    expect(rows.map { |row| row["action_type"] }).to match_array(%w[update check_in])
+    expect(entries.fetch("booking_audit_logs.csv")).not_to match(/guest_|Invented|example\.com/)
+    expect(JSON.parse(rows.find { |row| row["action_type"] == "update" }["new_value"])).to eq("check_out" => "2026-09-02")
+    expect(JSON.parse(entries.fetch("manifest.json"))["files"]).to have_key("booking_audit_logs.csv")
+  end
+
   it "uploads the zip and its checksum under the hotel slug and date" do
     result = run_export
 

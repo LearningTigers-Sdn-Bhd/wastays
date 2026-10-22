@@ -31,6 +31,9 @@ module EstatellExports
     HOTEL_RATE_PLANS = "SELECT id FROM rate_plans WHERE hotel_id = :h"
     HOTEL_RTRPS = "SELECT id FROM room_type_rate_plans WHERE room_type_id IN (#{HOTEL_ROOM_TYPES})"
 
+    # The booking audit rows the estatell replay reads. Guest edits are left out.
+    AUDIT_ACTIONS = %w[create check_in edit_check_in undo_check_in check_out undo_check_out update cancel void status_change].freeze
+
     TABLES = {
       "hotels" => "id = :h",
       "hotel_transaction_configurations" => "hotel_id = :h",
@@ -77,8 +80,13 @@ module EstatellExports
       "receipts" => "hotel_id = :h",
       "night_audits" => "hotel_id = :h",
       "night_audit_financial_summaries" => "night_audit_id IN (SELECT id FROM night_audits WHERE hotel_id = :h)",
-      "night_audit_logs" => "hotel_id = :h"
+      "night_audit_logs" => "hotel_id = :h",
+      "booking_audit_logs" => "hotel_id = :h AND auditable_type = 'Booking' AND action_type IN (#{AUDIT_ACTIONS.map { |a| "'#{a}'" }.join(', ')})"
     }.freeze
+
+    # Guest details sit in the old and new values of some audit rows. Keys that start with one of these are dropped.
+    AUDIT_GUEST_KEY_PREFIXES = %w[guest_].freeze
+    AUDIT_JSON_COLUMNS = %w[old_value new_value metadata].freeze
 
     # Secrets and login tokens the importer does not need.
     EXCLUDED_COLUMNS = {
@@ -160,11 +168,17 @@ module EstatellExports
       CSV.open(path, "w") do |csv|
         csv << columns
         scope.find_each do |record|
-          csv << columns.map { |column| cell(model, column, record[column]) }
+          csv << columns.map { |column| cell(model, column, scrub(table, column, record[column])) }
           count += 1
         end
       end
       count
+    end
+
+    def scrub(table, column, value)
+      return value unless table == "booking_audit_logs" && AUDIT_JSON_COLUMNS.include?(column) && value.is_a?(Hash)
+
+      value.reject { |key, _| AUDIT_GUEST_KEY_PREFIXES.any? { |prefix| key.to_s.start_with?(prefix) } }
     end
 
     def model_for(table)
