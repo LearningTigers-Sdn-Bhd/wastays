@@ -661,6 +661,7 @@ DEPENDENCIES
   rubocop-rails-omakase
   ruby-vips (~> 2.0)
   ruby_llm (~> 2.0)
+  rubyzip (~> 3.6)
   selenium-webdriver
   shoulda-matchers
   simplecov
