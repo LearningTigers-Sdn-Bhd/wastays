@@ -504,7 +504,7 @@ GEM
       marcel (>= 1.0, < 3)
       schematist (~> 1.1)
       zeitwerk (~> 2)
-    rubyzip (3.6.0)
+    rubyzip (3.7.0)
     schematist (1.1.0)
     securerandom (0.4.1)
     selenium-webdriver (4.50.0)
@@ -661,7 +661,7 @@ DEPENDENCIES
   rubocop-rails-omakase
   ruby-vips (~> 2.0)
   ruby_llm (~> 2.0)
-  rubyzip (~> 3.6)
+  rubyzip (~> 3.7)
   selenium-webdriver
   shoulda-matchers
   simplecov
