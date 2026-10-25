@@ -58,6 +58,14 @@ module EstatellExports
       "rate_plan_age_bands" => "rate_plan_id IN (#{HOTEL_RATE_PLANS})",
       "rate_plan_stay_discounts" => "rate_plan_id IN (#{HOTEL_RATE_PLANS})",
       "rate_plan_agency_rules" => "rate_plan_id IN (#{HOTEL_RATE_PLANS})",
+      "hotel_corporate_accounts" => "hotel_id = :h",
+      "accounts" => "id IN (SELECT corporate_account_id FROM hotel_corporate_accounts WHERE hotel_id = :h)",
+      "ar_invoices" => "hotel_id = :h",
+      "ar_invoice_corrections" => "hotel_id = :h",
+      "ar_payments" => "hotel_id = :h",
+      "ar_payment_allocations" => "ar_invoice_id IN (SELECT id FROM ar_invoices WHERE hotel_id = :h)",
+      "ar_payment_allocation_reversals" => "ar_payment_allocation_id IN (SELECT id FROM ar_payment_allocations WHERE ar_invoice_id IN (SELECT id FROM ar_invoices WHERE hotel_id = :h))",
+      "ar_payment_voids" => "ar_payment_id IN (SELECT id FROM ar_payments WHERE hotel_id = :h)",
       "guests" => "id IN (SELECT guest_id FROM booking_guests WHERE guest_id IS NOT NULL AND booking_id IN (#{HOTEL_BOOKINGS})) " \
                   "OR id IN (SELECT organizer_guest_id FROM group_bookings WHERE organizer_guest_id IS NOT NULL AND hotel_id = :h) " \
                   "OR created_by_hotel_id = :h",
