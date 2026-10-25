@@ -40,6 +40,17 @@ RSpec.describe EstatellExports::ExportHotel do
     expect(csv_rows(entries, "hotels.csv").map { |row| row["id"] }).to eq([ hotel.id.to_s ])
   end
 
+  it "exports the hotel's companies with their accounts, and no other hotel's" do
+    mine = create(:hotel_corporate_account, hotel: hotel)
+    theirs = create(:hotel_corporate_account, hotel: other_hotel)
+
+    entries = zip_entries(run_export)
+
+    expect(csv_rows(entries, "hotel_corporate_accounts.csv").map { |row| row["id"] }).to eq([ mine.id.to_s ])
+    expect(csv_rows(entries, "accounts.csv").map { |row| row["id"] }).to eq([ mine.corporate_account_id.to_s ])
+    expect(csv_rows(entries, "accounts.csv").map { |row| row["id"] }).not_to include(theirs.corporate_account_id.to_s)
+  end
+
   it "writes guest PII decrypted, never as ciphertext" do
     booking = create(:booking, hotel: hotel)
     guest = create(:guest, email: "kim@example.com", phone: "+60111222333", government_id: "A9998887", passport_number: "P1234567")
