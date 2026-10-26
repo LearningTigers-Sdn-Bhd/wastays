@@ -54,6 +54,10 @@ module Bookings
         selected_guest = nil
       end
 
+      if selected_guest && different_person?(booking, selected_guest)
+        return OpenStruct.new(success?: false, errors: [ "#{booking.guest_name.presence || 'This guest'} is not #{selected_guest.name}: the name or IC/passport number belongs to someone else. Clear the selected guest to add them as a new guest." ])
+      end
+
       if rate_plan.blank?
         return OpenStruct.new(success?: false, errors: [ "Selected rate plan could not be found for this room category." ])
       end
@@ -351,13 +355,38 @@ module Bookings
       @guest_update_intent == "create_new"
     end
 
+    # Only on evidence that belongs to the person staying: their IC/passport
+    # number, or an email or phone on a profile with the same name. Staff type a
+    # booker's or coordinator's contact, or 0000000000 when there is none, so a
+    # contact alone files the stay under someone else. A missed match only
+    # costs a duplicate staff can merge (as ChannelManagers::MatchChannelGuest).
     def automatically_matched_guest(booking)
-      email = normalized_email(booking.guest_email)
-      guest = Guest.find_by(email: email) if email.present?
-      return guest if guest
+      submitted_document_numbers(booking).each do |number|
+        guest = Guest.kept.find_by(government_id: number) || Guest.kept.find_by(passport_number: number)
+        return guest if guest
+      end
 
-      phone = normalized_phone(booking.guest_phone)
-      Guest.find_by(phone: phone) if phone.present?
+      contact_candidates(booking).find { |guest| ChannelManagers::MatchChannelGuest.same_name?(guest.name, booking.guest_name) }
+    end
+
+    def contact_candidates(booking)
+      email = normalized_email(booking.guest_email).presence
+      phone = normalized_phone(booking.guest_phone).presence
+      phone = nil if Guest.placeholder_phone?(phone)
+
+      by_email = email ? Guest.kept.where(email:).order(:created_at).to_a : []
+      by_phone = phone ? Guest.kept.where(phone:).order(:created_at).to_a : []
+      (by_email + by_phone).uniq
+    end
+
+    def different_person?(booking, guest)
+      Guests::DifferentPerson.call(
+        guest,
+        name: booking.guest_name,
+        document_type: booking.guest_document_type,
+        government_id: booking.guest_government_id,
+        passport_number: booking.guest_passport_number
+      )
     end
 
     def update_existing_guest_intent?

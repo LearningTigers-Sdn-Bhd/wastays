@@ -36,6 +36,7 @@ module BookingGuests
       return Result.new(false, candidate.errors.full_messages) unless candidate.valid?
 
       normalized = candidate.attributes.symbolize_keys.slice(*EDITABLE_ATTRIBUTES)
+      return Result.new(false, [ someone_else_message ]) if @update_profile && someone_else?(normalized)
       # Boat times join the before-picture too, so the audit reads "09:00 -> 11:00"
       # rather than as a time that appeared from nowhere.
       old_values = snapshot_values.merge(@bibo_attributes.keys.to_h { |key| [ key.to_s, @booking_guest.public_send(key) ] })
@@ -53,6 +54,24 @@ module BookingGuests
     end
 
     private
+
+    # The profile is one person's, shared by their other stays. Details of a
+    # different person go on this stay only, or the guest record would become
+    # theirs.
+    def someone_else?(values)
+      Guests::DifferentPerson.call(
+        @guest,
+        name: values[:name],
+        document_type: values[:document_type],
+        government_id: values[:government_id],
+        passport_number: values[:passport_number]
+      )
+    end
+
+    def someone_else_message
+      "#{@guest.name}'s guest record was not changed: these details belong to a different person " \
+        "(the name or IC/passport number differs). Save them to this stay only."
+    end
 
     def snapshot_updates(values)
       values.slice(*SNAPSHOT_ATTRIBUTES).to_h { |key, value| [ :"#{key}_snapshot", value ] }

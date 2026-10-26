@@ -107,7 +107,7 @@ RSpec.describe "HotelPortal::ProfessionalBookings", type: :request do
     end
 
     it "links an existing guest via existing_guest_id" do
-      params = valid_params.deep_merge(booking: { existing_guest_id: existing_guest.id })
+      params = valid_params.deep_merge(booking: { existing_guest_id: existing_guest.id, guest_name: existing_guest.name })
 
       expect {
         post hotel_booking_action_new_booking_path(hotel), params: params

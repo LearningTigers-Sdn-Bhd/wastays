@@ -340,6 +340,13 @@ RSpec.describe Guest, type: :model do
       expect(described_class.displayable_phone(placeholder)).to be_nil
     end
 
+    it "treats a number typed only to fill the field as a placeholder" do
+      expect(described_class.placeholder_phone?("0000000000")).to be(true)
+      expect(described_class.placeholder_phone?("+60 111-1111111")).to be(false)
+      expect(described_class.placeholder_phone?("1111111")).to be(true)
+      expect(described_class.displayable_phone("0000000000")).to be_nil
+    end
+
     it "leaves a real number alone" do
       expect(described_class.placeholder_phone?("+60123456789")).to be(false)
       expect(described_class.displayable_phone("+60123456789")).to eq("+60123456789")
