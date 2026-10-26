@@ -44,6 +44,24 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
     expect(result.guest.id).to eq(existing.id)
   end
 
+  it "does not match another person who shares the phone or email" do
+    coordinator = create(:guest, name: "Ezza", email: "jane@example.com", phone: "+60111111111", government_id: nil)
+
+    result = described_class.new(params.merge(government_id: nil)).call
+
+    expect(result.guest).not_to eq(coordinator)
+    expect(result.guest.name).to eq("Jane Doe")
+    expect(coordinator.reload.name).to eq("Ezza")
+  end
+
+  it "does not match on a placeholder phone" do
+    stranger = create(:guest, name: "Jane Doe", email: nil, phone: "0000000000", government_id: nil)
+
+    result = described_class.new(params.merge(email: nil, phone: "0000000000", government_id: nil)).call
+
+    expect(result.guest).not_to eq(stranger)
+  end
+
   it "marks repeat guest when guest has revenue-generating bookings" do
     guest = create(:guest, government_id: "A123456", phone: "+60111111111")
     booking = create(:booking, status: "completed")
@@ -89,7 +107,7 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
   end
 
   it "does not raise and heals a matched guest whose government_id was encrypted under a stale key" do
-    existing = create(:guest, phone: "+60111111111", government_id: "OLDID")
+    existing = create(:guest, name: "Jane Doe", phone: "+60111111111", government_id: "OLDID")
     quoted = Guest.connection.quote('{"p":"corrupted","h":{"iv":"bogus","at":"bogus"}}')
     Guest.connection.execute("UPDATE guests SET government_id = #{quoted} WHERE id = #{existing.id}")
 
@@ -102,7 +120,7 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
   end
 
   it "does not change a matched profile unless explicitly requested" do
-    existing = create(:guest, email: "jane@example.com", city: nil)
+    existing = create(:guest, name: "Jane Doe", email: "jane@example.com", city: nil)
 
     result = described_class.new(params).call
 
@@ -111,7 +129,7 @@ RSpec.describe GuestArrival::CreateOrMatchGuest do
   end
 
   it "updates all structured profile address fields when explicitly requested" do
-    existing = create(:guest, email: "jane@example.com", city: nil, home_address: nil)
+    existing = create(:guest, name: "Jane Doe", email: "jane@example.com", city: nil, home_address: nil)
 
     described_class.new(params.merge(update_profile: true)).call
 

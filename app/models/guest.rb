@@ -20,7 +20,14 @@ class Guest < ApplicationRecord
   # is a marker for the system, not something to show a person.
   PHONE_NOT_CAPTURED = "NOT CAPTURED"
 
-  def self.placeholder_phone?(value) = value.to_s.start_with?(PHONE_NOT_CAPTURED)
+  # The marker above, or a number typed only to fill the field: one digit
+  # repeated, such as 0000000000. Staff type these for guests with no phone, so
+  # they are shared by unrelated people.
+  def self.placeholder_phone?(value)
+    text = value.to_s
+    digits = text.gsub(/\D/, "")
+    text.start_with?(PHONE_NOT_CAPTURED) || (digits.present? && digits.squeeze.length == 1)
+  end
 
   # The phone to show, or nil when all there is is the placeholder.
   def self.displayable_phone(value) = (value.presence unless placeholder_phone?(value))

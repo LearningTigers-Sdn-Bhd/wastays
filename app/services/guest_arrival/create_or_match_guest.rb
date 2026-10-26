@@ -125,19 +125,17 @@ module GuestArrival
         return guest if guest
       end
 
-      # 2. Match by email if provided (More unique than phone)
-      if @email.present?
-        guest = Guest.find_by(email: @email)
-        return guest if guest
-      end
+      # 2. An email or phone, only on a profile with the same name: a booker or
+      # family member may share them, and a placeholder phone is shared by
+      # strangers (as ChannelManagers::MatchChannelGuest).
+      contact_candidates.find { |guest| ChannelManagers::MatchChannelGuest.same_name?(guest.name, @name) }
+    end
 
-      # 3. Match by phone if provided
-      if @phone.present?
-        guest = Guest.find_by(phone: @phone)
-        return guest if guest
-      end
-
-      nil
+    def contact_candidates
+      phone = @phone.presence unless Guest.placeholder_phone?(@phone)
+      by_email = @email.present? ? Guest.where(email: @email).order(:created_at).to_a : []
+      by_phone = phone ? Guest.where(phone:).order(:created_at).to_a : []
+      (by_email + by_phone).uniq
     end
 
     def guest_for_document_number(number)

@@ -63,6 +63,8 @@ RSpec.describe BookingGuests::UpdateSnapshot do
   end
 
   it "updates the reusable guest profile only when requested" do
+    guest.update!(name: "Stay Nam", document_type: "passport", government_id: "P9988")
+
     result = described_class.call(booking_guest:, attributes:, actor:, update_profile: true)
 
     expect(result).to be_success
@@ -76,6 +78,27 @@ RSpec.describe BookingGuests::UpdateSnapshot do
       postal_code: "50450",
       address_country: "Malaysia"
     )
+  end
+
+  it "refuses to save another person's details over the guest record" do
+    guest.update!(name: "Hendry Lepizus Datu", document_type: "passport", government_id: "A1234567")
+
+    result = described_class.call(booking_guest:, attributes: attributes.merge(name: "Ruben Bin Tinting"), actor:, update_profile: true)
+
+    expect(result).not_to be_success
+    expect(result.errors.first).to include("Hendry Lepizus Datu's guest record was not changed")
+    expect(guest.reload).to have_attributes(name: "Hendry Lepizus Datu", government_id: "a1234567")
+    expect(booking_guest.reload.name_snapshot).not_to eq("Ruben Bin Tinting")
+  end
+
+  it "still saves another person's details to the stay only" do
+    guest.update!(name: "Hendry Lepizus Datu")
+
+    result = described_class.call(booking_guest:, attributes: attributes.merge(name: "Ruben Bin Tinting"), actor:)
+
+    expect(result).to be_success
+    expect(booking_guest.reload.name_snapshot).to eq("Ruben Bin Tinting")
+    expect(guest.reload.name).to eq("Hendry Lepizus Datu")
   end
 
   it "does not partially update any layer when validation fails" do
