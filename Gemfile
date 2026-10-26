@@ -109,7 +109,7 @@ group :development do
 end
 
 gem "openssl", "~> 4.0"
-gem "aws-sdk-s3", "~> 1.233"
+gem "aws-sdk-s3", "~> 1.235"
 gem "nokogiri", ">= 1.19.3"
 
 gem "roo", "~> 3.0"
